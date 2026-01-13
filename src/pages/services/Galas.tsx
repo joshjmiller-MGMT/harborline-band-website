@@ -62,7 +62,7 @@ const GalasPage = () => {
               </div>
 
               <Button variant="hero" size="lg" className="mt-4" asChild>
-                <a href="/contact">Plan Your Gala</a>
+                <a href="/#contact">Plan Your Gala</a>
               </Button>
             </motion.div>
 
