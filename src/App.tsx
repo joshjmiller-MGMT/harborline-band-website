@@ -31,6 +31,19 @@ import RockvillePage from "./pages/locations/Rockville";
 import FrederickPage from "./pages/locations/Frederick";
 import EasternShorePage from "./pages/locations/EasternShore";
 
+// Venue Pages
+import PendryBaltimorePage from "./pages/venues/PendryBaltimore";
+import SagamorePendryPage from "./pages/venues/SagamorePendry";
+import GeorgePeabodyLibraryPage from "./pages/venues/GeorgePeabodyLibrary";
+import TheBelvederePage from "./pages/venues/TheBelvedere";
+import AmericanVisionaryArtMuseumPage from "./pages/venues/AmericanVisionaryArtMuseum";
+import BORailroadMuseumPage from "./pages/venues/BORailroadMuseum";
+import FourSeasonsBaltimorePage from "./pages/venues/FourSeasonsBaltimore";
+import EvergreenMuseumPage from "./pages/venues/EvergreenMuseum";
+import LeggMasonTowerPage from "./pages/venues/LeggMasonTower";
+import CylburnArboretumPage from "./pages/venues/CylburnArboretum";
+import CloistersCastlePage from "./pages/venues/CloistersCastle";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -66,6 +79,19 @@ const App = () => (
             <Route path="/locations/rockville" element={<RockvillePage />} />
             <Route path="/locations/frederick" element={<FrederickPage />} />
             <Route path="/locations/eastern-shore" element={<EasternShorePage />} />
+            
+            {/* Venue Routes */}
+            <Route path="/venues/pendry-baltimore" element={<PendryBaltimorePage />} />
+            <Route path="/venues/sagamore-pendry" element={<SagamorePendryPage />} />
+            <Route path="/venues/george-peabody-library" element={<GeorgePeabodyLibraryPage />} />
+            <Route path="/venues/the-belvedere" element={<TheBelvederePage />} />
+            <Route path="/venues/american-visionary-art-museum" element={<AmericanVisionaryArtMuseumPage />} />
+            <Route path="/venues/b-and-o-railroad-museum" element={<BORailroadMuseumPage />} />
+            <Route path="/venues/four-seasons-baltimore" element={<FourSeasonsBaltimorePage />} />
+            <Route path="/venues/evergreen-museum" element={<EvergreenMuseumPage />} />
+            <Route path="/venues/legg-mason-tower" element={<LeggMasonTowerPage />} />
+            <Route path="/venues/cylburn-arboretum" element={<CylburnArboretumPage />} />
+            <Route path="/venues/cloisters-castle" element={<CloistersCastlePage />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
