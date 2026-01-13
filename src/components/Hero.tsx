@@ -1,25 +1,35 @@
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import heroBand from "@/assets/band-hero.jpg";
 import logo from "@/assets/logo.png";
 
 const Hero = () => {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end start"],
+  });
+  
+  const y = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
+  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0">
+    <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Background Image with Parallax */}
+      <motion.div className="absolute inset-0" style={{ y }}>
         <img
           src={heroBand}
           alt="Harborline performing live"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover scale-110"
         />
         {/* Dark overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/70 to-background" />
         <div className="absolute inset-0 bg-background/40" />
-      </div>
+      </motion.div>
 
       {/* Content */}
-      <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
+      <motion.div className="relative z-10 text-center px-6 max-w-5xl mx-auto" style={{ opacity }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -29,7 +39,7 @@ const Hero = () => {
           <img
             src={logo}
             alt="Harborline Logo"
-            className="w-48 md:w-64 lg:w-80 mx-auto"
+            className="w-48 md:w-64 lg:w-80 mx-auto drop-shadow-2xl"
           />
         </motion.div>
 
@@ -65,7 +75,7 @@ const Hero = () => {
             <a href="#gallery">See Us Live</a>
           </Button>
         </motion.div>
-      </div>
+      </motion.div>
 
       {/* Scroll indicator */}
       <motion.div

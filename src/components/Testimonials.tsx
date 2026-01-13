@@ -20,6 +20,24 @@ const testimonials = [
     event: "Private Event",
     rating: 5,
   },
+  {
+    quote: "The energy they brought to our company holiday party was incredible. Already booked them for next year!",
+    author: "Marcus W.",
+    event: "Corporate Holiday Party",
+    rating: 5,
+  },
+  {
+    quote: "From cocktail hour jazz to late-night dance hits, they handled every moment perfectly.",
+    author: "Amanda & David",
+    event: "Wedding Reception",
+    rating: 5,
+  },
+  {
+    quote: "Our fundraiser exceeded expectations thanks to Harborline's incredible performance. A true class act.",
+    author: "Baltimore Arts Council",
+    event: "Charity Gala",
+    rating: 5,
+  },
 ];
 
 const Testimonials = () => {
@@ -44,14 +62,14 @@ const Testimonials = () => {
           </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {testimonials.map((testimonial, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: index * 0.15 }}
+              transition={{ duration: 0.6, delay: (index % 3) * 0.15 }}
               className="relative p-8 bg-card border border-border rounded-lg hover:border-primary/30 transition-all duration-500 group"
             >
               <Quote className="w-10 h-10 text-primary/20 absolute top-6 right-6 group-hover:text-primary/40 transition-colors duration-500" />
