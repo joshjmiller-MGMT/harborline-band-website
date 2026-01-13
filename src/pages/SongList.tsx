@@ -3,7 +3,8 @@ import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, Check, Download, X } from "lucide-react";
 
 const categories = ["All", "Reception", "Cocktail/Dinner"];
 
@@ -108,6 +109,7 @@ const SongListPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeGenre, setActiveGenre] = useState("All");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [selectedSongs, setSelectedSongs] = useState<Set<string>>(new Set());
 
   const filteredSongs = songs.filter((song) => {
     const matchesSearch =
@@ -117,6 +119,68 @@ const SongListPage = () => {
     const matchesCategory = activeCategory === "All" || song.category === activeCategory;
     return matchesSearch && matchesGenre && matchesCategory;
   });
+
+  const getSongKey = (song: typeof songs[0]) => `${song.title}-${song.artist}`;
+
+  const toggleSong = (song: typeof songs[0]) => {
+    const key = getSongKey(song);
+    setSelectedSongs((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedSongs(new Set());
+  };
+
+  const exportSelectedSongs = () => {
+    const selectedSongsList = songs.filter((song) => selectedSongs.has(getSongKey(song)));
+    
+    // Group by category
+    const receptionSongs = selectedSongsList.filter(s => s.category === "Reception");
+    const cocktailSongs = selectedSongsList.filter(s => s.category === "Cocktail/Dinner");
+    
+    let content = "HARBORLINE - MY EVENT SONG SELECTIONS\n";
+    content += "=====================================\n\n";
+    content += `Total Songs Selected: ${selectedSongsList.length}\n\n`;
+    
+    if (receptionSongs.length > 0) {
+      content += "RECEPTION SONGS\n";
+      content += "---------------\n";
+      receptionSongs.forEach((song) => {
+        content += `• ${song.title} - ${song.artist}\n`;
+      });
+      content += "\n";
+    }
+    
+    if (cocktailSongs.length > 0) {
+      content += "COCKTAIL/DINNER SONGS\n";
+      content += "---------------------\n";
+      cocktailSongs.forEach((song) => {
+        content += `• ${song.title} - ${song.artist}\n`;
+      });
+      content += "\n";
+    }
+    
+    content += "\n=====================================\n";
+    content += "Questions? Contact us at harborlinemusic.com\n";
+
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "harborline-song-selections.txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <Layout
@@ -131,7 +195,7 @@ const SongListPage = () => {
       />
 
       <section className="py-20 md:py-24">
-        <div className="container px-6 max-w-5xl mx-auto">
+        <div className="container px-6 max-w-4xl mx-auto">
           {/* Search and Filter */}
           <div className="mb-12 space-y-6">
             <div className="relative max-w-md mx-auto">
@@ -179,43 +243,96 @@ const SongListPage = () => {
             </div>
           </div>
 
-          {/* Song Count */}
-          <p className="text-center text-muted-foreground mb-8">
-            Showing {filteredSongs.length} of {songs.length} songs
+          {/* Song Count & Selection Info */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+            <p className="text-muted-foreground">
+              Showing {filteredSongs.length} of {songs.length} songs
+            </p>
+            {selectedSongs.size > 0 && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-primary font-medium">
+                  {selectedSongs.size} song{selectedSongs.size !== 1 ? "s" : ""} selected
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSelection}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Clear
+                </Button>
+                <Button
+                  variant="hero"
+                  size="sm"
+                  onClick={exportSelectedSongs}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export List
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Instruction */}
+          <p className="text-center text-sm text-muted-foreground mb-6">
+            Click on songs to select them for your event, then export your list
           </p>
 
-          {/* Song Grid */}
+          {/* Song List */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            className="space-y-2"
           >
-            {filteredSongs.map((song, index) => (
-              <motion.div
-                key={`${song.title}-${song.artist}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.02 }}
-                className="p-4 bg-card border border-border rounded-lg hover:border-primary/50 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="font-display text-lg leading-tight">{song.title}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{song.artist}</p>
+            {filteredSongs.map((song, index) => {
+              const isSelected = selectedSongs.has(getSongKey(song));
+              return (
+                <motion.div
+                  key={getSongKey(song)}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: index * 0.01 }}
+                  onClick={() => toggleSong(song)}
+                  className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-all ${
+                    isSelected
+                      ? "bg-primary/10 border-2 border-primary"
+                      : "bg-card border border-border hover:border-primary/50"
+                  }`}
+                >
+                  {/* Selection Indicator */}
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground"
+                        : "border-2 border-muted-foreground/30"
+                    }`}
+                  >
+                    {isSelected && <Check className="w-4 h-4" />}
                   </div>
-                  <span className={`shrink-0 text-xs px-2 py-1 rounded-full ${
-                    song.category === "Reception" 
-                      ? "bg-primary/20 text-primary" 
-                      : "bg-accent/50 text-accent-foreground"
-                  }`}>
-                    {song.category === "Cocktail/Dinner" ? "Cocktail" : song.category}
-                  </span>
-                </div>
-                <span className="inline-block mt-3 text-xs px-2 py-1 bg-secondary/50 rounded-full text-muted-foreground">
-                  {song.genre}
-                </span>
-              </motion.div>
-            ))}
+
+                  {/* Song Info */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-display text-base truncate">{song.title}</h3>
+                    <p className="text-sm text-muted-foreground truncate">{song.artist}</p>
+                  </div>
+
+                  {/* Tags */}
+                  <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs px-2 py-1 bg-secondary/50 rounded-full text-muted-foreground">
+                      {song.genre}
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      song.category === "Reception" 
+                        ? "bg-primary/20 text-primary" 
+                        : "bg-accent/50 text-accent-foreground"
+                    }`}>
+                      {song.category === "Cocktail/Dinner" ? "Cocktail" : song.category}
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })}
           </motion.div>
 
           {filteredSongs.length === 0 && (
