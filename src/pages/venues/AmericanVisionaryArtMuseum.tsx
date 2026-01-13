@@ -1,4 +1,5 @@
 import VenuePage from "@/components/VenuePage";
+import avam1 from "@/assets/venues/avam-1.jpg";
 
 const AmericanVisionaryArtMuseumPage = () => {
   return (
@@ -29,6 +30,9 @@ const AmericanVisionaryArtMuseumPage = () => {
         { name: "The Pendry Baltimore", slug: "pendry-baltimore" },
         { name: "B&O Railroad Museum", slug: "b-and-o-railroad-museum" },
         { name: "George Peabody Library", slug: "george-peabody-library" }
+      ]}
+      images={[
+        { src: avam1, alt: "American Visionary Art Museum colorful interior with whimsical art installations" }
       ]}
     />
   );

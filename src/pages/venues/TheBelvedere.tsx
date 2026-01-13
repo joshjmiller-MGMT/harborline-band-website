@@ -1,4 +1,6 @@
 import VenuePage from "@/components/VenuePage";
+import belvedere1 from "@/assets/venues/belvedere-1.jpg";
+import belvedere2 from "@/assets/venues/belvedere-2.jpg";
 
 const TheBelvederePage = () => {
   return (
@@ -29,6 +31,10 @@ const TheBelvederePage = () => {
         { name: "The Pendry Baltimore", slug: "pendry-baltimore" },
         { name: "Evergreen Museum", slug: "evergreen-museum" },
         { name: "Sagamore Pendry", slug: "sagamore-pendry" }
+      ]}
+      images={[
+        { src: belvedere1, alt: "The Belvedere grand ballroom with chandeliers and wedding reception" },
+        { src: belvedere2, alt: "The Belvedere rooftop terrace with panoramic city views at night" }
       ]}
     />
   );

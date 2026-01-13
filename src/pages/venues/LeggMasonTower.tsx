@@ -1,4 +1,5 @@
 import VenuePage from "@/components/VenuePage";
+import leggMason1 from "@/assets/venues/legg-mason-1.jpg";
 
 const LeggMasonTowerPage = () => {
   return (
@@ -29,6 +30,9 @@ const LeggMasonTowerPage = () => {
         { name: "The Pendry Baltimore", slug: "pendry-baltimore" },
         { name: "Sagamore Pendry", slug: "sagamore-pendry" },
         { name: "American Visionary Art Museum", slug: "american-visionary-art-museum" }
+      ]}
+      images={[
+        { src: leggMason1, alt: "Legg Mason Tower penthouse event space with panoramic city views at night" }
       ]}
     />
   );
