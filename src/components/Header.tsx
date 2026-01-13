@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const navLinks = [
   { href: "#services", label: "Services" },
+  { href: "#gallery", label: "Gallery" },
   { href: "#about", label: "About" },
   { href: "#contact", label: "Contact" },
 ];
@@ -33,8 +35,8 @@ const Header = () => {
       <div className="container px-6 mx-auto">
         <nav className="flex items-center justify-between h-20">
           {/* Logo */}
-          <a href="#" className="font-display text-2xl tracking-wide">
-            HARBORLINE
+          <a href="#" className="block">
+            <img src={logo} alt="Harborline" className="h-12 w-auto" />
           </a>
 
           {/* Desktop Nav */}
