@@ -351,10 +351,30 @@ www.harborlinemusic.com`;
     });
   };
 
-  const printList = () => {
+  const printList = async () => {
     const selectedSongsList = getSelectedSongsList();
     const receptionSongs = selectedSongsList.filter(s => s.category === "Reception");
     const cocktailSongs = selectedSongsList.filter(s => s.category === "Cocktail/Dinner");
+
+    // Convert logo to base64 for embedding in print window
+    const getLogoBase64 = (): Promise<string> => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL("image/png"));
+        };
+        img.onerror = () => resolve("");
+        img.src = logo;
+      });
+    };
+
+    const logoBase64 = await getLogoBase64();
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -412,7 +432,7 @@ www.harborlinemusic.com`;
     .footer-logo {
       width: 120px;
       height: auto;
-      opacity: 0.7;
+      opacity: 0.8;
     }
   </style>
 </head>
@@ -452,10 +472,16 @@ www.harborlinemusic.com`;
     ` : ''}
     
     <div class="footer">
-      <img src="${window.location.origin}/logo.png" alt="Harborline" class="footer-logo" onerror="this.style.display='none'">
+      ${logoBase64 ? `<img src="${logoBase64}" alt="Harborline" class="footer-logo">` : '<p style="color: #8B7355; font-weight: bold;">HARBORLINE</p>'}
     </div>
   </div>
-  <script>window.print(); window.close();</script>
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 100);
+    };
+  </script>
 </body>
 </html>`);
     printWindow.document.close();
