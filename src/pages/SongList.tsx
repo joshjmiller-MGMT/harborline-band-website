@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Check, Download, X } from "lucide-react";
+import { Search, Check, Download, X, FileText, File, Copy, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import logo from "@/assets/logo.png";
 
 const categories = ["All", "Reception", "Cocktail/Dinner"];
 
@@ -110,6 +118,7 @@ const SongListPage = () => {
   const [activeGenre, setActiveGenre] = useState("All");
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedSongs, setSelectedSongs] = useState<Set<string>>(new Set());
+  const printRef = useRef<HTMLDivElement>(null);
 
   const filteredSongs = songs.filter((song) => {
     const matchesSearch =
@@ -139,20 +148,21 @@ const SongListPage = () => {
     setSelectedSongs(new Set());
   };
 
-  const exportSelectedSongs = () => {
-    const selectedSongsList = songs.filter((song) => selectedSongs.has(getSongKey(song)));
-    
-    // Group by category
+  const getSelectedSongsList = () => {
+    return songs.filter((song) => selectedSongs.has(getSongKey(song)));
+  };
+
+  const generateContent = () => {
+    const selectedSongsList = getSelectedSongsList();
     const receptionSongs = selectedSongsList.filter(s => s.category === "Reception");
     const cocktailSongs = selectedSongsList.filter(s => s.category === "Cocktail/Dinner");
     
-    let content = "HARBORLINE - MY EVENT SONG SELECTIONS\n";
-    content += "=====================================\n\n";
+    let content = "";
     content += `Total Songs Selected: ${selectedSongsList.length}\n\n`;
     
     if (receptionSongs.length > 0) {
       content += "RECEPTION SONGS\n";
-      content += "---------------\n";
+      content += "─".repeat(40) + "\n";
       receptionSongs.forEach((song) => {
         content += `• ${song.title} - ${song.artist}\n`;
       });
@@ -161,15 +171,30 @@ const SongListPage = () => {
     
     if (cocktailSongs.length > 0) {
       content += "COCKTAIL/DINNER SONGS\n";
-      content += "---------------------\n";
+      content += "─".repeat(40) + "\n";
       cocktailSongs.forEach((song) => {
         content += `• ${song.title} - ${song.artist}\n`;
       });
       content += "\n";
     }
     
-    content += "\n=====================================\n";
-    content += "Questions? Contact us at harborlinemusic.com\n";
+    return content;
+  };
+
+  const exportAsTxt = () => {
+    const content = `
+╔════════════════════════════════════════════════════════════╗
+║           HARBORLINE - MY EVENT SONG SELECTIONS            ║
+╚════════════════════════════════════════════════════════════╝
+
+${generateContent()}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    🎵 HARBORLINE 🎵
+           Baltimore's Premier Event Band
+           www.harborlinemusic.com
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
 
     const blob = new Blob([content], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -180,6 +205,274 @@ const SongListPage = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    toast.success("Song list exported as TXT!");
+  };
+
+  const exportAsHtml = () => {
+    const selectedSongsList = getSelectedSongsList();
+    const receptionSongs = selectedSongsList.filter(s => s.category === "Reception");
+    const cocktailSongs = selectedSongsList.filter(s => s.category === "Cocktail/Dinner");
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Harborline - My Event Song Selections</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Georgia', serif; 
+      background: #1a1a1a; 
+      color: #fff; 
+      padding: 40px;
+      min-height: 100vh;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header { 
+      text-align: center; 
+      margin-bottom: 40px; 
+      padding-bottom: 30px;
+      border-bottom: 2px solid #D4AF37;
+    }
+    .logo { width: 150px; margin-bottom: 20px; }
+    h1 { 
+      font-size: 28px; 
+      color: #D4AF37; 
+      letter-spacing: 3px;
+      margin-bottom: 10px;
+    }
+    .subtitle { color: #888; font-size: 14px; }
+    .section { margin-bottom: 30px; }
+    .section-title { 
+      font-size: 18px; 
+      color: #D4AF37; 
+      margin-bottom: 15px;
+      letter-spacing: 2px;
+    }
+    .song-list { list-style: none; }
+    .song-item { 
+      padding: 12px 0; 
+      border-bottom: 1px solid #333;
+      display: flex;
+      justify-content: space-between;
+    }
+    .song-title { font-weight: bold; }
+    .song-artist { color: #888; }
+    .footer { 
+      margin-top: 50px; 
+      padding-top: 30px; 
+      border-top: 2px solid #D4AF37;
+      text-align: center;
+    }
+    .footer-logo { width: 100px; margin-bottom: 15px; opacity: 0.7; }
+    .footer-text { color: #888; font-size: 14px; }
+    .footer-link { color: #D4AF37; text-decoration: none; }
+    @media print {
+      body { background: #fff; color: #000; }
+      .song-item { border-bottom-color: #ddd; }
+      .section-title, h1 { color: #8B7355; }
+      .song-artist, .subtitle, .footer-text { color: #666; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="${logo}" alt="Harborline" class="logo" onerror="this.style.display='none'">
+      <h1>MY EVENT SONG SELECTIONS</h1>
+      <p class="subtitle">Total Songs: ${selectedSongsList.length}</p>
+    </div>
+    
+    ${receptionSongs.length > 0 ? `
+    <div class="section">
+      <h2 class="section-title">RECEPTION SONGS</h2>
+      <ul class="song-list">
+        ${receptionSongs.map(song => `
+          <li class="song-item">
+            <span class="song-title">${song.title}</span>
+            <span class="song-artist">${song.artist}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+    ` : ''}
+    
+    ${cocktailSongs.length > 0 ? `
+    <div class="section">
+      <h2 class="section-title">COCKTAIL/DINNER SONGS</h2>
+      <ul class="song-list">
+        ${cocktailSongs.map(song => `
+          <li class="song-item">
+            <span class="song-title">${song.title}</span>
+            <span class="song-artist">${song.artist}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+    ` : ''}
+    
+    <div class="footer">
+      <img src="${logo}" alt="Harborline" class="footer-logo" onerror="this.style.display='none'">
+      <p class="footer-text">
+        🎵 HARBORLINE - Baltimore's Premier Event Band<br>
+        <a href="https://harborlinemusic.com" class="footer-link">www.harborlinemusic.com</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "harborline-song-selections.html";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Song list exported as HTML! Open in browser and print to PDF.");
+  };
+
+  const copyToClipboard = () => {
+    const content = `HARBORLINE - MY EVENT SONG SELECTIONS
+=====================================
+
+${generateContent()}
+=====================================
+🎵 HARBORLINE - Baltimore's Premier Event Band
+www.harborlinemusic.com`;
+
+    navigator.clipboard.writeText(content).then(() => {
+      toast.success("Song list copied to clipboard!");
+    }).catch(() => {
+      toast.error("Failed to copy to clipboard");
+    });
+  };
+
+  const printList = () => {
+    const selectedSongsList = getSelectedSongsList();
+    const receptionSongs = selectedSongsList.filter(s => s.category === "Reception");
+    const cocktailSongs = selectedSongsList.filter(s => s.category === "Cocktail/Dinner");
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error("Please allow popups to print");
+      return;
+    }
+
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Harborline - Song Selections</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Georgia', serif; 
+      padding: 40px;
+      color: #000;
+    }
+    .container { max-width: 700px; margin: 0 auto; }
+    .header { 
+      text-align: center; 
+      margin-bottom: 30px; 
+      padding-bottom: 20px;
+      border-bottom: 2px solid #8B7355;
+    }
+    h1 { 
+      font-size: 24px; 
+      color: #8B7355; 
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .subtitle { color: #666; font-size: 12px; }
+    .section { margin-bottom: 25px; }
+    .section-title { 
+      font-size: 14px; 
+      color: #8B7355; 
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+      font-weight: bold;
+    }
+    .song-list { list-style: none; }
+    .song-item { 
+      padding: 8px 0; 
+      border-bottom: 1px solid #ddd;
+      font-size: 12px;
+    }
+    .song-title { font-weight: bold; }
+    .song-artist { color: #666; margin-left: 8px; }
+    .footer { 
+      margin-top: 40px; 
+      padding-top: 20px; 
+      border-top: 2px solid #8B7355;
+      text-align: center;
+    }
+    .footer-text { color: #666; font-size: 11px; }
+    .watermark {
+      text-align: center;
+      margin-top: 20px;
+      opacity: 0.6;
+    }
+    .watermark-text {
+      font-size: 18px;
+      font-weight: bold;
+      color: #8B7355;
+      letter-spacing: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>HARBORLINE</h1>
+      <p class="subtitle">MY EVENT SONG SELECTIONS • ${selectedSongsList.length} Songs</p>
+    </div>
+    
+    ${receptionSongs.length > 0 ? `
+    <div class="section">
+      <h2 class="section-title">RECEPTION SONGS (${receptionSongs.length})</h2>
+      <ul class="song-list">
+        ${receptionSongs.map(song => `
+          <li class="song-item">
+            <span class="song-title">${song.title}</span>
+            <span class="song-artist">— ${song.artist}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+    ` : ''}
+    
+    ${cocktailSongs.length > 0 ? `
+    <div class="section">
+      <h2 class="section-title">COCKTAIL/DINNER SONGS (${cocktailSongs.length})</h2>
+      <ul class="song-list">
+        ${cocktailSongs.map(song => `
+          <li class="song-item">
+            <span class="song-title">${song.title}</span>
+            <span class="song-artist">— ${song.artist}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+    ` : ''}
+    
+    <div class="footer">
+      <div class="watermark">
+        <p class="watermark-text">🎵 HARBORLINE 🎵</p>
+      </div>
+      <p class="footer-text">
+        Baltimore's Premier Event Band<br>
+        www.harborlinemusic.com
+      </p>
+    </div>
+  </div>
+  <script>window.print(); window.close();</script>
+</body>
+</html>`);
+    printWindow.document.close();
   };
 
   return (
@@ -194,10 +487,10 @@ const SongListPage = () => {
         subtitle="From Motown classics to today's hits—we've got your soundtrack covered"
       />
 
-      <section className="py-20 md:py-24">
+      <section className="py-8 md:py-12">
         <div className="container px-6 max-w-4xl mx-auto">
           {/* Search and Filter */}
-          <div className="mb-12 space-y-6">
+          <div className="mb-8 space-y-4">
             <div className="relative max-w-md mx-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
@@ -243,112 +536,144 @@ const SongListPage = () => {
             </div>
           </div>
 
-          {/* Song Count & Selection Info */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-            <p className="text-muted-foreground">
-              Showing {filteredSongs.length} of {songs.length} songs
-            </p>
-            {selectedSongs.size > 0 && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-primary font-medium">
-                  {selectedSongs.size} song{selectedSongs.size !== 1 ? "s" : ""} selected
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearSelection}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-4 h-4 mr-1" />
-                  Clear
-                </Button>
-                <Button
-                  variant="hero"
-                  size="sm"
-                  onClick={exportSelectedSongs}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Export List
-                </Button>
+          {/* Sticky Export Bar */}
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-4 border-b border-border mb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex items-center gap-4">
+                <p className="text-muted-foreground text-sm">
+                  {filteredSongs.length} of {songs.length} songs
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Click songs to select
+                </p>
               </div>
-            )}
+              
+              {selectedSongs.size > 0 ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-primary font-medium">
+                    {selectedSongs.size} selected
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-4 h-4 mr-1" />
+                    Clear
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="hero" size="sm">
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                        <ChevronDown className="w-4 h-4 ml-2" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={printList}>
+                        <File className="w-4 h-4 mr-2" />
+                        Print / Save as PDF
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={exportAsHtml}>
+                        <FileText className="w-4 h-4 mr-2" />
+                        Download HTML
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={exportAsTxt}>
+                        <FileText className="w-4 h-4 mr-2" />
+                        Download TXT
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={copyToClipboard}>
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy to Clipboard
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground">
+                  Select songs to export your list
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Instruction */}
-          <p className="text-center text-sm text-muted-foreground mb-6">
-            Click on songs to select them for your event, then export your list
-          </p>
-
-          {/* Song List */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-2"
+          {/* Scrollable Song List Container */}
+          <div 
+            ref={printRef}
+            className="h-[500px] overflow-y-auto rounded-lg border border-border bg-card/50 p-4"
           >
-            {filteredSongs.map((song, index) => {
-              const isSelected = selectedSongs.has(getSongKey(song));
-              return (
-                <motion.div
-                  key={getSongKey(song)}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, delay: index * 0.01 }}
-                  onClick={() => toggleSong(song)}
-                  className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-all ${
-                    isSelected
-                      ? "bg-primary/10 border-2 border-primary"
-                      : "bg-card border border-border hover:border-primary/50"
-                  }`}
-                >
-                  {/* Selection Indicator */}
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-2"
+            >
+              {filteredSongs.map((song, index) => {
+                const isSelected = selectedSongs.has(getSongKey(song));
+                return (
+                  <motion.div
+                    key={getSongKey(song)}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, delay: Math.min(index * 0.01, 0.5) }}
+                    onClick={() => toggleSong(song)}
+                    className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-all ${
                       isSelected
-                        ? "bg-primary text-primary-foreground"
-                        : "border-2 border-muted-foreground/30"
+                        ? "bg-primary/10 border-2 border-primary"
+                        : "bg-card border border-border hover:border-primary/50"
                     }`}
                   >
-                    {isSelected && <Check className="w-4 h-4" />}
-                  </div>
+                    {/* Selection Indicator */}
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : "border-2 border-muted-foreground/30"
+                      }`}
+                    >
+                      {isSelected && <Check className="w-4 h-4" />}
+                    </div>
 
-                  {/* Song Info */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-display text-base truncate">{song.title}</h3>
-                    <p className="text-sm text-muted-foreground truncate">{song.artist}</p>
-                  </div>
+                    {/* Song Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-display text-base truncate">{song.title}</h3>
+                      <p className="text-sm text-muted-foreground truncate">{song.artist}</p>
+                    </div>
 
-                  {/* Tags */}
-                  <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-                    <span className="text-xs px-2 py-1 bg-secondary/50 rounded-full text-muted-foreground">
-                      {song.genre}
-                    </span>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      song.category === "Reception" 
-                        ? "bg-primary/20 text-primary" 
-                        : "bg-accent/50 text-accent-foreground"
-                    }`}>
-                      {song.category === "Cocktail/Dinner" ? "Cocktail" : song.category}
-                    </span>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
+                    {/* Tags */}
+                    <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs px-2 py-1 bg-secondary/50 rounded-full text-muted-foreground">
+                        {song.genre}
+                      </span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        song.category === "Reception" 
+                          ? "bg-primary/20 text-primary" 
+                          : "bg-accent/50 text-accent-foreground"
+                      }`}>
+                        {song.category === "Cocktail/Dinner" ? "Cocktail" : song.category}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
 
-          {filteredSongs.length === 0 && (
-            <p className="text-center text-muted-foreground py-12">
-              No songs found. Try a different search or filter.
-            </p>
-          )}
+              {filteredSongs.length === 0 && (
+                <p className="text-center text-muted-foreground py-12">
+                  No songs found. Try a different search or filter.
+                </p>
+              )}
+            </motion.div>
+          </div>
 
+          {/* Request Song CTA */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mt-16 text-center p-8 bg-card border border-border rounded-lg"
+            className="mt-8 text-center p-6 bg-card border border-border rounded-lg"
           >
-            <h3 className="font-display text-2xl mb-3">DON'T SEE YOUR SONG?</h3>
-            <p className="text-muted-foreground mb-6">
+            <h3 className="font-display text-xl mb-2">DON'T SEE YOUR SONG?</h3>
+            <p className="text-muted-foreground text-sm mb-4">
               We learn new songs for our clients all the time. Let us know what you'd like to hear!
             </p>
             <a
