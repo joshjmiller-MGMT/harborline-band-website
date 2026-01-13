@@ -5,59 +5,117 @@ import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 
+const categories = ["All", "Reception", "Cocktail/Dinner"];
+
 const genres = [
   "All",
-  "Motown & Soul",
-  "Top 40",
-  "Rock Classics",
-  "Jazz & Standards",
-  "R&B & Funk",
-  "Country",
+  "Funk & Disco",
+  "Pop & Top 40",
+  "R&B & Soul",
+  "Rock & Alternative",
+  "Electronic & Dance",
+  "Reggae",
 ];
 
 const songs = [
-  { title: "September", artist: "Earth, Wind & Fire", genre: "R&B & Funk" },
-  { title: "Superstition", artist: "Stevie Wonder", genre: "Motown & Soul" },
-  { title: "Uptown Funk", artist: "Bruno Mars", genre: "Top 40" },
-  { title: "Don't Stop Believin'", artist: "Journey", genre: "Rock Classics" },
-  { title: "Signed, Sealed, Delivered", artist: "Stevie Wonder", genre: "Motown & Soul" },
-  { title: "Sweet Caroline", artist: "Neil Diamond", genre: "Rock Classics" },
-  { title: "Fly Me to the Moon", artist: "Frank Sinatra", genre: "Jazz & Standards" },
-  { title: "I Gotta Feeling", artist: "Black Eyed Peas", genre: "Top 40" },
-  { title: "Respect", artist: "Aretha Franklin", genre: "Motown & Soul" },
-  { title: "Livin' on a Prayer", artist: "Bon Jovi", genre: "Rock Classics" },
-  { title: "Sir Duke", artist: "Stevie Wonder", genre: "Motown & Soul" },
-  { title: "Wagon Wheel", artist: "Darius Rucker", genre: "Country" },
-  { title: "Shake It Off", artist: "Taylor Swift", genre: "Top 40" },
-  { title: "My Girl", artist: "The Temptations", genre: "Motown & Soul" },
-  { title: "The Way You Look Tonight", artist: "Frank Sinatra", genre: "Jazz & Standards" },
-  { title: "Crazy in Love", artist: "Beyoncé", genre: "R&B & Funk" },
-  { title: "Brown Eyed Girl", artist: "Van Morrison", genre: "Rock Classics" },
-  { title: "Can't Stop the Feeling", artist: "Justin Timberlake", genre: "Top 40" },
-  { title: "Get Lucky", artist: "Daft Punk", genre: "R&B & Funk" },
-  { title: "I Want You Back", artist: "Jackson 5", genre: "Motown & Soul" },
-  { title: "Dancing Queen", artist: "ABBA", genre: "Rock Classics" },
-  { title: "At Last", artist: "Etta James", genre: "Jazz & Standards" },
-  { title: "Happy", artist: "Pharrell Williams", genre: "Top 40" },
-  { title: "Le Freak", artist: "Chic", genre: "R&B & Funk" },
-  { title: "Ain't No Mountain High Enough", artist: "Marvin Gaye", genre: "Motown & Soul" },
-  { title: "Tennessee Whiskey", artist: "Chris Stapleton", genre: "Country" },
-  { title: "Boogie Wonderland", artist: "Earth, Wind & Fire", genre: "R&B & Funk" },
-  { title: "L-O-V-E", artist: "Nat King Cole", genre: "Jazz & Standards" },
-  { title: "Treasure", artist: "Bruno Mars", genre: "Top 40" },
-  { title: "Brick House", artist: "The Commodores", genre: "R&B & Funk" },
+  // RECEPTION MUSIC
+  { title: "Dancing Queen", artist: "ABBA", genre: "Funk & Disco", category: "Reception" },
+  { title: "Gimme! Gimme! Gimme! (A Man After Midnight)", artist: "ABBA", genre: "Funk & Disco", category: "Reception" },
+  { title: "Break My Soul", artist: "Beyoncé", genre: "Pop & Top 40", category: "Reception" },
+  { title: "Crazy in Love", artist: "Beyoncé", genre: "R&B & Soul", category: "Reception" },
+  { title: "Could You Be Loved", artist: "Bob Marley", genre: "Reggae", category: "Reception" },
+  { title: "My Prerogative", artist: "Bobby Brown", genre: "R&B & Soul", category: "Reception" },
+  { title: "Everytime We Touch", artist: "Cascada", genre: "Electronic & Dance", category: "Reception" },
+  { title: "360", artist: "Charli XCX", genre: "Pop & Top 40", category: "Reception" },
+  { title: "Move On Up", artist: "Curtis Mayfield", genre: "R&B & Soul", category: "Reception" },
+  { title: "Money for Nothing", artist: "Dire Straits", genre: "Rock & Alternative", category: "Reception" },
+  { title: "Latch", artist: "Disclosure ft. Sam Smith", genre: "Electronic & Dance", category: "Reception" },
+  { title: "Dance the Night", artist: "Dua Lipa", genre: "Pop & Top 40", category: "Reception" },
+  { title: "Levitating", artist: "Dua Lipa", genre: "Pop & Top 40", category: "Reception" },
+  { title: "September", artist: "Earth, Wind & Fire", genre: "Funk & Disco", category: "Reception" },
+  { title: "Low", artist: "Flo Rida", genre: "Pop & Top 40", category: "Reception" },
+  { title: "Hydra", artist: "Grover Washington Jr.", genre: "R&B & Soul", category: "Reception" },
+  { title: "Get Up Offa That Thing", artist: "James Brown", genre: "Funk & Disco", category: "Reception" },
+  { title: "Papa's Got a Brand New Bag", artist: "James Brown", genre: "Funk & Disco", category: "Reception" },
+  { title: "Canned Heat", artist: "Jamiroquai", genre: "Funk & Disco", category: "Reception" },
+  { title: "Cosmic Girl", artist: "Jamiroquai", genre: "Funk & Disco", category: "Reception" },
+  { title: "Move Your Feet", artist: "Junior Senior", genre: "Electronic & Dance", category: "Reception" },
+  { title: "Boogie Shoes", artist: "KC & The Sunshine Band", genre: "Funk & Disco", category: "Reception" },
+  { title: "That's the Way (I Like It)", artist: "KC & The Sunshine Band", genre: "Funk & Disco", category: "Reception" },
+  { title: "Never Too Much", artist: "Luther Vandross", genre: "R&B & Soul", category: "Reception" },
+  { title: "Unwritten", artist: "Natasha Bedingfield", genre: "Pop & Top 40", category: "Reception" },
+  { title: "Starships", artist: "Nicki Minaj", genre: "Pop & Top 40", category: "Reception" },
+  { title: "Lil Boo Thang", artist: "Paul Russell", genre: "Pop & Top 40", category: "Reception" },
+  { title: "Another Brick in the Wall (Part 2)", artist: "Pink Floyd", genre: "Rock & Alternative", category: "Reception" },
+  { title: "Fireball", artist: "Pitbull", genre: "Pop & Top 40", category: "Reception" },
+  { title: "Give Me Everything", artist: "Pitbull", genre: "Pop & Top 40", category: "Reception" },
+  { title: "Give It to Me Baby", artist: "Rick James", genre: "Funk & Disco", category: "Reception" },
+  { title: "Murder on the Dance Floor", artist: "Sophie Ellis-Bextor", genre: "Electronic & Dance", category: "Reception" },
+  { title: "Higher Ground", artist: "Stevie Wonder", genre: "Funk & Disco", category: "Reception" },
+  { title: "I Wish", artist: "Stevie Wonder", genre: "Funk & Disco", category: "Reception" },
+  { title: "Signed, Sealed, Delivered", artist: "Stevie Wonder", genre: "R&B & Soul", category: "Reception" },
+  { title: "Superstition", artist: "Stevie Wonder", genre: "Funk & Disco", category: "Reception" },
+  { title: "Jump On It (Apache)", artist: "Sugarhill Gang", genre: "Funk & Disco", category: "Reception" },
+  { title: "Brick House", artist: "The Commodores", genre: "Funk & Disco", category: "Reception" },
+  { title: "Best of My Love", artist: "The Emotions", genre: "R&B & Soul", category: "Reception" },
+  { title: "Message in a Bottle", artist: "The Police", genre: "Rock & Alternative", category: "Reception" },
+  { title: "Roxanne", artist: "The Police", genre: "Rock & Alternative", category: "Reception" },
+  { title: "Disco Inferno", artist: "The Trammps", genre: "Funk & Disco", category: "Reception" },
+  { title: "Blinding Lights", artist: "The Weeknd", genre: "Pop & Top 40", category: "Reception" },
+  { title: "Do It", artist: "Tuxedo", genre: "Funk & Disco", category: "Reception" },
+  { title: "Heads Will Roll (A-Trak Remix)", artist: "Yeah Yeah Yeahs", genre: "Electronic & Dance", category: "Reception" },
+  { title: "Remedy", artist: "Zedd", genre: "Electronic & Dance", category: "Reception" },
+
+  // COCKTAIL/DINNER MUSIC
+  { title: "Let's Stay Together", artist: "Al Green", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Valerie", artist: "Amy Winehouse", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Know You Now", artist: "Amy Winehouse", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "You Know I'm No Good", artist: "Amy Winehouse", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Positions", artist: "Ariana Grande", genre: "Pop & Top 40", category: "Cocktail/Dinner" },
+  { title: "We Can't Be Friends (Wait for Your Love)", artist: "Ariana Grande", genre: "Pop & Top 40", category: "Cocktail/Dinner" },
+  { title: "Drunk in Love", artist: "Beyoncé", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Ain't No Sunshine", artist: "Bill Withers", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "What You Won't Do for Love", artist: "Bobby Caldwell", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "End of the Road", artist: "Boyz II Men", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Attention", artist: "Charlie Puth", genre: "Pop & Top 40", category: "Cocktail/Dinner" },
+  { title: "Spanish Joint", artist: "D'Angelo", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Feel Like Makin' Love", artist: "D'Angelo", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Can't Hide Love", artist: "Earth, Wind & Fire", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Pony", artist: "Ginuwine", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Somebody That I Used to Know", artist: "Gotye ft. Kimbra", genre: "Pop & Top 40", category: "Cocktail/Dinner" },
+  { title: "Carried Away", artist: "H.E.R.", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Papa Don't Take No Mess", artist: "James Brown", genre: "Funk & Disco", category: "Cocktail/Dinner" },
+  { title: "I Keep Forgettin'", artist: "Michael McDonald", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Pretty Brown Eyes", artist: "Mint Condition", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Everybody Loves the Sunshine", artist: "Roy Ayers", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Nothing Can Come Between Us", artist: "Sade", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Kiss of Life", artist: "Sade", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Home at Last", artist: "Steely Dan", genre: "Rock & Alternative", category: "Cocktail/Dinner" },
+  { title: "Glamour Profession", artist: "Steely Dan", genre: "Rock & Alternative", category: "Cocktail/Dinner" },
+  { title: "Everybody Wants to Rule the World", artist: "Tears for Fears", genre: "Pop & Top 40", category: "Cocktail/Dinner" },
+  { title: "Lose Control", artist: "Teddy Swims", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "Can We Talk", artist: "Tevin Campbell", genre: "R&B & Soul", category: "Cocktail/Dinner" },
+  { title: "What a Fool Believes", artist: "The Doobie Brothers", genre: "Rock & Alternative", category: "Cocktail/Dinner" },
+  { title: "Minute by Minute", artist: "The Doobie Brothers", genre: "Rock & Alternative", category: "Cocktail/Dinner" },
+  { title: "Out of Time", artist: "The Weeknd", genre: "Pop & Top 40", category: "Cocktail/Dinner" },
+  { title: "Georgy Porgy", artist: "Toto", genre: "Rock & Alternative", category: "Cocktail/Dinner" },
+  { title: "Give Me One Reason", artist: "Tracy Chapman", genre: "Rock & Alternative", category: "Cocktail/Dinner" },
+  { title: "Middle", artist: "Zedd", genre: "Electronic & Dance", category: "Cocktail/Dinner" },
+  { title: "Stay", artist: "Zedd", genre: "Electronic & Dance", category: "Cocktail/Dinner" },
 ];
 
 const SongListPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeGenre, setActiveGenre] = useState("All");
+  const [activeCategory, setActiveCategory] = useState("All");
 
   const filteredSongs = songs.filter((song) => {
     const matchesSearch =
       song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       song.artist.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGenre = activeGenre === "All" || song.genre === activeGenre;
-    return matchesSearch && matchesGenre;
+    const matchesCategory = activeCategory === "All" || song.category === activeCategory;
+    return matchesSearch && matchesGenre && matchesCategory;
   });
 
   return (
@@ -86,6 +144,24 @@ const SongListPage = () => {
               />
             </div>
 
+            {/* Category Filter */}
+            <div className="flex justify-center gap-2 mb-4">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setActiveCategory(category)}
+                  className={`px-5 py-2.5 rounded-lg text-sm font-display tracking-wide transition-all ${
+                    activeCategory === category
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card border border-border text-muted-foreground hover:border-primary/50"
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+
+            {/* Genre Filter */}
             <div className="flex flex-wrap justify-center gap-2">
               {genres.map((genre) => (
                 <button
@@ -93,8 +169,8 @@ const SongListPage = () => {
                   onClick={() => setActiveGenre(genre)}
                   className={`px-4 py-2 rounded-full text-sm font-display tracking-wide transition-all ${
                     activeGenre === genre
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                      ? "bg-secondary text-foreground"
+                      : "bg-secondary/30 text-muted-foreground hover:bg-secondary/50"
                   }`}
                 >
                   {genre}
@@ -102,6 +178,11 @@ const SongListPage = () => {
               ))}
             </div>
           </div>
+
+          {/* Song Count */}
+          <p className="text-center text-muted-foreground mb-8">
+            Showing {filteredSongs.length} of {songs.length} songs
+          </p>
 
           {/* Song Grid */}
           <motion.div
@@ -117,9 +198,20 @@ const SongListPage = () => {
                 transition={{ duration: 0.3, delay: index * 0.02 }}
                 className="p-4 bg-card border border-border rounded-lg hover:border-primary/50 transition-colors"
               >
-                <h3 className="font-display text-lg">{song.title}</h3>
-                <p className="text-sm text-muted-foreground">{song.artist}</p>
-                <span className="inline-block mt-2 text-xs px-2 py-1 bg-secondary/50 rounded-full text-muted-foreground">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-display text-lg leading-tight">{song.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{song.artist}</p>
+                  </div>
+                  <span className={`shrink-0 text-xs px-2 py-1 rounded-full ${
+                    song.category === "Reception" 
+                      ? "bg-primary/20 text-primary" 
+                      : "bg-accent/50 text-accent-foreground"
+                  }`}>
+                    {song.category === "Cocktail/Dinner" ? "Cocktail" : song.category}
+                  </span>
+                </div>
+                <span className="inline-block mt-3 text-xs px-2 py-1 bg-secondary/50 rounded-full text-muted-foreground">
                   {song.genre}
                 </span>
               </motion.div>
