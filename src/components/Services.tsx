@@ -1,30 +1,35 @@
 import { motion } from "framer-motion";
-import { Music, Building2, Heart, Mic2, Users, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Music, Building2, Heart, Mic2, Users, Sparkles, ArrowRight } from "lucide-react";
 
 const services = [
   {
     icon: Building2,
     title: "Corporate Events",
     description:
-      "High-energy performances for conferences, galas, award ceremonies, and company celebrations that leave lasting impressions.",
+      "High-energy performances for conferences, galas, award ceremonies, and company celebrations.",
+    link: "/corporate",
   },
   {
     icon: Heart,
     title: "Weddings",
     description:
-      "From ceremony to reception, we create the perfect soundtrack for your special day with elegance and energy.",
+      "From ceremony to reception, we create the perfect soundtrack for your special day.",
+    link: "/weddings",
   },
   {
     icon: Mic2,
     title: "Private Parties",
     description:
-      "Birthdays, anniversaries, and exclusive gatherings brought to life with tailored setlists and professional production.",
+      "Birthdays, anniversaries, and exclusive gatherings brought to life with tailored setlists.",
+    link: "/private-parties",
   },
   {
     icon: Music,
-    title: "Live Productions",
+    title: "Galas & Fundraisers",
     description:
-      "Full-scale entertainment solutions with professional sound, lighting, and stage presence for any venue.",
+      "Sophisticated entertainment for charity events, galas, and prestigious gatherings.",
+    link: "/galas",
   },
 ];
 
@@ -72,22 +77,27 @@ const Services = () => {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {services.map((service, index) => (
-            <motion.div
-              key={service.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="group relative p-5 bg-secondary/30 border border-border rounded-lg hover:border-primary/50 hover:bg-secondary/50 transition-all duration-300"
-            >
-              <service.icon className="w-8 h-8 text-primary mb-4 group-hover:scale-110 transition-transform duration-300" />
-              <h3 className="font-display text-lg tracking-wide mb-2">
-                {service.title}
-              </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {service.description}
-              </p>
-            </motion.div>
+            <Link to={service.link} key={service.title}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="group relative h-full p-5 bg-secondary/30 border border-border rounded-lg hover:border-primary/50 hover:bg-secondary/50 transition-all duration-300"
+              >
+                <service.icon className="w-8 h-8 text-primary mb-4 group-hover:scale-110 transition-transform duration-300" />
+                <h3 className="font-display text-lg tracking-wide mb-2">
+                  {service.title}
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                  {service.description}
+                </p>
+                <div className="flex items-center gap-1 text-primary text-sm font-display tracking-wide opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <span>Learn More</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </motion.div>
+            </Link>
           ))}
         </div>
       </div>

@@ -1,5 +1,13 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import { ArrowRight, Music2, Headphones, Mic } from "lucide-react";
 import gallery1 from "@/assets/gallery-1.jpg";
+
+const highlights = [
+  { icon: Music2, text: "100+ Song Repertoire" },
+  { icon: Headphones, text: "Professional Sound" },
+  { icon: Mic, text: "Dynamic Vocalists" },
+];
 
 const About = () => {
   return (
@@ -23,7 +31,26 @@ const About = () => {
                 alt="Harborline band"
                 className="w-full aspect-[4/3] object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-background/20 to-transparent" />
+              
+              {/* Overlay highlights */}
+              <div className="absolute bottom-0 left-0 right-0 p-6">
+                <div className="flex flex-wrap gap-2">
+                  {highlights.map((item, index) => (
+                    <motion.div
+                      key={item.text}
+                      initial={{ opacity: 0, y: 10 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.4 + index * 0.1 }}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm border border-border rounded-full text-xs"
+                    >
+                      <item.icon className="w-3.5 h-3.5 text-primary" />
+                      <span>{item.text}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
             </div>
             {/* Decorative element */}
             <div className="absolute -bottom-4 -right-4 w-32 h-32 border-2 border-primary/30 rounded-lg -z-10" />
@@ -56,6 +83,14 @@ const About = () => {
                 the last encore.
               </p>
             </div>
+
+            <Link 
+              to="/songs" 
+              className="inline-flex items-center gap-2 mt-6 text-primary font-display tracking-wide hover:gap-3 transition-all group"
+            >
+              <span>View Our Song List</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-6 mt-10 pt-10 border-t border-border">
