@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import heroBand from "@/assets/hero-band.jpg";
+import heroBand from "@/assets/band-hero.jpg";
+import logo from "@/assets/logo.png";
 
 const Hero = () => {
   return (
@@ -13,29 +14,33 @@ const Hero = () => {
           className="w-full h-full object-cover"
         />
         {/* Dark overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/60 to-background" />
-        <div className="absolute inset-0 bg-background/30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/70 to-background" />
+        <div className="absolute inset-0 bg-background/40" />
       </div>
 
       {/* Content */}
       <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="mb-6"
+        >
+          <img
+            src={logo}
+            alt="Harborline Logo"
+            className="w-48 md:w-64 lg:w-80 mx-auto"
+          />
+        </motion.div>
+
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
           className="text-primary font-display tracking-display text-lg md:text-xl mb-4"
         >
-          BALTIMORE'S PREMIER
+          BALTIMORE'S PREMIER EVENT BAND
         </motion.p>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="font-display text-7xl md:text-9xl lg:text-[10rem] tracking-tight leading-none mb-6"
-        >
-          HARBORLINE
-        </motion.h1>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -43,8 +48,8 @@ const Hero = () => {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto mb-10 font-light"
         >
-          Event & Corporate Music Group bringing unforgettable live 
-          entertainment to galas, weddings, and private celebrations.
+          Bringing unforgettable live entertainment to galas, weddings, 
+          corporate events, and private celebrations across Maryland and beyond.
         </motion.p>
 
         <motion.div
@@ -54,10 +59,10 @@ const Hero = () => {
           className="flex flex-col sm:flex-row gap-4 justify-center"
         >
           <Button variant="hero" size="xl" asChild>
-            <a href="#contact">Book Now</a>
+            <a href="#contact">Book Your Event</a>
           </Button>
           <Button variant="heroOutline" size="xl" asChild>
-            <a href="#services">Our Services</a>
+            <a href="#gallery">See Us Live</a>
           </Button>
         </motion.div>
       </div>
