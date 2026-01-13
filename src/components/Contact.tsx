@@ -35,11 +35,11 @@ const Contact = () => {
           {/* Contact Info */}
           <div className="flex flex-col md:flex-row gap-8 md:gap-16 text-center">
             <a
-              href="mailto:info@harborline.com"
+              href="mailto:josh@baltimoresound.net"
               className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors group"
             >
               <Mail className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              <span>info@harborline.com</span>
+              <span>josh@baltimoresound.net</span>
             </a>
             <a
               href="tel:+14105551234"
@@ -56,7 +56,7 @@ const Contact = () => {
 
           {/* CTA Button */}
           <Button variant="hero" size="xl" className="mt-4" asChild>
-            <a href="mailto:info@harborline.com">Request Availability</a>
+            <a href="mailto:josh@baltimoresound.net">Request Availability</a>
           </Button>
         </motion.div>
       </div>
