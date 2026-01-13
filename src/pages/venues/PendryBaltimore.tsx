@@ -1,4 +1,6 @@
 import VenuePage from "@/components/VenuePage";
+import pendry1 from "@/assets/venues/pendry-1.jpg";
+import pendry2 from "@/assets/venues/pendry-2.jpg";
 
 const PendryBaltimorePage = () => {
   return (
@@ -29,6 +31,10 @@ const PendryBaltimorePage = () => {
         { name: "George Peabody Library", slug: "george-peabody-library" },
         { name: "The Belvedere", slug: "the-belvedere" },
         { name: "American Visionary Art Museum", slug: "american-visionary-art-museum" }
+      ]}
+      images={[
+        { src: pendry1, alt: "The Pendry Baltimore elegant ballroom with arched ceilings and harbor views" },
+        { src: pendry2, alt: "The Pendry Baltimore waterfront pier wedding ceremony at sunset" }
       ]}
     />
   );

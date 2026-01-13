@@ -1,4 +1,6 @@
 import VenuePage from "@/components/VenuePage";
+import boRailroad1 from "@/assets/venues/bo-railroad-1.jpg";
+import boRailroad2 from "@/assets/venues/bo-railroad-2.jpg";
 
 const BORailroadMuseumPage = () => {
   return (
@@ -29,6 +31,10 @@ const BORailroadMuseumPage = () => {
         { name: "The Belvedere", slug: "the-belvedere" },
         { name: "Four Seasons Baltimore", slug: "four-seasons-baltimore" },
         { name: "The Pendry Baltimore", slug: "pendry-baltimore" }
+      ]}
+      images={[
+        { src: boRailroad1, alt: "B&O Railroad Museum historic hall with vintage locomotives and wedding reception" },
+        { src: boRailroad2, alt: "B&O Railroad Museum roundhouse with domed ceiling and elegant event setup" }
       ]}
     />
   );

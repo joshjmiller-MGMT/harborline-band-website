@@ -1,4 +1,6 @@
 import VenuePage from "@/components/VenuePage";
+import cylburn1 from "@/assets/venues/cylburn-1.jpg";
+import cylburn2 from "@/assets/venues/cylburn-2.jpg";
 
 const CylburnArboretumPage = () => {
   return (
@@ -29,6 +31,10 @@ const CylburnArboretumPage = () => {
         { name: "The Belvedere", slug: "the-belvedere" },
         { name: "George Peabody Library", slug: "george-peabody-library" },
         { name: "Cloisters Castle", slug: "cloisters-castle" }
+      ]}
+      images={[
+        { src: cylburn1, alt: "Cylburn Arboretum garden wedding ceremony with greenhouse and flowering gardens" },
+        { src: cylburn2, alt: "Cylburn Arboretum Victorian mansion with fountain and tented reception" }
       ]}
     />
   );

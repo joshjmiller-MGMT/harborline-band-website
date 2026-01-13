@@ -3,7 +3,8 @@ import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { MapPin, Music, Heart, Users, CheckCircle, Star, Building2 } from "lucide-react";
+import { MapPin, Music, Heart, Users, CheckCircle, Star, Building2, Camera } from "lucide-react";
+import { useState } from "react";
 
 interface VenuePageProps {
   venueName: string;
@@ -14,6 +15,7 @@ interface VenuePageProps {
   capacity?: string;
   highlights: string[];
   nearbyVenues: { name: string; slug: string }[];
+  images?: { src: string; alt: string }[];
 }
 
 const VenuePage = ({ 
@@ -24,8 +26,10 @@ const VenuePage = ({
   features,
   capacity,
   highlights,
-  nearbyVenues 
+  nearbyVenues,
+  images = []
 }: VenuePageProps) => {
+  const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const slug = venueName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   
   const venueSchema = {
@@ -88,8 +92,60 @@ const VenuePage = ({
                 <h2 className="font-display text-3xl md:text-4xl tracking-tight mb-4">
                   HARBORLINE AT <span className="text-gradient-gold">{venueName.toUpperCase()}</span>
                 </h2>
-                <p className="text-muted-foreground text-lg">{description}</p>
+                <p className="text-muted-foreground text-lg mb-6">{description}</p>
+                
+                {/* Image Gallery */}
+                {images.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="font-display text-xl flex items-center gap-2">
+                      <Camera className="w-5 h-5 text-primary" />
+                      VENUE GALLERY
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {images.map((image, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: index * 0.1 }}
+                          className="relative aspect-[4/3] overflow-hidden rounded-lg cursor-pointer group"
+                          onClick={() => setSelectedImage(index)}
+                        >
+                          <img
+                            src={image.src}
+                            alt={image.alt}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Lightbox */}
+              {selectedImage !== null && images.length > 0 && (
+                <div 
+                  className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+                  onClick={() => setSelectedImage(null)}
+                >
+                  <motion.img
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    src={images[selectedImage].src}
+                    alt={images[selectedImage].alt}
+                    className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                  />
+                  <button
+                    className="absolute top-4 right-4 text-white/80 hover:text-white text-4xl"
+                    onClick={() => setSelectedImage(null)}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
 
               {/* Why We Love This Venue */}
               <div className="bg-card border border-border rounded-lg p-6">

@@ -1,4 +1,6 @@
 import VenuePage from "@/components/VenuePage";
+import pendry1 from "@/assets/venues/pendry-1.jpg";
+import pendry2 from "@/assets/venues/pendry-2.jpg";
 
 const SagamorePendryPage = () => {
   return (
@@ -29,6 +31,10 @@ const SagamorePendryPage = () => {
         { name: "George Peabody Library", slug: "george-peabody-library" },
         { name: "Four Seasons Baltimore", slug: "four-seasons-baltimore" },
         { name: "The Belvedere", slug: "the-belvedere" }
+      ]}
+      images={[
+        { src: pendry1, alt: "Sagamore Pendry elegant ballroom with French Revival architecture" },
+        { src: pendry2, alt: "Sagamore Pendry waterfront pier ceremony at golden hour" }
       ]}
     />
   );

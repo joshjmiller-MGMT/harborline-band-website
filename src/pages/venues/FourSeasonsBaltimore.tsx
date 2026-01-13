@@ -1,4 +1,6 @@
 import VenuePage from "@/components/VenuePage";
+import fourSeasons1 from "@/assets/venues/four-seasons-1.jpg";
+import fourSeasons2 from "@/assets/venues/four-seasons-2.jpg";
 
 const FourSeasonsBaltimorePage = () => {
   return (
@@ -29,6 +31,10 @@ const FourSeasonsBaltimorePage = () => {
         { name: "Sagamore Pendry", slug: "sagamore-pendry" },
         { name: "American Visionary Art Museum", slug: "american-visionary-art-museum" },
         { name: "Legg Mason Tower", slug: "legg-mason-tower" }
+      ]}
+      images={[
+        { src: fourSeasons1, alt: "Four Seasons Baltimore ballroom with crystal chandeliers and harbor views" },
+        { src: fourSeasons2, alt: "Four Seasons Baltimore waterfront terrace ceremony at sunset" }
       ]}
     />
   );

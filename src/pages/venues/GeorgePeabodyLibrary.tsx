@@ -1,4 +1,6 @@
 import VenuePage from "@/components/VenuePage";
+import peabody1 from "@/assets/venues/peabody-1.jpg";
+import peabody2 from "@/assets/venues/peabody-2.jpg";
 
 const GeorgePeabodyLibraryPage = () => {
   return (
@@ -29,6 +31,10 @@ const GeorgePeabodyLibraryPage = () => {
         { name: "The Pendry Baltimore", slug: "pendry-baltimore" },
         { name: "Evergreen Museum", slug: "evergreen-museum" },
         { name: "American Visionary Art Museum", slug: "american-visionary-art-museum" }
+      ]}
+      images={[
+        { src: peabody1, alt: "George Peabody Library grand atrium with ornate balconies and wedding reception" },
+        { src: peabody2, alt: "George Peabody Library wedding ceremony with marble floors and book-lined walls" }
       ]}
     />
   );
