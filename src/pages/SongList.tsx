@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
+import logoBlack from "@/assets/logo-black.png";
 
 const categories = ["All", "Reception", "Cocktail/Dinner"];
 
@@ -370,7 +371,7 @@ www.harborlinemusic.com`;
           resolve(canvas.toDataURL("image/png"));
         };
         img.onerror = () => resolve("");
-        img.src = logo;
+        img.src = logoBlack;
       });
     };
 
