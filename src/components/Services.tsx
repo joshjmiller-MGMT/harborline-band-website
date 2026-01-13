@@ -36,24 +36,24 @@ const features = [
 
 const Services = () => {
   return (
-    <section id="services" className="py-24 md:py-32 bg-card">
-      <div className="container px-6 max-w-6xl mx-auto">
+    <section id="services" className="py-20 md:py-24 bg-card">
+      <div className="container px-6 max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="text-center mb-12"
         >
           <p className="text-primary font-display tracking-display text-sm mb-3">
             WHAT WE DO
           </p>
-          <h2 className="font-display text-5xl md:text-7xl tracking-tight mb-6">
+          <h2 className="font-display text-4xl md:text-5xl tracking-tight mb-4">
             OUR SERVICES
           </h2>
           
           {/* Feature pills */}
-          <div className="flex flex-wrap justify-center gap-3 mt-8">
+          <div className="flex flex-wrap justify-center gap-2 mt-6">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.text}
@@ -61,37 +61,32 @@ const Services = () => {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: 0.3 + index * 0.1 }}
-                className="flex items-center gap-2 px-4 py-2 bg-secondary/50 border border-border rounded-full text-sm text-muted-foreground"
+                className="flex items-center gap-2 px-3 py-1.5 bg-secondary/50 border border-border rounded-full text-xs text-muted-foreground"
               >
-                <feature.icon className="w-4 h-4 text-primary" />
+                <feature.icon className="w-3.5 h-3.5 text-primary" />
                 <span>{feature.text}</span>
               </motion.div>
             ))}
           </div>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {services.map((service, index) => (
             <motion.div
               key={service.title}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              className="group relative p-8 md:p-10 bg-secondary/50 border border-border rounded-lg hover:border-primary/50 transition-all duration-500 overflow-hidden"
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              className="group relative p-5 bg-secondary/30 border border-border rounded-lg hover:border-primary/50 hover:bg-secondary/50 transition-all duration-300"
             >
-              {/* Hover glow effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
-              <div className="relative">
-                <service.icon className="w-10 h-10 text-primary mb-6 group-hover:scale-110 transition-transform duration-300" />
-                <h3 className="font-display text-2xl md:text-3xl tracking-wide mb-4">
-                  {service.title}
-                </h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  {service.description}
-                </p>
-              </div>
+              <service.icon className="w-8 h-8 text-primary mb-4 group-hover:scale-110 transition-transform duration-300" />
+              <h3 className="font-display text-lg tracking-wide mb-2">
+                {service.title}
+              </h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {service.description}
+              </p>
             </motion.div>
           ))}
         </div>
