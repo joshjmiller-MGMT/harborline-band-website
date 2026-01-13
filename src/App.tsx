@@ -10,15 +10,19 @@ import AboutPage from "./pages/About";
 import FAQPage from "./pages/FAQ";
 import SongListPage from "./pages/SongList";
 
-// Service Pages
+// Occasion Pages
 import WeddingsPage from "./pages/services/Weddings";
 import CorporatePage from "./pages/services/Corporate";
 import GalasPage from "./pages/services/Galas";
 import PrivatePartiesPage from "./pages/services/PrivateParties";
-import BirthdayPartiesPage from "./pages/services/BirthdayParties";
-import HolidayPartiesPage from "./pages/services/HolidayParties";
-import AnniversariesPage from "./pages/services/Anniversaries";
-import BreweryEventsPage from "./pages/services/BreweryEvents";
+
+// Ensemble Pages
+import FullBandPage from "./pages/ensembles/FullBand";
+import JazzQuartetPage from "./pages/ensembles/JazzQuartet";
+import PianoTrioPage from "./pages/ensembles/PianoTrio";
+import AcousticDuoPage from "./pages/ensembles/AcousticDuo";
+import StringEnsemblePage from "./pages/ensembles/StringEnsemble";
+import SoloPerformerPage from "./pages/ensembles/SoloPerformer";
 
 // Location Pages
 import BaltimorePage from "./pages/locations/Baltimore";
@@ -59,15 +63,19 @@ const App = () => (
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/songs" element={<SongListPage />} />
             
-            {/* Service Routes */}
+            {/* Occasion Routes */}
             <Route path="/weddings" element={<WeddingsPage />} />
             <Route path="/corporate" element={<CorporatePage />} />
             <Route path="/galas" element={<GalasPage />} />
             <Route path="/private-parties" element={<PrivatePartiesPage />} />
-            <Route path="/birthday-parties" element={<BirthdayPartiesPage />} />
-            <Route path="/holiday-parties" element={<HolidayPartiesPage />} />
-            <Route path="/anniversaries" element={<AnniversariesPage />} />
-            <Route path="/brewery-events" element={<BreweryEventsPage />} />
+            
+            {/* Ensemble Routes */}
+            <Route path="/ensembles/full-band" element={<FullBandPage />} />
+            <Route path="/ensembles/jazz-quartet" element={<JazzQuartetPage />} />
+            <Route path="/ensembles/piano-trio" element={<PianoTrioPage />} />
+            <Route path="/ensembles/acoustic-duo" element={<AcousticDuoPage />} />
+            <Route path="/ensembles/string-ensemble" element={<StringEnsemblePage />} />
+            <Route path="/ensembles/solo-performer" element={<SoloPerformerPage />} />
             
             {/* Location Routes */}
             <Route path="/locations/baltimore" element={<BaltimorePage />} />

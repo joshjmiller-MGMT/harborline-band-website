@@ -2,18 +2,25 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ChevronDown, Music, MapPin, Building2, PartyPopper, Briefcase, Gift, Cake, Snowflake, Heart, Beer } from "lucide-react";
+import { Menu, X, ChevronDown, Music, MapPin, Building2, Users, Mic2, Piano, Guitar, Music2, User, Heart, Briefcase, PartyPopper, Gift } from "lucide-react";
 import logo from "@/assets/logo.png";
 
-const serviceLinks = [
-  { name: "Weddings", href: "/weddings", icon: Heart, description: "Your perfect wedding soundtrack" },
-  { name: "Corporate Events", href: "/corporate", icon: Briefcase, description: "Professional entertainment" },
-  { name: "Galas & Fundraisers", href: "/galas", icon: PartyPopper, description: "Elegant affairs" },
-  { name: "Private Parties", href: "/private-parties", icon: Gift, description: "Celebrate in style" },
-  { name: "Birthday Parties", href: "/birthday-parties", icon: Cake, description: "Make it memorable" },
-  { name: "Holiday Parties", href: "/holiday-parties", icon: Snowflake, description: "Seasonal celebrations" },
-  { name: "Anniversaries", href: "/anniversaries", icon: Heart, description: "Milestone moments" },
-  { name: "Brewery Events", href: "/brewery-events", icon: Beer, description: "Craft & music" },
+// Ensemble configurations - how the band can be sized
+const ensembleLinks = [
+  { name: "The Full Band", href: "/ensembles/full-band", icon: Users, description: "8-12 piece high-energy" },
+  { name: "Jazz Quartet", href: "/ensembles/jazz-quartet", icon: Mic2, description: "Sophisticated swing" },
+  { name: "Piano Trio", href: "/ensembles/piano-trio", icon: Piano, description: "Elegant & intimate" },
+  { name: "Acoustic Duo", href: "/ensembles/acoustic-duo", icon: Guitar, description: "Stripped-down soul" },
+  { name: "String Ensemble", href: "/ensembles/string-ensemble", icon: Music2, description: "Classical beauty" },
+  { name: "Solo Performer", href: "/ensembles/solo-performer", icon: User, description: "Piano, guitar, or voice" },
+];
+
+// Occasions - what events we cover
+const occasionLinks = [
+  { name: "Weddings", href: "/weddings", icon: Heart, description: "Ceremony to reception" },
+  { name: "Corporate Events", href: "/corporate", icon: Briefcase, description: "Galas & conferences" },
+  { name: "Private Parties", href: "/private-parties", icon: PartyPopper, description: "Celebrations of all kinds" },
+  { name: "Special Occasions", href: "/galas", icon: Gift, description: "Fundraisers & milestones" },
 ];
 
 const locationLinks = [
@@ -86,19 +93,19 @@ const Header = () => {
 
           {/* Desktop Nav */}
           <div className="hidden lg:flex items-center gap-1">
-            {/* Services Dropdown */}
+            {/* Ensembles Dropdown */}
             <div 
               className="relative"
-              onMouseEnter={() => handleMenuEnter('services')}
+              onMouseEnter={() => handleMenuEnter('ensembles')}
               onMouseLeave={handleMenuLeave}
             >
               <button className="flex items-center gap-1 px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors">
-                Services
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${activeMenu === 'services' ? 'rotate-180' : ''}`} />
+                Ensembles
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${activeMenu === 'ensembles' ? 'rotate-180' : ''}`} />
               </button>
               
               <AnimatePresence>
-                {activeMenu === 'services' && (
+                {activeMenu === 'ensembles' && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -106,9 +113,61 @@ const Header = () => {
                     transition={{ duration: 0.2 }}
                     className="absolute top-full left-0 pt-2 z-50"
                   >
-                    <div className="bg-card border border-border rounded-xl shadow-2xl p-6 min-w-[480px]">
+                    <div className="bg-card border border-border rounded-xl shadow-2xl p-6 min-w-[520px]">
+                      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
+                        <Music className="w-5 h-5 text-primary" />
+                        <span className="font-display text-sm text-foreground">Band Configurations</span>
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
-                        {serviceLinks.map((link) => (
+                        {ensembleLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                              <link.icon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <span className="font-display text-sm text-foreground block">{link.name}</span>
+                              <span className="text-xs text-muted-foreground">{link.description}</span>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Occasions Dropdown */}
+            <div 
+              className="relative"
+              onMouseEnter={() => handleMenuEnter('occasions')}
+              onMouseLeave={handleMenuLeave}
+            >
+              <button className="flex items-center gap-1 px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors">
+                Occasions
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${activeMenu === 'occasions' ? 'rotate-180' : ''}`} />
+              </button>
+              
+              <AnimatePresence>
+                {activeMenu === 'occasions' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute top-full left-0 pt-2 z-50"
+                  >
+                    <div className="bg-card border border-border rounded-xl shadow-2xl p-6 min-w-[320px]">
+                      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
+                        <PartyPopper className="w-5 h-5 text-primary" />
+                        <span className="font-display text-sm text-foreground">Event Types</span>
+                      </div>
+                      <div className="space-y-1">
+                        {occasionLinks.map((link) => (
                           <Link
                             key={link.href}
                             to={link.href}
@@ -259,24 +318,57 @@ const Header = () => {
               className="lg:hidden pb-6 overflow-hidden"
             >
               <div className="flex flex-col gap-2 bg-card rounded-xl p-4 border border-border">
-                {/* Mobile Services */}
+                {/* Mobile Ensembles */}
                 <div>
                   <button
-                    onClick={() => toggleMobileMenu('services')}
+                    onClick={() => toggleMobileMenu('ensembles')}
                     className="flex items-center justify-between w-full py-3 font-display tracking-wide-custom text-lg text-foreground"
                   >
-                    Services
-                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${mobileExpandedMenu === 'services' ? 'rotate-180' : ''}`} />
+                    Ensembles
+                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${mobileExpandedMenu === 'ensembles' ? 'rotate-180' : ''}`} />
                   </button>
                   <AnimatePresence>
-                    {mobileExpandedMenu === 'services' && (
+                    {mobileExpandedMenu === 'ensembles' && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         className="pl-4 overflow-hidden"
                       >
-                        {serviceLinks.map((link) => (
+                        {ensembleLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="flex items-center gap-3 py-2 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <link.icon className="w-4 h-4" />
+                            {link.name}
+                          </Link>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Mobile Occasions */}
+                <div>
+                  <button
+                    onClick={() => toggleMobileMenu('occasions')}
+                    className="flex items-center justify-between w-full py-3 font-display tracking-wide-custom text-lg text-foreground"
+                  >
+                    Occasions
+                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${mobileExpandedMenu === 'occasions' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {mobileExpandedMenu === 'occasions' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="pl-4 overflow-hidden"
+                      >
+                        {occasionLinks.map((link) => (
                           <Link
                             key={link.href}
                             to={link.href}
