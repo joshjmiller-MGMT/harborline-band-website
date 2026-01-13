@@ -143,7 +143,7 @@ const SongListPage = () => {
               We learn new songs for our clients all the time. Let us know what you'd like to hear!
             </p>
             <a
-              href="/contact"
+              href="/#contact"
               className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-display tracking-wide transition-colors"
             >
               Request a Song →

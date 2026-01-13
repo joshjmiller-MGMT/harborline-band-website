@@ -71,7 +71,7 @@ const PrivatePartiesPage = () => {
               From song requests to timing, we make it seamless.
             </p>
             <Button variant="hero" size="lg" asChild>
-              <a href="/contact">Start Planning</a>
+              <a href="/#contact">Start Planning</a>
             </Button>
           </motion.div>
         </div>

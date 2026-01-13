@@ -105,7 +105,7 @@ const LocationPage = ({ city, region, description, venues, nearbyAreas }: Locati
               )}
 
               <Button variant="hero" size="lg" asChild>
-                <a href="/contact">Book for Your {city} Event</a>
+                <a href="/#contact">Book for Your {city} Event</a>
               </Button>
             </motion.div>
 
