@@ -407,20 +407,12 @@ www.harborlinemusic.com`;
     .footer { 
       margin-top: 40px; 
       padding-top: 20px; 
-      border-top: 2px solid #8B7355;
       text-align: center;
     }
-    .footer-text { color: #666; font-size: 11px; }
-    .watermark {
-      text-align: center;
-      margin-top: 20px;
-      opacity: 0.6;
-    }
-    .watermark-text {
-      font-size: 18px;
-      font-weight: bold;
-      color: #8B7355;
-      letter-spacing: 3px;
+    .footer-logo {
+      width: 120px;
+      height: auto;
+      opacity: 0.7;
     }
   </style>
 </head>
@@ -460,13 +452,7 @@ www.harborlinemusic.com`;
     ` : ''}
     
     <div class="footer">
-      <div class="watermark">
-        <p class="watermark-text">🎵 HARBORLINE 🎵</p>
-      </div>
-      <p class="footer-text">
-        Baltimore's Premier Event Band<br>
-        www.harborlinemusic.com
-      </p>
+      <img src="${window.location.origin}/logo.png" alt="Harborline" class="footer-logo" onerror="this.style.display='none'">
     </div>
   </div>
   <script>window.print(); window.close();</script>
