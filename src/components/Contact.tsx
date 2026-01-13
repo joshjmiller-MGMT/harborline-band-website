@@ -32,8 +32,19 @@ const Contact = () => {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="flex flex-col items-center gap-8"
         >
+          {/* Monday.com Form Embed */}
+          <div className="w-full max-w-2xl rounded-lg overflow-hidden shadow-2xl">
+            <iframe 
+              src="https://forms.monday.com/forms/embed/cd9db9bdd36a0a870cc16f6d7cf06fda?r=use1" 
+              width="100%" 
+              height="500" 
+              style={{ border: 0 }}
+              title="Contact Form"
+            />
+          </div>
+
           {/* Contact Info */}
-          <div className="flex flex-col md:flex-row gap-8 md:gap-16 text-center">
+          <div className="flex flex-col md:flex-row gap-8 md:gap-16 text-center mt-4">
             <a
               href="mailto:josh@baltimoresound.net"
               className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors group"
@@ -53,11 +64,6 @@ const Contact = () => {
               <span>Baltimore, MD</span>
             </div>
           </div>
-
-          {/* CTA Button */}
-          <Button variant="hero" size="xl" className="mt-4" asChild>
-            <a href="mailto:josh@baltimoresound.net">Request Availability</a>
-          </Button>
         </motion.div>
       </div>
     </section>
