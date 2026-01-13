@@ -37,12 +37,26 @@ const locationLinks = [
   { name: "Eastern Shore", href: "/locations/eastern-shore" },
 ];
 
+const venueLinks = [
+  { name: "The Pendry Baltimore", href: "/venues/pendry-baltimore" },
+  { name: "Sagamore Pendry", href: "/venues/sagamore-pendry" },
+  { name: "George Peabody Library", href: "/venues/george-peabody-library" },
+  { name: "The Belvedere", href: "/venues/the-belvedere" },
+  { name: "Four Seasons Baltimore", href: "/venues/four-seasons-baltimore" },
+  { name: "American Visionary Art Museum", href: "/venues/american-visionary-art-museum" },
+  { name: "B&O Railroad Museum", href: "/venues/b-and-o-railroad-museum" },
+  { name: "Evergreen Museum", href: "/venues/evergreen-museum" },
+  { name: "Cylburn Arboretum", href: "/venues/cylburn-arboretum" },
+  { name: "Cloisters Castle", href: "/venues/cloisters-castle" },
+  { name: "Legg Mason Tower", href: "/venues/legg-mason-tower" },
+];
+
 const Footer = () => {
   return (
     <footer className="py-16 border-t border-border bg-card/50">
       <div className="container px-6 max-w-7xl mx-auto">
         {/* Main Footer Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-12">
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-1">
             <img src={logo} alt="Harborline" className="h-12 w-auto mb-4" />
@@ -87,6 +101,23 @@ const Footer = () => {
             <h4 className="font-display tracking-wide text-sm mb-4">LOCATIONS</h4>
             <ul className="space-y-2">
               {locationLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    to={link.href}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Venues Column */}
+          <div>
+            <h4 className="font-display tracking-wide text-sm mb-4">VENUES</h4>
+            <ul className="space-y-2">
+              {venueLinks.slice(0, 8).map((link) => (
                 <li key={link.href}>
                   <Link
                     to={link.href}
