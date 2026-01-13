@@ -1,20 +1,52 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown, Music, MapPin, Building2, PartyPopper, Briefcase, Gift, Cake, Snowflake, Heart, Beer } from "lucide-react";
 import logo from "@/assets/logo.png";
 
-const navLinks = [
-  { href: "/weddings", label: "Weddings" },
-  { href: "/corporate", label: "Corporate" },
-  { href: "/songs", label: "Songs" },
-  { href: "/about", label: "About" },
-  { href: "/faq", label: "FAQ" },
+const serviceLinks = [
+  { name: "Weddings", href: "/weddings", icon: Heart, description: "Your perfect wedding soundtrack" },
+  { name: "Corporate Events", href: "/corporate", icon: Briefcase, description: "Professional entertainment" },
+  { name: "Galas & Fundraisers", href: "/galas", icon: PartyPopper, description: "Elegant affairs" },
+  { name: "Private Parties", href: "/private-parties", icon: Gift, description: "Celebrate in style" },
+  { name: "Birthday Parties", href: "/birthday-parties", icon: Cake, description: "Make it memorable" },
+  { name: "Holiday Parties", href: "/holiday-parties", icon: Snowflake, description: "Seasonal celebrations" },
+  { name: "Anniversaries", href: "/anniversaries", icon: Heart, description: "Milestone moments" },
+  { name: "Brewery Events", href: "/brewery-events", icon: Beer, description: "Craft & music" },
+];
+
+const locationLinks = [
+  { name: "Baltimore", href: "/locations/baltimore" },
+  { name: "Washington DC", href: "/locations/washington-dc" },
+  { name: "Annapolis", href: "/locations/annapolis" },
+  { name: "Bethesda", href: "/locations/bethesda" },
+  { name: "Columbia", href: "/locations/columbia" },
+  { name: "Towson", href: "/locations/towson" },
+  { name: "Frederick", href: "/locations/frederick" },
+  { name: "Rockville", href: "/locations/rockville" },
+  { name: "Eastern Shore", href: "/locations/eastern-shore" },
+];
+
+const venueLinks = [
+  { name: "The Pendry Baltimore", href: "/venues/pendry-baltimore" },
+  { name: "Sagamore Pendry", href: "/venues/sagamore-pendry" },
+  { name: "George Peabody Library", href: "/venues/george-peabody-library" },
+  { name: "The Belvedere", href: "/venues/the-belvedere" },
+  { name: "Four Seasons Baltimore", href: "/venues/four-seasons-baltimore" },
+  { name: "American Visionary Art Museum", href: "/venues/american-visionary-art-museum" },
+  { name: "B&O Railroad Museum", href: "/venues/b-and-o-railroad-museum" },
+  { name: "Evergreen Museum", href: "/venues/evergreen-museum" },
+  { name: "Cylburn Arboretum", href: "/venues/cylburn-arboretum" },
+  { name: "Cloisters Castle", href: "/venues/cloisters-castle" },
+  { name: "Legg Mason Tower", href: "/venues/legg-mason-tower" },
 ];
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [mobileExpandedMenu, setMobileExpandedMenu] = useState<string | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,34 +56,186 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const handleMenuEnter = (menu: string) => {
+    setActiveMenu(menu);
+  };
+
+  const handleMenuLeave = () => {
+    setActiveMenu(null);
+  };
+
+  const toggleMobileMenu = (menu: string) => {
+    setMobileExpandedMenu(mobileExpandedMenu === menu ? null : menu);
+  };
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? "bg-background/90 backdrop-blur-md border-b border-border" : ""
+        isScrolled ? "bg-background/95 backdrop-blur-md border-b border-border" : "bg-background/80 backdrop-blur-sm"
       }`}
     >
       <div className="container px-6 mx-auto">
         <nav className="flex items-center justify-between h-20">
           {/* Logo */}
-          <a href="#" className="block">
+          <Link to="/" className="block">
             <img src={logo} alt="Harborline" className="h-12 w-auto" />
-          </a>
+          </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
-            <Button variant="hero" size="sm" asChild>
+          <div className="hidden lg:flex items-center gap-1">
+            {/* Services Dropdown */}
+            <div 
+              className="relative"
+              onMouseEnter={() => handleMenuEnter('services')}
+              onMouseLeave={handleMenuLeave}
+            >
+              <button className="flex items-center gap-1 px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors">
+                Services
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${activeMenu === 'services' ? 'rotate-180' : ''}`} />
+              </button>
+              
+              <AnimatePresence>
+                {activeMenu === 'services' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute top-full left-0 pt-2 z-50"
+                  >
+                    <div className="bg-card border border-border rounded-xl shadow-2xl p-6 min-w-[480px]">
+                      <div className="grid grid-cols-2 gap-2">
+                        {serviceLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                              <link.icon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <span className="font-display text-sm text-foreground block">{link.name}</span>
+                              <span className="text-xs text-muted-foreground">{link.description}</span>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Locations Dropdown */}
+            <div 
+              className="relative"
+              onMouseEnter={() => handleMenuEnter('locations')}
+              onMouseLeave={handleMenuLeave}
+            >
+              <button className="flex items-center gap-1 px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors">
+                Locations
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${activeMenu === 'locations' ? 'rotate-180' : ''}`} />
+              </button>
+              
+              <AnimatePresence>
+                {activeMenu === 'locations' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute top-full left-0 pt-2 z-50"
+                  >
+                    <div className="bg-card border border-border rounded-xl shadow-2xl p-6 min-w-[280px]">
+                      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
+                        <MapPin className="w-5 h-5 text-primary" />
+                        <span className="font-display text-sm text-foreground">Service Areas</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {locationLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            className="px-3 py-2 text-sm text-muted-foreground hover:text-primary hover:bg-muted/50 rounded-md transition-colors"
+                          >
+                            {link.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Venues Dropdown */}
+            <div 
+              className="relative"
+              onMouseEnter={() => handleMenuEnter('venues')}
+              onMouseLeave={handleMenuLeave}
+            >
+              <button className="flex items-center gap-1 px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors">
+                Venues
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${activeMenu === 'venues' ? 'rotate-180' : ''}`} />
+              </button>
+              
+              <AnimatePresence>
+                {activeMenu === 'venues' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50"
+                  >
+                    <div className="bg-card border border-border rounded-xl shadow-2xl p-6 min-w-[400px]">
+                      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
+                        <Building2 className="w-5 h-5 text-primary" />
+                        <span className="font-display text-sm text-foreground">Featured Venues</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {venueLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            className="px-3 py-2 text-sm text-muted-foreground hover:text-primary hover:bg-muted/50 rounded-md transition-colors"
+                          >
+                            {link.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Direct Links */}
+            <Link
+              to="/songs"
+              className="flex items-center gap-1 px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Music className="w-4 h-4" />
+              Songs
+            </Link>
+            <Link
+              to="/about"
+              className="px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              About
+            </Link>
+            <Link
+              to="/faq"
+              className="px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              FAQ
+            </Link>
+
+            <Button variant="hero" size="sm" className="ml-4" asChild>
               <a href="/#contact">Book Now</a>
             </Button>
           </div>
@@ -59,39 +243,151 @@ const Header = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 text-foreground"
+            className="lg:hidden p-2 text-foreground"
           >
             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </nav>
 
         {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden pb-6"
-          >
-            <div className="flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="lg:hidden pb-6 overflow-hidden"
+            >
+              <div className="flex flex-col gap-2 bg-card rounded-xl p-4 border border-border">
+                {/* Mobile Services */}
+                <div>
+                  <button
+                    onClick={() => toggleMobileMenu('services')}
+                    className="flex items-center justify-between w-full py-3 font-display tracking-wide-custom text-lg text-foreground"
+                  >
+                    Services
+                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${mobileExpandedMenu === 'services' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {mobileExpandedMenu === 'services' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="pl-4 overflow-hidden"
+                      >
+                        {serviceLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="flex items-center gap-3 py-2 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <link.icon className="w-4 h-4" />
+                            {link.name}
+                          </Link>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Mobile Locations */}
+                <div>
+                  <button
+                    onClick={() => toggleMobileMenu('locations')}
+                    className="flex items-center justify-between w-full py-3 font-display tracking-wide-custom text-lg text-foreground"
+                  >
+                    Locations
+                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${mobileExpandedMenu === 'locations' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {mobileExpandedMenu === 'locations' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="pl-4 overflow-hidden"
+                      >
+                        {locationLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="block py-2 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            {link.name}
+                          </Link>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Mobile Venues */}
+                <div>
+                  <button
+                    onClick={() => toggleMobileMenu('venues')}
+                    className="flex items-center justify-between w-full py-3 font-display tracking-wide-custom text-lg text-foreground"
+                  >
+                    Venues
+                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${mobileExpandedMenu === 'venues' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {mobileExpandedMenu === 'venues' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="pl-4 overflow-hidden"
+                      >
+                        {venueLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="block py-2 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            {link.name}
+                          </Link>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Direct Links */}
+                <Link
+                  to="/songs"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="font-display tracking-wide-custom text-lg text-muted-foreground hover:text-primary transition-colors"
+                  className="py-3 font-display tracking-wide-custom text-lg text-foreground hover:text-primary transition-colors"
                 >
-                  {link.label}
-                </a>
-              ))}
-              <Button variant="hero" size="lg" className="mt-2" asChild>
-                <a href="/#contact" onClick={() => setIsMobileMenuOpen(false)}>
-                  Book Now
-                </a>
-              </Button>
-            </div>
-          </motion.div>
-        )}
+                  Songs
+                </Link>
+                <Link
+                  to="/about"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="py-3 font-display tracking-wide-custom text-lg text-foreground hover:text-primary transition-colors"
+                >
+                  About
+                </Link>
+                <Link
+                  to="/faq"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="py-3 font-display tracking-wide-custom text-lg text-foreground hover:text-primary transition-colors"
+                >
+                  FAQ
+                </Link>
+
+                <Button variant="hero" size="lg" className="mt-4" asChild>
+                  <a href="/#contact" onClick={() => setIsMobileMenuOpen(false)}>
+                    Book Now
+                  </a>
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.header>
   );
