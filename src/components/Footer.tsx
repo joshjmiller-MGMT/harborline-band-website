@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Instagram, Facebook } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -13,51 +14,137 @@ const socialLinks = [
   { icon: VimeoIcon, href: "https://vimeo.com/showcase/11690570", label: "Vimeo" },
 ];
 
+const serviceLinks = [
+  { name: "Weddings", href: "/weddings" },
+  { name: "Corporate Events", href: "/corporate" },
+  { name: "Galas & Fundraisers", href: "/galas" },
+  { name: "Private Parties", href: "/private-parties" },
+  { name: "Birthday Parties", href: "/birthday-parties" },
+  { name: "Holiday Parties", href: "/holiday-parties" },
+  { name: "Anniversaries", href: "/anniversaries" },
+  { name: "Brewery Events", href: "/brewery-events" },
+];
+
+const locationLinks = [
+  { name: "Baltimore", href: "/locations/baltimore" },
+  { name: "Washington DC", href: "/locations/washington-dc" },
+  { name: "Annapolis", href: "/locations/annapolis" },
+  { name: "Bethesda", href: "/locations/bethesda" },
+  { name: "Columbia", href: "/locations/columbia" },
+  { name: "Towson", href: "/locations/towson" },
+  { name: "Frederick", href: "/locations/frederick" },
+  { name: "Rockville", href: "/locations/rockville" },
+  { name: "Eastern Shore", href: "/locations/eastern-shore" },
+];
+
 const Footer = () => {
   return (
-    <footer className="py-12 border-t border-border bg-card/50">
-      <div className="container px-6 mx-auto">
-        <div className="flex flex-col items-center gap-8">
-          {/* Logo */}
-          <img src={logo} alt="Harborline" className="h-16 w-auto opacity-80" />
-          
-          {/* Social Links */}
-          <div className="flex gap-6">
-            {socialLinks.map((social) => (
-              <a
-                key={social.label}
-                href={social.href}
-                aria-label={social.label}
-                className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all duration-300"
-              >
-                <social.icon className="w-5 h-5" />
-              </a>
-            ))}
+    <footer className="py-16 border-t border-border bg-card/50">
+      <div className="container px-6 max-w-7xl mx-auto">
+        {/* Main Footer Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+          {/* Brand Column */}
+          <div className="col-span-2 md:col-span-1">
+            <img src={logo} alt="Harborline" className="h-12 w-auto mb-4" />
+            <p className="text-muted-foreground text-sm mb-4">
+              Baltimore's premier event band bringing unforgettable live entertainment to celebrations across Maryland, DC, and beyond.
+            </p>
+            <div className="flex gap-3">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.label}
+                  className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all duration-300"
+                >
+                  <social.icon className="w-4 h-4" />
+                </a>
+              ))}
+            </div>
           </div>
-          
-          {/* Nav Links */}
-          <nav className="flex flex-wrap justify-center gap-6 text-sm">
-            <a href="#services" className="text-muted-foreground hover:text-primary transition-colors">
-              Services
-            </a>
-            <a href="#gallery" className="text-muted-foreground hover:text-primary transition-colors">
-              Gallery
-            </a>
-            <a href="#about" className="text-muted-foreground hover:text-primary transition-colors">
-              About
-            </a>
-            <a href="#contact" className="text-muted-foreground hover:text-primary transition-colors">
-              Contact
-            </a>
-          </nav>
-          
-          {/* Copyright */}
-          <div className="text-center">
+
+          {/* Services Column */}
+          <div>
+            <h4 className="font-display tracking-wide text-sm mb-4">SERVICES</h4>
+            <ul className="space-y-2">
+              {serviceLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    to={link.href}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Locations Column */}
+          <div>
+            <h4 className="font-display tracking-wide text-sm mb-4">LOCATIONS</h4>
+            <ul className="space-y-2">
+              {locationLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    to={link.href}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Quick Links Column */}
+          <div>
+            <h4 className="font-display tracking-wide text-sm mb-4">QUICK LINKS</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/songs" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Song List
+                </Link>
+              </li>
+              <li>
+                <Link to="/about" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/faq" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  FAQ
+                </Link>
+              </li>
+              <li>
+                <a href="/#gallery" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Gallery
+                </a>
+              </li>
+              <li>
+                <a href="/#videos" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Videos
+                </a>
+              </li>
+              <li>
+                <a href="/#contact" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Book Now
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="pt-8 border-t border-border">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-muted-foreground text-sm">
               © {new Date().getFullYear()} Harborline. Baltimore's Premier Event Band.
             </p>
-            <p className="text-muted-foreground/60 text-xs mt-2">
-              Serving Maryland, DC, Virginia & Beyond
+            <p className="text-muted-foreground/60 text-xs">
+              Live Entertainment for Maryland, DC, Virginia & Beyond
             </p>
           </div>
         </div>
