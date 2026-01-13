@@ -46,11 +46,11 @@ const Contact = () => {
           {/* Contact Info */}
           <div className="flex flex-col md:flex-row gap-8 md:gap-16 text-center mt-4">
             <a
-              href="mailto:josh@baltimoresound.net"
+              href="mailto:harborlineband@gmail.com"
               className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors group"
             >
               <Mail className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              <span>josh@baltimoresound.net</span>
+              <span>harborlineband@gmail.com</span>
             </a>
             <a
               href="tel:+14105551234"
