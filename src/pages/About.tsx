@@ -6,7 +6,7 @@ import { Music, Users, Calendar, Award, Heart, Sparkles } from "lucide-react";
 
 const stats = [
   { icon: Calendar, value: "500+", label: "Events Performed" },
-  { icon: Users, value: "15+", label: "Years Experience" },
+  { icon: Users, value: "10+", label: "Years Experience" },
   { icon: Award, value: "100%", label: "Client Satisfaction" },
   { icon: Heart, value: "50+", label: "Wedding Venues" },
 ];
