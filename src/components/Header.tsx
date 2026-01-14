@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ChevronDown, Music, MapPin, Building2, Users, Mic2, Piano, Guitar, Music2, User, Heart, Briefcase, PartyPopper, Gift } from "lucide-react";
+import { Menu, X, ChevronDown, Music, MapPin, Users, Mic2, Piano, Guitar, Music2, User, Heart, Briefcase, PartyPopper, Gift } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 // Ensemble configurations - how the band can be sized
@@ -21,32 +21,6 @@ const occasionLinks = [
   { name: "Corporate Events", href: "/corporate", icon: Briefcase, description: "Galas & conferences" },
   { name: "Private Parties", href: "/private-parties", icon: PartyPopper, description: "Celebrations of all kinds" },
   { name: "Special Occasions", href: "/galas", icon: Gift, description: "Fundraisers & milestones" },
-];
-
-const locationLinks = [
-  { name: "Baltimore", href: "/locations/baltimore" },
-  { name: "Washington DC", href: "/locations/washington-dc" },
-  { name: "Annapolis", href: "/locations/annapolis" },
-  { name: "Bethesda", href: "/locations/bethesda" },
-  { name: "Columbia", href: "/locations/columbia" },
-  { name: "Towson", href: "/locations/towson" },
-  { name: "Frederick", href: "/locations/frederick" },
-  { name: "Rockville", href: "/locations/rockville" },
-  { name: "Eastern Shore", href: "/locations/eastern-shore" },
-];
-
-const venueLinks = [
-  { name: "The Pendry Baltimore", href: "/venues/pendry-baltimore" },
-  { name: "Sagamore Pendry", href: "/venues/sagamore-pendry" },
-  { name: "George Peabody Library", href: "/venues/george-peabody-library" },
-  { name: "The Belvedere", href: "/venues/the-belvedere" },
-  { name: "Four Seasons Baltimore", href: "/venues/four-seasons-baltimore" },
-  { name: "American Visionary Art Museum", href: "/venues/american-visionary-art-museum" },
-  { name: "B&O Railroad Museum", href: "/venues/b-and-o-railroad-museum" },
-  { name: "Evergreen Museum", href: "/venues/evergreen-museum" },
-  { name: "Cylburn Arboretum", href: "/venues/cylburn-arboretum" },
-  { name: "Cloisters Castle", href: "/venues/cloisters-castle" },
-  { name: "Legg Mason Tower", href: "/venues/legg-mason-tower" },
 ];
 
 const Header = () => {
@@ -189,89 +163,14 @@ const Header = () => {
               </AnimatePresence>
             </div>
 
-            {/* Locations Dropdown */}
-            <div 
-              className="relative"
-              onMouseEnter={() => handleMenuEnter('locations')}
-              onMouseLeave={handleMenuLeave}
+            {/* Where We Perform - Single Link */}
+            <Link
+              to="/where-we-perform"
+              className="flex items-center gap-1 px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors"
             >
-              <button className="flex items-center gap-1 px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors">
-                Locations
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${activeMenu === 'locations' ? 'rotate-180' : ''}`} />
-              </button>
-              
-              <AnimatePresence>
-                {activeMenu === 'locations' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute top-full left-0 pt-2 z-50"
-                  >
-                    <div className="bg-card border border-border rounded-xl shadow-2xl p-6 min-w-[280px]">
-                      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
-                        <MapPin className="w-5 h-5 text-primary" />
-                        <span className="font-display text-sm text-foreground">Service Areas</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1">
-                        {locationLinks.map((link) => (
-                          <Link
-                            key={link.href}
-                            to={link.href}
-                            className="px-3 py-2 text-sm text-muted-foreground hover:text-primary hover:bg-muted/50 rounded-md transition-colors"
-                          >
-                            {link.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Venues Dropdown */}
-            <div 
-              className="relative"
-              onMouseEnter={() => handleMenuEnter('venues')}
-              onMouseLeave={handleMenuLeave}
-            >
-              <button className="flex items-center gap-1 px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors">
-                Venues
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${activeMenu === 'venues' ? 'rotate-180' : ''}`} />
-              </button>
-              
-              <AnimatePresence>
-                {activeMenu === 'venues' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50"
-                  >
-                    <div className="bg-card border border-border rounded-xl shadow-2xl p-6 min-w-[400px]">
-                      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
-                        <Building2 className="w-5 h-5 text-primary" />
-                        <span className="font-display text-sm text-foreground">Featured Venues</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1">
-                        {venueLinks.map((link) => (
-                          <Link
-                            key={link.href}
-                            to={link.href}
-                            className="px-3 py-2 text-sm text-muted-foreground hover:text-primary hover:bg-muted/50 rounded-md transition-colors"
-                          >
-                            {link.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+              <MapPin className="w-4 h-4" />
+              Where We Perform
+            </Link>
 
             {/* Direct Links */}
             <Link
@@ -384,69 +283,15 @@ const Header = () => {
                   </AnimatePresence>
                 </div>
 
-                {/* Mobile Locations */}
-                <div>
-                  <button
-                    onClick={() => toggleMobileMenu('locations')}
-                    className="flex items-center justify-between w-full py-3 font-display tracking-wide-custom text-lg text-foreground"
-                  >
-                    Locations
-                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${mobileExpandedMenu === 'locations' ? 'rotate-180' : ''}`} />
-                  </button>
-                  <AnimatePresence>
-                    {mobileExpandedMenu === 'locations' && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="pl-4 overflow-hidden"
-                      >
-                        {locationLinks.map((link) => (
-                          <Link
-                            key={link.href}
-                            to={link.href}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                            className="block py-2 text-muted-foreground hover:text-primary transition-colors"
-                          >
-                            {link.name}
-                          </Link>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Mobile Venues */}
-                <div>
-                  <button
-                    onClick={() => toggleMobileMenu('venues')}
-                    className="flex items-center justify-between w-full py-3 font-display tracking-wide-custom text-lg text-foreground"
-                  >
-                    Venues
-                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${mobileExpandedMenu === 'venues' ? 'rotate-180' : ''}`} />
-                  </button>
-                  <AnimatePresence>
-                    {mobileExpandedMenu === 'venues' && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="pl-4 overflow-hidden"
-                      >
-                        {venueLinks.map((link) => (
-                          <Link
-                            key={link.href}
-                            to={link.href}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                            className="block py-2 text-muted-foreground hover:text-primary transition-colors"
-                          >
-                            {link.name}
-                          </Link>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                {/* Where We Perform - Single Link */}
+                <Link
+                  to="/where-we-perform"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-2 py-3 font-display tracking-wide-custom text-lg text-foreground hover:text-primary transition-colors"
+                >
+                  <MapPin className="w-5 h-5" />
+                  Where We Perform
+                </Link>
 
                 {/* Direct Links */}
                 <Link
