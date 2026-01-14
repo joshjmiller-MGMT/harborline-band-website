@@ -47,7 +47,7 @@ const faqs = [
   },
   {
     question: "What happens if a band member gets sick?",
-    answer: "We maintain a roster of exceptional musicians who can step in if needed. In our 15+ years, we've never missed an event. Your celebration is our priority, and we have contingency plans for any situation."
+    answer: "We maintain a roster of exceptional musicians who can step in if needed. In our 10+ years, we've never missed an event. Your celebration is our priority, and we have contingency plans for any situation."
   }
 ];
 

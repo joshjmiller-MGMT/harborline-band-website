@@ -14,7 +14,7 @@ const trustBadges = [
   },
   {
     icon: Clock,
-    label: "15+ Years",
+    label: "10+ Years",
     description: "Experience",
   },
   {
