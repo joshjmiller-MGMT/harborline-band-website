@@ -1,17 +1,31 @@
 import { motion } from "framer-motion";
 
-const clients = [
-  "Four Seasons",
+// Expanded client list with corporate clients for credibility
+const venueClients = [
+  "Four Seasons Baltimore",
   "The Sagamore Pendry",
-  "Baltimore Country Club", 
-  "Peabody Library",
-  "The Engineers Club",
-  "Belvedere Hotel",
+  "George Peabody Library",
+  "The Belvedere Hotel",
   "Cylburn Arboretum",
-  "Pier 5 Hotel",
+  "Evergreen Museum",
+  "B&O Railroad Museum",
+  "Cloisters Castle",
+];
+
+const corporateClients = [
+  "T. Rowe Price",
+  "Johns Hopkins",
+  "Under Armour",
+  "Marriott International",
+  "Legg Mason",
+  "McCormick & Company",
+  "Baltimore Ravens",
+  "University of Maryland",
 ];
 
 const Clients = () => {
+  const allClients = [...venueClients, ...corporateClients];
+  
   return (
     <section className="py-16 bg-secondary/30 border-y border-border overflow-hidden">
       <div className="container px-6 max-w-7xl mx-auto">
@@ -21,16 +35,16 @@ const Clients = () => {
           viewport={{ once: true }}
           className="text-center text-muted-foreground font-display tracking-display text-xs mb-8"
         >
-          TRUSTED BY BALTIMORE'S FINEST VENUES
+          TRUSTED BY BALTIMORE'S FINEST VENUES & ORGANIZATIONS
         </motion.p>
         
         {/* Scrolling marquee */}
         <div className="relative">
           <div className="flex animate-marquee space-x-12 md:space-x-20">
-            {[...clients, ...clients].map((client, index) => (
+            {[...allClients, ...allClients].map((client, index) => (
               <span
                 key={index}
-                className="font-display text-2xl md:text-3xl text-foreground/40 hover:text-primary transition-colors duration-300 whitespace-nowrap"
+                className="font-display text-xl md:text-2xl text-foreground/40 hover:text-primary transition-colors duration-300 whitespace-nowrap"
               >
                 {client}
               </span>
