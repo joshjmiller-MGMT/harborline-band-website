@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import AboutPage from "./pages/About";
 import FAQPage from "./pages/FAQ";
 import SongListPage from "./pages/SongList";
+import WhereWePerformPage from "./pages/WhereWePerform";
 
 // Occasion Pages
 import WeddingsPage from "./pages/services/Weddings";
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="/about" element={<AboutPage />} />
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/songs" element={<SongListPage />} />
+            <Route path="/where-we-perform" element={<WhereWePerformPage />} />
             
             {/* Occasion Routes */}
             <Route path="/weddings" element={<WeddingsPage />} />
