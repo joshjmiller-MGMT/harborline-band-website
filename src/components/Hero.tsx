@@ -72,7 +72,7 @@ const Hero = () => {
             <a href="#contact">Book Your Event</a>
           </Button>
           <Button variant="heroOutline" size="xl" asChild>
-            <a href="#gallery">See Us Live</a>
+            <a href="/where-we-perform#upcoming-shows">See Us Live</a>
           </Button>
         </motion.div>
       </motion.div>
