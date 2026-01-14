@@ -122,7 +122,7 @@ const LocationPage = ({ city, region, description, venues, nearbyAreas }: Locati
                 <ul className="space-y-3">
                   {[
                     "500+ events performed",
-                    "15+ years experience",
+                    "10+ years experience",
                     "All genres covered",
                     "Flexible band sizes",
                     "Professional sound & lighting"

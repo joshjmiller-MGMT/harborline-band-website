@@ -15,7 +15,7 @@ const AboutPage = () => {
   return (
     <Layout
       title="About Harborline | Baltimore's Premier Event Band"
-      description="Meet Harborline - Baltimore's most dynamic event and corporate band. With 15+ years of experience and 500+ performances, we bring unmatched energy to every event."
+      description="Meet Harborline - Baltimore's most dynamic event and corporate band. With 10+ years of experience and 500+ performances, we bring unmatched energy to every event."
       canonical="https://harborlinemusic.com/about"
     >
       <PageHero
