@@ -2,7 +2,7 @@ import { Helmet } from "react-helmet-async";
 import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
-import { MapPin, Building2, Star, Users, Calendar, Award } from "lucide-react";
+import { MapPin, Building2, Star, Users, Calendar, Award, Clock, Ticket } from "lucide-react";
 import { Link } from "react-router-dom";
 
 // Featured venues with images
@@ -102,6 +102,46 @@ const stats = [
   { number: "150+", label: "Venues", icon: Building2 },
   { number: "12", label: "Years Experience", icon: Award },
   { number: "50mi", label: "Service Radius", icon: MapPin },
+];
+
+// Upcoming public performances - you can update these dates
+const upcomingShows = [
+  {
+    date: "2026-02-14",
+    title: "Valentine's Jazz Night",
+    venue: "The Pendry Baltimore",
+    location: "Fells Point",
+    time: "7:00 PM - 10:00 PM",
+    type: "Public Event",
+    ticketLink: null, // Add ticket link when available
+  },
+  {
+    date: "2026-03-08",
+    title: "Spring Swing Soirée",
+    venue: "George Peabody Library",
+    location: "Mount Vernon",
+    time: "6:30 PM - 9:30 PM",
+    type: "Public Event",
+    ticketLink: null,
+  },
+  {
+    date: "2026-03-21",
+    title: "Harbor Nights",
+    venue: "Four Seasons Baltimore",
+    location: "Harbor East",
+    time: "8:00 PM - 11:00 PM",
+    type: "Public Event",
+    ticketLink: null,
+  },
+  {
+    date: "2026-04-12",
+    title: "Jazz Brunch",
+    venue: "The Belvedere",
+    location: "Mount Vernon",
+    time: "11:00 AM - 2:00 PM",
+    type: "Public Event",
+    ticketLink: null,
+  },
 ];
 
 const WhereWePerformPage = () => {
@@ -349,6 +389,102 @@ const WhereWePerformPage = () => {
               </p>
             </motion.div>
           </div>
+        </div>
+      </section>
+
+      {/* Upcoming Shows Calendar */}
+      <section id="upcoming-shows" className="py-20 scroll-mt-24">
+        <div className="container px-6 mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Ticket className="w-5 h-5 text-primary" />
+              <span className="font-display text-sm tracking-widest text-primary uppercase">See Us Live</span>
+            </div>
+            <h2 className="font-display text-3xl md:text-4xl text-foreground mb-4">
+              Upcoming Public Performances
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Catch us at one of our upcoming shows. Private events are not listed—contact us to book your own.
+            </p>
+          </motion.div>
+
+          <div className="max-w-3xl mx-auto space-y-4">
+            {upcomingShows.map((show, index) => {
+              const showDate = new Date(show.date);
+              const monthShort = showDate.toLocaleDateString('en-US', { month: 'short' });
+              const dayNum = showDate.getDate();
+              const dayName = showDate.toLocaleDateString('en-US', { weekday: 'long' });
+              
+              return (
+                <motion.div
+                  key={`${show.date}-${show.title}`}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex gap-4 md:gap-6 bg-card border border-border rounded-xl p-4 md:p-6 hover:border-primary/50 transition-colors"
+                >
+                  {/* Date Block */}
+                  <div className="flex-shrink-0 w-16 md:w-20 text-center">
+                    <div className="bg-primary/10 rounded-lg p-2 md:p-3">
+                      <div className="font-display text-xs text-primary uppercase">{monthShort}</div>
+                      <div className="font-display text-2xl md:text-3xl text-foreground">{dayNum}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Event Details */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-display text-lg md:text-xl text-foreground mb-1 truncate">
+                      {show.title}
+                    </h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      {show.venue} • {show.location}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <Clock className="w-4 h-4" />
+                        {show.time}
+                      </span>
+                      <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
+                        {show.type}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Action */}
+                  <div className="flex-shrink-0 self-center">
+                    {show.ticketLink ? (
+                      <a
+                        href={show.ticketLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-4 py-2 bg-primary text-primary-foreground text-sm font-display rounded-md hover:bg-primary/90 transition-colors"
+                      >
+                        <Ticket className="w-4 h-4" />
+                        Tickets
+                      </a>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Details TBA</span>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center text-muted-foreground mt-8 text-sm"
+          >
+            Want us at your event? <Link to="/#contact" className="text-primary hover:underline">Get in touch</Link> to discuss your private booking.
+          </motion.p>
         </div>
       </section>
 
