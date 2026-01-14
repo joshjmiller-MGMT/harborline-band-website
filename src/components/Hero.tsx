@@ -69,7 +69,7 @@ const Hero = () => {
           className="flex flex-col sm:flex-row gap-4 justify-center"
         >
           <Button variant="hero" size="xl" asChild>
-            <a href="#contact">Book Your Event</a>
+            <a href="/#contact">Book Your Event</a>
           </Button>
           <Button variant="heroOutline" size="xl" asChild>
             <a href="/where-we-perform#upcoming-shows">See Us Live</a>
