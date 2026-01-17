@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Award, Shield, Clock, Star, CheckCircle } from "lucide-react";
+import { Award, Shield, Clock, Star } from "lucide-react";
 
 const trustBadges = [
   {
@@ -33,11 +33,6 @@ const pressLogos = [
   { name: "Washingtonian", featured: false },
 ];
 
-const accolades = [
-  "The Knot Best of Weddings 2024",
-  "WeddingWire Couples' Choice Award",
-  "Baltimore's Best Live Band",
-];
 
 const CredibilitySection = () => {
   return (
@@ -121,26 +116,6 @@ const CredibilitySection = () => {
           </div>
         </motion.div>
 
-        {/* Awards/Accolades Row */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="flex flex-wrap justify-center gap-4 md:gap-6"
-        >
-          {accolades.map((accolade, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full border border-primary/20"
-            >
-              <CheckCircle className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-foreground/90">
-                {accolade}
-              </span>
-            </div>
-          ))}
-        </motion.div>
       </div>
     </section>
   );
