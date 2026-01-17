@@ -176,7 +176,7 @@ const JazzQuartetPage = () => {
             className="text-center mt-16"
           >
             <Button variant="hero" size="lg" asChild>
-              <a href="/#contact">Book the Jazz Quartet</a>
+              <a href="/request-a-quote">Request a Quote</a>
             </Button>
           </motion.div>
         </div>

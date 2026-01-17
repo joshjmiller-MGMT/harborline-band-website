@@ -49,6 +49,7 @@ import EvergreenMuseumPage from "./pages/venues/EvergreenMuseum";
 import LeggMasonTowerPage from "./pages/venues/LeggMasonTower";
 import CylburnArboretumPage from "./pages/venues/CylburnArboretum";
 import CloistersCastlePage from "./pages/venues/CloistersCastle";
+import RequestQuotePage from "./pages/RequestQuote";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/songs" element={<SongListPage />} />
             <Route path="/where-we-perform" element={<WhereWePerformPage />} />
+            <Route path="/request-a-quote" element={<RequestQuotePage />} />
             
             {/* Occasion Routes */}
             <Route path="/weddings" element={<WeddingsPage />} />

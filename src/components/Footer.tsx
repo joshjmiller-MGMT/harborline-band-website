@@ -160,8 +160,8 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <a href="/#contact" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Book Now
+                <a href="/request-a-quote" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Request a Quote
                 </a>
               </li>
             </ul>

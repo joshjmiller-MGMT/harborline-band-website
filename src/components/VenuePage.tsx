@@ -202,7 +202,7 @@ const VenuePage = ({
               </div>
 
               <Button variant="hero" size="lg" asChild>
-                <a href="/#contact">Book for Your {venueName} Event</a>
+                <a href="/request-a-quote">Request a Quote</a>
               </Button>
             </motion.div>
 

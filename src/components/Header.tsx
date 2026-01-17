@@ -194,7 +194,7 @@ const Header = () => {
             </Link>
 
             <Button variant="hero" size="sm" className="ml-4" asChild>
-              <a href="/#contact">Book Now</a>
+              <a href="/request-a-quote">Request a Quote</a>
             </Button>
           </div>
 
@@ -317,8 +317,8 @@ const Header = () => {
                 </Link>
 
                 <Button variant="hero" size="lg" className="mt-4" asChild>
-                  <a href="/#contact" onClick={() => setIsMobileMenuOpen(false)}>
-                    Book Now
+                  <a href="/request-a-quote" onClick={() => setIsMobileMenuOpen(false)}>
+                    Request a Quote
                   </a>
                 </Button>
               </div>

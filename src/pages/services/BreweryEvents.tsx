@@ -168,7 +168,7 @@ const BreweryEventsPage = () => {
             className="text-center mt-12"
           >
             <Button variant="hero" size="lg" asChild>
-              <a href="/#contact">Book Harborline for Your Brewery</a>
+              <a href="/request-a-quote">Request a Quote</a>
             </Button>
           </motion.div>
         </div>

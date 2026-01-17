@@ -61,7 +61,7 @@ const CorporatePage = () => {
               </ul>
 
               <Button variant="hero" size="lg" className="mt-8" asChild>
-                <a href="/#contact">Request a Proposal</a>
+                <a href="/request-a-quote">Request a Quote</a>
               </Button>
             </motion.div>
 

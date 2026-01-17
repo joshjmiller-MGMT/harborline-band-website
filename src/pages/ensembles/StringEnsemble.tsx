@@ -176,7 +176,7 @@ const StringEnsemblePage = () => {
             className="text-center mt-16"
           >
             <Button variant="hero" size="lg" asChild>
-              <a href="/#contact">Book the String Ensemble</a>
+              <a href="/request-a-quote">Request a Quote</a>
             </Button>
           </motion.div>
         </div>
