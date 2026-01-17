@@ -175,7 +175,7 @@ const FullBandPage = () => {
             className="text-center mt-16"
           >
             <Button variant="hero" size="lg" asChild>
-              <a href="/#contact">Book the Full Band</a>
+              <a href="/request-a-quote">Request a Quote</a>
             </Button>
           </motion.div>
         </div>

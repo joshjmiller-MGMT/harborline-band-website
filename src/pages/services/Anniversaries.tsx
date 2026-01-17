@@ -168,7 +168,7 @@ const AnniversariesPage = () => {
             className="text-center mt-12"
           >
             <Button variant="hero" size="lg" asChild>
-              <a href="/#contact">Plan Your Anniversary Celebration</a>
+              <a href="/request-a-quote">Request a Quote</a>
             </Button>
           </motion.div>
         </div>

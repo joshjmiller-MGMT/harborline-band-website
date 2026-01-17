@@ -167,7 +167,7 @@ const BirthdayPartiesPage = () => {
             className="text-center mt-12"
           >
             <Button variant="hero" size="lg" asChild>
-              <a href="/#contact">Plan Your Birthday Party</a>
+              <a href="/request-a-quote">Request a Quote</a>
             </Button>
           </motion.div>
         </div>

@@ -62,7 +62,7 @@ const PageHero = ({ eyebrow, title, subtitle, showCTA = true }: PageHeroProps) =
             transition={{ duration: 0.6, delay: 0.3 }}
           >
             <Button variant="hero" size="lg" asChild>
-              <a href="/#contact">Book Your Event</a>
+              <a href="/request-a-quote">Request a Quote</a>
             </Button>
           </motion.div>
         )}

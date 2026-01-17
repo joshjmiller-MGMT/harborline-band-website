@@ -167,7 +167,7 @@ const WeddingsPage = () => {
             className="text-center mt-12"
           >
             <Button variant="hero" size="lg" asChild>
-              <a href="/#contact">Get a Custom Quote</a>
+              <a href="/request-a-quote">Request a Quote</a>
             </Button>
           </motion.div>
         </div>
