@@ -185,13 +185,13 @@ const Index = () => {
       <Header />
       <main>
         <Hero />
+        <About />
+        <VideoGallery />
         <Services />
         <Gallery />
-        <VideoGallery />
-        <About />
         <Testimonials />
-        <Contact />
         <CredibilitySection />
+        <Contact />
       </main>
       <Footer />
       <ScrollToTop />
