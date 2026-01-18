@@ -107,13 +107,22 @@ const stats = [
 // Upcoming public performances - you can update these dates
 const upcomingShows = [
   {
+    date: "2026-01-30",
+    title: "Jazz Trio at Backwater Books",
+    venue: "Backwater Books",
+    location: "Old Ellicott City",
+    time: "7:00 PM - 9:00 PM",
+    type: "Every Final Friday",
+    ticketLink: null,
+  },
+  {
     date: "2026-02-14",
     title: "Valentine's Jazz Night (Solo Piano)",
     venue: "Atwater's",
     location: "Belvedere Square",
     time: "7:00 PM - 10:00 PM",
     type: "Public Event",
-    ticketLink: null, // Add ticket link when available
+    ticketLink: null,
   },
   {
     date: "2026-03-08",
@@ -130,15 +139,6 @@ const upcomingShows = [
     venue: "Four Seasons Baltimore",
     location: "Harbor East",
     time: "8:00 PM - 11:00 PM",
-    type: "Public Event",
-    ticketLink: null,
-  },
-  {
-    date: "2026-04-12",
-    title: "Jazz Brunch",
-    venue: "The Belvedere",
-    location: "Mount Vernon",
-    time: "11:00 AM - 2:00 PM",
     type: "Public Event",
     ticketLink: null,
   },
