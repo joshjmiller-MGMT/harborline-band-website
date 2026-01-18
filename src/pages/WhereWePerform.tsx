@@ -178,30 +178,6 @@ const WhereWePerformPage = () => {
         subtitle="From historic ballrooms to waterfront estates, we bring unforgettable entertainment to the Mid-Atlantic's most prestigious venues"
       />
 
-      {/* Stats Section */}
-      <section className="py-16 bg-muted/30">
-        <div className="container px-6 mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="text-center"
-              >
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                  <stat.icon className="w-6 h-6 text-primary" />
-                </div>
-                <div className="font-display text-3xl md:text-4xl text-foreground mb-1">{stat.number}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Upcoming Shows Calendar */}
       <section id="upcoming-shows" className="py-20 scroll-mt-24">
         <div className="container px-6 mx-auto">
@@ -484,6 +460,30 @@ const WhereWePerformPage = () => {
                 sound for each venue's unique acoustics.
               </p>
             </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-16 bg-muted/30">
+        <div className="container px-6 mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {stats.map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="text-center"
+              >
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                  <stat.icon className="w-6 h-6 text-primary" />
+                </div>
+                <div className="font-display text-3xl md:text-4xl text-foreground mb-1">{stat.number}</div>
+                <div className="text-sm text-muted-foreground">{stat.label}</div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
