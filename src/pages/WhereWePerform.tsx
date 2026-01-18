@@ -274,6 +274,78 @@ const WhereWePerformPage = () => {
         </div>
       </section>
 
+      {/* Experience Highlights */}
+      <section className="py-20">
+        <div className="container px-6 mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Star className="w-5 h-5 text-primary" />
+              <span className="font-display text-sm tracking-widest text-primary uppercase">Our Experience</span>
+            </div>
+            <h2 className="font-display text-3xl md:text-4xl text-foreground mb-4">
+              Why Venue Experience Matters
+            </h2>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-center"
+            >
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Building2 className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="font-display text-lg text-foreground mb-2">Venue Partnerships</h3>
+              <p className="text-muted-foreground text-sm">
+                We're on the preferred vendor list at many premier venues, meaning streamlined coordination 
+                and trusted relationships with venue staff.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-center"
+            >
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="font-display text-lg text-foreground mb-2">Local Expertise</h3>
+              <p className="text-muted-foreground text-sm">
+                As Baltimore natives, we understand the unique character of each neighborhood and venue, 
+                from Inner Harbor elegance to countryside charm.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="text-center"
+            >
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Award className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="font-display text-lg text-foreground mb-2">Acoustic Knowledge</h3>
+              <p className="text-muted-foreground text-sm">
+                Every space sounds different. Our experience means we know exactly how to tune our 
+                sound for each venue's unique acoustics.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* Featured Venues */}
       <section className="py-20">
         <div className="container px-6 mx-auto">
@@ -388,78 +460,6 @@ const WhereWePerformPage = () => {
                 </div>
               </motion.div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Experience Highlights */}
-      <section className="py-20">
-        <div className="container px-6 mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Star className="w-5 h-5 text-primary" />
-              <span className="font-display text-sm tracking-widest text-primary uppercase">Our Experience</span>
-            </div>
-            <h2 className="font-display text-3xl md:text-4xl text-foreground mb-4">
-              Why Venue Experience Matters
-            </h2>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-center"
-            >
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Building2 className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="font-display text-lg text-foreground mb-2">Venue Partnerships</h3>
-              <p className="text-muted-foreground text-sm">
-                We're on the preferred vendor list at many premier venues, meaning streamlined coordination 
-                and trusted relationships with venue staff.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="text-center"
-            >
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="font-display text-lg text-foreground mb-2">Local Expertise</h3>
-              <p className="text-muted-foreground text-sm">
-                As Baltimore natives, we understand the unique character of each neighborhood and venue, 
-                from Inner Harbor elegance to countryside charm.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="text-center"
-            >
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Award className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="font-display text-lg text-foreground mb-2">Acoustic Knowledge</h3>
-              <p className="text-muted-foreground text-sm">
-                Every space sounds different. Our experience means we know exactly how to tune our 
-                sound for each venue's unique acoustics.
-              </p>
-            </motion.div>
           </div>
         </div>
       </section>
