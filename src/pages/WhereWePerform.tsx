@@ -111,7 +111,7 @@ const upcomingShows = [
     title: "Final Fridays with Josh Miller Trio",
     venue: "Backwater Books",
     location: "Old Ellicott City",
-    time: "7:00 PM - 9:00 PM",
+    time: "8:00 PM - 10:00 PM",
     type: "Every Final Friday of the Month",
     ticketLink: null,
   },
