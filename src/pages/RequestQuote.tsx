@@ -75,9 +75,10 @@ const RequestQuotePage = () => {
               <iframe 
                 src="https://forms.monday.com/forms/embed/cd9db9bdd36a0a870cc16f6d7cf06fda?r=use1" 
                 width="100%" 
-                height="700" 
+                height="1200" 
                 style={{ border: 0 }}
                 title="Request a Quote Form"
+                className="min-h-[800px]"
               />
             </motion.div>
           </div>
