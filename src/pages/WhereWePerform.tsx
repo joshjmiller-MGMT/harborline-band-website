@@ -108,9 +108,9 @@ const stats = [
 const upcomingShows = [
   {
     date: "2026-02-14",
-    title: "Valentine's Jazz Night",
-    venue: "The Pendry Baltimore",
-    location: "Fells Point",
+    title: "Valentine's Jazz Night (Solo Piano)",
+    venue: "Atwater's",
+    location: "Belvedere Square",
     time: "7:00 PM - 10:00 PM",
     type: "Public Event",
     ticketLink: null, // Add ticket link when available
