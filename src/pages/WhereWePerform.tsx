@@ -120,7 +120,7 @@ const upcomingShows = [
     title: "Valentine's Jazz Night (Solo Piano)",
     venue: "Atwater's",
     location: "Belvedere Square",
-    time: "7:00 PM - 10:00 PM",
+    time: "6:00 PM - 9:00 PM",
     type: "Public Event",
     ticketLink: null,
   },
