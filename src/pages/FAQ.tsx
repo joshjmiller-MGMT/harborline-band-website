@@ -118,7 +118,7 @@ const FAQPage = () => {
               Still have questions? We'd love to hear from you.
             </p>
             <a
-              href="/#contact"
+              href="/request-a-quote"
               className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-display tracking-wide transition-colors"
             >
               Contact Us →

@@ -666,7 +666,7 @@ const WhereWePerformPage = () => {
             viewport={{ once: true }}
             className="text-center text-muted-foreground mt-8"
           >
-            Plus dozens more venues across the region. <Link to="/#contact" className="text-primary hover:underline">Contact us</Link> to discuss your venue.
+            Plus dozens more venues across the region. <Link to="/request-a-quote" className="text-primary hover:underline">Contact us</Link> to discuss your venue.
           </motion.p>
         </div>
       </section>
@@ -761,7 +761,7 @@ const WhereWePerformPage = () => {
               performance tailored to your space.
             </p>
             <Link
-              to="/#contact"
+              to="/request-a-quote"
               className="inline-flex items-center justify-center px-8 py-3 bg-primary text-primary-foreground font-display tracking-wide uppercase hover:bg-primary/90 transition-colors rounded-md"
             >
               Get in Touch
