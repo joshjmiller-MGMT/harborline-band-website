@@ -53,11 +53,11 @@ const Contact = () => {
               <span>harborlineband@gmail.com</span>
             </a>
             <a
-              href="tel:+14105551234"
+              href="tel:+14434052378"
               className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors group"
             >
               <Phone className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              <span>(410) 555-1234</span>
+              <span>(443) 405-2378</span>
             </a>
             <div className="flex items-center gap-3 text-muted-foreground">
               <MapPin className="w-5 h-5" />
