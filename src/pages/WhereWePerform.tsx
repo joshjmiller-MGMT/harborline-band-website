@@ -354,7 +354,8 @@ const WhereWePerformPage = () => {
 
           <div className="max-w-3xl mx-auto space-y-4">
             {upcomingShows.map((show, index) => {
-              const showDate = new Date(show.date);
+              const [year, month, day] = show.date.split('-').map(Number);
+              const showDate = new Date(year, month - 1, day);
               const monthShort = showDate.toLocaleDateString('en-US', { month: 'short' });
               const dayNum = showDate.getDate();
               const dayName = showDate.toLocaleDateString('en-US', { weekday: 'long' });
