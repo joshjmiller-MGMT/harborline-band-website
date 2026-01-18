@@ -108,7 +108,7 @@ const stats = [
 const upcomingShows = [
   {
     date: "2026-01-30",
-    title: "Jazz Trio at Backwater Books",
+    title: "Final Fridays with Josh Miller Trio",
     venue: "Backwater Books",
     location: "Old Ellicott City",
     time: "7:00 PM - 9:00 PM",
