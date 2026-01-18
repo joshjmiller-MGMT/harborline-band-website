@@ -526,7 +526,7 @@ const WhereWePerformPage = () => {
             viewport={{ once: true }}
             className="text-center text-muted-foreground mt-8 text-sm"
           >
-            Want us at your event? <Link to="/#contact" className="text-primary hover:underline">Get in touch</Link> to discuss your private booking.
+            Want us at your event? <Link to="/request-a-quote" className="text-primary hover:underline">Get in touch</Link> to discuss your private booking.
           </motion.p>
         </div>
       </section>
