@@ -127,7 +127,7 @@ const upcomingShows = [
   {
     date: "2025-02-19",
     title: "Private Event",
-    venue: "Destination Wedding",
+    venue: "Destination Corporate Activation",
     location: "Bahamas",
     time: "Feb 19-21",
     type: "Private Event",
@@ -136,8 +136,8 @@ const upcomingShows = [
   {
     date: "2025-03-28",
     title: "Wedding",
-    venue: "Gramercy Mansion",
-    location: "Baltimore",
+    venue: "",
+    location: "",
     time: "",
     type: "Private Event",
     ticketLink: null,
@@ -352,69 +352,63 @@ const WhereWePerformPage = () => {
             </p>
           </motion.div>
 
-          <div className="max-w-3xl mx-auto space-y-4">
-            {upcomingShows.map((show, index) => {
-              const [year, month, day] = show.date.split('-').map(Number);
-              const showDate = new Date(year, month - 1, day);
-              const monthShort = showDate.toLocaleDateString('en-US', { month: 'short' });
-              const dayNum = showDate.getDate();
-              const dayName = showDate.toLocaleDateString('en-US', { weekday: 'long' });
-              
-              return (
-                <motion.div
-                  key={`${show.date}-${show.title}`}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex gap-4 md:gap-6 bg-card border border-border rounded-xl p-4 md:p-6 hover:border-primary/50 transition-colors"
-                >
-                  {/* Date Block */}
-                  <div className="flex-shrink-0 w-16 md:w-20 text-center">
-                    <div className="bg-primary/10 rounded-lg p-2 md:p-3">
-                      <div className="font-display text-xs text-primary uppercase">{monthShort}</div>
-                      <div className="font-display text-2xl md:text-3xl text-foreground">{dayNum}</div>
+          <div className="max-w-3xl mx-auto bg-card/50 border border-border rounded-2xl p-4 md:p-6">
+            <div className="space-y-3">
+              {upcomingShows.map((show, index) => {
+                const [year, month, day] = show.date.split('-').map(Number);
+                const showDate = new Date(year, month - 1, day);
+                const monthShort = showDate.toLocaleDateString('en-US', { month: 'short' });
+                const dayNum = showDate.getDate();
+                
+                const hasVenueInfo = show.venue || show.location;
+                
+                return (
+                  <motion.div
+                    key={`${show.date}-${show.title}`}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex gap-3 md:gap-4 bg-background border border-border rounded-lg p-3 md:p-4 hover:border-primary/50 transition-colors"
+                  >
+                    {/* Date Block */}
+                    <div className="flex-shrink-0 w-12 md:w-14 text-center">
+                      <div className="bg-primary/10 rounded-lg p-1.5 md:p-2">
+                        <div className="font-display text-[10px] text-primary uppercase">{monthShort}</div>
+                        <div className="font-display text-xl md:text-2xl text-foreground">{dayNum}</div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Event Details */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-display text-lg md:text-xl text-foreground mb-1 truncate">
-                      {show.title}
-                    </h3>
-                    <p className="text-muted-foreground text-sm mb-2">
-                      {show.venue} • {show.location}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-3 text-sm">
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        {show.time}
-                      </span>
+                    
+                    {/* Event Details */}
+                    <div className="flex-1 min-w-0 flex items-center">
+                      <div>
+                        <h3 className="font-display text-base md:text-lg text-foreground truncate">
+                          {show.title}
+                        </h3>
+                        {hasVenueInfo && (
+                          <p className="text-muted-foreground text-xs">
+                            {[show.venue, show.location].filter(Boolean).join(' • ')}
+                          </p>
+                        )}
+                        {show.time && (
+                          <span className="flex items-center gap-1 text-muted-foreground text-xs mt-1">
+                            <Clock className="w-3 h-3" />
+                            {show.time}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Type Badge */}
+                    <div className="flex-shrink-0 self-center">
                       <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
                         {show.type}
                       </span>
                     </div>
-                  </div>
-                  
-                  {/* Action */}
-                  <div className="flex-shrink-0 self-center">
-                    {show.ticketLink ? (
-                      <a
-                        href={show.ticketLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-4 py-2 bg-primary text-primary-foreground text-sm font-display rounded-md hover:bg-primary/90 transition-colors"
-                      >
-                        <Ticket className="w-4 h-4" />
-                        Tickets
-                      </a>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Details TBA</span>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
 
           <motion.p
