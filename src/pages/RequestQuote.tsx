@@ -72,15 +72,13 @@ const RequestQuotePage = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-2xl">
-                <iframe 
-                  src="https://forms.monday.com/forms/embed/cd9db9bdd36a0a870cc16f6d7cf06fda?r=use1" 
-                  width="100%" 
-                  height="600" 
-                  style={{ border: 0 }}
-                  title="Request a Quote Form"
-                />
-              </div>
+              <iframe 
+                src="https://forms.monday.com/forms/embed/cd9db9bdd36a0a870cc16f6d7cf06fda?r=use1" 
+                width="100%" 
+                height="700" 
+                style={{ border: 0 }}
+                title="Request a Quote Form"
+              />
             </motion.div>
           </div>
         </div>
