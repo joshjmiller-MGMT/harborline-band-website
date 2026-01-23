@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import heroBand from "@/assets/band-hero.jpg";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo-new.png";
 
 const Hero = () => {
   return (
