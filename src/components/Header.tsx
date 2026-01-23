@@ -62,7 +62,7 @@ const Header = () => {
         <nav className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="block">
-            <img src={logo} alt="Harborline" className="h-12 w-auto" />
+            <img src={logo} alt="Harborline" className="h-6 w-auto" />
           </Link>
 
           {/* Desktop Nav */}
