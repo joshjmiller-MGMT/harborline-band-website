@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Instagram, Facebook } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo-new.png";
 
 const VimeoIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
