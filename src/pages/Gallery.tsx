@@ -11,6 +11,16 @@ import gallery5 from "@/assets/gallery-5.jpg";
 import heroBand from "@/assets/band-hero.jpg";
 import heroImage from "@/assets/hero-band.jpg";
 
+// Band member photos
+import groupLaughing from "@/assets/band/group-laughing.jpg";
+import groupPortrait from "@/assets/band/group-portrait.jpg";
+import member1 from "@/assets/band/member-1.jpg";
+import member2 from "@/assets/band/member-2.jpg";
+import member3 from "@/assets/band/member-3.jpg";
+import member4 from "@/assets/band/member-4.jpg";
+import member5 from "@/assets/band/member-5.jpg";
+import member6 from "@/assets/band/member-6.jpg";
+
 // Venue images
 import avam1 from "@/assets/venues/avam-1.jpg";
 import belvedere1 from "@/assets/venues/belvedere-1.jpg";
@@ -40,6 +50,8 @@ import logoIcon from "@/assets/logo-icon.png";
 import logoOriginal from "@/assets/logo.png";
 
 const galleryImages = [
+  { src: groupLaughing, alt: "Harborline band group photo - candid laughing moment", category: "Band" },
+  { src: groupPortrait, alt: "Harborline band official group portrait", category: "Band" },
   { src: gallery1, alt: "Harborline performing at a corporate event", category: "Band" },
   { src: gallery2, alt: "Band members at an outdoor celebration", category: "Band" },
   { src: gallery3, alt: "Setup for an elegant waterfront event", category: "Band" },
@@ -47,6 +59,15 @@ const galleryImages = [
   { src: gallery5, alt: "Keyboardist performing live", category: "Band" },
   { src: heroBand, alt: "Harborline hero band image", category: "Band" },
   { src: heroImage, alt: "Hero band performance", category: "Band" },
+];
+
+const memberImages = [
+  { src: member1, alt: "Band member portrait - keyboardist" },
+  { src: member2, alt: "Band member portrait - bassist" },
+  { src: member3, alt: "Band member portrait - guitarist" },
+  { src: member4, alt: "Band member portrait - vocalist" },
+  { src: member5, alt: "Band member portrait - saxophonist" },
+  { src: member6, alt: "Band member portrait - drummer" },
 ];
 
 const venueImages = [
@@ -160,6 +181,38 @@ const GalleryPage = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.4, delay: index * 0.05 }}
                   className="relative group overflow-hidden rounded-lg aspect-square"
+                >
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-4">
+                    <p className="text-sm text-foreground">{image.alt}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
+
+          {/* Member Portraits Section */}
+          <motion.section
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.25 }}
+            className="mb-20"
+          >
+            <h2 className="font-display text-3xl mb-8 border-b border-border pb-4">
+              MEMBER PORTRAITS
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {memberImages.map((image, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  className="relative group overflow-hidden rounded-lg aspect-[3/4]"
                 >
                   <img
                     src={image.src}
