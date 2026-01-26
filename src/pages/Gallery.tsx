@@ -20,6 +20,9 @@ import member3 from "@/assets/band/member-3.jpg";
 import member4 from "@/assets/band/member-4.jpg";
 import member5 from "@/assets/band/member-5.jpg";
 import member6 from "@/assets/band/member-6.jpg";
+import livePerformance1 from "@/assets/band/live-performance-1.png";
+import livePerformance2 from "@/assets/band/live-performance-2.jpg";
+import livePerformance3 from "@/assets/band/live-performance-3.jpg";
 
 // Venue images
 import avam1 from "@/assets/venues/avam-1.jpg";
@@ -52,6 +55,9 @@ import logoOriginal from "@/assets/logo.png";
 const galleryImages = [
   { src: groupLaughing, alt: "Harborline band group photo - candid laughing moment", category: "Band" },
   { src: groupPortrait, alt: "Harborline band official group portrait", category: "Band" },
+  { src: livePerformance1, alt: "Live performance - drums and saxophone", category: "Band" },
+  { src: livePerformance2, alt: "Live performance at wedding reception", category: "Band" },
+  { src: livePerformance3, alt: "Live performance - band on stage", category: "Band" },
   { src: gallery1, alt: "Harborline performing at a corporate event", category: "Band" },
   { src: gallery2, alt: "Band members at an outdoor celebration", category: "Band" },
   { src: gallery3, alt: "Setup for an elegant waterfront event", category: "Band" },
@@ -62,12 +68,12 @@ const galleryImages = [
 ];
 
 const memberImages = [
-  { src: member1, alt: "Band member portrait - keyboardist" },
-  { src: member2, alt: "Band member portrait - bassist" },
-  { src: member3, alt: "Band member portrait - guitarist" },
-  { src: member4, alt: "Band member portrait - vocalist" },
-  { src: member5, alt: "Band member portrait - saxophonist" },
-  { src: member6, alt: "Band member portrait - drummer" },
+  { src: member1, alt: "Band member portrait" },
+  { src: member2, alt: "Band member portrait" },
+  { src: member3, alt: "Band member portrait" },
+  { src: member4, alt: "Band member portrait" },
+  { src: member5, alt: "Band member portrait" },
+  { src: member6, alt: "Band member portrait" },
 ];
 
 const venueImages = [
