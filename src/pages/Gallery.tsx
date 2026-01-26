@@ -26,6 +26,16 @@ import livePerformance3 from "@/assets/band/live-performance-3.jpg";
 import setupTent from "@/assets/band/setup-tent.png";
 import setupWaterfront from "@/assets/band/setup-waterfront.png";
 
+// New player portraits (grouped by player)
+import portraitPlayer1A from "@/assets/band/portrait-player1-a.jpg";
+import portraitPlayer1B from "@/assets/band/portrait-player1-b.jpg";
+import portraitPlayer2A from "@/assets/band/portrait-player2-a.jpg";
+import portraitPlayer3A from "@/assets/band/portrait-player3-a.jpg";
+import portraitPlayer4A from "@/assets/band/portrait-player4-a.jpg";
+import portraitPlayer4B from "@/assets/band/portrait-player4-b.jpg";
+import portraitPlayer5A from "@/assets/band/portrait-player5-a.jpg";
+import portraitPlayer5B from "@/assets/band/portrait-player5-b.jpg";
+
 // Venue images
 import avam1 from "@/assets/venues/avam-1.jpg";
 import belvedere1 from "@/assets/venues/belvedere-1.jpg";
@@ -72,12 +82,26 @@ const galleryImages = [
 ];
 
 const memberImages = [
-  { src: member1, alt: "Band member portrait" },
-  { src: member2, alt: "Band member portrait" },
-  { src: member3, alt: "Band member portrait" },
-  { src: member4, alt: "Band member portrait" },
-  { src: member5, alt: "Band member portrait" },
-  { src: member6, alt: "Band member portrait" },
+  // Player 1 - Glasses, beard
+  { src: portraitPlayer1A, alt: "Band member portrait - serious", player: 1 },
+  { src: portraitPlayer1B, alt: "Band member portrait - smiling", player: 1 },
+  // Player 2 - Female vocalist
+  { src: portraitPlayer2A, alt: "Band member portrait - vocalist", player: 2 },
+  // Player 3 - Long hair
+  { src: portraitPlayer3A, alt: "Band member portrait - guitarist", player: 3 },
+  // Player 4 - Curly hair, mustache
+  { src: portraitPlayer4A, alt: "Band member portrait - smiling", player: 4 },
+  { src: portraitPlayer4B, alt: "Band member portrait - serious", player: 4 },
+  // Player 5 - Durag
+  { src: portraitPlayer5A, alt: "Band member portrait - smiling", player: 5 },
+  { src: portraitPlayer5B, alt: "Band member portrait - serious", player: 5 },
+  // Existing portraits
+  { src: member1, alt: "Band member portrait", player: 6 },
+  { src: member2, alt: "Band member portrait", player: 7 },
+  { src: member3, alt: "Band member portrait", player: 8 },
+  { src: member4, alt: "Band member portrait", player: 9 },
+  { src: member5, alt: "Band member portrait", player: 10 },
+  { src: member6, alt: "Band member portrait", player: 11 },
 ];
 
 const venueImages = [
