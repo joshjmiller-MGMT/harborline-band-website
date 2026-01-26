@@ -12,6 +12,7 @@ import AboutPage from "./pages/About";
 import FAQPage from "./pages/FAQ";
 import SongListPage from "./pages/SongList";
 import WhereWePerformPage from "./pages/WhereWePerform";
+import GalleryPage from "./pages/Gallery";
 
 // Occasion Pages
 import WeddingsPage from "./pages/services/Weddings";
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/songs" element={<SongListPage />} />
             <Route path="/where-we-perform" element={<WhereWePerformPage />} />
             <Route path="/request-a-quote" element={<RequestQuotePage />} />
+            <Route path="/gallery" element={<GalleryPage />} />
             
             {/* Occasion Routes */}
             <Route path="/weddings" element={<WeddingsPage />} />
