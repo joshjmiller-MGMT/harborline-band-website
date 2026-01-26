@@ -21,7 +21,6 @@ import member4 from "@/assets/band/member-4.jpg";
 import member5 from "@/assets/band/member-5.jpg";
 import member6 from "@/assets/band/member-6.jpg";
 import livePerformance1 from "@/assets/band/live-performance-1.png";
-import livePerformance2 from "@/assets/band/live-performance-2.jpg";
 
 import setupTent from "@/assets/band/setup-tent.png";
 import setupWaterfront from "@/assets/band/setup-waterfront.png";
@@ -68,8 +67,6 @@ const galleryImages = [
   { src: groupLaughing, alt: "Harborline band group photo - candid laughing moment", category: "Band" },
   { src: groupPortrait, alt: "Harborline band official group portrait", category: "Band" },
   { src: livePerformance1, alt: "Live performance - drums and saxophone", category: "Band" },
-  { src: livePerformance2, alt: "Live performance at wedding reception", category: "Band" },
-  
   { src: setupTent, alt: "Professional DJ and sound setup in white tent", category: "Band" },
   { src: setupWaterfront, alt: "Waterfront keyboard setup with bay view", category: "Band" },
   { src: gallery1, alt: "Harborline performing at a corporate event", category: "Band" },
