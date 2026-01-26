@@ -9,8 +9,8 @@ const trustBadges = [
   },
   {
     icon: Shield,
-    label: "Fully Insured",
-    description: "$2M Coverage",
+    label: "200+ Songs",
+    description: "In Our Repertoire",
   },
   {
     icon: Clock,
