@@ -121,7 +121,7 @@ const LocationPage = ({ city, region, description, venues, nearbyAreas }: Locati
                 <h3 className="font-display text-xl mb-4">WHY HARBORLINE</h3>
                 <ul className="space-y-3">
                   {[
-                    "500+ events performed",
+                    "1000+ events performed",
                     "10+ years experience",
                     "All genres covered",
                     "Flexible band sizes",

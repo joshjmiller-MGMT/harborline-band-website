@@ -6,7 +6,7 @@ import groupLaughing from "@/assets/band/group-laughing.jpg";
 import { Music, Users, Calendar, Award, Heart, Sparkles } from "lucide-react";
 
 const stats = [
-  { icon: Calendar, value: "500+", label: "Events Performed" },
+  { icon: Calendar, value: "1000+", label: "Events Performed" },
   { icon: Users, value: "10+", label: "Years Experience" },
   { icon: Award, value: "100%", label: "Client Satisfaction" },
   { icon: Heart, value: "50+", label: "Wedding Venues" },
@@ -16,7 +16,7 @@ const AboutPage = () => {
   return (
     <Layout
       title="About Harborline | Baltimore's Premier Event Band"
-      description="Meet Harborline - Baltimore's most dynamic event and corporate band. With 10+ years of experience and 500+ performances, we bring unmatched energy to every event."
+      description="Meet Harborline - Baltimore's most dynamic event and corporate band. With 10+ years of experience and 1000+ performances, we bring unmatched energy to every event."
       canonical="https://harborlinemusic.com/about"
     >
       <PageHero
