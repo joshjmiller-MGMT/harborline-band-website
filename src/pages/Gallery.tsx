@@ -23,6 +23,8 @@ import member6 from "@/assets/band/member-6.jpg";
 import livePerformance1 from "@/assets/band/live-performance-1.png";
 import livePerformance2 from "@/assets/band/live-performance-2.jpg";
 import livePerformance3 from "@/assets/band/live-performance-3.jpg";
+import setupTent from "@/assets/band/setup-tent.png";
+import setupWaterfront from "@/assets/band/setup-waterfront.png";
 
 // Venue images
 import avam1 from "@/assets/venues/avam-1.jpg";
@@ -58,6 +60,8 @@ const galleryImages = [
   { src: livePerformance1, alt: "Live performance - drums and saxophone", category: "Band" },
   { src: livePerformance2, alt: "Live performance at wedding reception", category: "Band" },
   { src: livePerformance3, alt: "Live performance - band on stage", category: "Band" },
+  { src: setupTent, alt: "Professional DJ and sound setup in white tent", category: "Band" },
+  { src: setupWaterfront, alt: "Waterfront keyboard setup with bay view", category: "Band" },
   { src: gallery1, alt: "Harborline performing at a corporate event", category: "Band" },
   { src: gallery2, alt: "Band members at an outdoor celebration", category: "Band" },
   { src: gallery3, alt: "Setup for an elegant waterfront event", category: "Band" },
