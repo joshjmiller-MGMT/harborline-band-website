@@ -37,6 +37,7 @@ import logoText from "@/assets/logo-text.png";
 import logoBlack from "@/assets/logo-black.png";
 import logoNew from "@/assets/logo-new.png";
 import logoIcon from "@/assets/logo-icon.png";
+import logoOriginal from "@/assets/logo.png";
 
 const galleryImages = [
   { src: gallery1, alt: "Harborline performing at a corporate event", category: "Band" },
@@ -75,6 +76,7 @@ const logos = [
   { src: logoBlack, alt: "Harborline Black Logo" },
   { src: logoNew, alt: "Harborline New Logo" },
   { src: logoIcon, alt: "Harborline Icon Logo" },
+  { src: logoOriginal, alt: "Harborline Original Logo" },
 ];
 
 const externalLinks = [
