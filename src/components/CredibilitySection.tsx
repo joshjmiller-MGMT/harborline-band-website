@@ -4,7 +4,7 @@ import { Award, Shield, Clock, Star } from "lucide-react";
 const trustBadges = [
   {
     icon: Award,
-    label: "500+ Events",
+    label: "1000+ Events",
     description: "Performed",
   },
   {

@@ -9,7 +9,7 @@ const benefits = [
   "Brand-appropriate song selections",
   "Seamless integration with event timeline",
   "Corporate-friendly repertoire",
-  "Experienced with 500+ corporate events",
+  "Experienced with 1000+ corporate events",
   "Full production capabilities"
 ];
 

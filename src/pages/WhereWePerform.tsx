@@ -100,7 +100,7 @@ const serviceAreas = [
 ];
 
 const stats = [
-  { number: "500+", label: "Performances", icon: Calendar },
+  { number: "1000+", label: "Performances", icon: Calendar },
   { number: "150+", label: "Venues", icon: Building2 },
   { number: "10+", label: "Years Experience", icon: Award },
   { number: "50mi", label: "Service Radius", icon: MapPin },
