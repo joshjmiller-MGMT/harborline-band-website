@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, Music2, Headphones, Mic } from "lucide-react";
-import gallery1 from "@/assets/gallery-1.jpg";
+import groupWaterfront1 from "@/assets/band/group-waterfront-1.webp";
 
 const highlights = [
   { icon: Music2, text: "100+ Song Repertoire" },
@@ -27,8 +27,8 @@ const About = () => {
           >
             <div className="relative rounded-lg overflow-hidden">
               <img
-                src={gallery1}
-                alt="Harborline band"
+                src={groupWaterfront1}
+                alt="Harborline band group photo by the water"
                 className="w-full aspect-[4/3] object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-background/20 to-transparent" />

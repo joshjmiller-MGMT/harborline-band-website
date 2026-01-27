@@ -3,8 +3,8 @@ import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Music, Wine, Users, Sparkles, CheckCircle } from "lucide-react";
-import galleryImage3 from "@/assets/gallery-3.jpg";
-import galleryImage4 from "@/assets/gallery-4.jpg";
+import jazzTrio1 from "@/assets/band/jazz-trio-1.webp";
+import jazzTrio2 from "@/assets/band/jazz-trio-2.webp";
 
 const features = [
   { icon: Users, text: "4 Musicians" },
@@ -107,13 +107,13 @@ const JazzQuartetPage = () => {
               className="grid grid-cols-2 gap-4"
             >
               <img
-                src={galleryImage3}
-                alt="Jazz quartet performance"
+                src={jazzTrio1}
+                alt="Jazz trio performing under tent with piano, drums and upright bass"
                 className="rounded-lg shadow-lg"
               />
               <img
-                src={galleryImage4}
-                alt="Elegant event atmosphere"
+                src={jazzTrio2}
+                alt="Jazz trio intimate performance"
                 className="rounded-lg shadow-lg mt-8"
               />
             </motion.div>
