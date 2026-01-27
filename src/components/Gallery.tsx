@@ -1,15 +1,15 @@
 import { motion } from "framer-motion";
 import groupWaterfront1 from "@/assets/band/group-waterfront-1.webp";
-import groupWaterfront3 from "@/assets/band/group-waterfront-3.webp";
 import jazzTrio1 from "@/assets/band/jazz-trio-1.webp";
-import liveDjSax from "@/assets/band/live-dj-sax.webp";
+import livePerformance1 from "@/assets/band/live-performance-1.png";
+import groupPortrait from "@/assets/band/group-portrait.jpg";
 import specialEventDancer from "@/assets/band/special-event-dancer.webp";
 
 const images = [
   { src: groupWaterfront1, alt: "Harborline band group photo by the water" },
+  { src: livePerformance1, alt: "Live performance - drums and saxophone" },
   { src: jazzTrio1, alt: "Jazz trio performing under tent" },
-  { src: liveDjSax, alt: "DJ and saxophone live performance" },
-  { src: groupWaterfront3, alt: "Band having fun by the bay" },
+  { src: groupPortrait, alt: "Harborline band official group portrait" },
   { src: specialEventDancer, alt: "Special event with ribbon dancer and live band" },
 ];
 
