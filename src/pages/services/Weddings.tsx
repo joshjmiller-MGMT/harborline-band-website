@@ -3,8 +3,8 @@ import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Heart, Music, Users, Sparkles, Clock, CheckCircle } from "lucide-react";
-import galleryImage1 from "@/assets/gallery-1.jpg";
-import galleryImage2 from "@/assets/gallery-2.jpg";
+import groupWaterfront2 from "@/assets/band/group-waterfront-2.webp";
+import jazzTrio1 from "@/assets/band/jazz-trio-1.webp";
 
 const features = [
   { icon: Music, text: "Custom First Dance Arrangements" },
@@ -104,13 +104,13 @@ const WeddingsPage = () => {
               className="grid grid-cols-2 gap-4"
             >
               <img
-                src={galleryImage1}
-                alt="Wedding performance"
+                src={groupWaterfront2}
+                alt="Band candid moment with vocalist"
                 className="rounded-lg shadow-lg"
               />
               <img
-                src={galleryImage2}
-                alt="Wedding celebration"
+                src={jazzTrio1}
+                alt="Jazz trio for wedding ceremony"
                 className="rounded-lg shadow-lg mt-8"
               />
             </motion.div>

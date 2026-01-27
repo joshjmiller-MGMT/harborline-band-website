@@ -1,16 +1,16 @@
 import { motion } from "framer-motion";
-import gallery1 from "@/assets/gallery-1.jpg";
-import gallery2 from "@/assets/gallery-2.jpg";
-import gallery3 from "@/assets/gallery-3.jpg";
-import gallery4 from "@/assets/gallery-4.jpg";
-import gallery5 from "@/assets/gallery-5.jpg";
+import groupWaterfront1 from "@/assets/band/group-waterfront-1.webp";
+import groupWaterfront3 from "@/assets/band/group-waterfront-3.webp";
+import jazzTrio1 from "@/assets/band/jazz-trio-1.webp";
+import liveDjSax from "@/assets/band/live-dj-sax.webp";
+import specialEventDancer from "@/assets/band/special-event-dancer.webp";
 
 const images = [
-  { src: gallery1, alt: "Harborline performing at a corporate event" },
-  { src: gallery2, alt: "Band members at an outdoor celebration" },
-  { src: gallery3, alt: "Setup for an elegant waterfront event" },
-  { src: gallery4, alt: "The band posing by the Chesapeake Bay" },
-  { src: gallery5, alt: "Keyboardist performing live" },
+  { src: groupWaterfront1, alt: "Harborline band group photo by the water" },
+  { src: jazzTrio1, alt: "Jazz trio performing under tent" },
+  { src: liveDjSax, alt: "DJ and saxophone live performance" },
+  { src: groupWaterfront3, alt: "Band having fun by the bay" },
+  { src: specialEventDancer, alt: "Special event with ribbon dancer and live band" },
 ];
 
 const Gallery = () => {

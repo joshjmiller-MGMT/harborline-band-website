@@ -1,8 +1,8 @@
 import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
-import groupPortrait from "@/assets/band/group-portrait.jpg";
-import groupLaughing from "@/assets/band/group-laughing.jpg";
+import groupWaterfront1 from "@/assets/band/group-waterfront-1.webp";
+import groupWaterfront3 from "@/assets/band/group-waterfront-3.webp";
 import { Music, Users, Calendar, Award, Heart, Sparkles } from "lucide-react";
 
 const stats = [
@@ -38,13 +38,13 @@ const AboutPage = () => {
               className="space-y-4"
             >
               <img
-                src={groupPortrait}
-                alt="Harborline band official group portrait"
+                src={groupWaterfront1}
+                alt="Harborline band group photo by the water"
                 className="rounded-lg shadow-2xl"
               />
               <img
-                src={groupLaughing}
-                alt="Harborline band candid moment"
+                src={groupWaterfront3}
+                alt="Harborline band having fun by the bay"
                 className="rounded-lg shadow-xl"
               />
             </motion.div>

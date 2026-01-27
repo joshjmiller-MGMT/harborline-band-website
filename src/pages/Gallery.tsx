@@ -25,6 +25,18 @@ import livePerformance1 from "@/assets/band/live-performance-1.png";
 import setupTent from "@/assets/band/setup-tent.png";
 import setupWaterfront from "@/assets/band/setup-waterfront.png";
 
+// New waterfront group photos
+import groupWaterfront1 from "@/assets/band/group-waterfront-1.webp";
+import groupWaterfront2 from "@/assets/band/group-waterfront-2.webp";
+import groupWaterfront3 from "@/assets/band/group-waterfront-3.webp";
+import groupWaterfront4 from "@/assets/band/group-waterfront-4.webp";
+
+// New performance photos
+import jazzTrio1 from "@/assets/band/jazz-trio-1.webp";
+import jazzTrio2 from "@/assets/band/jazz-trio-2.webp";
+import liveDjSax from "@/assets/band/live-dj-sax.webp";
+import specialEventDancer from "@/assets/band/special-event-dancer.webp";
+
 // New player portraits (grouped by player)
 import portraitPlayer1A from "@/assets/band/portrait-player1-a.jpg";
 import portraitPlayer1B from "@/assets/band/portrait-player1-b.jpg";
@@ -64,6 +76,17 @@ import logoIcon from "@/assets/logo-icon.png";
 import logoOriginal from "@/assets/logo.png";
 
 const galleryImages = [
+  // New waterfront group shots
+  { src: groupWaterfront1, alt: "Full band group photo by the water - everyone smiling", category: "Band" },
+  { src: groupWaterfront2, alt: "Candid band moment with vocalist featured", category: "Band" },
+  { src: groupWaterfront3, alt: "Fun band photo with peace sign", category: "Band" },
+  { src: groupWaterfront4, alt: "Band sharing a candid moment by the bay", category: "Band" },
+  // New performance shots
+  { src: jazzTrio1, alt: "Jazz trio performing under white tent - piano, drums, upright bass", category: "Band" },
+  { src: jazzTrio2, alt: "Jazz trio in action - intimate performance", category: "Band" },
+  { src: liveDjSax, alt: "DJ and saxophone player performing together", category: "Band" },
+  { src: specialEventDancer, alt: "Special event with ribbon dancer and live band", category: "Band" },
+  // Original photos
   { src: groupLaughing, alt: "Harborline band group photo - candid laughing moment", category: "Band" },
   { src: groupPortrait, alt: "Harborline band official group portrait", category: "Band" },
   { src: livePerformance1, alt: "Live performance - drums and saxophone", category: "Band" },
