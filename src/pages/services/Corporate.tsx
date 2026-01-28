@@ -47,8 +47,8 @@ const CorporatePage = () => {
               </h2>
               <p className="text-muted-foreground text-lg mb-6">
                 Whether it's a company party or a night your team will never forget, 
-                Harborline sets the tone with modern soul and R&B energy. We build the vibe, 
-                read the room, and keep the energy high from first note to last.
+                Harborline sets the tone with modern soul and R&B energy—building the vibe, 
+                reading the room, and keeping the energy high from first note to last.
               </p>
               
               <ul className="grid sm:grid-cols-2 gap-3">
@@ -102,7 +102,7 @@ const CorporatePage = () => {
               LEADING ORGANIZATIONS
             </h3>
             <p className="text-muted-foreground">
-              We've had the privilege of performing for corporations, nonprofits, 
+              Harborline has had the privilege of performing for corporations, nonprofits, 
               and institutions throughout the Baltimore-Washington region.
             </p>
           </motion.div>

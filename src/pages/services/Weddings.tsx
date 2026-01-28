@@ -57,7 +57,7 @@ const WeddingsPage = () => {
       <PageHero
         eyebrow="WEDDINGS"
         title="YOUR PERFECT SOUNDTRACK"
-        subtitle="From the first note to the last dance, we create unforgettable wedding celebrations"
+        subtitle="From the first note to the last dance, Harborline creates unforgettable wedding celebrations"
       />
 
       {/* Intro Section */}
@@ -80,8 +80,8 @@ const WeddingsPage = () => {
                 and today's hits woven into one nonstop, feel-good celebration.
               </p>
               <p className="text-muted-foreground">
-                From your first dance to the last song, we set the tone and keep the groove alive. 
-                We work closely with you to craft the perfect soundtrack for every moment.
+                From the first dance to the last song, Harborline sets the tone and keeps the groove alive—working 
+                closely with each couple to craft the perfect soundtrack for every moment.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
                 {features.map((feature) => (

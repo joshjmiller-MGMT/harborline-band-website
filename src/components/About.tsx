@@ -72,13 +72,13 @@ const About = () => {
             
             <div className="space-y-6 text-muted-foreground">
               <p className="text-lg leading-relaxed">
-                Harborline brings modern soul and R&B energy to every celebration. 
-                We're the DMV's newest premiere band—connecting some of the best 
-                musicians and bandleaders in the region to create something special.
+                Harborline brings modern soul and R&B energy to every celebration—the DMV's 
+                newest premiere band connecting some of the best musicians and bandleaders 
+                in the region to create something special.
               </p>
               <p className="text-lg leading-relaxed">
-                From timeless classics to today's chart-toppers, we build the vibe, 
-                read the room, and keep your dance floor moving all night long.
+                From timeless classics to today's chart-toppers, Harborline builds the vibe, 
+                reads the room, and keeps dance floors moving all night long.
               </p>
             </div>
 
