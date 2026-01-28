@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
-import logoBlack from "@/assets/logo-black.png";
+import logoNew from "@/assets/logo-new.png";
 
 const categories = ["All", "Reception", "Cocktail/Dinner"];
 
@@ -371,11 +371,12 @@ www.harborlinemusic.com`;
           resolve(canvas.toDataURL("image/png"));
         };
         img.onerror = () => resolve("");
-        img.src = logoBlack;
+        img.src = logoNew;
       });
     };
 
     const logoBase64 = await getLogoBase64();
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -389,69 +390,232 @@ www.harborlinemusic.com`;
 <head>
   <title>Harborline - Song Selections</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600&display=swap');
+    
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    
     body { 
-      font-family: 'Georgia', serif; 
-      padding: 40px;
-      color: #000;
+      font-family: 'Cormorant Garamond', Georgia, serif; 
+      padding: 50px 40px;
+      color: #1a1a1a;
+      background: #fff;
+      line-height: 1.6;
     }
-    .container { max-width: 700px; margin: 0 auto; }
+    
+    .container { 
+      max-width: 650px; 
+      margin: 0 auto; 
+    }
+    
     .header { 
       text-align: center; 
-      margin-bottom: 30px; 
-      padding-bottom: 20px;
-      border-bottom: 2px solid #8B7355;
+      margin-bottom: 40px; 
+      padding-bottom: 30px;
+      border-bottom: 1px solid #e5e5e5;
     }
-    h1 { 
-      font-size: 24px; 
-      color: #8B7355; 
-      letter-spacing: 2px;
+    
+    .header-logo {
+      width: 180px;
+      height: auto;
+      margin-bottom: 20px;
+    }
+    
+    .header-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 4px;
+      color: #7C3AED;
+      text-transform: uppercase;
       margin-bottom: 8px;
     }
-    .subtitle { color: #666; font-size: 12px; }
-    .section { margin-bottom: 25px; }
-    .section-title { 
-      font-size: 14px; 
-      color: #8B7355; 
-      margin-bottom: 12px;
-      letter-spacing: 1px;
-      font-weight: bold;
+    
+    .header-subtitle { 
+      font-family: 'Cormorant Garamond', serif;
+      color: #666; 
+      font-size: 14px;
+      font-style: italic;
     }
-    .song-list { list-style: none; }
-    .song-item { 
-      padding: 8px 0; 
-      border-bottom: 1px solid #ddd;
-      font-size: 12px;
+    
+    .stats-bar {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 20px;
+      padding-top: 15px;
     }
-    .song-title { font-weight: bold; }
-    .song-artist { color: #666; margin-left: 8px; }
-    .footer { 
-      margin-top: 40px; 
-      padding-top: 20px; 
+    
+    .stat-item {
       text-align: center;
     }
+    
+    .stat-number {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: #7C3AED;
+    }
+    
+    .stat-label {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #888;
+      text-transform: uppercase;
+    }
+    
+    .section { 
+      margin-bottom: 35px; 
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #7C3AED;
+    }
+    
+    .section-icon {
+      width: 8px;
+      height: 8px;
+      background: linear-gradient(135deg, #7C3AED, #3B82F6);
+      border-radius: 50%;
+    }
+    
+    .section-title { 
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px; 
+      font-weight: 600;
+      color: #1a1a1a;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    
+    .section-count {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10px;
+      color: #7C3AED;
+      margin-left: auto;
+    }
+    
+    .song-list { 
+      list-style: none;
+      columns: 2;
+      column-gap: 30px;
+    }
+    
+    .song-item { 
+      padding: 6px 0; 
+      font-size: 11px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .song-title { 
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+    
+    .song-artist { 
+      color: #888;
+      font-size: 10px;
+      font-style: italic;
+    }
+    
+    .footer { 
+      margin-top: 50px; 
+      padding-top: 30px; 
+      border-top: 1px solid #e5e5e5;
+      text-align: center;
+    }
+    
     .footer-logo {
-      width: 120px;
+      width: 100px;
       height: auto;
-      opacity: 0.8;
+      margin-bottom: 15px;
+      opacity: 0.9;
+    }
+    
+    .footer-tagline {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: #666;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    
+    .footer-contact {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10px;
+      color: #7C3AED;
+    }
+    
+    .footer-date {
+      font-size: 10px;
+      color: #aaa;
+      margin-top: 15px;
+      font-style: italic;
+    }
+    
+    @media print {
+      body { 
+        padding: 30px;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .section-header {
+        border-bottom-color: #7C3AED !important;
+      }
+      .section-icon {
+        background: #7C3AED !important;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>HARBORLINE</h1>
-      <p class="subtitle">MY EVENT SONG SELECTIONS • ${selectedSongsList.length} Songs</p>
+      ${logoBase64 ? `<img src="${logoBase64}" alt="Harborline" class="header-logo">` : ''}
+      <p class="header-title">My Event Song Selections</p>
+      <p class="header-subtitle">Curated playlist for your special occasion</p>
+      
+      <div class="stats-bar">
+        <div class="stat-item">
+          <div class="stat-number">${selectedSongsList.length}</div>
+          <div class="stat-label">Total Songs</div>
+        </div>
+        ${receptionSongs.length > 0 ? `
+        <div class="stat-item">
+          <div class="stat-number">${receptionSongs.length}</div>
+          <div class="stat-label">Reception</div>
+        </div>
+        ` : ''}
+        ${cocktailSongs.length > 0 ? `
+        <div class="stat-item">
+          <div class="stat-number">${cocktailSongs.length}</div>
+          <div class="stat-label">Cocktail</div>
+        </div>
+        ` : ''}
+      </div>
     </div>
     
     ${receptionSongs.length > 0 ? `
     <div class="section">
-      <h2 class="section-title">RECEPTION SONGS (${receptionSongs.length})</h2>
+      <div class="section-header">
+        <div class="section-icon"></div>
+        <h2 class="section-title">Reception Songs</h2>
+        <span class="section-count">${receptionSongs.length} songs</span>
+      </div>
       <ul class="song-list">
         ${receptionSongs.map(song => `
           <li class="song-item">
             <span class="song-title">${song.title}</span>
-            <span class="song-artist">— ${song.artist}</span>
+            <span class="song-artist">${song.artist}</span>
           </li>
         `).join('')}
       </ul>
@@ -460,12 +624,16 @@ www.harborlinemusic.com`;
     
     ${cocktailSongs.length > 0 ? `
     <div class="section">
-      <h2 class="section-title">COCKTAIL/DINNER SONGS (${cocktailSongs.length})</h2>
+      <div class="section-header">
+        <div class="section-icon"></div>
+        <h2 class="section-title">Cocktail & Dinner Songs</h2>
+        <span class="section-count">${cocktailSongs.length} songs</span>
+      </div>
       <ul class="song-list">
         ${cocktailSongs.map(song => `
           <li class="song-item">
             <span class="song-title">${song.title}</span>
-            <span class="song-artist">— ${song.artist}</span>
+            <span class="song-artist">${song.artist}</span>
           </li>
         `).join('')}
       </ul>
@@ -473,14 +641,17 @@ www.harborlinemusic.com`;
     ` : ''}
     
     <div class="footer">
-      ${logoBase64 ? `<img src="${logoBase64}" alt="Harborline" class="footer-logo">` : '<p style="color: #8B7355; font-weight: bold;">HARBORLINE</p>'}
+      ${logoBase64 ? `<img src="${logoBase64}" alt="Harborline" class="footer-logo">` : ''}
+      <p class="footer-tagline">Baltimore's Premier Event Band</p>
+      <p class="footer-contact">harborlinemusic.com</p>
+      <p class="footer-date">Generated on ${today}</p>
     </div>
   </div>
   <script>
     window.onload = function() {
       setTimeout(function() {
         window.print();
-      }, 100);
+      }, 200);
     };
   </script>
 </body>
