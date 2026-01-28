@@ -61,19 +61,19 @@ const AboutPage = () => {
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   Whether it's a first dance, a company party, or a night you'll never forget, 
-                  Harborline sets the tone and keeps the groove alive. We're Baltimore's go-to 
-                  live band for weddings, corporate events, galas, and private parties.
+                  Harborline sets the tone and keeps the groove alive. The band is Baltimore's go-to 
+                  choice for weddings, corporate events, galas, and private parties.
                 </p>
                 <p>
-                  Our seasoned musicians bring decades of combined experience across every style—
-                  from classic Motown and soul to today's hottest hits. We deliver the best of 
+                  Harborline's seasoned musicians bring decades of combined experience across every style—
+                  from classic Motown and soul to today's hottest hits. The band delivers the best of 
                   the old and the best of the new in one nonstop, feel-good set that reads the 
                   room and keeps people dancing.
                 </p>
                 <p>
-                  What sets us apart isn't just our talent—it's our commitment to creating 
-                  an unforgettable vibe. We work closely with every client to craft the perfect 
-                  experience, ensuring every moment of your event hits exactly right.
+                  What sets Harborline apart isn't just the talent—it's the commitment to creating 
+                  an unforgettable vibe, working closely with every client to craft the perfect 
+                  experience and ensure every moment hits exactly right.
                 </p>
               </div>
             </motion.div>

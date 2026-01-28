@@ -61,7 +61,7 @@ const Footer = () => {
           <div className="col-span-2 md:col-span-1">
             <img src={logo} alt="Harborline" className="h-12 w-auto mb-4 object-contain" />
             <p className="text-muted-foreground text-sm mb-4">
-              The DMV's newest premiere band—we build the vibe, read the room, and keep your dance floor moving all night.
+              The DMV's newest premiere band—building the vibe, reading the room, and keeping dance floors moving all night.
             </p>
             <div className="flex gap-3">
               {socialLinks.map((social) => (
