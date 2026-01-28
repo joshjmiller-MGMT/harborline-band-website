@@ -46,9 +46,9 @@ const CorporatePage = () => {
                 CORPORATE <span className="text-gradient-gold">EXCELLENCE</span>
               </h2>
               <p className="text-muted-foreground text-lg mb-6">
-                From Fortune 500 galas to startup celebrations, Harborline delivers 
-                polished, professional entertainment that reflects your company's image. 
-                We understand the unique demands of corporate events and consistently exceed expectations.
+                Whether it's a company party or a night your team will never forget, 
+                Harborline sets the tone with modern soul and R&B energy. We build the vibe, 
+                read the room, and keep the energy high from first note to last.
               </p>
               
               <ul className="grid sm:grid-cols-2 gap-3">

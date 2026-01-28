@@ -61,7 +61,7 @@ const Footer = () => {
           <div className="col-span-2 md:col-span-1">
             <img src={logo} alt="Harborline" className="h-12 w-auto mb-4 object-contain" />
             <p className="text-muted-foreground text-sm mb-4">
-              Baltimore's premier event band bringing unforgettable live entertainment to celebrations across Maryland, DC, and beyond.
+              Modern soul and R&B energy for weddings, corporate events, and private parties across the DMV.
             </p>
             <div className="flex gap-3">
               {socialLinks.map((social) => (

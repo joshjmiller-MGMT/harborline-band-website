@@ -16,13 +16,13 @@ const AboutPage = () => {
   return (
     <Layout
       title="About Harborline | Baltimore's Premier Event Band"
-      description="Meet Harborline - Baltimore's most dynamic event and corporate band. With 10+ years of experience and 1000+ performances, we bring unmatched energy to every event."
+      description="Harborline is the DMV's premiere event band bringing modern soul and R&B energy to every celebration. The best of the old and the best of the new."
       canonical="https://harborlinemusic.com/about"
     >
       <PageHero
         eyebrow="OUR STORY"
         title="ABOUT HARBORLINE"
-        subtitle="Where passion meets performance"
+        subtitle="Modern soul. Timeless energy."
         showCTA={false}
       />
 
@@ -56,25 +56,24 @@ const AboutPage = () => {
               transition={{ duration: 0.6 }}
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight mb-6">
-                BALTIMORE'S SOUND
+                SETTING THE TONE
               </h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
-                  Harborline was born from a shared vision: to create unforgettable musical 
-                  experiences that transform ordinary events into extraordinary celebrations. 
-                  Based in Baltimore, we've become the go-to entertainment choice for discerning 
-                  clients throughout Maryland and the Mid-Atlantic region.
+                  Whether it's a first dance, a company party, or a night you'll never forget, 
+                  Harborline sets the tone and keeps the groove alive. We're Baltimore's go-to 
+                  live band for weddings, corporate events, galas, and private parties.
                 </p>
                 <p>
-                  Our seasoned musicians bring decades of combined experience across every genre 
-                  imaginable—from classic Motown and timeless jazz to today's chart-topping hits. 
-                  Whether it's an intimate wedding reception or a corporate gala for thousands, 
-                  we deliver the same level of excellence and energy.
+                  Our seasoned musicians bring decades of combined experience across every style—
+                  from classic Motown and soul to today's hottest hits. We deliver the best of 
+                  the old and the best of the new in one nonstop, feel-good set that reads the 
+                  room and keeps people dancing.
                 </p>
                 <p>
-                  What sets us apart isn't just our talent—it's our commitment to making your 
-                  vision a reality. We work closely with every client to craft the perfect 
-                  setlist, ensuring every moment of your event is backed by the perfect soundtrack.
+                  What sets us apart isn't just our talent—it's our commitment to creating 
+                  an unforgettable vibe. We work closely with every client to craft the perfect 
+                  experience, ensuring every moment of your event hits exactly right.
                 </p>
               </div>
             </motion.div>
