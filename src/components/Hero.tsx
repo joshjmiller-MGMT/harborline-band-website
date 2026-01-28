@@ -48,8 +48,8 @@ const Hero = () => {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto mb-10 font-light"
         >
-          Bringing unforgettable live entertainment to galas, weddings, 
-          corporate events, and private celebrations across Maryland and beyond.
+          The best of the old and the best of the new—one nonstop, feel-good set 
+          for weddings, corporate events, and private celebrations across the DMV.
         </motion.p>
 
         <motion.div

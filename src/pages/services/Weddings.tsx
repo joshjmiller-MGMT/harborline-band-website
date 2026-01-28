@@ -76,12 +76,12 @@ const WeddingsPage = () => {
               </h2>
               <p className="text-muted-foreground text-lg">
                 Your wedding day deserves live music that moves hearts and fills the dance floor. 
-                Harborline has been the soundtrack to hundreds of Maryland weddings, bringing 
-                elegance to ceremonies and unstoppable energy to receptions.
+                Harborline delivers the best of the old and the best of the new—timeless classics 
+                and today's hits woven into one nonstop, feel-good celebration.
               </p>
               <p className="text-muted-foreground">
-                We understand that every couple is unique. That's why we work closely with you 
-                to craft the perfect musical experience—from your processional to your grand exit.
+                From your first dance to the last song, we set the tone and keep the groove alive. 
+                We work closely with you to craft the perfect soundtrack for every moment.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
                 {features.map((feature) => (

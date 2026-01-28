@@ -72,15 +72,13 @@ const About = () => {
             
             <div className="space-y-6 text-muted-foreground">
               <p className="text-lg leading-relaxed">
-                Based in Baltimore, Harborline is a dynamic ensemble of seasoned musicians 
-                dedicated to delivering world-class live entertainment. With decades of 
-                combined experience performing at prestigious venues and high-profile events, 
-                we bring professionalism, versatility, and infectious energy to every stage.
+                Harborline brings modern soul and R&B energy to every celebration. 
+                We're the DMV's newest premiere band—connecting some of the best 
+                musicians and bandleaders in the region to create something special.
               </p>
               <p className="text-lg leading-relaxed">
-                From classic hits to contemporary favorites, our repertoire spans genres 
-                to keep dance floors packed and guests entertained from the first note to 
-                the last encore.
+                From timeless classics to today's chart-toppers, we build the vibe, 
+                read the room, and keep your dance floor moving all night long.
               </p>
             </div>
 
