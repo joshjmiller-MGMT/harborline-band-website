@@ -71,14 +71,15 @@ const RequestQuotePage = () => {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
+              className="overflow-visible"
             >
               <iframe 
                 src="https://forms.monday.com/forms/embed/cd9db9bdd36a0a870cc16f6d7cf06fda?r=use1" 
                 width="100%" 
-                height="1200" 
-                style={{ border: 0, filter: 'invert(1) hue-rotate(180deg)' }}
+                height="auto"
+                style={{ border: 0, filter: 'invert(1) hue-rotate(180deg)', minHeight: '100vh' }}
                 title="Request a Quote Form"
-                className="min-h-[800px]"
+                scrolling="no"
               />
             </motion.div>
           </div>
