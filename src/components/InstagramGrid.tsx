@@ -1,25 +1,24 @@
 import { motion } from "framer-motion";
 import { Instagram } from "lucide-react";
 
-// Replace these imports with your own square-cropped frame screenshots
-import thumb1 from "@/assets/band/live-performance-1.png";
-import thumb2 from "@/assets/band/live-performance-2.jpg";
-import thumb3 from "@/assets/band/live-performance-3.jpg";
-import thumb4 from "@/assets/band/group-laughing.jpg";
-import thumb5 from "@/assets/band/live-dj-sax.webp";
-import thumb6 from "@/assets/band/jazz-trio-1.webp";
-import thumb7 from "@/assets/band/special-event-dancer.webp";
-import thumb8 from "@/assets/band/setup-tent.png";
+import ig1 from "@/assets/instagram/ig-1.png";
+import ig2 from "@/assets/instagram/ig-2.png";
+import ig3 from "@/assets/instagram/ig-3.png";
+import ig4 from "@/assets/instagram/ig-4.png";
+import ig5 from "@/assets/instagram/ig-5.png";
+import ig6 from "@/assets/instagram/ig-6.png";
+import ig7 from "@/assets/instagram/ig-7.png";
+import ig8 from "@/assets/instagram/ig-8.png";
 
 const instagramPosts = [
-  { url: "https://www.instagram.com/harborline.band/reel/DQKEwAXjC8n/", thumbnail: thumb1 },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DN3nioKYj6D/", thumbnail: thumb2 },
-  { url: "https://www.instagram.com/joshjmillerofficial/reel/DUqps0tEbJ6/", thumbnail: thumb3 },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/p/DUlckBnjTh3/", thumbnail: thumb4 },
-  { url: "https://www.instagram.com/harborline.band/reel/DSaXaZ-jV4l/", thumbnail: thumb5 },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DLSiBjwM--m/", thumbnail: thumb6 },
-  { url: "https://www.instagram.com/100daysoffiddle/reel/DIjnjrrgjOC/", thumbnail: thumb7 },
-  { url: "https://www.instagram.com/the.economy.band/reel/DGmQKv5sMJB/", thumbnail: thumb8 },
+  { url: "https://www.instagram.com/harborline.band/reel/DQKEwAXjC8n/", thumbnail: ig1 },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DN3nioKYj6D/", thumbnail: ig2 },
+  { url: "https://www.instagram.com/joshjmillerofficial/reel/DUqps0tEbJ6/", thumbnail: ig3 },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/p/DUlckBnjTh3/", thumbnail: ig4 },
+  { url: "https://www.instagram.com/harborline.band/reel/DSaXaZ-jV4l/", thumbnail: ig5 },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DLSiBjwM--m/", thumbnail: ig6 },
+  { url: "https://www.instagram.com/100daysoffiddle/reel/DIjnjrrgjOC/", thumbnail: ig7 },
+  { url: "https://www.instagram.com/the.economy.band/reel/DGmQKv5sMJB/", thumbnail: ig8 },
 ];
 
 const InstagramGrid = () => {
