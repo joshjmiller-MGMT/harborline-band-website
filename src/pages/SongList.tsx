@@ -435,6 +435,24 @@ www.harborlinemusic.com`;
       return;
     }
 
+    // Build a flat sorted list grouped by genre for the compact layout
+    const allSongRows = Object.entries(songsByGenre).flatMap(([genre, genreSongs]) =>
+      genreSongs.map(song => ({ ...song, genre }))
+    );
+
+    // Split into 3 columns
+    const colSize = Math.ceil(allSongRows.length / 3);
+    const col1 = allSongRows.slice(0, colSize);
+    const col2 = allSongRows.slice(colSize, colSize * 2);
+    const col3 = allSongRows.slice(colSize * 2);
+
+    const renderColumn = (colSongs: typeof allSongRows) => colSongs.map(song => `
+      <div class="song-row">
+        <span class="song-title">${song.title}</span>
+        <span class="song-artist">${song.artist}</span>
+      </div>
+    `).join('');
+
     printWindow.document.write(`
 <!DOCTYPE html>
 <html>
@@ -447,183 +465,158 @@ www.harborlinemusic.com`;
     
     body { 
       font-family: 'Cormorant Garamond', Georgia, serif; 
-      padding: 50px 40px;
+      padding: 25px 30px;
       color: #1a1a1a;
       background: #fff;
-      line-height: 1.6;
+      line-height: 1.3;
     }
     
     .container { 
-      max-width: 650px; 
+      max-width: 100%; 
       margin: 0 auto; 
     }
     
     .header { 
-      text-align: center; 
-      margin-bottom: 40px; 
-      padding-bottom: 30px;
-      border-bottom: 1px solid #e5e5e5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px; 
+      padding-bottom: 12px;
+      border-bottom: 2px solid #7C3AED;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
     }
     
     .header-logo {
-      width: 180px;
+      width: 100px;
       height: auto;
-      margin-bottom: 20px;
     }
+    
+    .header-text {}
     
     .header-title {
       font-family: 'Montserrat', sans-serif;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
-      letter-spacing: 4px;
+      letter-spacing: 3px;
       color: #7C3AED;
       text-transform: uppercase;
-      margin-bottom: 8px;
+      margin-bottom: 2px;
     }
     
     .header-subtitle { 
       font-family: 'Cormorant Garamond', serif;
       color: #666; 
-      font-size: 14px;
+      font-size: 11px;
       font-style: italic;
     }
     
-    .stats-bar {
-      display: flex;
-      justify-content: center;
-      gap: 30px;
-      margin-top: 20px;
-      padding-top: 15px;
-    }
-    
-    .stat-item {
-      text-align: center;
+    .header-right {
+      text-align: right;
     }
     
     .stat-number {
       font-family: 'Montserrat', sans-serif;
-      font-size: 24px;
+      font-size: 20px;
       font-weight: 700;
       color: #7C3AED;
+      line-height: 1;
     }
     
     .stat-label {
       font-family: 'Montserrat', sans-serif;
-      font-size: 9px;
+      font-size: 7px;
       letter-spacing: 2px;
       color: #888;
       text-transform: uppercase;
     }
     
-    .section { 
-      margin-bottom: 35px; 
-    }
-    
-    .section-header {
+    .columns {
       display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 18px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #7C3AED;
+      gap: 20px;
     }
     
-    .section-icon {
-      width: 8px;
-      height: 8px;
-      background: linear-gradient(135deg, #7C3AED, #3B82F6);
-      border-radius: 50%;
+    .column {
+      flex: 1;
     }
     
-    .section-title { 
-      font-family: 'Montserrat', sans-serif;
-      font-size: 11px; 
-      font-weight: 600;
-      color: #1a1a1a;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-    }
-    
-    .section-count {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 10px;
-      color: #7C3AED;
-      margin-left: auto;
-    }
-    
-    .song-list { 
-      list-style: none;
-      columns: 2;
-      column-gap: 30px;
-    }
-    
-    .song-item { 
-      padding: 6px 0; 
-      font-size: 11px;
-      break-inside: avoid;
-      page-break-inside: avoid;
-      display: flex;
-      flex-direction: column;
+    .song-row {
+      padding: 2px 0;
+      border-bottom: 1px solid #f0f0f0;
     }
     
     .song-title { 
+      font-family: 'Montserrat', sans-serif;
       font-weight: 600;
+      font-size: 7.5px;
       color: #1a1a1a;
+      display: block;
+      line-height: 1.3;
     }
     
     .song-artist { 
+      font-family: 'Cormorant Garamond', serif;
       color: #888;
-      font-size: 10px;
+      font-size: 8px;
       font-style: italic;
+      display: block;
+      line-height: 1.2;
     }
     
     .footer { 
-      margin-top: 50px; 
-      padding-top: 30px; 
+      margin-top: 12px; 
+      padding-top: 8px; 
       border-top: 1px solid #e5e5e5;
-      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
     
     .footer-logo {
-      width: 100px;
+      width: 50px;
       height: auto;
-      margin-bottom: 15px;
-      opacity: 0.9;
+      opacity: 0.8;
     }
     
     .footer-tagline {
       font-family: 'Montserrat', sans-serif;
-      font-size: 9px;
-      letter-spacing: 3px;
+      font-size: 7px;
+      letter-spacing: 2px;
       color: #666;
       text-transform: uppercase;
-      margin-bottom: 8px;
     }
     
     .footer-contact {
       font-family: 'Montserrat', sans-serif;
-      font-size: 10px;
+      font-size: 8px;
       color: #7C3AED;
     }
     
     .footer-date {
-      font-size: 10px;
+      font-size: 8px;
       color: #aaa;
-      margin-top: 15px;
       font-style: italic;
     }
     
     @media print {
       body { 
-        padding: 30px;
+        padding: 20px 25px;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
-      .section-header {
-        border-bottom-color: #7C3AED !important;
-      }
-      .section-icon {
-        background: #7C3AED !important;
+      @page {
+        size: letter;
+        margin: 0.4in;
       }
     }
   </style>
@@ -631,41 +624,34 @@ www.harborlinemusic.com`;
 <body>
   <div class="container">
     <div class="header">
-      ${logoBase64 ? `<img src="${logoBase64}" alt="Harborline" class="header-logo">` : ''}
-      <p class="header-title">My Event Song Selections</p>
-      <p class="header-subtitle">Curated playlist for your special occasion</p>
-      
-      <div class="stats-bar">
-        <div class="stat-item">
-          <div class="stat-number">${selectedSongsList.length}</div>
-          <div class="stat-label">Total Songs</div>
+      <div class="header-left">
+        ${logoBase64 ? `<img src="${logoBase64}" alt="Harborline" class="header-logo">` : ''}
+        <div class="header-text">
+          <p class="header-title">My Event Song Selections</p>
+          <p class="header-subtitle">Curated playlist for your special occasion</p>
         </div>
       </div>
+      <div class="header-right">
+        <div class="stat-number">${selectedSongsList.length}</div>
+        <div class="stat-label">Songs</div>
+      </div>
     </div>
     
-    ${Object.entries(songsByGenre).map(([genre, genreSongs]) => `
-    <div class="section">
-      <div class="section-header">
-        <div class="section-icon"></div>
-        <h2 class="section-title">${genre}</h2>
-        <span class="section-count">${genreSongs.length} songs</span>
-      </div>
-      <ul class="song-list">
-        ${genreSongs.map(song => `
-          <li class="song-item">
-            <span class="song-title">${song.title}</span>
-            <span class="song-artist">${song.artist}</span>
-          </li>
-        `).join('')}
-      </ul>
+    <div class="columns">
+      <div class="column">${renderColumn(col1)}</div>
+      <div class="column">${renderColumn(col2)}</div>
+      <div class="column">${renderColumn(col3)}</div>
     </div>
-    `).join('')}
     
     <div class="footer">
-      ${logoBase64 ? `<img src="${logoBase64}" alt="Harborline" class="footer-logo">` : ''}
-      <p class="footer-tagline">Baltimore's Premier Event Band</p>
-      <p class="footer-contact">harborlinemusic.com</p>
-      <p class="footer-date">Generated on ${today}</p>
+      <div class="footer-left">
+        ${logoBase64 ? `<img src="${logoBase64}" alt="Harborline" class="footer-logo">` : ''}
+        <p class="footer-tagline">Baltimore's Premier Event Band</p>
+      </div>
+      <div>
+        <p class="footer-contact">harborlinemusic.com</p>
+        <p class="footer-date">Generated on ${today}</p>
+      </div>
     </div>
   </div>
   <script>
