@@ -1,37 +1,28 @@
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Instagram } from "lucide-react";
 
+// Replace these imports with your own square-cropped frame screenshots
+import thumb1 from "@/assets/band/live-performance-1.png";
+import thumb2 from "@/assets/band/live-performance-2.jpg";
+import thumb3 from "@/assets/band/live-performance-3.jpg";
+import thumb4 from "@/assets/band/group-laughing.jpg";
+import thumb5 from "@/assets/band/live-dj-sax.webp";
+import thumb6 from "@/assets/band/jazz-trio-1.webp";
+import thumb7 from "@/assets/band/special-event-dancer.webp";
+import thumb8 from "@/assets/band/setup-tent.png";
+
 const instagramPosts = [
-  { url: "https://www.instagram.com/harborline.band/reel/DQKEwAXjC8n/" },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DN3nioKYj6D/" },
-  { url: "https://www.instagram.com/joshjmillerofficial/reel/DUqps0tEbJ6/" },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/p/DUlckBnjTh3/" },
-  { url: "https://www.instagram.com/harborline.band/reel/DSaXaZ-jV4l/" },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DLSiBjwM--m/" },
-  { url: "https://www.instagram.com/100daysoffiddle/reel/DIjnjrrgjOC/" },
-  { url: "https://www.instagram.com/the.economy.band/reel/DGmQKv5sMJB/" },
+  { url: "https://www.instagram.com/harborline.band/reel/DQKEwAXjC8n/", thumbnail: thumb1 },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DN3nioKYj6D/", thumbnail: thumb2 },
+  { url: "https://www.instagram.com/joshjmillerofficial/reel/DUqps0tEbJ6/", thumbnail: thumb3 },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/p/DUlckBnjTh3/", thumbnail: thumb4 },
+  { url: "https://www.instagram.com/harborline.band/reel/DSaXaZ-jV4l/", thumbnail: thumb5 },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DLSiBjwM--m/", thumbnail: thumb6 },
+  { url: "https://www.instagram.com/100daysoffiddle/reel/DIjnjrrgjOC/", thumbnail: thumb7 },
+  { url: "https://www.instagram.com/the.economy.band/reel/DGmQKv5sMJB/", thumbnail: thumb8 },
 ];
 
 const InstagramGrid = () => {
-  useEffect(() => {
-    // Load Instagram embed script
-    const script = document.createElement("script");
-    script.src = "https://www.instagram.com/embed.js";
-    script.async = true;
-    document.body.appendChild(script);
-
-    script.onload = () => {
-      if ((window as any).instgrm) {
-        (window as any).instgrm.Embeds.process();
-      }
-    };
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
-
   return (
     <section className="py-24 md:py-32">
       <div className="container px-6 max-w-6xl mx-auto">
@@ -61,23 +52,27 @@ const InstagramGrid = () => {
           className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3"
         >
           {instagramPosts.map((post, index) => (
-            <motion.div
+            <motion.a
               key={index}
+              href={post.url}
+              target="_blank"
+              rel="noopener noreferrer"
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: index * 0.05 }}
-              className="aspect-square overflow-hidden rounded-sm border border-border bg-card"
+              className="group relative aspect-square overflow-hidden rounded-sm bg-card border border-border"
             >
-              <iframe
-                src={`${post.url}embed/`}
-                className="w-full h-full border-0"
-                scrolling="no"
-                allowTransparency
+              <img
+                src={post.thumbnail}
+                alt={`Instagram post ${index + 1}`}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 loading="lazy"
-                title={`Instagram post ${index + 1}`}
               />
-            </motion.div>
+              <div className="absolute inset-0 bg-background/0 group-hover:bg-background/60 transition-all duration-300 flex items-center justify-center">
+                <Instagram className="text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-8 h-8" />
+              </div>
+            </motion.a>
           ))}
         </motion.div>
 
