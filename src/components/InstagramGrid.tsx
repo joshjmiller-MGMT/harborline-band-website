@@ -30,7 +30,7 @@ const InstagramGrid = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-8"
         >
           <p className="text-primary font-display tracking-display text-sm mb-3">
             FOLLOW ALONG
@@ -38,9 +38,18 @@ const InstagramGrid = () => {
           <h2 className="font-display text-5xl md:text-7xl tracking-tight mb-4">
             @HARBORLINE.BAND
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto mb-6">
             Catch the latest highlights, behind-the-scenes moments, and live performance clips.
           </p>
+          <a
+            href="https://www.instagram.com/harborline.band/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-display tracking-wide-custom text-lg"
+          >
+            <Instagram className="w-5 h-5" />
+            FOLLOW US ON INSTAGRAM
+          </a>
         </motion.div>
 
         <motion.div
@@ -48,7 +57,7 @@ const InstagramGrid = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3"
+          className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 md:gap-2"
         >
           {instagramPosts.map((post, index) => (
             <motion.a
@@ -60,7 +69,7 @@ const InstagramGrid = () => {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: index * 0.05 }}
-              className="group relative aspect-square overflow-hidden rounded-sm bg-card border border-border"
+              className="group relative aspect-square overflow-hidden rounded-sm bg-card border border-border/50"
             >
               <img
                 src={post.thumbnail}
@@ -73,24 +82,6 @@ const InstagramGrid = () => {
               </div>
             </motion.a>
           ))}
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="text-center mt-8"
-        >
-          <a
-            href="https://www.instagram.com/harborline.band/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-display tracking-wide-custom text-lg"
-          >
-            <Instagram className="w-5 h-5" />
-            FOLLOW US ON INSTAGRAM
-          </a>
         </motion.div>
       </div>
     </section>
