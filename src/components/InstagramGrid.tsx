@@ -1,18 +1,37 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Instagram } from "lucide-react";
 
 const instagramPosts = [
-  { url: "https://www.instagram.com/harborline.band/reel/DQKEwAXjC8n/", embedId: "DQKEwAXjC8n", alt: "Harborline performance" },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DN3nioKYj6D/", embedId: "DN3nioKYj6D", alt: "Baltimore Sound Entertainment" },
-  { url: "https://www.instagram.com/joshjmillerofficial/reel/DUqps0tEbJ6/", embedId: "DUqps0tEbJ6", alt: "Josh Miller performance" },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/p/DUlckBnjTh3/", embedId: "DUlckBnjTh3", alt: "Baltimore Sound post" },
-  { url: "https://www.instagram.com/harborline.band/reel/DSaXaZ-jV4l/", embedId: "DSaXaZ-jV4l", alt: "Harborline reel" },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DLSiBjwM--m/", embedId: "DLSiBjwM--m", alt: "Baltimore Sound reel" },
-  { url: "https://www.instagram.com/100daysoffiddle/reel/DIjnjrrgjOC/", embedId: "DIjnjrrgjOC", alt: "100 Days of Fiddle" },
-  { url: "https://www.instagram.com/the.economy.band/reel/DGmQKv5sMJB/", embedId: "DGmQKv5sMJB", alt: "The Economy Band" },
+  { url: "https://www.instagram.com/harborline.band/reel/DQKEwAXjC8n/" },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DN3nioKYj6D/" },
+  { url: "https://www.instagram.com/joshjmillerofficial/reel/DUqps0tEbJ6/" },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/p/DUlckBnjTh3/" },
+  { url: "https://www.instagram.com/harborline.band/reel/DSaXaZ-jV4l/" },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DLSiBjwM--m/" },
+  { url: "https://www.instagram.com/100daysoffiddle/reel/DIjnjrrgjOC/" },
+  { url: "https://www.instagram.com/the.economy.band/reel/DGmQKv5sMJB/" },
 ];
 
 const InstagramGrid = () => {
+  useEffect(() => {
+    // Load Instagram embed script
+    const script = document.createElement("script");
+    script.src = "https://www.instagram.com/embed.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      if ((window as any).instgrm) {
+        (window as any).instgrm.Embeds.process();
+      }
+    };
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
   return (
     <section className="py-24 md:py-32">
       <div className="container px-6 max-w-6xl mx-auto">
@@ -42,32 +61,23 @@ const InstagramGrid = () => {
           className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3"
         >
           {instagramPosts.map((post, index) => (
-            <motion.a
+            <motion.div
               key={index}
-              href={post.url}
-              target="_blank"
-              rel="noopener noreferrer"
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: index * 0.05 }}
-              className="group relative aspect-square overflow-hidden rounded-sm bg-card border border-border"
+              className="aspect-square overflow-hidden rounded-sm border border-border bg-card"
             >
-              <img
-                src={`https://instagram.com/p/${post.embedId}/media/?size=m`}
-                alt={post.alt}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              <iframe
+                src={`${post.url}embed/`}
+                className="w-full h-full border-0"
+                scrolling="no"
+                allowTransparency
                 loading="lazy"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  target.style.display = 'none';
-                  target.parentElement!.classList.add('bg-secondary');
-                }}
+                title={`Instagram post ${index + 1}`}
               />
-              <div className="absolute inset-0 bg-background/0 group-hover:bg-background/60 transition-all duration-300 flex items-center justify-center">
-                <Instagram className="text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-8 h-8" />
-              </div>
-            </motion.a>
+            </motion.div>
           ))}
         </motion.div>
 
