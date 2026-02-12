@@ -5,6 +5,7 @@ import Hero from "@/components/Hero";
 import CredibilitySection from "@/components/CredibilitySection";
 import Services from "@/components/Services";
 import Gallery from "@/components/Gallery";
+import InstagramGrid from "@/components/InstagramGrid";
 import VideoGallery from "@/components/VideoGallery";
 import About from "@/components/About";
 import Testimonials from "@/components/Testimonials";
@@ -186,6 +187,7 @@ const Index = () => {
       <main>
         <Hero />
         <About />
+        <InstagramGrid />
         <VideoGallery />
         <Services />
         <Gallery />
