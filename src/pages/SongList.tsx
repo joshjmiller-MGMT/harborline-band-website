@@ -440,11 +440,10 @@ www.harborlinemusic.com`;
       genreSongs.map(song => ({ ...song, genre }))
     );
 
-    // Split into 3 columns
-    const colSize = Math.ceil(allSongRows.length / 3);
+    // Split into 2 columns
+    const colSize = Math.ceil(allSongRows.length / 2);
     const col1 = allSongRows.slice(0, colSize);
-    const col2 = allSongRows.slice(colSize, colSize * 2);
-    const col3 = allSongRows.slice(colSize * 2);
+    const col2 = allSongRows.slice(colSize);
 
     const renderColumn = (colSongs: typeof allSongRows) => colSongs.map(song => `
       <div class="song-row">
@@ -640,7 +639,6 @@ www.harborlinemusic.com`;
     <div class="columns">
       <div class="column">${renderColumn(col1)}</div>
       <div class="column">${renderColumn(col2)}</div>
-      <div class="column">${renderColumn(col3)}</div>
     </div>
     
     <div class="footer">
