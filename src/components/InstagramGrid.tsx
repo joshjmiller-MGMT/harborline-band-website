@@ -16,9 +16,9 @@ const instagramPosts = [
   { url: "https://www.instagram.com/joshjmillerofficial/reel/DUqps0tEbJ6/", thumbnail: ig3 },
   { url: "https://www.instagram.com/baltimoresoundentertainment/p/DUlckBnjTh3/", thumbnail: ig4 },
   { url: "https://www.instagram.com/harborline.band/reel/DSaXaZ-jV4l/", thumbnail: ig5 },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DLSiBjwM--m/", thumbnail: ig6 },
+  { url: "https://www.instagram.com/the.economy.band/reel/DGmQKv5sMJB/", thumbnail: ig6 },
   { url: "https://www.instagram.com/100daysoffiddle/reel/DIjnjrrgjOC/", thumbnail: ig7 },
-  { url: "https://www.instagram.com/the.economy.band/reel/DGmQKv5sMJB/", thumbnail: ig8 },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DLSiBjwM--m/", thumbnail: ig8 },
 ];
 
 const InstagramGrid = () => {
