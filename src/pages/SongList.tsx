@@ -748,9 +748,31 @@ www.harborlinemusic.com`;
                 <p className="text-muted-foreground text-sm">
                   {filteredSongs.length} of {songs.length} songs
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Click songs to select
-                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const allFilteredKeys = filteredSongs.map(getSongKey);
+                    const allSelected = allFilteredKeys.every(k => selectedSongs.has(k));
+                    if (allSelected) {
+                      setSelectedSongs(prev => {
+                        const newSet = new Set(prev);
+                        allFilteredKeys.forEach(k => newSet.delete(k));
+                        return newSet;
+                      });
+                    } else {
+                      setSelectedSongs(prev => {
+                        const newSet = new Set(prev);
+                        allFilteredKeys.forEach(k => newSet.add(k));
+                        return newSet;
+                      });
+                    }
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <Check className="w-3.5 h-3.5 mr-1" />
+                  {filteredSongs.every(s => selectedSongs.has(getSongKey(s))) ? "Deselect All" : "Select All"}
+                </Button>
               </div>
               
               {selectedSongs.size > 0 ? (
