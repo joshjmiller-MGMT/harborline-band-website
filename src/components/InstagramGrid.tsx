@@ -2,14 +2,14 @@ import { motion } from "framer-motion";
 import { Instagram } from "lucide-react";
 
 const instagramPosts = [
-  { url: "https://www.instagram.com/reel/example1/", thumbnail: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop", alt: "Live performance highlight" },
-  { url: "https://www.instagram.com/reel/example2/", thumbnail: "https://images.unsplash.com/photo-1501612780327-45045538702b?w=400&h=400&fit=crop", alt: "Wedding reception moment" },
-  { url: "https://www.instagram.com/reel/example3/", thumbnail: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=400&fit=crop", alt: "Band setup" },
-  { url: "https://www.instagram.com/reel/example4/", thumbnail: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop", alt: "Stage lights" },
-  { url: "https://www.instagram.com/reel/example5/", thumbnail: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop", alt: "Crowd dancing" },
-  { url: "https://www.instagram.com/reel/example6/", thumbnail: "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&h=400&fit=crop", alt: "Event highlight" },
-  { url: "https://www.instagram.com/reel/example7/", thumbnail: "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=400&h=400&fit=crop", alt: "Behind the scenes" },
-  { url: "https://www.instagram.com/reel/example8/", thumbnail: "https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=400&h=400&fit=crop", alt: "Gala performance" },
+  { url: "https://www.instagram.com/harborline.band/reel/DQKEwAXjC8n/", embedId: "DQKEwAXjC8n", alt: "Harborline performance" },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DN3nioKYj6D/", embedId: "DN3nioKYj6D", alt: "Baltimore Sound Entertainment" },
+  { url: "https://www.instagram.com/joshjmillerofficial/reel/DUqps0tEbJ6/", embedId: "DUqps0tEbJ6", alt: "Josh Miller performance" },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/p/DUlckBnjTh3/", embedId: "DUlckBnjTh3", alt: "Baltimore Sound post" },
+  { url: "https://www.instagram.com/harborline.band/reel/DSaXaZ-jV4l/", embedId: "DSaXaZ-jV4l", alt: "Harborline reel" },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DLSiBjwM--m/", embedId: "DLSiBjwM--m", alt: "Baltimore Sound reel" },
+  { url: "https://www.instagram.com/100daysoffiddle/reel/DIjnjrrgjOC/", embedId: "DIjnjrrgjOC", alt: "100 Days of Fiddle" },
+  { url: "https://www.instagram.com/the.economy.band/reel/DGmQKv5sMJB/", embedId: "DGmQKv5sMJB", alt: "The Economy Band" },
 ];
 
 const InstagramGrid = () => {
@@ -54,10 +54,15 @@ const InstagramGrid = () => {
               className="group relative aspect-square overflow-hidden rounded-sm bg-card border border-border"
             >
               <img
-                src={post.thumbnail}
+                src={`https://instagram.com/p/${post.embedId}/media/?size=m`}
                 alt={post.alt}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 loading="lazy"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.style.display = 'none';
+                  target.parentElement!.classList.add('bg-secondary');
+                }}
               />
               <div className="absolute inset-0 bg-background/0 group-hover:bg-background/60 transition-all duration-300 flex items-center justify-center">
                 <Instagram className="text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-8 h-8" />
