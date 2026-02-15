@@ -417,13 +417,9 @@ ${generateContent()}
   };
 
   const copyToClipboard = () => {
-    const content = `HARBORLINE - MY EVENT SONG SELECTIONS
-=====================================
-
-${generateContent()}
-=====================================
-🎵 HARBORLINE - Baltimore's Premier Event Band
-www.harborlinemusic.com`;
+    const selectedSongsList = getSelectedSongsList();
+    const songsToUse = selectedSongsList.length > 0 ? selectedSongsList : filteredSongs;
+    const content = songsToUse.map(song => `• ${song.title} - ${song.artist}`).join('\n');
 
     navigator.clipboard.writeText(content).then(() => {
       toast.success("Song list copied to clipboard!");
