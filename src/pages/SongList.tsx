@@ -82,6 +82,7 @@ const songs: Song[] = [
   { title: "Positions", artist: "Ariana Grande", genre: "Pop & Top 40", functions: ["Cocktail", "Reception"] },
   { title: "We Can't Be Friends (Wait for Your Love)", artist: "Ariana Grande", genre: "Pop & Top 40", functions: ["Cocktail", "Dinner"] },
   { title: "Out of Time", artist: "The Weeknd", genre: "Pop & Top 40", functions: ["Cocktail", "Dinner"] },
+  { title: "Pink Pony Club", artist: "Chappell Roan", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
 
   // R&B & SOUL
   { title: "Signed, Sealed, Delivered", artist: "Stevie Wonder", genre: "R&B & Soul", functions: ["Reception", "Party", "Ceremony"] },
@@ -124,6 +125,7 @@ const songs: Song[] = [
   { title: "Home at Last", artist: "Steely Dan", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"] },
   { title: "Glamour Profession", artist: "Steely Dan", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"] },
   { title: "Minute by Minute", artist: "The Doobie Brothers", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"] },
+  { title: "Reminiscing", artist: "Little River Band", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner", "Reception"] },
 
   // ELECTRONIC & DANCE
   { title: "Murder on the Dance Floor", artist: "Sophie Ellis-Bextor", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
@@ -137,11 +139,7 @@ const songs: Song[] = [
 
   // REGGAE
   { title: "Could You Be Loved", artist: "Bob Marley", genre: "Reggae", functions: ["Cocktail", "Reception", "Party"] },
-
-  // ADDITIONAL
-  { title: "Pink Pony Club", artist: "Chappell Roan", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
-  { title: "Reminiscing", artist: "Little River Band", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner", "Reception"] },
-];
+].sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
 
 const SongListPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
