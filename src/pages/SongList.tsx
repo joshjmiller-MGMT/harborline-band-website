@@ -1,19 +1,11 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Check, Download, X, FileText, File, Copy, ChevronDown } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Search, Check, X, Copy } from "lucide-react";
 import { toast } from "sonner";
-import logo from "@/assets/logo.png";
-import logoNew from "@/assets/logo-new.png";
 
 const genres = [
   "All",
@@ -180,7 +172,7 @@ const SongListPage = () => {
   const [activeGenre, setActiveGenre] = useState("All");
   const [activeFunction, setActiveFunction] = useState("All");
   const [selectedSongs, setSelectedSongs] = useState<Set<string>>(new Set());
-  const printRef = useRef<HTMLDivElement>(null);
+  
 
   const filteredSongs = songs.filter((song) => {
     const matchesSearch =
@@ -214,216 +206,12 @@ const SongListPage = () => {
     return songs.filter((song) => selectedSongs.has(getSongKey(song)));
   };
 
-  const generateContent = () => {
-    const selectedSongsList = getSelectedSongsList();
-    
-    // Group by genre
-    const songsByGenre = genres.slice(1).reduce((acc, genre) => {
-      const genreSongs = selectedSongsList.filter(s => s.genre === genre);
-      if (genreSongs.length > 0) {
-        acc[genre] = genreSongs;
-      }
-      return acc;
-    }, {} as Record<string, typeof songs>);
-    
-    let content = "";
-    content += `Total Songs Selected: ${selectedSongsList.length}\n\n`;
-    
-    Object.entries(songsByGenre).forEach(([genre, genreSongs]) => {
-      content += `${genre.toUpperCase()}\n`;
-      content += "─".repeat(40) + "\n";
-      genreSongs.forEach((song) => {
-        content += `• ${song.title} - ${song.artist}\n`;
-      });
-      content += "\n";
-    });
-    
-    return content;
-  };
-
-  const exportAsTxt = () => {
-    const content = `
-╔════════════════════════════════════════════════════════════╗
-║           HARBORLINE - MY EVENT SONG SELECTIONS            ║
-╚════════════════════════════════════════════════════════════╝
-
-${generateContent()}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                    🎵 HARBORLINE 🎵
-           Baltimore's Premier Event Band
-           www.harborlinemusic.com
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`;
-
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "harborline-song-selections.txt";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success("Song list exported as TXT!");
-  };
-
-  const exportAsHtml = () => {
-    const selectedSongsList = getSelectedSongsList();
-    
-    // Group by genre
-    const songsByGenre = genres.slice(1).reduce((acc, genre) => {
-      const genreSongs = selectedSongsList.filter(s => s.genre === genre);
-      if (genreSongs.length > 0) {
-        acc[genre] = genreSongs;
-      }
-      return acc;
-    }, {} as Record<string, typeof songs>);
-
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Harborline - My Event Song Selections</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600&display=swap');
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: 'Cormorant Garamond', Georgia, serif; 
-      background: #1a1a1a; 
-      color: #fff; 
-      padding: 50px 40px;
-      min-height: 100vh;
-      line-height: 1.6;
-    }
-    .container { max-width: 800px; margin: 0 auto; }
-    .header { 
-      text-align: center; 
-      margin-bottom: 40px; 
-      padding-bottom: 30px;
-      border-bottom: 1px solid #333;
-    }
-    .logo { width: 180px; margin-bottom: 20px; }
-    .header-title { 
-      font-family: 'Montserrat', sans-serif;
-      font-size: 11px; 
-      font-weight: 600;
-      color: #7C3AED; 
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-    .subtitle { color: #888; font-size: 14px; font-style: italic; }
-    .section { margin-bottom: 30px; }
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #7C3AED;
-    }
-    .section-icon {
-      width: 8px;
-      height: 8px;
-      background: linear-gradient(135deg, #7C3AED, #3B82F6);
-      border-radius: 50%;
-    }
-    .section-title { 
-      font-family: 'Montserrat', sans-serif;
-      font-size: 11px; 
-      font-weight: 600;
-      color: #fff;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-    }
-    .song-list { list-style: none; columns: 2; column-gap: 30px; }
-    .song-item { 
-      padding: 6px 0; 
-      font-size: 12px;
-      break-inside: avoid;
-    }
-    .song-title { font-weight: 600; }
-    .song-artist { color: #888; font-size: 11px; font-style: italic; }
-    .footer { 
-      margin-top: 50px; 
-      padding-top: 30px; 
-      border-top: 1px solid #333;
-      text-align: center;
-    }
-    .footer-logo { width: 100px; margin-bottom: 15px; opacity: 0.8; }
-    .footer-tagline { 
-      font-family: 'Montserrat', sans-serif;
-      font-size: 9px; 
-      letter-spacing: 3px;
-      color: #666;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-    .footer-link { color: #7C3AED; text-decoration: none; font-family: 'Montserrat', sans-serif; font-size: 10px; }
-    @media print {
-      body { background: #fff; color: #000; }
-      .song-item { border-bottom-color: #ddd; }
-      .section-title { color: #1a1a1a; }
-      .song-artist, .subtitle { color: #666; }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <img src="${logoNew}" alt="Harborline" class="logo" onerror="this.style.display='none'">
-      <p class="header-title">My Event Song Selections</p>
-      <p class="subtitle">Curated playlist • ${selectedSongsList.length} songs</p>
-    </div>
-    
-    ${Object.entries(songsByGenre).map(([genre, genreSongs]) => `
-    <div class="section">
-      <div class="section-header">
-        <div class="section-icon"></div>
-        <h2 class="section-title">${genre}</h2>
-      </div>
-      <ul class="song-list">
-        ${genreSongs.map(song => `
-          <li class="song-item">
-            <span class="song-title">${song.title}</span><br>
-            <span class="song-artist">${song.artist}</span>
-          </li>
-        `).join('')}
-      </ul>
-    </div>
-    `).join('')}
-    
-    <div class="footer">
-      <img src="${logoNew}" alt="Harborline" class="footer-logo" onerror="this.style.display='none'">
-      <p class="footer-tagline">Baltimore's Premier Event Band</p>
-      <a href="https://harborlinemusic.com" class="footer-link">harborlinemusic.com</a>
-    </div>
-  </div>
-</body>
-</html>`;
-
-    const blob = new Blob([htmlContent], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "harborline-song-selections.html";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success("Song list exported as HTML! Open in browser and print to PDF.");
-  };
 
   const copyToClipboard = () => {
-    const content = `HARBORLINE - MY EVENT SONG SELECTIONS
-=====================================
-
-${generateContent()}
-=====================================
-🎵 HARBORLINE - Baltimore's Premier Event Band
-www.harborlinemusic.com`;
+    const selectedSongsList = getSelectedSongsList();
+    const content = selectedSongsList
+      .map((song) => `• ${song.title} – ${song.artist}`)
+      .join("\n\n");
 
     navigator.clipboard.writeText(content).then(() => {
       toast.success("Song list copied to clipboard!");
@@ -432,273 +220,6 @@ www.harborlinemusic.com`;
     });
   };
 
-  const printList = async () => {
-    const selectedSongsList = getSelectedSongsList();
-    
-    // Group by genre
-    const songsByGenre = genres.slice(1).reduce((acc, genre) => {
-      const genreSongs = selectedSongsList.filter(s => s.genre === genre);
-      if (genreSongs.length > 0) {
-        acc[genre] = genreSongs;
-      }
-      return acc;
-    }, {} as Record<string, typeof songs>);
-
-    // Convert logo to base64 for embedding in print window
-    const getLogoBase64 = (): Promise<string> => {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext("2d");
-          ctx?.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL("image/png"));
-        };
-        img.onerror = () => resolve("");
-        img.src = logoNew;
-      });
-    };
-
-    const logoBase64 = await getLogoBase64();
-    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error("Please allow popups to print");
-      return;
-    }
-
-    // Build a flat sorted list grouped by genre for the compact layout
-    const allSongRows = Object.entries(songsByGenre).flatMap(([genre, genreSongs]) =>
-      genreSongs.map(song => ({ ...song, genre }))
-    );
-
-    // Split into 2 columns
-    const colSize = Math.ceil(allSongRows.length / 2);
-    const col1 = allSongRows.slice(0, colSize);
-    const col2 = allSongRows.slice(colSize);
-
-    const renderColumn = (colSongs: typeof allSongRows) => colSongs.map(song => `
-      <div class="song-row">
-        <span class="song-title">${song.title}</span>
-        <span class="song-artist">${song.artist}</span>
-      </div>
-    `).join('');
-
-    printWindow.document.write(`
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Harborline - Song Selections</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600&display=swap');
-    
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    body { 
-      font-family: 'Cormorant Garamond', Georgia, serif; 
-      padding: 25px 30px;
-      color: #1a1a1a;
-      background: #fff;
-      line-height: 1.3;
-    }
-    
-    .container { 
-      max-width: 100%; 
-      margin: 0 auto; 
-    }
-    
-    .header { 
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 15px; 
-      padding-bottom: 12px;
-      border-bottom: 2px solid #7C3AED;
-    }
-    
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-    
-    .header-logo {
-      width: 100px;
-      height: auto;
-    }
-    
-    .header-text {}
-    
-    .header-title {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 3px;
-      color: #7C3AED;
-      text-transform: uppercase;
-      margin-bottom: 2px;
-    }
-    
-    .header-subtitle { 
-      font-family: 'Cormorant Garamond', serif;
-      color: #666; 
-      font-size: 11px;
-      font-style: italic;
-    }
-    
-    .header-right {
-      text-align: right;
-    }
-    
-    .stat-number {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 20px;
-      font-weight: 700;
-      color: #7C3AED;
-      line-height: 1;
-    }
-    
-    .stat-label {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 7px;
-      letter-spacing: 2px;
-      color: #888;
-      text-transform: uppercase;
-    }
-    
-    .columns {
-      display: flex;
-      gap: 20px;
-    }
-    
-    .column {
-      flex: 1;
-    }
-    
-    .song-row {
-      padding: 2px 0;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    
-    .song-title { 
-      font-family: 'Montserrat', sans-serif;
-      font-weight: 600;
-      font-size: 7.5px;
-      color: #1a1a1a;
-      display: block;
-      line-height: 1.3;
-    }
-    
-    .song-artist { 
-      font-family: 'Cormorant Garamond', serif;
-      color: #888;
-      font-size: 8px;
-      font-style: italic;
-      display: block;
-      line-height: 1.2;
-    }
-    
-    .footer { 
-      margin-top: 12px; 
-      padding-top: 8px; 
-      border-top: 1px solid #e5e5e5;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .footer-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .footer-logo {
-      width: 50px;
-      height: auto;
-      opacity: 0.8;
-    }
-    
-    .footer-tagline {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 7px;
-      letter-spacing: 2px;
-      color: #666;
-      text-transform: uppercase;
-    }
-    
-    .footer-contact {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 8px;
-      color: #7C3AED;
-    }
-    
-    .footer-date {
-      font-size: 8px;
-      color: #aaa;
-      font-style: italic;
-    }
-    
-    @media print {
-      body { 
-        padding: 20px 25px;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-      @page {
-        size: letter;
-        margin: 0.4in;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="header-left">
-        ${logoBase64 ? `<img src="${logoBase64}" alt="Harborline" class="header-logo">` : ''}
-        <div class="header-text">
-          <p class="header-title">My Event Song Selections</p>
-          <p class="header-subtitle">Curated playlist for your special occasion</p>
-        </div>
-      </div>
-      <div class="header-right">
-        <div class="stat-number">${selectedSongsList.length}</div>
-        <div class="stat-label">Songs</div>
-      </div>
-    </div>
-    
-    <div class="columns">
-      <div class="column">${renderColumn(col1)}</div>
-      <div class="column">${renderColumn(col2)}</div>
-    </div>
-    
-    <div class="footer">
-      <div class="footer-left">
-        ${logoBase64 ? `<img src="${logoBase64}" alt="Harborline" class="footer-logo">` : ''}
-        <p class="footer-tagline">Baltimore's Premier Event Band</p>
-      </div>
-      <div>
-        <p class="footer-contact">harborlinemusic.com</p>
-        <p class="footer-date">Generated on ${today}</p>
-      </div>
-    </div>
-  </div>
-  <script>
-    window.onload = function() {
-      setTimeout(function() {
-        window.print();
-      }, 200);
-    };
-  </script>
-</body>
-</html>`);
-    printWindow.document.close();
-  };
 
   return (
     <Layout
@@ -809,33 +330,10 @@ www.harborlinemusic.com`;
                     <X className="w-4 h-4 mr-1" />
                     Clear
                   </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="hero" size="sm">
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                        <ChevronDown className="w-4 h-4 ml-2" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={printList}>
-                        <File className="w-4 h-4 mr-2" />
-                        Print / Save as PDF
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={exportAsHtml}>
-                        <FileText className="w-4 h-4 mr-2" />
-                        Download HTML
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={exportAsTxt}>
-                        <FileText className="w-4 h-4 mr-2" />
-                        Download TXT
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={copyToClipboard}>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy to Clipboard
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button variant="hero" size="sm" onClick={copyToClipboard}>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy to Clipboard
+                  </Button>
                 </div>
               ) : (
                 <span className="text-sm text-muted-foreground">
@@ -847,7 +345,6 @@ www.harborlinemusic.com`;
 
           {/* Scrollable Song List Container */}
           <div 
-            ref={printRef}
             className="h-[500px] overflow-y-auto rounded-lg border border-border bg-card/50 p-4"
           >
             <motion.div
