@@ -137,6 +137,10 @@ const songs: Song[] = [
 
   // REGGAE
   { title: "Could You Be Loved", artist: "Bob Marley", genre: "Reggae", functions: ["Cocktail", "Reception", "Party"] },
+
+  // ADDITIONAL
+  { title: "Pink Pony Club", artist: "Chappell Roan", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
+  { title: "Reminiscing", artist: "Little River Band", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner", "Reception"] },
 ];
 
 const SongListPage = () => {
