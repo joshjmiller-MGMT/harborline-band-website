@@ -165,6 +165,11 @@ const songs: Song[] = [
   { title: "Aeroplane", artist: "Red Hot Chili Peppers", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
   { title: "Cissy Strut", artist: "The Meters", genre: "Funk & Disco", functions: ["Cocktail", "Reception", "Party"] },
   { title: "Symptom of Life", artist: "Willow", genre: "R&B & Soul", functions: ["Cocktail", "Reception"] },
+  { title: "Outstanding", artist: "The Gap Band", genre: "Funk & Disco", functions: ["Reception", "Party"] },
+  { title: "The Boys of Summer", artist: "Don Henley", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
+  { title: "Hold the Line", artist: "Toto", genre: "Rock & Alternative", functions: ["Cocktail", "Reception", "Party"] },
+  { title: "Owner of a Lonely Heart", artist: "Yes", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
+  { title: "Rosanna", artist: "Toto", genre: "Rock & Alternative", functions: ["Cocktail", "Reception", "Party"] },
 ].sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
 
 const SongListPage = () => {
