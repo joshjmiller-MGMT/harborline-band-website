@@ -170,6 +170,9 @@ const songs: Song[] = [
   { title: "Hold the Line", artist: "Toto", genre: "Rock & Alternative", functions: ["Cocktail", "Reception", "Party"] },
   { title: "Owner of a Lonely Heart", artist: "Yes", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
   { title: "Rosanna", artist: "Toto", genre: "Rock & Alternative", functions: ["Cocktail", "Reception", "Party"] },
+  { title: "Voyage to Atlantis", artist: "The Isley Brothers", genre: "R&B & Soul", functions: ["Cocktail", "Ceremony", "Reception"] },
+  { title: "Footsteps in the Dark", artist: "The Isley Brothers", genre: "R&B & Soul", functions: ["Cocktail", "Reception"] },
+  { title: "Little Red Corvette", artist: "Prince", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
 ].sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
 
 const SongListPage = () => {
