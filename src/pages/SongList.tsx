@@ -139,6 +139,32 @@ const songs: Song[] = [
 
   // REGGAE
   { title: "Could You Be Loved", artist: "Bob Marley", genre: "Reggae", functions: ["Cocktail", "Reception", "Party"] },
+
+  // ADDITIONAL
+  { title: "Eyes Without a Face", artist: "Billy Idol", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"] },
+  { title: "I Will Survive", artist: "Cake", genre: "Rock & Alternative", functions: ["Reception", "Party"] },
+  { title: "Short Skirt/Long Jacket", artist: "Cake", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
+  { title: "The Distance", artist: "Cake", genre: "Rock & Alternative", functions: ["Reception", "Party"] },
+  { title: "Closer", artist: "The Chainsmokers", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
+  { title: "Crazy", artist: "Gnarls Barkley", genre: "R&B & Soul", functions: ["Cocktail", "Reception", "Party"] },
+  { title: "25 or 6 to 4", artist: "Chicago", genre: "Rock & Alternative", functions: ["Reception", "Party"] },
+  { title: "The Night Me and Your Mama Met", artist: "Childish Gambino", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"] },
+  { title: "You Make My Dreams Come True", artist: "Daryl Hall & John Oates", genre: "Funk & Disco", functions: ["Reception", "Party"] },
+  { title: "Roadhouse Blues", artist: "The Doors", genre: "Rock & Alternative", functions: ["Reception", "Party"] },
+  { title: "Anyway", artist: "Duck Sauce", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
+  { title: "Before I Let Go", artist: "Frankie Beverly & Maze", genre: "R&B & Soul", functions: ["Reception", "Party"] },
+  { title: "Places to Be", artist: "Fred Again..", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
+  { title: "How Sweet It Is", artist: "James Taylor", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "Ceremony"] },
+  { title: "Feelin' Alright", artist: "Joe Cocker", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
+  { title: "D.A.N.C.E.", artist: "Justice", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
+  { title: "This Is It", artist: "Kenny Loggins", genre: "Pop & Top 40", functions: ["Cocktail", "Reception"] },
+  { title: "Stay", artist: "Kid LAROI & Justin Bieber", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
+  { title: "Carried Away", artist: "Passion Pit", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
+  { title: "Runnin' Away", artist: "The Pharcyde", genre: "R&B & Soul", functions: ["Cocktail", "Reception"] },
+  { title: "Passion", artist: "PinkPantheress", genre: "Pop & Top 40", functions: ["Cocktail", "Reception"] },
+  { title: "Aeroplane", artist: "Red Hot Chili Peppers", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
+  { title: "Cissy Strut", artist: "The Meters", genre: "Funk & Disco", functions: ["Cocktail", "Reception", "Party"] },
+  { title: "Symptom of Life", artist: "Willow", genre: "R&B & Soul", functions: ["Cocktail", "Reception"] },
 ].sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
 
 const SongListPage = () => {
