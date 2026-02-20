@@ -36,149 +36,161 @@ const functions = [
   "Holiday",
 ];
 
+const decades = [
+  "All",
+  "70s",
+  "80s",
+  "90s",
+  "2000s",
+  "2010s",
+  "2020s",
+];
+
 type Song = {
   title: string;
   artist: string;
   genre: string;
   functions: string[];
+  decade: string;
 };
 
 const songs: Song[] = [
   // FUNK & DISCO
-  { title: "September", artist: "Earth, Wind & Fire", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Superstition", artist: "Stevie Wonder", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Dancing Queen", artist: "ABBA", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "I Wish", artist: "Stevie Wonder", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Brick House", artist: "The Commodores", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Disco Inferno", artist: "The Trammps", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Higher Ground", artist: "Stevie Wonder", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Boogie Shoes", artist: "KC & The Sunshine Band", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "That's the Way (I Like It)", artist: "KC & The Sunshine Band", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Get Up Offa That Thing", artist: "James Brown", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Papa's Got a Brand New Bag", artist: "James Brown", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Canned Heat", artist: "Jamiroquai", genre: "Funk & Disco", functions: ["Reception", "Party", "Cocktail"] },
-  { title: "Cosmic Girl", artist: "Jamiroquai", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Do It", artist: "Tuxedo", genre: "Funk & Disco", functions: ["Reception", "Party", "Cocktail"] },
-  { title: "Jump On It (Apache)", artist: "Sugarhill Gang", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Give It to Me Baby", artist: "Rick James", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Gimme! Gimme! Gimme! (A Man After Midnight)", artist: "ABBA", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Papa Don't Take No Mess", artist: "James Brown", genre: "Funk & Disco", functions: ["Reception", "Party"] },
+  { title: "September", artist: "Earth, Wind & Fire", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Superstition", artist: "Stevie Wonder", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Dancing Queen", artist: "ABBA", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "I Wish", artist: "Stevie Wonder", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Brick House", artist: "The Commodores", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Disco Inferno", artist: "The Trammps", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Higher Ground", artist: "Stevie Wonder", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Boogie Shoes", artist: "KC & The Sunshine Band", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "That's the Way (I Like It)", artist: "KC & The Sunshine Band", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Get Up Offa That Thing", artist: "James Brown", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Papa's Got a Brand New Bag", artist: "James Brown", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "60s" },
+  { title: "Canned Heat", artist: "Jamiroquai", genre: "Funk & Disco", functions: ["Reception", "Party", "Cocktail"], decade: "90s" },
+  { title: "Cosmic Girl", artist: "Jamiroquai", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "90s" },
+  { title: "Do It", artist: "Tuxedo", genre: "Funk & Disco", functions: ["Reception", "Party", "Cocktail"], decade: "2010s" },
+  { title: "Jump On It (Apache)", artist: "Sugarhill Gang", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "80s" },
+  { title: "Give It to Me Baby", artist: "Rick James", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "80s" },
+  { title: "Gimme! Gimme! Gimme! (A Man After Midnight)", artist: "ABBA", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Papa Don't Take No Mess", artist: "James Brown", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
 
   // POP & TOP 40
-  { title: "Blinding Lights", artist: "The Weeknd", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
-  { title: "Levitating", artist: "Dua Lipa", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
-  { title: "Dance the Night", artist: "Dua Lipa", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
-  { title: "Break My Soul", artist: "Beyoncé", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
-  { title: "Unwritten", artist: "Natasha Bedingfield", genre: "Pop & Top 40", functions: ["Reception", "Party", "Ceremony"] },
-  { title: "Fireball", artist: "Pitbull", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
-  { title: "Give Me Everything", artist: "Pitbull", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
-  { title: "Starships", artist: "Nicki Minaj", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
-  { title: "360", artist: "Charli XCX", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
-  { title: "Lil Boo Thang", artist: "Paul Russell", genre: "Pop & Top 40", functions: ["Reception", "Party", "Cocktail"] },
-  { title: "Low", artist: "Flo Rida", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
-  { title: "Everybody Wants to Rule the World", artist: "Tears for Fears", genre: "Pop & Top 40", functions: ["Cocktail", "Dinner"] },
-  { title: "Somebody That I Used to Know", artist: "Gotye ft. Kimbra", genre: "Pop & Top 40", functions: ["Cocktail", "Dinner"] },
-  { title: "Attention", artist: "Charlie Puth", genre: "Pop & Top 40", functions: ["Reception", "Party", "Cocktail"] },
-  { title: "Positions", artist: "Ariana Grande", genre: "Pop & Top 40", functions: ["Cocktail", "Reception"] },
-  { title: "We Can't Be Friends (Wait for Your Love)", artist: "Ariana Grande", genre: "Pop & Top 40", functions: ["Cocktail", "Dinner"] },
-  { title: "Out of Time", artist: "The Weeknd", genre: "Pop & Top 40", functions: ["Cocktail", "Dinner"] },
-  { title: "Pink Pony Club", artist: "Chappell Roan", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
+  { title: "Blinding Lights", artist: "The Weeknd", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "2020s" },
+  { title: "Levitating", artist: "Dua Lipa", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "2020s" },
+  { title: "Dance the Night", artist: "Dua Lipa", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "2020s" },
+  { title: "Break My Soul", artist: "Beyoncé", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "2020s" },
+  { title: "Unwritten", artist: "Natasha Bedingfield", genre: "Pop & Top 40", functions: ["Reception", "Party", "Ceremony"], decade: "2000s" },
+  { title: "Fireball", artist: "Pitbull", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "2010s" },
+  { title: "Give Me Everything", artist: "Pitbull", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "2010s" },
+  { title: "Starships", artist: "Nicki Minaj", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "2010s" },
+  { title: "360", artist: "Charli XCX", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "2020s" },
+  { title: "Lil Boo Thang", artist: "Paul Russell", genre: "Pop & Top 40", functions: ["Reception", "Party", "Cocktail"], decade: "2020s" },
+  { title: "Low", artist: "Flo Rida", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "2000s" },
+  { title: "Everybody Wants to Rule the World", artist: "Tears for Fears", genre: "Pop & Top 40", functions: ["Cocktail", "Dinner"], decade: "80s" },
+  { title: "Somebody That I Used to Know", artist: "Gotye ft. Kimbra", genre: "Pop & Top 40", functions: ["Cocktail", "Dinner"], decade: "2010s" },
+  { title: "Attention", artist: "Charlie Puth", genre: "Pop & Top 40", functions: ["Reception", "Party", "Cocktail"], decade: "2010s" },
+  { title: "Positions", artist: "Ariana Grande", genre: "Pop & Top 40", functions: ["Cocktail", "Reception"], decade: "2020s" },
+  { title: "We Can't Be Friends (Wait for Your Love)", artist: "Ariana Grande", genre: "Pop & Top 40", functions: ["Cocktail", "Dinner"], decade: "2020s" },
+  { title: "Out of Time", artist: "The Weeknd", genre: "Pop & Top 40", functions: ["Cocktail", "Dinner"], decade: "2020s" },
+  { title: "Pink Pony Club", artist: "Chappell Roan", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "2020s" },
 
   // R&B & SOUL
-  { title: "Signed, Sealed, Delivered", artist: "Stevie Wonder", genre: "R&B & Soul", functions: ["Reception", "Party", "Ceremony"] },
-  { title: "Crazy in Love", artist: "Beyoncé", genre: "R&B & Soul", functions: ["Reception", "Party", "First Dance"] },
-  { title: "Never Too Much", artist: "Luther Vandross", genre: "R&B & Soul", functions: ["Reception", "Party", "First Dance"] },
-  { title: "Mistletoe Jam", artist: "Luther Vandross", genre: "R&B & Soul", functions: ["Holiday", "Party", "Reception"] },
-  { title: "Best of My Love", artist: "The Emotions", genre: "R&B & Soul", functions: ["Reception", "Party"] },
-  { title: "Move On Up", artist: "Curtis Mayfield", genre: "R&B & Soul", functions: ["Reception", "Party", "Cocktail"] },
-  { title: "My Prerogative", artist: "Bobby Brown", genre: "R&B & Soul", functions: ["Reception", "Party"] },
-  { title: "Hydra", artist: "Grover Washington Jr.", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"] },
-  { title: "Let's Stay Together", artist: "Al Green", genre: "R&B & Soul", functions: ["First Dance", "Ceremony", "Dinner", "Cocktail"] },
-  { title: "What You Won't Do for Love", artist: "Bobby Caldwell", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "First Dance"] },
-  { title: "Ain't No Sunshine", artist: "Bill Withers", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "Ceremony"] },
-  { title: "Valerie", artist: "Amy Winehouse", genre: "R&B & Soul", functions: ["Cocktail", "Reception"] },
-  { title: "Can't Hide Love", artist: "Earth, Wind & Fire", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "Reception"] },
-  { title: "Everybody Loves the Sunshine", artist: "Roy Ayers", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"] },
-  { title: "You Know I'm No Good", artist: "Amy Winehouse", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"] },
-  { title: "Know You Now", artist: "Amy Winehouse", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"] },
-  { title: "Drunk in Love", artist: "Beyoncé", genre: "R&B & Soul", functions: ["Reception", "Party"] },
-  { title: "End of the Road", artist: "Boyz II Men", genre: "R&B & Soul", functions: ["Ceremony", "First Dance"] },
-  { title: "Spanish Joint", artist: "D'Angelo", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"] },
-  { title: "Feel Like Makin' Love", artist: "D'Angelo", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "First Dance"] },
-  { title: "Pony", artist: "Ginuwine", genre: "R&B & Soul", functions: ["Reception", "Party"] },
-  { title: "Carried Away", artist: "H.E.R.", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "First Dance"] },
-  { title: "I Keep Forgettin'", artist: "Michael McDonald", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"] },
-  { title: "Pretty Brown Eyes", artist: "Mint Condition", genre: "R&B & Soul", functions: ["Cocktail", "Reception", "First Dance"] },
-  { title: "Nothing Can Come Between Us", artist: "Sade", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "First Dance"] },
-  { title: "Kiss of Life", artist: "Sade", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"] },
-  { title: "Can We Talk", artist: "Tevin Campbell", genre: "R&B & Soul", functions: ["Cocktail", "Reception"] },
-  { title: "Lose Control", artist: "Teddy Swims", genre: "R&B & Soul", functions: ["Reception", "Party"] },
+  { title: "Signed, Sealed, Delivered", artist: "Stevie Wonder", genre: "R&B & Soul", functions: ["Reception", "Party", "Ceremony"], decade: "70s" },
+  { title: "Crazy in Love", artist: "Beyoncé", genre: "R&B & Soul", functions: ["Reception", "Party", "First Dance"], decade: "2000s" },
+  { title: "Never Too Much", artist: "Luther Vandross", genre: "R&B & Soul", functions: ["Reception", "Party", "First Dance"], decade: "80s" },
+  { title: "Mistletoe Jam", artist: "Luther Vandross", genre: "R&B & Soul", functions: ["Holiday", "Party", "Reception"], decade: "80s" },
+  { title: "Best of My Love", artist: "The Emotions", genre: "R&B & Soul", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Move On Up", artist: "Curtis Mayfield", genre: "R&B & Soul", functions: ["Reception", "Party", "Cocktail"], decade: "70s" },
+  { title: "My Prerogative", artist: "Bobby Brown", genre: "R&B & Soul", functions: ["Reception", "Party"], decade: "80s" },
+  { title: "Hydra", artist: "Grover Washington Jr.", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"], decade: "70s" },
+  { title: "Let's Stay Together", artist: "Al Green", genre: "R&B & Soul", functions: ["First Dance", "Ceremony", "Dinner", "Cocktail"], decade: "70s" },
+  { title: "What You Won't Do for Love", artist: "Bobby Caldwell", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "First Dance"], decade: "70s" },
+  { title: "Ain't No Sunshine", artist: "Bill Withers", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "Ceremony"], decade: "70s" },
+  { title: "Valerie", artist: "Amy Winehouse", genre: "R&B & Soul", functions: ["Cocktail", "Reception"], decade: "2000s" },
+  { title: "Can't Hide Love", artist: "Earth, Wind & Fire", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "Reception"], decade: "70s" },
+  { title: "Everybody Loves the Sunshine", artist: "Roy Ayers", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"], decade: "70s" },
+  { title: "You Know I'm No Good", artist: "Amy Winehouse", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"], decade: "2000s" },
+  { title: "Know You Now", artist: "Amy Winehouse", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"], decade: "2000s" },
+  { title: "Drunk in Love", artist: "Beyoncé", genre: "R&B & Soul", functions: ["Reception", "Party"], decade: "2010s" },
+  { title: "End of the Road", artist: "Boyz II Men", genre: "R&B & Soul", functions: ["Ceremony", "First Dance"], decade: "90s" },
+  { title: "Spanish Joint", artist: "D'Angelo", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"], decade: "2000s" },
+  { title: "Feel Like Makin' Love", artist: "D'Angelo", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "First Dance"], decade: "2000s" },
+  { title: "Pony", artist: "Ginuwine", genre: "R&B & Soul", functions: ["Reception", "Party"], decade: "90s" },
+  { title: "Carried Away", artist: "H.E.R.", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "First Dance"], decade: "2020s" },
+  { title: "I Keep Forgettin'", artist: "Michael McDonald", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"], decade: "80s" },
+  { title: "Pretty Brown Eyes", artist: "Mint Condition", genre: "R&B & Soul", functions: ["Cocktail", "Reception", "First Dance"], decade: "90s" },
+  { title: "Nothing Can Come Between Us", artist: "Sade", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "First Dance"], decade: "80s" },
+  { title: "Kiss of Life", artist: "Sade", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"], decade: "90s" },
+  { title: "Can We Talk", artist: "Tevin Campbell", genre: "R&B & Soul", functions: ["Cocktail", "Reception"], decade: "90s" },
+  { title: "Lose Control", artist: "Teddy Swims", genre: "R&B & Soul", functions: ["Reception", "Party"], decade: "2020s" },
 
   // ROCK & ALTERNATIVE
-  { title: "Message in a Bottle", artist: "The Police", genre: "Rock & Alternative", functions: ["Reception", "Party"] },
-  { title: "Roxanne", artist: "The Police", genre: "Rock & Alternative", functions: ["Reception", "Party"] },
-  { title: "Money for Nothing", artist: "Dire Straits", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
-  { title: "Another Brick in the Wall (Part 2)", artist: "Pink Floyd", genre: "Rock & Alternative", functions: ["Reception", "Party"] },
-  { title: "What a Fool Believes", artist: "The Doobie Brothers", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner", "Reception"] },
-  { title: "Give Me One Reason", artist: "Tracy Chapman", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
-  { title: "Georgy Porgy", artist: "Toto", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"] },
-  { title: "Home at Last", artist: "Steely Dan", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"] },
-  { title: "Glamour Profession", artist: "Steely Dan", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"] },
-  { title: "Minute by Minute", artist: "The Doobie Brothers", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"] },
-  { title: "Reminiscing", artist: "Little River Band", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner", "Reception"] },
+  { title: "Message in a Bottle", artist: "The Police", genre: "Rock & Alternative", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Roxanne", artist: "The Police", genre: "Rock & Alternative", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Money for Nothing", artist: "Dire Straits", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"], decade: "80s" },
+  { title: "Another Brick in the Wall (Part 2)", artist: "Pink Floyd", genre: "Rock & Alternative", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "What a Fool Believes", artist: "The Doobie Brothers", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner", "Reception"], decade: "70s" },
+  { title: "Give Me One Reason", artist: "Tracy Chapman", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"], decade: "90s" },
+  { title: "Georgy Porgy", artist: "Toto", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"], decade: "70s" },
+  { title: "Home at Last", artist: "Steely Dan", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"], decade: "70s" },
+  { title: "Glamour Profession", artist: "Steely Dan", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"], decade: "80s" },
+  { title: "Minute by Minute", artist: "The Doobie Brothers", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"], decade: "70s" },
+  { title: "Reminiscing", artist: "Little River Band", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner", "Reception"], decade: "70s" },
 
   // ELECTRONIC & DANCE
-  { title: "Murder on the Dance Floor", artist: "Sophie Ellis-Bextor", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
-  { title: "Latch", artist: "Disclosure ft. Sam Smith", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
-  { title: "Everytime We Touch", artist: "Cascada", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
-  { title: "Move Your Feet", artist: "Junior Senior", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
-  { title: "Heads Will Roll (A-Trak Remix)", artist: "Yeah Yeah Yeahs", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
-  { title: "Remedy", artist: "Zedd", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
-  { title: "Middle", artist: "Zedd", genre: "Electronic & Dance", functions: ["Reception", "Party", "Cocktail"] },
-  { title: "Stay", artist: "Zedd", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
+  { title: "Murder on the Dance Floor", artist: "Sophie Ellis-Bextor", genre: "Electronic & Dance", functions: ["Reception", "Party"], decade: "2000s" },
+  { title: "Latch", artist: "Disclosure ft. Sam Smith", genre: "Electronic & Dance", functions: ["Reception", "Party"], decade: "2010s" },
+  { title: "Everytime We Touch", artist: "Cascada", genre: "Electronic & Dance", functions: ["Reception", "Party"], decade: "2000s" },
+  { title: "Move Your Feet", artist: "Junior Senior", genre: "Electronic & Dance", functions: ["Reception", "Party"], decade: "2000s" },
+  { title: "Heads Will Roll (A-Trak Remix)", artist: "Yeah Yeah Yeahs", genre: "Electronic & Dance", functions: ["Reception", "Party"], decade: "2010s" },
+  { title: "Remedy", artist: "Zedd", genre: "Electronic & Dance", functions: ["Reception", "Party"], decade: "2010s" },
+  { title: "Middle", artist: "Zedd", genre: "Electronic & Dance", functions: ["Reception", "Party", "Cocktail"], decade: "2010s" },
+  { title: "Stay", artist: "Zedd", genre: "Electronic & Dance", functions: ["Reception", "Party"], decade: "2010s" },
 
   // REGGAE
-  { title: "Could You Be Loved", artist: "Bob Marley", genre: "Reggae", functions: ["Cocktail", "Reception", "Party"] },
+  { title: "Could You Be Loved", artist: "Bob Marley", genre: "Reggae", functions: ["Cocktail", "Reception", "Party"], decade: "80s" },
 
   // ADDITIONAL
-  { title: "Eyes Without a Face", artist: "Billy Idol", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"] },
-  { title: "I Will Survive", artist: "Cake", genre: "Rock & Alternative", functions: ["Reception", "Party"] },
-  { title: "Short Skirt/Long Jacket", artist: "Cake", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
-  { title: "The Distance", artist: "Cake", genre: "Rock & Alternative", functions: ["Reception", "Party"] },
-  { title: "Closer", artist: "The Chainsmokers", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
-  { title: "Crazy", artist: "Gnarls Barkley", genre: "R&B & Soul", functions: ["Cocktail", "Reception", "Party"] },
-  { title: "25 or 6 to 4", artist: "Chicago", genre: "Rock & Alternative", functions: ["Reception", "Party"] },
-  { title: "The Night Me and Your Mama Met", artist: "Childish Gambino", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"] },
-  { title: "You Make My Dreams Come True", artist: "Daryl Hall & John Oates", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "Roadhouse Blues", artist: "The Doors", genre: "Rock & Alternative", functions: ["Reception", "Party"] },
-  { title: "Anyway", artist: "Duck Sauce", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
-  { title: "Before I Let Go", artist: "Frankie Beverly & Maze", genre: "R&B & Soul", functions: ["Reception", "Party"] },
-  { title: "Places to Be", artist: "Fred Again..", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
-  { title: "How Sweet It Is", artist: "James Taylor", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "Ceremony"] },
-  { title: "Feelin' Alright", artist: "Joe Cocker", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
-  { title: "D.A.N.C.E.", artist: "Justice", genre: "Electronic & Dance", functions: ["Reception", "Party"] },
-  { title: "This Is It", artist: "Kenny Loggins", genre: "Pop & Top 40", functions: ["Cocktail", "Reception"] },
-  { title: "Stay", artist: "Kid LAROI & Justin Bieber", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
-  { title: "Carried Away", artist: "Passion Pit", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
-  { title: "Runnin' Away", artist: "The Pharcyde", genre: "R&B & Soul", functions: ["Cocktail", "Reception"] },
-  { title: "Passion", artist: "PinkPantheress", genre: "Pop & Top 40", functions: ["Cocktail", "Reception"] },
-  { title: "Aeroplane", artist: "Red Hot Chili Peppers", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
-  { title: "Cissy Strut", artist: "The Meters", genre: "Funk & Disco", functions: ["Cocktail", "Reception", "Party"] },
-  { title: "Symptom of Life", artist: "Willow", genre: "R&B & Soul", functions: ["Cocktail", "Reception"] },
-  { title: "Outstanding", artist: "The Gap Band", genre: "Funk & Disco", functions: ["Reception", "Party"] },
-  { title: "The Boys of Summer", artist: "Don Henley", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
-  { title: "Hold the Line", artist: "Toto", genre: "Rock & Alternative", functions: ["Cocktail", "Reception", "Party"] },
-  { title: "Owner of a Lonely Heart", artist: "Yes", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"] },
-  { title: "Rosanna", artist: "Toto", genre: "Rock & Alternative", functions: ["Cocktail", "Reception", "Party"] },
-  { title: "Voyage to Atlantis", artist: "The Isley Brothers", genre: "R&B & Soul", functions: ["Cocktail", "Ceremony", "Reception"] },
-  { title: "Footsteps in the Dark", artist: "The Isley Brothers", genre: "R&B & Soul", functions: ["Cocktail", "Reception"] },
-  { title: "Little Red Corvette", artist: "Prince", genre: "Pop & Top 40", functions: ["Reception", "Party"] },
+  { title: "Eyes Without a Face", artist: "Billy Idol", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"], decade: "80s" },
+  { title: "I Will Survive", artist: "Cake", genre: "Rock & Alternative", functions: ["Reception", "Party"], decade: "90s" },
+  { title: "Short Skirt/Long Jacket", artist: "Cake", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"], decade: "2000s" },
+  { title: "The Distance", artist: "Cake", genre: "Rock & Alternative", functions: ["Reception", "Party"], decade: "90s" },
+  { title: "Closer", artist: "The Chainsmokers", genre: "Electronic & Dance", functions: ["Reception", "Party"], decade: "2010s" },
+  { title: "Crazy", artist: "Gnarls Barkley", genre: "R&B & Soul", functions: ["Cocktail", "Reception", "Party"], decade: "2000s" },
+  { title: "25 or 6 to 4", artist: "Chicago", genre: "Rock & Alternative", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "The Night Me and Your Mama Met", artist: "Childish Gambino", genre: "R&B & Soul", functions: ["Cocktail", "Dinner"], decade: "2010s" },
+  { title: "You Make My Dreams Come True", artist: "Daryl Hall & John Oates", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "80s" },
+  { title: "Roadhouse Blues", artist: "The Doors", genre: "Rock & Alternative", functions: ["Reception", "Party"], decade: "70s" },
+  { title: "Anyway", artist: "Duck Sauce", genre: "Electronic & Dance", functions: ["Reception", "Party"], decade: "2010s" },
+  { title: "Before I Let Go", artist: "Frankie Beverly & Maze", genre: "R&B & Soul", functions: ["Reception", "Party"], decade: "80s" },
+  { title: "Places to Be", artist: "Fred Again..", genre: "Electronic & Dance", functions: ["Reception", "Party"], decade: "2020s" },
+  { title: "How Sweet It Is", artist: "James Taylor", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "Ceremony"], decade: "70s" },
+  { title: "Feelin' Alright", artist: "Joe Cocker", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"], decade: "60s" },
+  { title: "D.A.N.C.E.", artist: "Justice", genre: "Electronic & Dance", functions: ["Reception", "Party"], decade: "2000s" },
+  { title: "This Is It", artist: "Kenny Loggins", genre: "Pop & Top 40", functions: ["Cocktail", "Reception"], decade: "80s" },
+  { title: "Stay", artist: "Kid LAROI & Justin Bieber", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "2020s" },
+  { title: "Carried Away", artist: "Passion Pit", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "2010s" },
+  { title: "Runnin' Away", artist: "The Pharcyde", genre: "R&B & Soul", functions: ["Cocktail", "Reception"], decade: "90s" },
+  { title: "Passion", artist: "PinkPantheress", genre: "Pop & Top 40", functions: ["Cocktail", "Reception"], decade: "2020s" },
+  { title: "Aeroplane", artist: "Red Hot Chili Peppers", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"], decade: "90s" },
+  { title: "Cissy Strut", artist: "The Meters", genre: "Funk & Disco", functions: ["Cocktail", "Reception", "Party"], decade: "70s" },
+  { title: "Symptom of Life", artist: "Willow", genre: "R&B & Soul", functions: ["Cocktail", "Reception"], decade: "2020s" },
+  { title: "Outstanding", artist: "The Gap Band", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "80s" },
+  { title: "The Boys of Summer", artist: "Don Henley", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"], decade: "80s" },
+  { title: "Hold the Line", artist: "Toto", genre: "Rock & Alternative", functions: ["Cocktail", "Reception", "Party"], decade: "70s" },
+  { title: "Owner of a Lonely Heart", artist: "Yes", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"], decade: "80s" },
+  { title: "Rosanna", artist: "Toto", genre: "Rock & Alternative", functions: ["Cocktail", "Reception", "Party"], decade: "80s" },
+  { title: "Voyage to Atlantis", artist: "The Isley Brothers", genre: "R&B & Soul", functions: ["Cocktail", "Ceremony", "Reception"], decade: "70s" },
+  { title: "Footsteps in the Dark", artist: "The Isley Brothers", genre: "R&B & Soul", functions: ["Cocktail", "Reception"], decade: "70s" },
+  { title: "Little Red Corvette", artist: "Prince", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "80s" },
 ].sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
 
 const SongListPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeGenre, setActiveGenre] = useState("All");
   const [activeFunction, setActiveFunction] = useState("All");
+  const [activeDecade, setActiveDecade] = useState("All");
   const [selectedSongs, setSelectedSongs] = useState<Set<string>>(new Set());
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -188,7 +200,8 @@ const SongListPage = () => {
       song.artist.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGenre = activeGenre === "All" || song.genre === activeGenre;
     const matchesFunction = activeFunction === "All" || song.functions.includes(activeFunction);
-    return matchesSearch && matchesGenre && matchesFunction;
+    const matchesDecade = activeDecade === "All" || song.decade === activeDecade;
+    return matchesSearch && matchesGenre && matchesFunction && matchesDecade;
   });
 
   const getSongKey = (song: typeof songs[0]) => `${song.title}-${song.artist}`;
@@ -752,6 +765,23 @@ ${generateContent()}
                   }`}
                 >
                   {fn}
+                </button>
+              ))}
+            </div>
+
+            {/* Decade Filter */}
+            <div className="flex flex-wrap justify-center gap-2">
+              {decades.map((decade) => (
+                <button
+                  key={decade}
+                  onClick={() => setActiveDecade(decade)}
+                  className={`px-4 py-2 rounded-full text-sm font-display tracking-wide transition-all ${
+                    activeDecade === decade
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-accent/20 text-muted-foreground hover:bg-accent/40"
+                  }`}
+                >
+                  {decade}
                 </button>
               ))}
             </div>
