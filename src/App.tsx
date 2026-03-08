@@ -52,7 +52,7 @@ import LeggMasonTowerPage from "./pages/venues/LeggMasonTower";
 import CylburnArboretumPage from "./pages/venues/CylburnArboretum";
 import CloistersCastlePage from "./pages/venues/CloistersCastle";
 import RequestQuotePage from "./pages/RequestQuote";
-import Schedule from "./pages/Schedule";
+import SchedulePage from "./pages/Schedule";
 
 const queryClient = new QueryClient();
 
