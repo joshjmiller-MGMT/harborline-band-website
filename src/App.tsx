@@ -52,6 +52,7 @@ import LeggMasonTowerPage from "./pages/venues/LeggMasonTower";
 import CylburnArboretumPage from "./pages/venues/CylburnArboretum";
 import CloistersCastlePage from "./pages/venues/CloistersCastle";
 import RequestQuotePage from "./pages/RequestQuote";
+import Schedule from "./pages/Schedule";
 
 const queryClient = new QueryClient();
 
@@ -109,6 +110,9 @@ const App = () => (
             <Route path="/venues/legg-mason-tower" element={<LeggMasonTowerPage />} />
             <Route path="/venues/cylburn-arboretum" element={<CylburnArboretumPage />} />
             <Route path="/venues/cloisters-castle" element={<CloistersCastlePage />} />
+            
+            {/* Hidden Routes */}
+            <Route path="/schedule" element={<Schedule />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
