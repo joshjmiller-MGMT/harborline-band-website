@@ -110,6 +110,9 @@ const App = () => (
             <Route path="/venues/cylburn-arboretum" element={<CylburnArboretumPage />} />
             <Route path="/venues/cloisters-castle" element={<CloistersCastlePage />} />
             
+            {/* Hidden Routes */}
+            <Route path="/schedule" element={<Schedule />} />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
