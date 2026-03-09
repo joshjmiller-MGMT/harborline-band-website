@@ -40,9 +40,10 @@ const rehearsals = [
 
 export default function SchedulePage() {
   const [selectedRehearsal, setSelectedRehearsal] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [playerName, setPlayerName] = useState("");
   const [hasResponded, setHasResponded] = useState<Record<string, 'confirmed' | 'denied'>>({});
+  const optionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const currentRehearsal = rehearsals.find(r => r.id === selectedRehearsal);
 
