@@ -186,7 +186,7 @@ const songs: Song[] = [
   { title: "Little Red Corvette", artist: "Prince", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "80s" },
 ].sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
 
-const SongListPage = () => {
+const SongListPage = ({ embedded = false }: { embedded?: boolean }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeGenre, setActiveGenre] = useState("All");
   const [activeFunction, setActiveFunction] = useState("All");
@@ -709,17 +709,15 @@ ${generateContent()}
     printWindow.document.close();
   };
 
-  return (
-    <Layout
-      title="Song List & Repertoire | Harborline Baltimore Band"
-      description="Browse Harborline's extensive song list featuring Motown, Top 40, rock classics, jazz standards, and more. Request your favorite songs for your event."
-      canonical="https://harborlinemusic.com/songs"
-    >
-      <PageHero
-        eyebrow="REPERTOIRE"
-        title="OUR SONG LIST"
-        subtitle="From Motown classics to today's hits—we've got your soundtrack covered"
-      />
+  const content = (
+    <>
+      {!embedded && (
+        <PageHero
+          eyebrow="REPERTOIRE"
+          title="OUR SONG LIST"
+          subtitle="From Motown classics to today's hits—we've got your soundtrack covered"
+        />
+      )}
 
       <section className="py-8 md:py-12">
         <div className="container px-6 max-w-4xl mx-auto">
@@ -956,6 +954,18 @@ ${generateContent()}
           </motion.div>
         </div>
       </section>
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <Layout
+      title="Song List & Repertoire | Harborline Baltimore Band"
+      description="Browse Harborline's extensive song list featuring Motown, Top 40, rock classics, jazz standards, and more. Request your favorite songs for your event."
+      canonical="https://harborlinemusic.com/songs"
+    >
+      {content}
     </Layout>
   );
 };
