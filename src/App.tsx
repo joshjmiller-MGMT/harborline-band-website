@@ -54,6 +54,14 @@ import CloistersCastlePage from "./pages/venues/CloistersCastle";
 import RequestQuotePage from "./pages/RequestQuote";
 import SchedulePage from "./pages/Schedule";
 
+// Team Portal
+import { TeamAuthProvider } from "./hooks/useTeamAuth";
+import TeamLogin from "./pages/team/TeamLogin";
+import TeamSongs from "./pages/team/TeamSongs";
+import TeamGallery from "./pages/team/TeamGallery";
+import TeamScheduler from "./pages/team/TeamScheduler";
+import TeamResources from "./pages/team/TeamResources";
+
 const queryClient = new QueryClient();
 
 const App = () => (

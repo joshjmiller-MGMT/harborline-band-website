@@ -4,7 +4,7 @@ import GalleryPage from "@/pages/Gallery";
 export default function TeamGallery() {
   return (
     <TeamLayout>
-      <GalleryPage embedded />
+      <GalleryPage />
     </TeamLayout>
   );
 }

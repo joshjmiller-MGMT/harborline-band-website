@@ -4,7 +4,7 @@ import SongListPage from "@/pages/SongList";
 export default function TeamSongs() {
   return (
     <TeamLayout>
-      <SongListPage embedded />
+      <SongListPage />
     </TeamLayout>
   );
 }
