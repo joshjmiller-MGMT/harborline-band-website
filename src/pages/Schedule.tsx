@@ -211,23 +211,25 @@ export default function SchedulePage() {
               <CardDescription>Review and respond to each proposed date below</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-          
-          {currentRehearsal?.proposedDates.length === 0 ? (
-            <div className="text-center p-12 border rounded-xl bg-muted/20">
-              <p className="text-muted-foreground">No proposed dates at the moment.</p>
-            </div>
-          ) : (
-            currentRehearsal?.proposedDates.map((option) => (
-              <Card key={option.id} className={`transition-all duration-200 ${hasResponded[option.id] === 'confirmed' ? 'border-green-500/50 bg-green-500/5' : hasResponded[option.id] === 'denied' ? 'border-red-500/50 bg-red-500/5' : ''}`}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 p-3 rounded-lg text-primary">
-                          <CalendarIcon className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-semibold">{format(option.date, 'EEEE, MMMM do, yyyy')}</h3>
+              {currentRehearsal?.proposedDates.length === 0 ? (
+                <div className="text-center p-12 border rounded-xl bg-muted/20">
+                  <p className="text-muted-foreground">No proposed dates at the moment.</p>
+                </div>
+              ) : (
+                currentRehearsal?.proposedDates.map((option) => (
+                  <div 
+                    key={option.id}
+                    ref={(el) => { optionRefs.current[option.id] = el; }}
+                    className={`border rounded-xl p-6 transition-all duration-200 ${hasResponded[option.id] === 'confirmed' ? 'border-green-500/50 bg-green-500/5' : hasResponded[option.id] === 'denied' ? 'border-red-500/50 bg-red-500/5' : 'border-border/50'}`}
+                  >
+                    <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-primary/10 p-3 rounded-lg text-primary">
+                            <CalendarIcon className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-semibold">{format(option.date, 'EEEE, MMMM do, yyyy')}</h3>
                           <div className="flex items-center gap-4 text-muted-foreground mt-1">
                             <span className="flex items-center gap-1 text-sm">
                               <Clock className="w-4 h-4" />
