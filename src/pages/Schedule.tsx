@@ -143,46 +143,47 @@ export default function SchedulePage() {
 
   // Rehearsal Detail View
   return (
-    <div className="container max-w-5xl py-24 mx-auto px-4">
-      <Button 
-        variant="ghost" 
-        className="mb-6 gap-2"
-        onClick={() => setSelectedRehearsal(null)}
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to all rehearsals
-      </Button>
+    <div className="min-h-screen bg-background py-12 px-4">
+      <div className="container max-w-6xl mx-auto">
+        <Button 
+          variant="ghost" 
+          className="mb-8 gap-2"
+          onClick={() => setSelectedRehearsal(null)}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to all rehearsals
+        </Button>
 
-      <div className="space-y-4 mb-12 text-center">
-        <h1 className="text-4xl md:text-5xl font-display text-foreground">{currentRehearsal?.title}</h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Review the proposed dates below and confirm your availability.
-        </p>
-      </div>
+        <div className="space-y-3 mb-10 text-center">
+          <h1 className="text-4xl md:text-5xl font-display text-foreground">{currentRehearsal?.title}</h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Review the proposed dates below and confirm your availability.
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Calendar and Details Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Select Dates</CardTitle>
-              <CardDescription>Click dates to jump to options</CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={handleDateSelect}
-                className="rounded-md border pointer-events-auto"
-                modifiers={{
-                  proposed: currentRehearsal?.proposedDates.map(d => d.date) || [],
-                }}
-                modifiersStyles={{
-                  proposed: { fontWeight: 'bold', backgroundColor: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))' }
-                }}
-              />
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Calendar and Details Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Calendar View</CardTitle>
+                <CardDescription>Click highlighted dates to jump to options</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0 pb-6 flex justify-center">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={handleDateSelect}
+                  className="rounded-md pointer-events-auto scale-95"
+                  modifiers={{
+                    proposed: currentRehearsal?.proposedDates.map(d => d.date) || [],
+                  }}
+                  modifiersStyles={{
+                    proposed: { fontWeight: 'bold', backgroundColor: 'hsl(var(--primary) / 0.15)', color: 'hsl(var(--primary))' }
+                  }}
+                />
+              </CardContent>
+            </Card>
 
           <Card>
             <CardHeader>
