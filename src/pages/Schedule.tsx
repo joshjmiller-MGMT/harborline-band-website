@@ -70,12 +70,11 @@ export default function SchedulePage() {
       <div className="min-h-screen bg-background">
         {/* Header */}
         <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
-          <div className="container max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container max-w-3xl mx-auto px-4 py-4">
             <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
               <Home className="w-4 h-4" />
               <span className="text-sm">Back to Home</span>
             </Link>
-            <img src={logo} alt="Harborline" className="h-8" />
           </div>
         </div>
 
