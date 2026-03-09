@@ -72,58 +72,67 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ScrollToTopOnNavigate />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/faq" element={<FAQPage />} />
-            <Route path="/songs" element={<SongListPage />} />
-            <Route path="/where-we-perform" element={<WhereWePerformPage />} />
-            <Route path="/request-a-quote" element={<RequestQuotePage />} />
-            <Route path="/gallery" element={<GalleryPage />} />
-            
-            {/* Occasion Routes */}
-            <Route path="/weddings" element={<WeddingsPage />} />
-            <Route path="/corporate" element={<CorporatePage />} />
-            <Route path="/galas" element={<GalasPage />} />
-            <Route path="/private-parties" element={<PrivatePartiesPage />} />
-            
-            {/* Ensemble Routes */}
-            <Route path="/ensembles/full-band" element={<FullBandPage />} />
-            <Route path="/ensembles/jazz-quartet" element={<JazzQuartetPage />} />
-            <Route path="/ensembles/piano-trio" element={<PianoTrioPage />} />
-            <Route path="/ensembles/acoustic-duo" element={<AcousticDuoPage />} />
-            <Route path="/ensembles/string-ensemble" element={<StringEnsemblePage />} />
-            <Route path="/ensembles/solo-performer" element={<SoloPerformerPage />} />
-            
-            {/* Location Routes */}
-            <Route path="/locations/baltimore" element={<BaltimorePage />} />
-            <Route path="/locations/towson" element={<TowsonPage />} />
-            <Route path="/locations/columbia" element={<ColumbiaPage />} />
-            <Route path="/locations/annapolis" element={<AnnapolisPage />} />
-            <Route path="/locations/washington-dc" element={<WashingtonDCPage />} />
-            <Route path="/locations/bethesda" element={<BethesdaPage />} />
-            <Route path="/locations/rockville" element={<RockvillePage />} />
-            <Route path="/locations/frederick" element={<FrederickPage />} />
-            <Route path="/locations/eastern-shore" element={<EasternShorePage />} />
-            
-            {/* Venue Routes */}
-            <Route path="/venues/pendry-baltimore" element={<PendryBaltimorePage />} />
-            <Route path="/venues/sagamore-pendry" element={<SagamorePendryPage />} />
-            <Route path="/venues/george-peabody-library" element={<GeorgePeabodyLibraryPage />} />
-            <Route path="/venues/the-belvedere" element={<TheBelvederePage />} />
-            <Route path="/venues/american-visionary-art-museum" element={<AmericanVisionaryArtMuseumPage />} />
-            <Route path="/venues/b-and-o-railroad-museum" element={<BORailroadMuseumPage />} />
-            <Route path="/venues/four-seasons-baltimore" element={<FourSeasonsBaltimorePage />} />
-            <Route path="/venues/evergreen-museum" element={<EvergreenMuseumPage />} />
-            <Route path="/venues/legg-mason-tower" element={<LeggMasonTowerPage />} />
-            <Route path="/venues/cylburn-arboretum" element={<CylburnArboretumPage />} />
-            <Route path="/venues/cloisters-castle" element={<CloistersCastlePage />} />
-            
-            {/* Hidden Routes */}
-            <Route path="/schedule" element={<SchedulePage />} />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <TeamAuthProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/faq" element={<FAQPage />} />
+              <Route path="/songs" element={<SongListPage />} />
+              <Route path="/where-we-perform" element={<WhereWePerformPage />} />
+              <Route path="/request-a-quote" element={<RequestQuotePage />} />
+              <Route path="/gallery" element={<GalleryPage />} />
+              
+              {/* Occasion Routes */}
+              <Route path="/weddings" element={<WeddingsPage />} />
+              <Route path="/corporate" element={<CorporatePage />} />
+              <Route path="/galas" element={<GalasPage />} />
+              <Route path="/private-parties" element={<PrivatePartiesPage />} />
+              
+              {/* Ensemble Routes */}
+              <Route path="/ensembles/full-band" element={<FullBandPage />} />
+              <Route path="/ensembles/jazz-quartet" element={<JazzQuartetPage />} />
+              <Route path="/ensembles/piano-trio" element={<PianoTrioPage />} />
+              <Route path="/ensembles/acoustic-duo" element={<AcousticDuoPage />} />
+              <Route path="/ensembles/string-ensemble" element={<StringEnsemblePage />} />
+              <Route path="/ensembles/solo-performer" element={<SoloPerformerPage />} />
+              
+              {/* Location Routes */}
+              <Route path="/locations/baltimore" element={<BaltimorePage />} />
+              <Route path="/locations/towson" element={<TowsonPage />} />
+              <Route path="/locations/columbia" element={<ColumbiaPage />} />
+              <Route path="/locations/annapolis" element={<AnnapolisPage />} />
+              <Route path="/locations/washington-dc" element={<WashingtonDCPage />} />
+              <Route path="/locations/bethesda" element={<BethesdaPage />} />
+              <Route path="/locations/rockville" element={<RockvillePage />} />
+              <Route path="/locations/frederick" element={<FrederickPage />} />
+              <Route path="/locations/eastern-shore" element={<EasternShorePage />} />
+              
+              {/* Venue Routes */}
+              <Route path="/venues/pendry-baltimore" element={<PendryBaltimorePage />} />
+              <Route path="/venues/sagamore-pendry" element={<SagamorePendryPage />} />
+              <Route path="/venues/george-peabody-library" element={<GeorgePeabodyLibraryPage />} />
+              <Route path="/venues/the-belvedere" element={<TheBelvederePage />} />
+              <Route path="/venues/american-visionary-art-museum" element={<AmericanVisionaryArtMuseumPage />} />
+              <Route path="/venues/b-and-o-railroad-museum" element={<BORailroadMuseumPage />} />
+              <Route path="/venues/four-seasons-baltimore" element={<FourSeasonsBaltimorePage />} />
+              <Route path="/venues/evergreen-museum" element={<EvergreenMuseumPage />} />
+              <Route path="/venues/legg-mason-tower" element={<LeggMasonTowerPage />} />
+              <Route path="/venues/cylburn-arboretum" element={<CylburnArboretumPage />} />
+              <Route path="/venues/cloisters-castle" element={<CloistersCastlePage />} />
+              
+              {/* Hidden Routes */}
+              <Route path="/schedule" element={<SchedulePage />} />
+              
+              {/* Team Portal */}
+              <Route path="/team/login" element={<TeamLogin />} />
+              <Route path="/team/songs" element={<TeamSongs />} />
+              <Route path="/team/gallery" element={<TeamGallery />} />
+              <Route path="/team/scheduler" element={<TeamScheduler />} />
+              <Route path="/team/resources" element={<TeamResources />} />
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TeamAuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
