@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ChevronDown, Music, MapPin, Users, Mic2, Piano, Guitar, Music2, User, Heart, Briefcase, PartyPopper, Gift } from "lucide-react";
+import { Menu, X, ChevronDown, Music, MapPin, Users, Mic2, Piano, Guitar, Music2, User, Heart, Briefcase, PartyPopper, Gift, Lock } from "lucide-react";
 import logo from "@/assets/logo-text.png";
 
 // Ensemble configurations - how the band can be sized
@@ -196,6 +196,9 @@ const Header = () => {
             <Button variant="hero" size="sm" className="ml-4" asChild>
               <a href="/request-a-quote">Request a Quote</a>
             </Button>
+            <Link to="/team/login" className="ml-2 p-2 text-muted-foreground hover:text-primary transition-colors" title="Team Login">
+              <Lock className="w-4 h-4" />
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
