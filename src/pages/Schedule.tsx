@@ -73,41 +73,54 @@ export default function SchedulePage() {
   // Rehearsal List View
   if (!selectedRehearsal) {
     return (
-      <div className="container max-w-3xl py-24 mx-auto px-4">
-        <div className="space-y-4 mb-12 text-center">
-          <h1 className="text-4xl md:text-5xl font-display text-foreground">Rehearsal Schedule</h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Select a rehearsal to view available dates and RSVP.
-          </p>
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
+          <div className="container max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+              <Home className="w-4 h-4" />
+              <span className="text-sm">Back to Home</span>
+            </Link>
+            <img src={logo} alt="Harborline" className="h-8" />
+          </div>
         </div>
 
-        <div className="space-y-4">
-          {rehearsals.map((rehearsal) => (
-            <Card 
-              key={rehearsal.id} 
-              className="cursor-pointer hover:border-primary/50 transition-all duration-200 hover:shadow-md"
-              onClick={() => setSelectedRehearsal(rehearsal.id)}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-semibold">{rehearsal.title}</h3>
-                    <p className="text-muted-foreground">{rehearsal.description}</p>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <CalendarIcon className="w-4 h-4" />
-                        Event: {format(rehearsal.eventDate, 'MMMM d, yyyy')}
-                      </span>
-                      <Badge variant="outline">
-                        {rehearsal.proposedDates.length} date options
-                      </Badge>
+        <div className="container max-w-3xl py-16 mx-auto px-4">
+          <div className="space-y-4 mb-12 text-center">
+            <h1 className="text-4xl md:text-5xl font-display text-foreground">Rehearsal Schedule</h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Select a rehearsal to view available dates and RSVP.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {rehearsals.map((rehearsal) => (
+              <Card 
+                key={rehearsal.id} 
+                className="cursor-pointer border-border/50 hover:border-primary/50 transition-all duration-200 hover:shadow-lg hover:shadow-primary/10 bg-card/80"
+                onClick={() => setSelectedRehearsal(rehearsal.id)}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-semibold text-foreground">{rehearsal.title}</h3>
+                      <p className="text-muted-foreground">{rehearsal.description}</p>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <CalendarIcon className="w-4 h-4 text-primary" />
+                          Event: {format(rehearsal.eventDate, 'MMMM d, yyyy')}
+                        </span>
+                        <Badge variant="outline" className="border-primary/30 text-primary">
+                          {rehearsal.proposedDates.length} date options
+                        </Badge>
+                      </div>
                     </div>
+                    <ChevronRight className="w-6 h-6 text-muted-foreground" />
                   </div>
-                  <ChevronRight className="w-6 h-6 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     );
