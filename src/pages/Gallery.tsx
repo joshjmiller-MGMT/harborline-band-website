@@ -160,9 +160,9 @@ const externalLinks = [
   { name: "Facebook", url: "https://www.facebook.com/Harborline.band/", type: "Social" },
 ];
 
-const GalleryPage = () => {
-  return (
-    <Layout>
+const GalleryPage = ({ embedded = false }: { embedded?: boolean }) => {
+  const content = (
+    <>
       <Helmet>
         <title>Media Gallery | Harborline</title>
         <meta name="robots" content="noindex, nofollow" />
