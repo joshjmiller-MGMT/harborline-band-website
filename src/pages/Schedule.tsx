@@ -65,6 +65,22 @@ export default function SchedulePage() {
     });
   };
 
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    if (date) {
+      // Find matching proposed date and scroll to it
+      const matchingOption = currentRehearsal?.proposedDates.find(d => 
+        d.date.toDateString() === date.toDateString()
+      );
+      if (matchingOption && optionRefs.current[matchingOption.id]) {
+        optionRefs.current[matchingOption.id]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+    }
+  };
+
   // Rehearsal List View
   if (!selectedRehearsal) {
     return (
