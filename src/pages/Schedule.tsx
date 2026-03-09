@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X, Clock, MapPin, ChevronRight, ArrowLeft, Home } from "lucide-react";
 import { Link } from "react-router-dom";
