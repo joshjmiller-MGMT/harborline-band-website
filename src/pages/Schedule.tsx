@@ -185,33 +185,33 @@ export default function SchedulePage() {
               </CardContent>
             </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Details</CardTitle>
-              <CardDescription>Enter your name to RSVP</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="playerName">Name</Label>
-                <Input 
-                  id="playerName" 
-                  placeholder="e.g. John (Drums)" 
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Your Details</CardTitle>
+                <CardDescription>Enter your name to RSVP</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  <Label htmlFor="playerName">Name</Label>
+                  <Input 
+                    id="playerName" 
+                    placeholder="e.g. John (Drums)" 
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Proposed Options Container */}
-        <div className="lg:col-span-3">
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle className="text-2xl font-display">Proposed Rehearsal Options</CardTitle>
-              <CardDescription>Review and respond to each proposed date below</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+          {/* Proposed Options Container */}
+          <div className="lg:col-span-2">
+            <Card className="h-fit">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl font-display">Proposed Rehearsal Options</CardTitle>
+                <CardDescription>Review and respond to each proposed date below</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 max-h-[650px] overflow-y-auto"
               {currentRehearsal?.proposedDates.length === 0 ? (
                 <div className="text-center p-12 border rounded-xl bg-muted/20">
                   <p className="text-muted-foreground">No proposed dates at the moment.</p>
