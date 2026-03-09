@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo-circle.png";
 
 // Mock data for rehearsals
 const rehearsals = [
@@ -70,12 +70,11 @@ export default function SchedulePage() {
       <div className="min-h-screen bg-background">
         {/* Header */}
         <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
-          <div className="container max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container max-w-3xl mx-auto px-4 py-4">
             <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
               <Home className="w-4 h-4" />
               <span className="text-sm">Back to Home</span>
             </Link>
-            <img src={logo} alt="Harborline" className="h-8" />
           </div>
         </div>
 
@@ -114,6 +113,11 @@ export default function SchedulePage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+
+          {/* Logo at bottom */}
+          <div className="flex justify-center mt-16 mb-8">
+            <img src={logo} alt="Harborline" className="w-40 md:w-56 opacity-60" />
           </div>
         </div>
       </div>
