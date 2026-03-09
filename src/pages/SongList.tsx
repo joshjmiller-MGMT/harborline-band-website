@@ -954,6 +954,18 @@ ${generateContent()}
           </motion.div>
         </div>
       </section>
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <Layout
+      title="Song List & Repertoire | Harborline Baltimore Band"
+      description="Browse Harborline's extensive song list featuring Motown, Top 40, rock classics, jazz standards, and more. Request your favorite songs for your event."
+      canonical="https://harborlinemusic.com/songs"
+    >
+      {content}
     </Layout>
   );
 };

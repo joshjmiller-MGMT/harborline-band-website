@@ -371,8 +371,11 @@ const GalleryPage = ({ embedded = false }: { embedded?: boolean }) => {
           </motion.section>
         </div>
       </div>
-    </Layout>
+    </>
   );
+
+  if (embedded) return content;
+  return <Layout>{content}</Layout>;
 };
 
 export default GalleryPage;
