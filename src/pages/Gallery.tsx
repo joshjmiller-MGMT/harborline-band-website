@@ -168,7 +168,7 @@ const GalleryPage = ({ embedded = false }: { embedded?: boolean }) => {
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
-      <div className="pt-32 pb-24">
+      <div className={embedded ? "py-12" : "pt-32 pb-24"}>
         <div className="container px-6 max-w-7xl mx-auto">
           {/* Header */}
           <motion.div
