@@ -211,7 +211,7 @@ export default function SchedulePage() {
                 <CardTitle className="text-xl font-display">Proposed Rehearsal Options</CardTitle>
                 <CardDescription>Review and respond to each proposed date below</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4 max-h-[650px] overflow-y-auto"
+              <CardContent className="space-y-4 max-h-[650px] overflow-y-auto">
               {currentRehearsal?.proposedDates.length === 0 ? (
                 <div className="text-center p-12 border rounded-xl bg-muted/20">
                   <p className="text-muted-foreground">No proposed dates at the moment.</p>
