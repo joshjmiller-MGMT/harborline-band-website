@@ -160,18 +160,19 @@ export default function SchedulePage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-1 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Calendar and Details Sidebar */}
+        <div className="lg:col-span-1 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Select Dates</CardTitle>
-              <CardDescription>View dates with proposed rehearsals</CardDescription>
+              <CardDescription>Click dates to jump to options</CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center">
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={setSelectedDate}
+                onSelect={handleDateSelect}
                 className="rounded-md border pointer-events-auto"
                 modifiers={{
                   proposed: currentRehearsal?.proposedDates.map(d => d.date) || [],
@@ -202,8 +203,14 @@ export default function SchedulePage() {
           </Card>
         </div>
 
-        <div className="md:col-span-2 space-y-4">
-          <h2 className="text-2xl font-display mb-4">Proposed Options</h2>
+        {/* Proposed Options Container */}
+        <div className="lg:col-span-3">
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="text-2xl font-display">Proposed Rehearsal Options</CardTitle>
+              <CardDescription>Review and respond to each proposed date below</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
           
           {currentRehearsal?.proposedDates.length === 0 ? (
             <div className="text-center p-12 border rounded-xl bg-muted/20">
