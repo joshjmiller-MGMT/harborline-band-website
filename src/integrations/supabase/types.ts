@@ -14,7 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      rehearsal_responses: {
+        Row: {
+          created_at: string
+          id: string
+          option_id: string
+          player_name: string
+          rehearsal_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_id: string
+          player_name: string
+          rehearsal_id: string
+          status: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_id?: string
+          player_name?: string
+          rehearsal_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
