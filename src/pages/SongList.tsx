@@ -186,7 +186,7 @@ const songs: Song[] = [
   { title: "Little Red Corvette", artist: "Prince", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "80s" },
 ].sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
 
-const SongListPage = () => {
+const SongListPage = ({ embedded = false }: { embedded?: boolean }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeGenre, setActiveGenre] = useState("All");
   const [activeFunction, setActiveFunction] = useState("All");
