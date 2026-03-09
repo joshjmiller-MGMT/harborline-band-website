@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Check, X, Clock, MapPin } from "lucide-react";
+import { Calendar as CalendarIcon, Check, X, Clock, MapPin, ChevronRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,36 +9,46 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 
-// Mock data for proposed rehearsal dates
-const initialProposedDates = [
+// Mock data for rehearsals
+const rehearsals = [
   {
-    id: "1",
-    date: new Date(new Date().setDate(new Date().getDate() + 5)),
-    time: "7:00 PM - 10:00 PM",
-    location: "Main Studio, Baltimore",
-    responses: { confirmed: 3, denied: 1, pending: 2 },
-  },
-  {
-    id: "2",
-    date: new Date(new Date().setDate(new Date().getDate() + 7)),
-    time: "6:30 PM - 9:30 PM",
-    location: "Main Studio, Baltimore",
-    responses: { confirmed: 5, denied: 0, pending: 1 },
-  },
-  {
-    id: "3",
-    date: new Date(new Date().setDate(new Date().getDate() + 12)),
-    time: "2:00 PM - 5:00 PM",
-    location: "Rehearsal Space B, Columbia",
-    responses: { confirmed: 1, denied: 4, pending: 1 },
+    id: "hoffman-wedding",
+    title: "Rehearsals for Hoffman Wedding",
+    eventDate: new Date(new Date().setDate(new Date().getDate() + 30)),
+    description: "Wedding reception at The Belvedere",
+    proposedDates: [
+      {
+        id: "1",
+        date: new Date(new Date().setDate(new Date().getDate() + 5)),
+        time: "7:00 PM - 10:00 PM",
+        location: "Main Studio, Baltimore",
+        responses: { confirmed: 3, denied: 1, pending: 2 },
+      },
+      {
+        id: "2",
+        date: new Date(new Date().setDate(new Date().getDate() + 7)),
+        time: "6:30 PM - 9:30 PM",
+        location: "Main Studio, Baltimore",
+        responses: { confirmed: 5, denied: 0, pending: 1 },
+      },
+      {
+        id: "3",
+        date: new Date(new Date().setDate(new Date().getDate() + 12)),
+        time: "2:00 PM - 5:00 PM",
+        location: "Rehearsal Space B, Columbia",
+        responses: { confirmed: 1, denied: 4, pending: 1 },
+      }
+    ]
   }
 ];
 
 export default function SchedulePage() {
-  const [proposedDates, setProposedDates] = useState(initialProposedDates);
+  const [selectedRehearsal, setSelectedRehearsal] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [playerName, setPlayerName] = useState("");
   const [hasResponded, setHasResponded] = useState<Record<string, 'confirmed' | 'denied'>>({});
+
+  const currentRehearsal = rehearsals.find(r => r.id === selectedRehearsal);
 
   const handleResponse = (id: string, status: 'confirmed' | 'denied') => {
     if (!playerName.trim()) {
@@ -51,16 +61,70 @@ export default function SchedulePage() {
     }
 
     setHasResponded(prev => ({ ...prev, [id]: status }));
+    const dateOption = currentRehearsal?.proposedDates.find(d => d.id === id);
     toast({
       title: "Response recorded",
-      description: `You have ${status === 'confirmed' ? 'confirmed' : 'declined'} the rehearsal on ${format(proposedDates.find(d => d.id === id)?.date || new Date(), 'MMM d')}.`,
+      description: `You have ${status === 'confirmed' ? 'confirmed' : 'declined'} the rehearsal on ${format(dateOption?.date || new Date(), 'MMM d')}.`,
     });
   };
 
+  // Rehearsal List View
+  if (!selectedRehearsal) {
+    return (
+      <div className="container max-w-3xl py-24 mx-auto px-4">
+        <div className="space-y-4 mb-12 text-center">
+          <h1 className="text-4xl md:text-5xl font-display text-foreground">Rehearsal Schedule</h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Select a rehearsal to view available dates and RSVP.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {rehearsals.map((rehearsal) => (
+            <Card 
+              key={rehearsal.id} 
+              className="cursor-pointer hover:border-primary/50 transition-all duration-200 hover:shadow-md"
+              onClick={() => setSelectedRehearsal(rehearsal.id)}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-semibold">{rehearsal.title}</h3>
+                    <p className="text-muted-foreground">{rehearsal.description}</p>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <CalendarIcon className="w-4 h-4" />
+                        Event: {format(rehearsal.eventDate, 'MMMM d, yyyy')}
+                      </span>
+                      <Badge variant="outline">
+                        {rehearsal.proposedDates.length} date options
+                      </Badge>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-6 h-6 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Rehearsal Detail View
   return (
     <div className="container max-w-5xl py-24 mx-auto px-4">
+      <Button 
+        variant="ghost" 
+        className="mb-6 gap-2"
+        onClick={() => setSelectedRehearsal(null)}
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to all rehearsals
+      </Button>
+
       <div className="space-y-4 mb-12 text-center">
-        <h1 className="text-4xl md:text-5xl font-display text-foreground">Rehearsal Scheduling</h1>
+        <h1 className="text-4xl md:text-5xl font-display text-foreground">{currentRehearsal?.title}</h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
           Review the proposed dates below and confirm your availability.
         </p>
@@ -80,7 +144,7 @@ export default function SchedulePage() {
                 onSelect={setSelectedDate}
                 className="rounded-md border pointer-events-auto"
                 modifiers={{
-                  proposed: proposedDates.map(d => d.date),
+                  proposed: currentRehearsal?.proposedDates.map(d => d.date) || [],
                 }}
                 modifiersStyles={{
                   proposed: { fontWeight: 'bold', backgroundColor: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))' }
@@ -111,12 +175,12 @@ export default function SchedulePage() {
         <div className="md:col-span-2 space-y-4">
           <h2 className="text-2xl font-display mb-4">Proposed Options</h2>
           
-          {proposedDates.length === 0 ? (
+          {currentRehearsal?.proposedDates.length === 0 ? (
             <div className="text-center p-12 border rounded-xl bg-muted/20">
               <p className="text-muted-foreground">No proposed dates at the moment.</p>
             </div>
           ) : (
-            proposedDates.map((option) => (
+            currentRehearsal?.proposedDates.map((option) => (
               <Card key={option.id} className={`transition-all duration-200 ${hasResponded[option.id] === 'confirmed' ? 'border-green-500/50 bg-green-500/5' : hasResponded[option.id] === 'denied' ? 'border-red-500/50 bg-red-500/5' : ''}`}>
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
