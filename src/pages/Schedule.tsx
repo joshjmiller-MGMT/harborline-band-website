@@ -270,15 +270,16 @@ export default function SchedulePage() {
                         className={`flex-1 md:w-32 gap-2 ${hasResponded[option.id] === 'denied' ? '' : 'hover:bg-red-50 hover:text-red-600 hover:border-red-200'}`}
                         onClick={() => handleResponse(option.id, 'denied')}
                       >
-                        <X className="w-4 h-4" />
-                        Can't Make It
-                      </Button>
+                          <X className="w-4 h-4" />
+                          Can't Make It
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
+                ))
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
