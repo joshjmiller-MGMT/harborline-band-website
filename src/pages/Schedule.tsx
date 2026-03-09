@@ -240,24 +240,24 @@ export default function SchedulePage() {
                               {option.location}
                             </span>
                           </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2 items-center text-sm pt-2">
+                          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+                            {option.responses.confirmed} Confirmed
+                          </Badge>
+                          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20">
+                            {option.responses.denied} Unavailable
+                          </Badge>
+                          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+                            {option.responses.pending} Pending
+                          </Badge>
                         </div>
                       </div>
-                      
-                      <div className="flex gap-2 items-center text-sm pt-2">
-                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
-                          {option.responses.confirmed} Confirmed
-                        </Badge>
-                        <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20">
-                          {option.responses.denied} Unavailable
-                        </Badge>
-                        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
-                          {option.responses.pending} Pending
-                        </Badge>
-                      </div>
-                    </div>
 
-                    <div className="flex gap-3 w-full md:w-auto">
-                      <Button 
+                      <div className="flex gap-3 w-full lg:w-auto">
+                        <Button
                         variant={hasResponded[option.id] === 'confirmed' ? 'default' : 'outline'}
                         className={`flex-1 md:w-32 gap-2 ${hasResponded[option.id] === 'confirmed' ? 'bg-green-600 hover:bg-green-700' : 'hover:bg-green-50 hover:text-green-600 hover:border-green-200'}`}
                         onClick={() => handleResponse(option.id, 'confirmed')}
