@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Check, X, Clock, MapPin, ChevronRight, ArrowLeft, Home } from "lucide-react";
+import { Calendar as CalendarIcon, Check, X, Clock, MapPin, ChevronRight, ArrowLeft, Home, Send, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -9,45 +9,72 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import logo from "@/assets/logo-circle.png";
+
+type ResponseEntry = { name: string; status: 'confirmed' | 'denied' };
 
 // Mock data for rehearsals
 const rehearsals = [
   {
     id: "hoffman-wedding",
     title: "Rehearsals for Hoffman Wedding",
-    eventDate: new Date(new Date().setDate(new Date().getDate() + 30)),
-    description: "Wedding reception at The Belvedere",
+    eventDate: new Date(2026, 2, 28),
+    description: "Wedding reception at Gramercy Mansion",
     proposedDates: [
-      { id: "1", date: new Date(2026, 2, 14), time: "9:00 AM - 12:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "2", date: new Date(2026, 2, 14), time: "1:00 PM - 4:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "3", date: new Date(2026, 2, 14), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "4", date: new Date(2026, 2, 15), time: "9:00 AM - 12:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "5", date: new Date(2026, 2, 15), time: "1:00 PM - 4:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "6", date: new Date(2026, 2, 15), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "7", date: new Date(2026, 2, 16), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "8", date: new Date(2026, 2, 17), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "9", date: new Date(2026, 2, 18), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "10", date: new Date(2026, 2, 22), time: "9:00 AM - 12:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "11", date: new Date(2026, 2, 22), time: "1:00 PM - 4:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "12", date: new Date(2026, 2, 22), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "13", date: new Date(2026, 2, 23), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "14", date: new Date(2026, 2, 24), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
-      { id: "15", date: new Date(2026, 2, 27), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "1", date: new Date(2026, 2, 14), time: "9:00 AM - 12:00 PM", location: "TBD" },
+      { id: "2", date: new Date(2026, 2, 14), time: "1:00 PM - 4:00 PM", location: "TBD" },
+      { id: "3", date: new Date(2026, 2, 14), time: "6:00 PM - 9:00 PM", location: "TBD" },
+      { id: "4", date: new Date(2026, 2, 15), time: "9:00 AM - 12:00 PM", location: "TBD" },
+      { id: "5", date: new Date(2026, 2, 15), time: "1:00 PM - 4:00 PM", location: "TBD" },
+      { id: "6", date: new Date(2026, 2, 15), time: "6:00 PM - 9:00 PM", location: "TBD" },
+      { id: "7", date: new Date(2026, 2, 16), time: "6:00 PM - 9:00 PM", location: "TBD" },
+      { id: "8", date: new Date(2026, 2, 17), time: "6:00 PM - 9:00 PM", location: "TBD" },
+      { id: "9", date: new Date(2026, 2, 18), time: "6:00 PM - 9:00 PM", location: "TBD" },
+      { id: "10", date: new Date(2026, 2, 22), time: "9:00 AM - 12:00 PM", location: "TBD" },
+      { id: "11", date: new Date(2026, 2, 22), time: "1:00 PM - 4:00 PM", location: "TBD" },
+      { id: "12", date: new Date(2026, 2, 22), time: "6:00 PM - 9:00 PM", location: "TBD" },
+      { id: "13", date: new Date(2026, 2, 23), time: "6:00 PM - 9:00 PM", location: "TBD" },
+      { id: "14", date: new Date(2026, 2, 24), time: "6:00 PM - 9:00 PM", location: "TBD" },
+      { id: "15", date: new Date(2026, 2, 27), time: "6:00 PM - 9:00 PM", location: "TBD" },
     ]
   }
 ];
+
+// Load saved responses from localStorage
+function loadResponses(rehearsalId: string): Record<string, ResponseEntry[]> {
+  try {
+    const saved = localStorage.getItem(`rehearsal-responses-${rehearsalId}`);
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveResponses(rehearsalId: string, responses: Record<string, ResponseEntry[]>) {
+  localStorage.setItem(`rehearsal-responses-${rehearsalId}`, JSON.stringify(responses));
+}
 
 export default function SchedulePage() {
   const [selectedRehearsal, setSelectedRehearsal] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [playerName, setPlayerName] = useState("");
-  const [hasResponded, setHasResponded] = useState<Record<string, 'confirmed' | 'denied'>>({});
+  const [localSelections, setLocalSelections] = useState<Record<string, 'confirmed' | 'denied'>>({});
+  const [submittedResponses, setSubmittedResponses] = useState<Record<string, Record<string, ResponseEntry[]>>>({});
+  const [respondersDialog, setRespondersDialog] = useState<{ optionId: string; filter: 'confirmed' | 'denied' | 'all' } | null>(null);
   const optionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const currentRehearsal = rehearsals.find(r => r.id === selectedRehearsal);
 
-  const handleResponse = (id: string, status: 'confirmed' | 'denied') => {
+  // Load responses when selecting a rehearsal
+  const getResponses = (rehearsalId: string): Record<string, ResponseEntry[]> => {
+    if (submittedResponses[rehearsalId]) return submittedResponses[rehearsalId];
+    const loaded = loadResponses(rehearsalId);
+    setSubmittedResponses(prev => ({ ...prev, [rehearsalId]: loaded }));
+    return loaded;
+  };
+
+  const handleLocalSelect = (id: string, status: 'confirmed' | 'denied') => {
     if (!playerName.trim()) {
       toast({
         title: "Name required",
@@ -56,20 +83,51 @@ export default function SchedulePage() {
       });
       return;
     }
+    setLocalSelections(prev => {
+      if (prev[id] === status) {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: status };
+    });
+  };
 
-    setHasResponded(prev => ({ ...prev, [id]: status }));
-    const dateOption = currentRehearsal?.proposedDates.find(d => d.id === id);
+  const handleSubmit = () => {
+    if (!playerName.trim()) {
+      toast({ title: "Name required", description: "Please enter your name before submitting.", variant: "destructive" });
+      return;
+    }
+    if (Object.keys(localSelections).length === 0) {
+      toast({ title: "No selections", description: "Please mark your availability for at least one date.", variant: "destructive" });
+      return;
+    }
+
+    const rehearsalId = selectedRehearsal!;
+    const current = { ...getResponses(rehearsalId) };
+
+    // Add/update responses
+    for (const [optionId, status] of Object.entries(localSelections)) {
+      if (!current[optionId]) current[optionId] = [];
+      // Remove existing response from this person
+      current[optionId] = current[optionId].filter(r => r.name !== playerName.trim());
+      current[optionId].push({ name: playerName.trim(), status });
+    }
+
+    saveResponses(rehearsalId, current);
+    setSubmittedResponses(prev => ({ ...prev, [rehearsalId]: current }));
+    setLocalSelections({});
+
     toast({
-      title: "Response recorded",
-      description: `You have ${status === 'confirmed' ? 'confirmed' : 'declined'} the rehearsal on ${format(dateOption?.date || new Date(), 'MMM d')}.`,
+      title: "Availability submitted!",
+      description: `Your responses for ${Object.keys(localSelections).length} date(s) have been saved.`,
     });
   };
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
     if (date) {
-      // Find matching proposed date and scroll to it
-      const matchingOption = currentRehearsal?.proposedDates.find(d => 
+      const matchingOption = currentRehearsal?.proposedDates.find(d =>
         d.date.toDateString() === date.toDateString()
       );
       if (matchingOption && optionRefs.current[matchingOption.id]) {
@@ -81,13 +139,28 @@ export default function SchedulePage() {
     }
   };
 
+  const getOptionCounts = (optionId: string) => {
+    const rehearsalId = selectedRehearsal!;
+    const responses = getResponses(rehearsalId)[optionId] || [];
+    return {
+      confirmed: responses.filter(r => r.status === 'confirmed').length,
+      denied: responses.filter(r => r.status === 'denied').length,
+    };
+  };
+
+  const getRespondersForOption = (optionId: string, filter?: 'confirmed' | 'denied' | 'all') => {
+    const rehearsalId = selectedRehearsal!;
+    const responses = getResponses(rehearsalId)[optionId] || [];
+    if (filter) return responses.filter(r => r.status === filter);
+    return responses;
+  };
+
   // Rehearsal List View
   if (!selectedRehearsal) {
     return (
       <div className="min-h-screen bg-background">
-        {/* Header */}
         <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
-        <div className="container max-w-3xl mx-auto px-4 py-4">
+          <div className="container max-w-3xl mx-auto px-4 py-4">
             <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
               <Home className="w-4 h-4" />
               <span className="text-sm">Back to Home</span>
@@ -105,8 +178,8 @@ export default function SchedulePage() {
 
           <div className="space-y-4">
             {rehearsals.map((rehearsal) => (
-              <Card 
-                key={rehearsal.id} 
+              <Card
+                key={rehearsal.id}
                 className="cursor-pointer border-border/50 hover:border-primary/50 transition-all duration-200 hover:shadow-lg hover:shadow-primary/10 bg-card/80"
                 onClick={() => setSelectedRehearsal(rehearsal.id)}
               >
@@ -132,7 +205,6 @@ export default function SchedulePage() {
             ))}
           </div>
 
-          {/* Logo at bottom */}
           <div className="flex justify-center mt-16 mb-8">
             <img src={logo} alt="Harborline" className="w-40 md:w-56 opacity-60" />
           </div>
@@ -145,10 +217,10 @@ export default function SchedulePage() {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="container max-w-6xl mx-auto">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="mb-8 gap-2"
-          onClick={() => setSelectedRehearsal(null)}
+          onClick={() => { setSelectedRehearsal(null); setLocalSelections({}); }}
         >
           <ArrowLeft className="w-4 h-4" />
           Back to all rehearsals
@@ -162,7 +234,7 @@ export default function SchedulePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Calendar and Details Sidebar */}
+          {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             <Card className="overflow-hidden">
               <CardHeader className="pb-4">
@@ -193,9 +265,9 @@ export default function SchedulePage() {
               <CardContent className="pt-0">
                 <div className="space-y-3">
                   <Label htmlFor="playerName">Name</Label>
-                  <Input 
-                    id="playerName" 
-                    placeholder="e.g. John (Drums)" 
+                  <Input
+                    id="playerName"
+                    placeholder="e.g. John (Drums)"
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value)}
                   />
@@ -204,7 +276,7 @@ export default function SchedulePage() {
             </Card>
           </div>
 
-          {/* Proposed Options Container */}
+          {/* Proposed Options */}
           <div className="lg:col-span-2">
             <Card className="h-fit">
               <CardHeader className="pb-4">
@@ -212,78 +284,122 @@ export default function SchedulePage() {
                 <CardDescription>Review and respond to each proposed date below</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 max-h-[650px] overflow-y-auto">
-              {currentRehearsal?.proposedDates.length === 0 ? (
-                <div className="text-center p-12 border rounded-xl bg-muted/20">
-                  <p className="text-muted-foreground">No proposed dates at the moment.</p>
-                </div>
-              ) : (
-                currentRehearsal?.proposedDates.map((option) => (
-                  <div 
-                    key={option.id}
-                    ref={(el) => { optionRefs.current[option.id] = el; }}
-                    className={`border rounded-xl p-6 transition-all duration-200 ${hasResponded[option.id] === 'confirmed' ? 'border-green-500/50 bg-green-500/5' : hasResponded[option.id] === 'denied' ? 'border-red-500/50 bg-red-500/5' : 'border-border/50'}`}
-                  >
-                    <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-primary/10 p-3 rounded-lg text-primary">
-                            <CalendarIcon className="w-6 h-6" />
+                {currentRehearsal?.proposedDates.map((option) => {
+                  const counts = getOptionCounts(option.id);
+                  const selected = localSelections[option.id];
+                  return (
+                    <div
+                      key={option.id}
+                      ref={(el) => { optionRefs.current[option.id] = el; }}
+                      className={`border rounded-xl p-6 transition-all duration-200 ${
+                        selected === 'confirmed' ? 'border-green-500/50 bg-green-500/5' :
+                        selected === 'denied' ? 'border-red-500/50 bg-red-500/5' :
+                        'border-border/50'
+                      }`}
+                    >
+                      <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-primary/10 p-3 rounded-lg text-primary">
+                              <CalendarIcon className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-semibold">{format(option.date, 'EEEE, MMMM do, yyyy')}</h3>
+                              <div className="flex items-center gap-4 text-muted-foreground mt-1">
+                                <span className="flex items-center gap-1 text-sm">
+                                  <Clock className="w-4 h-4" />
+                                  {option.time}
+                                </span>
+                                <span className="flex items-center gap-1 text-sm">
+                                  <MapPin className="w-4 h-4" />
+                                  {option.location}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-xl font-semibold">{format(option.date, 'EEEE, MMMM do, yyyy')}</h3>
-                          <div className="flex items-center gap-4 text-muted-foreground mt-1">
-                            <span className="flex items-center gap-1 text-sm">
-                              <Clock className="w-4 h-4" />
-                              {option.time}
-                            </span>
-                            <span className="flex items-center gap-1 text-sm">
-                              <MapPin className="w-4 h-4" />
-                              {option.location}
-                            </span>
-                          </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex gap-2 items-center text-sm pt-2">
-                          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
-                            {option.responses.confirmed} Confirmed
-                          </Badge>
-                          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20">
-                            {option.responses.denied} Unavailable
-                          </Badge>
-                          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
-                            {option.responses.pending} Pending
-                          </Badge>
-                        </div>
-                      </div>
 
-                      <div className="flex gap-3 w-full lg:w-auto">
-                        <Button
-                        variant={hasResponded[option.id] === 'confirmed' ? 'default' : 'outline'}
-                        className={`flex-1 md:w-32 gap-2 ${hasResponded[option.id] === 'confirmed' ? 'bg-green-600 hover:bg-green-700' : 'hover:bg-green-50 hover:text-green-600 hover:border-green-200'}`}
-                        onClick={() => handleResponse(option.id, 'confirmed')}
-                      >
-                        <Check className="w-4 h-4" />
-                        Available
-                      </Button>
-                      <Button 
-                        variant={hasResponded[option.id] === 'denied' ? 'destructive' : 'outline'}
-                        className={`flex-1 md:w-32 gap-2 ${hasResponded[option.id] === 'denied' ? '' : 'hover:bg-red-50 hover:text-red-600 hover:border-red-200'}`}
-                        onClick={() => handleResponse(option.id, 'denied')}
-                      >
-                          <X className="w-4 h-4" />
-                          Can't Make It
-                        </Button>
+                          <div className="flex gap-2 items-center text-sm pt-2">
+                            <Badge
+                              variant="outline"
+                              className="bg-green-500/10 text-green-600 border-green-500/20 cursor-pointer hover:bg-green-500/20 transition-colors"
+                              onClick={() => setRespondersDialog({ optionId: option.id, filter: 'confirmed' })}
+                            >
+                              <Users className="w-3 h-3 mr-1" />
+                              {counts.confirmed} Confirmed
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className="bg-red-500/10 text-red-600 border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
+                              onClick={() => setRespondersDialog({ optionId: option.id, filter: 'denied' })}
+                            >
+                              <Users className="w-3 h-3 mr-1" />
+                              {counts.denied} Unavailable
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3 w-full lg:w-auto">
+                          <Button
+                            variant={selected === 'confirmed' ? 'default' : 'outline'}
+                            className={`flex-1 md:w-32 gap-2 ${selected === 'confirmed' ? 'bg-green-600 hover:bg-green-700' : 'hover:bg-green-50 hover:text-green-600 hover:border-green-200'}`}
+                            onClick={() => handleLocalSelect(option.id, 'confirmed')}
+                          >
+                            <Check className="w-4 h-4" />
+                            Available
+                          </Button>
+                          <Button
+                            variant={selected === 'denied' ? 'destructive' : 'outline'}
+                            className={`flex-1 md:w-32 gap-2 ${selected === 'denied' ? '' : 'hover:bg-red-50 hover:text-red-600 hover:border-red-200'}`}
+                            onClick={() => handleLocalSelect(option.id, 'denied')}
+                          >
+                            <X className="w-4 h-4" />
+                            Can't Make It
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })}
+              </CardContent>
+
+              {/* Submit Button */}
+              {Object.keys(localSelections).length > 0 && (
+                <div className="p-6 pt-4 border-t border-border/50">
+                  <Button onClick={handleSubmit} size="lg" className="w-full gap-2">
+                    <Send className="w-4 h-4" />
+                    Submit Availability ({Object.keys(localSelections).length} response{Object.keys(localSelections).length !== 1 ? 's' : ''})
+                  </Button>
+                </div>
               )}
-            </CardContent>
-          </Card>
+            </Card>
+          </div>
         </div>
       </div>
+
+      {/* Responders Dialog */}
+      <Dialog open={!!respondersDialog} onOpenChange={() => setRespondersDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {respondersDialog?.filter === 'confirmed' ? 'Confirmed' : 'Unavailable'} Responses
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-2">
+            {respondersDialog && (() => {
+              const responders = getRespondersForOption(respondersDialog.optionId, respondersDialog.filter);
+              if (responders.length === 0) {
+                return <p className="text-muted-foreground text-sm py-4 text-center">No responses yet.</p>;
+              }
+              return responders.map((r, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                  <div className={`w-2 h-2 rounded-full ${r.status === 'confirmed' ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className="font-medium">{r.name}</span>
+                </div>
+              ));
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
-  </div>
   );
 }
