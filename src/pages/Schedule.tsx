@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo-circle.png";
 
 // Mock data for rehearsals
 const rehearsals = [
