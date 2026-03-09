@@ -196,6 +196,9 @@ const Header = () => {
             <Button variant="hero" size="sm" className="ml-4" asChild>
               <a href="/request-a-quote">Request a Quote</a>
             </Button>
+            <Link to="/team/login" className="ml-2 p-2 text-muted-foreground hover:text-primary transition-colors" title="Team Login">
+              <Lock className="w-4 h-4" />
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
