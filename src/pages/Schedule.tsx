@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X, Clock, MapPin, ChevronRight, ArrowLeft, Home, Send, Users } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo-circle.png";
 
 type ResponseEntry = { name: string; status: 'confirmed' | 'denied' };
@@ -41,46 +42,46 @@ const rehearsals = [
   }
 ];
 
-// Load saved responses from localStorage
-function loadResponses(rehearsalId: string): Record<string, ResponseEntry[]> {
-  try {
-    const saved = localStorage.getItem(`rehearsal-responses-${rehearsalId}`);
-    return saved ? JSON.parse(saved) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveResponses(rehearsalId: string, responses: Record<string, ResponseEntry[]>) {
-  localStorage.setItem(`rehearsal-responses-${rehearsalId}`, JSON.stringify(responses));
-}
-
 export default function SchedulePage() {
   const [selectedRehearsal, setSelectedRehearsal] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [playerName, setPlayerName] = useState("");
   const [localSelections, setLocalSelections] = useState<Record<string, 'confirmed' | 'denied'>>({});
-  const [submittedResponses, setSubmittedResponses] = useState<Record<string, Record<string, ResponseEntry[]>>>({});
-  const [respondersDialog, setRespondersDialog] = useState<{ optionId: string; filter: 'confirmed' | 'denied' | 'all' } | null>(null);
+  const [dbResponses, setDbResponses] = useState<Record<string, ResponseEntry[]>>({});
+  const [respondersDialog, setRespondersDialog] = useState<{ optionId: string; filter: 'confirmed' | 'denied' } | null>(null);
+  const [loading, setLoading] = useState(false);
   const optionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const currentRehearsal = rehearsals.find(r => r.id === selectedRehearsal);
 
-  // Load responses when selecting a rehearsal
-  const getResponses = (rehearsalId: string): Record<string, ResponseEntry[]> => {
-    if (submittedResponses[rehearsalId]) return submittedResponses[rehearsalId];
-    const loaded = loadResponses(rehearsalId);
-    setSubmittedResponses(prev => ({ ...prev, [rehearsalId]: loaded }));
-    return loaded;
-  };
+  const fetchResponses = useCallback(async (rehearsalId: string) => {
+    const { data, error } = await supabase
+      .from('rehearsal_responses')
+      .select('option_id, player_name, status')
+      .eq('rehearsal_id', rehearsalId);
+
+    if (error) {
+      console.error('Error fetching responses:', error);
+      return;
+    }
+
+    const grouped: Record<string, ResponseEntry[]> = {};
+    for (const row of data || []) {
+      if (!grouped[row.option_id]) grouped[row.option_id] = [];
+      grouped[row.option_id].push({ name: row.player_name, status: row.status as 'confirmed' | 'denied' });
+    }
+    setDbResponses(grouped);
+  }, []);
+
+  useEffect(() => {
+    if (selectedRehearsal) {
+      fetchResponses(selectedRehearsal);
+    }
+  }, [selectedRehearsal, fetchResponses]);
 
   const handleLocalSelect = (id: string, status: 'confirmed' | 'denied') => {
     if (!playerName.trim()) {
-      toast({
-        title: "Name required",
-        description: "Please enter your name before responding.",
-        variant: "destructive",
-      });
+      toast({ title: "Name required", description: "Please enter your name before responding.", variant: "destructive" });
       return;
     }
     setLocalSelections(prev => {
@@ -93,7 +94,7 @@ export default function SchedulePage() {
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!playerName.trim()) {
       toast({ title: "Name required", description: "Please enter your name before submitting.", variant: "destructive" });
       return;
@@ -103,24 +104,36 @@ export default function SchedulePage() {
       return;
     }
 
+    setLoading(true);
     const rehearsalId = selectedRehearsal!;
-    const current = { ...getResponses(rehearsalId) };
+    const rows = Object.entries(localSelections).map(([optionId, status]) => ({
+      rehearsal_id: rehearsalId,
+      option_id: optionId,
+      player_name: playerName.trim(),
+      status,
+    }));
 
-    // Add/update responses
-    for (const [optionId, status] of Object.entries(localSelections)) {
-      if (!current[optionId]) current[optionId] = [];
-      // Remove existing response from this person
-      current[optionId] = current[optionId].filter(r => r.name !== playerName.trim());
-      current[optionId].push({ name: playerName.trim(), status });
+    // Upsert each response
+    for (const row of rows) {
+      const { error } = await supabase
+        .from('rehearsal_responses')
+        .upsert(row, { onConflict: 'rehearsal_id,option_id,player_name' });
+
+      if (error) {
+        console.error('Error saving response:', error);
+        toast({ title: "Error", description: "Failed to save some responses.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
     }
 
-    saveResponses(rehearsalId, current);
-    setSubmittedResponses(prev => ({ ...prev, [rehearsalId]: current }));
+    await fetchResponses(rehearsalId);
     setLocalSelections({});
+    setLoading(false);
 
     toast({
       title: "Availability submitted!",
-      description: `Your responses for ${Object.keys(localSelections).length} date(s) have been saved.`,
+      description: `Your responses for ${rows.length} date(s) have been saved.`,
     });
   };
 
@@ -131,28 +144,22 @@ export default function SchedulePage() {
         d.date.toDateString() === date.toDateString()
       );
       if (matchingOption && optionRefs.current[matchingOption.id]) {
-        optionRefs.current[matchingOption.id]?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        });
+        optionRefs.current[matchingOption.id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
   };
 
   const getOptionCounts = (optionId: string) => {
-    const rehearsalId = selectedRehearsal!;
-    const responses = getResponses(rehearsalId)[optionId] || [];
+    const responses = dbResponses[optionId] || [];
     return {
       confirmed: responses.filter(r => r.status === 'confirmed').length,
       denied: responses.filter(r => r.status === 'denied').length,
     };
   };
 
-  const getRespondersForOption = (optionId: string, filter?: 'confirmed' | 'denied' | 'all') => {
-    const rehearsalId = selectedRehearsal!;
-    const responses = getResponses(rehearsalId)[optionId] || [];
-    if (filter) return responses.filter(r => r.status === filter);
-    return responses;
+  const getRespondersForOption = (optionId: string, filter: 'confirmed' | 'denied') => {
+    const responses = dbResponses[optionId] || [];
+    return responses.filter(r => r.status === filter);
   };
 
   // Rehearsal List View
@@ -362,12 +369,11 @@ export default function SchedulePage() {
                 })}
               </CardContent>
 
-              {/* Submit Button */}
               {Object.keys(localSelections).length > 0 && (
                 <div className="p-6 pt-4 border-t border-border/50">
-                  <Button onClick={handleSubmit} size="lg" className="w-full gap-2">
+                  <Button onClick={handleSubmit} size="lg" className="w-full gap-2" disabled={loading}>
                     <Send className="w-4 h-4" />
-                    Submit Availability ({Object.keys(localSelections).length} response{Object.keys(localSelections).length !== 1 ? 's' : ''})
+                    {loading ? 'Submitting...' : `Submit Availability (${Object.keys(localSelections).length} response${Object.keys(localSelections).length !== 1 ? 's' : ''})`}
                   </Button>
                 </div>
               )}
