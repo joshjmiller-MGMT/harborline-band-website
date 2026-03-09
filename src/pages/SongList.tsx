@@ -709,17 +709,15 @@ ${generateContent()}
     printWindow.document.close();
   };
 
-  return (
-    <Layout
-      title="Song List & Repertoire | Harborline Baltimore Band"
-      description="Browse Harborline's extensive song list featuring Motown, Top 40, rock classics, jazz standards, and more. Request your favorite songs for your event."
-      canonical="https://harborlinemusic.com/songs"
-    >
-      <PageHero
-        eyebrow="REPERTOIRE"
-        title="OUR SONG LIST"
-        subtitle="From Motown classics to today's hits—we've got your soundtrack covered"
-      />
+  const content = (
+    <>
+      {!embedded && (
+        <PageHero
+          eyebrow="REPERTOIRE"
+          title="OUR SONG LIST"
+          subtitle="From Motown classics to today's hits—we've got your soundtrack covered"
+        />
+      )}
 
       <section className="py-8 md:py-12">
         <div className="container px-6 max-w-4xl mx-auto">
