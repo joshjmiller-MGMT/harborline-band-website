@@ -19,27 +19,21 @@ const rehearsals = [
     eventDate: new Date(new Date().setDate(new Date().getDate() + 30)),
     description: "Wedding reception at The Belvedere",
     proposedDates: [
-      {
-        id: "1",
-        date: new Date(new Date().setDate(new Date().getDate() + 5)),
-        time: "7:00 PM - 10:00 PM",
-        location: "Main Studio, Baltimore",
-        responses: { confirmed: 3, denied: 1, pending: 2 },
-      },
-      {
-        id: "2",
-        date: new Date(new Date().setDate(new Date().getDate() + 7)),
-        time: "6:30 PM - 9:30 PM",
-        location: "Main Studio, Baltimore",
-        responses: { confirmed: 5, denied: 0, pending: 1 },
-      },
-      {
-        id: "3",
-        date: new Date(new Date().setDate(new Date().getDate() + 12)),
-        time: "2:00 PM - 5:00 PM",
-        location: "Rehearsal Space B, Columbia",
-        responses: { confirmed: 1, denied: 4, pending: 1 },
-      }
+      { id: "1", date: new Date(2026, 2, 14), time: "9:00 AM - 12:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "2", date: new Date(2026, 2, 14), time: "1:00 PM - 4:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "3", date: new Date(2026, 2, 14), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "4", date: new Date(2026, 2, 15), time: "9:00 AM - 12:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "5", date: new Date(2026, 2, 15), time: "1:00 PM - 4:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "6", date: new Date(2026, 2, 15), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "7", date: new Date(2026, 2, 16), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "8", date: new Date(2026, 2, 17), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "9", date: new Date(2026, 2, 18), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "10", date: new Date(2026, 2, 22), time: "9:00 AM - 12:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "11", date: new Date(2026, 2, 22), time: "1:00 PM - 4:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "12", date: new Date(2026, 2, 22), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "13", date: new Date(2026, 2, 23), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "14", date: new Date(2026, 2, 24), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
+      { id: "15", date: new Date(2026, 2, 27), time: "6:00 PM - 9:00 PM", location: "TBD", responses: { confirmed: 0, denied: 0, pending: 0 } },
     ]
   }
 ];
