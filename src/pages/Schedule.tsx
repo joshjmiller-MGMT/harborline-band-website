@@ -148,7 +148,7 @@ export default function SchedulePage() {
     };
   };
 
-  const getRespondersForOption = (optionId: string, filter?: 'confirmed' | 'denied') => {
+  const getRespondersForOption = (optionId: string, filter?: 'confirmed' | 'denied' | 'all') => {
     const rehearsalId = selectedRehearsal!;
     const responses = getResponses(rehearsalId)[optionId] || [];
     if (filter) return responses.filter(r => r.status === filter);
