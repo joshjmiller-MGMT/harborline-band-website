@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X, Clock, MapPin, ChevronRight, ArrowLeft, Home } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -40,9 +40,10 @@ const rehearsals = [
 
 export default function SchedulePage() {
   const [selectedRehearsal, setSelectedRehearsal] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [playerName, setPlayerName] = useState("");
   const [hasResponded, setHasResponded] = useState<Record<string, 'confirmed' | 'denied'>>({});
+  const optionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const currentRehearsal = rehearsals.find(r => r.id === selectedRehearsal);
 
@@ -62,6 +63,22 @@ export default function SchedulePage() {
       title: "Response recorded",
       description: `You have ${status === 'confirmed' ? 'confirmed' : 'declined'} the rehearsal on ${format(dateOption?.date || new Date(), 'MMM d')}.`,
     });
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    if (date) {
+      // Find matching proposed date and scroll to it
+      const matchingOption = currentRehearsal?.proposedDates.find(d => 
+        d.date.toDateString() === date.toDateString()
+      );
+      if (matchingOption && optionRefs.current[matchingOption.id]) {
+        optionRefs.current[matchingOption.id]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+    }
   };
 
   // Rehearsal List View
@@ -143,18 +160,19 @@ export default function SchedulePage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-1 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Calendar and Details Sidebar */}
+        <div className="lg:col-span-1 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Select Dates</CardTitle>
-              <CardDescription>View dates with proposed rehearsals</CardDescription>
+              <CardDescription>Click dates to jump to options</CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center">
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={setSelectedDate}
+                onSelect={handleDateSelect}
                 className="rounded-md border pointer-events-auto"
                 modifiers={{
                   proposed: currentRehearsal?.proposedDates.map(d => d.date) || [],
@@ -185,25 +203,33 @@ export default function SchedulePage() {
           </Card>
         </div>
 
-        <div className="md:col-span-2 space-y-4">
-          <h2 className="text-2xl font-display mb-4">Proposed Options</h2>
-          
-          {currentRehearsal?.proposedDates.length === 0 ? (
-            <div className="text-center p-12 border rounded-xl bg-muted/20">
-              <p className="text-muted-foreground">No proposed dates at the moment.</p>
-            </div>
-          ) : (
-            currentRehearsal?.proposedDates.map((option) => (
-              <Card key={option.id} className={`transition-all duration-200 ${hasResponded[option.id] === 'confirmed' ? 'border-green-500/50 bg-green-500/5' : hasResponded[option.id] === 'denied' ? 'border-red-500/50 bg-red-500/5' : ''}`}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 p-3 rounded-lg text-primary">
-                          <CalendarIcon className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-semibold">{format(option.date, 'EEEE, MMMM do, yyyy')}</h3>
+        {/* Proposed Options Container */}
+        <div className="lg:col-span-3">
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="text-2xl font-display">Proposed Rehearsal Options</CardTitle>
+              <CardDescription>Review and respond to each proposed date below</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+              {currentRehearsal?.proposedDates.length === 0 ? (
+                <div className="text-center p-12 border rounded-xl bg-muted/20">
+                  <p className="text-muted-foreground">No proposed dates at the moment.</p>
+                </div>
+              ) : (
+                currentRehearsal?.proposedDates.map((option) => (
+                  <div 
+                    key={option.id}
+                    ref={(el) => { optionRefs.current[option.id] = el; }}
+                    className={`border rounded-xl p-6 transition-all duration-200 ${hasResponded[option.id] === 'confirmed' ? 'border-green-500/50 bg-green-500/5' : hasResponded[option.id] === 'denied' ? 'border-red-500/50 bg-red-500/5' : 'border-border/50'}`}
+                  >
+                    <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-primary/10 p-3 rounded-lg text-primary">
+                            <CalendarIcon className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-semibold">{format(option.date, 'EEEE, MMMM do, yyyy')}</h3>
                           <div className="flex items-center gap-4 text-muted-foreground mt-1">
                             <span className="flex items-center gap-1 text-sm">
                               <Clock className="w-4 h-4" />
@@ -214,24 +240,24 @@ export default function SchedulePage() {
                               {option.location}
                             </span>
                           </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2 items-center text-sm pt-2">
+                          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+                            {option.responses.confirmed} Confirmed
+                          </Badge>
+                          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20">
+                            {option.responses.denied} Unavailable
+                          </Badge>
+                          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+                            {option.responses.pending} Pending
+                          </Badge>
                         </div>
                       </div>
-                      
-                      <div className="flex gap-2 items-center text-sm pt-2">
-                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
-                          {option.responses.confirmed} Confirmed
-                        </Badge>
-                        <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20">
-                          {option.responses.denied} Unavailable
-                        </Badge>
-                        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
-                          {option.responses.pending} Pending
-                        </Badge>
-                      </div>
-                    </div>
 
-                    <div className="flex gap-3 w-full md:w-auto">
-                      <Button 
+                      <div className="flex gap-3 w-full lg:w-auto">
+                        <Button
                         variant={hasResponded[option.id] === 'confirmed' ? 'default' : 'outline'}
                         className={`flex-1 md:w-32 gap-2 ${hasResponded[option.id] === 'confirmed' ? 'bg-green-600 hover:bg-green-700' : 'hover:bg-green-50 hover:text-green-600 hover:border-green-200'}`}
                         onClick={() => handleResponse(option.id, 'confirmed')}
@@ -244,15 +270,16 @@ export default function SchedulePage() {
                         className={`flex-1 md:w-32 gap-2 ${hasResponded[option.id] === 'denied' ? '' : 'hover:bg-red-50 hover:text-red-600 hover:border-red-200'}`}
                         onClick={() => handleResponse(option.id, 'denied')}
                       >
-                        <X className="w-4 h-4" />
-                        Can't Make It
-                      </Button>
+                          <X className="w-4 h-4" />
+                          Can't Make It
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
+                ))
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
