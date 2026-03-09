@@ -114,6 +114,11 @@ export default function SchedulePage() {
               </Card>
             ))}
           </div>
+
+          {/* Logo at bottom */}
+          <div className="flex justify-center mt-16 mb-8">
+            <img src={logo} alt="Harborline" className="w-40 md:w-56 opacity-60" />
+          </div>
         </div>
       </div>
     );
