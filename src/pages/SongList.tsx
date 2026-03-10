@@ -184,6 +184,16 @@ const songs: Song[] = [
   { title: "Voyage to Atlantis", artist: "The Isley Brothers", genre: "R&B & Soul", functions: ["Cocktail", "Ceremony", "Reception"], decade: "70s" },
   { title: "Footsteps in the Dark", artist: "The Isley Brothers", genre: "R&B & Soul", functions: ["Cocktail", "Reception"], decade: "70s" },
   { title: "Little Red Corvette", artist: "Prince", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "80s" },
+  { title: "So Easy", artist: "Olivia Dean", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "First Dance"], decade: "2020s" },
+  { title: "P.D.A. (We Just Don't Care)", artist: "John Legend", genre: "R&B & Soul", functions: ["Cocktail", "Dinner", "First Dance"], decade: "2000s" },
+  { title: "Do I Do", artist: "Stevie Wonder", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "80s" },
+  { title: "As", artist: "Stevie Wonder", genre: "R&B & Soul", functions: ["Ceremony", "First Dance", "Reception"], decade: "70s" },
+  { title: "Bring on the Night", artist: "The Police", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"], decade: "70s" },
+  { title: "When the World Is Running Down...", artist: "The Police", genre: "Rock & Alternative", functions: ["Cocktail", "Reception"], decade: "80s" },
+  { title: "Murder by Numbers", artist: "The Police", genre: "Rock & Alternative", functions: ["Cocktail", "Dinner"], decade: "80s" },
+  { title: "Nights on Broadway", artist: "Bee Gees", genre: "Funk & Disco", functions: ["Reception", "Party", "Cocktail"], decade: "70s" },
+  { title: "Shout", artist: "Tears for Fears", genre: "Pop & Top 40", functions: ["Reception", "Party"], decade: "80s" },
+  { title: "In the Stone", artist: "Earth, Wind & Fire", genre: "Funk & Disco", functions: ["Reception", "Party"], decade: "70s" },
 ].sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
 
 const SongListPage = ({ embedded = false }: { embedded?: boolean }) => {
