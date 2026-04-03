@@ -458,7 +458,7 @@ function generateHTML(event: EventData): string {
   <div class="page">
     <div class="header">
       <div class="circles">${circlesHTML}</div>
-      <div class="brand-text">HARBOR<span class="brand-highlight">LINE</span></div>
+      <img src="${logoUrl}" alt="Harborline" class="brand-logo" />
     </div>
 
     <div class="event-title">${event.eventName}</div>
