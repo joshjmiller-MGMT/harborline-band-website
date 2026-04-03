@@ -8,7 +8,7 @@ import { FileText, Download, Loader2, ExternalLink, AlertCircle } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-type TemplateType = "wedding-ros" | "wedding-planner" | "corporate-ros";
+type TemplateType = "wedding-ros" | "wedding-planner" | "corporate-ros" | "party-runsheet";
 
 const TEMPLATE_INFO: Record<TemplateType, { name: string; description: string }> = {
   "wedding-ros": {
@@ -22,6 +22,10 @@ const TEMPLATE_INFO: Record<TemplateType, { name: string; description: string }>
   "corporate-ros": {
     name: "Corporate / Multi-Day Event Run of Show",
     description: "Detailed production run of show with multi-day scheduling, sound/production notes, and logistics.",
+  },
+  "party-runsheet": {
+    name: "Party / Event Run Sheet",
+    description: "Comprehensive day-of run sheet with event details, timeline, team roster, songlist by set, and logistics (load-in, parking, arrival).",
   },
 };
 
