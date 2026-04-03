@@ -438,9 +438,9 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       continue;
     }
 
-    // ── "@" instruction lines ──
-    if (line.startsWith('@') || line.startsWith('*')) {
-      const cleanLine = line.replace(/^[@*]\s*/, '').trim();
+    // ── "@" instruction lines (NOT * which are bullet songs) ──
+    if (line.startsWith('@')) {
+      const cleanLine = line.replace(/^@\s*/, '').trim();
       if (cleanLine && timeline.length > 0) {
         const lastTl = timeline[timeline.length - 1];
         lastTl.description += ` — ${cleanLine}`;
