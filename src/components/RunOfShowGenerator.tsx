@@ -72,40 +72,43 @@ export default function RunOfShowGenerator() {
     }
   };
 
-  const generateDocument = async (format: "docx" | "pdf") => {
+  const generateDocument = async (format: "html" | "print") => {
     if (!sheetData) return;
 
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
-        body: { sheetData, template, format },
+        body: { sheetData, template, format: "html" },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      // data.file is base64 encoded
-      const byteChars = atob(data.file);
-      const byteNumbers = new Array(byteChars.length);
-      for (let i = 0; i < byteChars.length; i++) {
-        byteNumbers[i] = byteChars.charCodeAt(i);
+      // Decode base64 HTML
+      const html = atob(data.file);
+
+      if (format === "print") {
+        // Open in new tab for printing as PDF
+        const newWindow = window.open("", "_blank");
+        if (newWindow) {
+          newWindow.document.write(html);
+          newWindow.document.close();
+          setTimeout(() => newWindow.print(), 500);
+        }
+      } else {
+        // Download as HTML file
+        const blob = new Blob([html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${data.filename || "run-of-show"}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      const mimeType = format === "docx"
-        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        : "application/pdf";
-      const blob = new Blob([byteArray], { type: mimeType });
 
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${data.filename || "run-of-show"}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({ title: "Document generated!", description: `Your ${format.toUpperCase()} has been downloaded.` });
+      toast({ title: "Document generated!", description: format === "print" ? "Print dialog opened in new tab." : "HTML file downloaded." });
     } catch (err: any) {
       toast({
         title: "Generation failed",
