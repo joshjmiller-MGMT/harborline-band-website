@@ -244,22 +244,22 @@ export default function RunOfShowGenerator() {
           ) : (
             <div className="flex gap-3">
               <Button
-                onClick={() => generateDocument("docx")}
+                onClick={() => generateDocument("html")}
                 disabled={generating}
                 className="flex-1"
                 variant="hero"
               >
                 {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                Export DOCX
+                Download HTML
               </Button>
               <Button
-                onClick={() => generateDocument("pdf")}
+                onClick={() => generateDocument("print")}
                 disabled={generating}
                 className="flex-1"
                 variant="heroOutline"
               >
                 {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                Export PDF
+                Print / Save as PDF
               </Button>
             </div>
           )}
