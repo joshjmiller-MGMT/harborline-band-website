@@ -360,7 +360,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
 
     // ── Role assignment lines: "FULL BAND – ..." or "CEREMONY – ..." ──
     // Check this BEFORE pipe-delimited details so FULL BAND isn't consumed as key-value
-    const roleMatch = line.match(/^([A-Z][A-Z\s/&()]+?)\s*[–-]\s*(.+)$/);
+    const roleMatch = line.match(/^([A-Z][A-Z\s/&()-]+?)\s*[–]\s*(.+)$/) || line.match(/^([A-Z][A-Z\s/&()]+?)\s+-\s+(.+)$/);
     if (roleMatch && !line.match(/^\d/)) {
       const roleLabel = roleMatch[1].trim();
       const roleValue = roleMatch[2].trim();
