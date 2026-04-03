@@ -42,38 +42,48 @@ interface ParsedEventData {
 }
 
 export default function RunOfShowGenerator() {
-  const [sheetUrl, setSheetUrl] = useState("");
+  const [inputUrl, setInputUrl] = useState("");
   const [template, setTemplate] = useState<TemplateType>("party-runsheet");
   const [loading, setLoading] = useState(false);
   const [sheetData, setSheetData] = useState<SheetData | null>(null);
   const [parsedData, setParsedData] = useState<ParsedEventData | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [sourceType, setSourceType] = useState<string>("");
 
-  const extractSheetId = (url: string): string | null => {
-    const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-    return match ? match[1] : null;
+  const detectUrlType = (url: string): string => {
+    if (url.includes('docs.google.com/spreadsheets')) return 'Google Sheet';
+    if (url.includes('docs.google.com/document')) return 'Google Doc';
+    if (url.includes('.csv')) return 'CSV';
+    return 'Webpage';
   };
 
-  const fetchSheet = async () => {
-    const sheetId = extractSheetId(sheetUrl);
-    if (!sheetId) {
-      toast({ title: "Invalid URL", description: "Please paste a valid Google Sheets URL.", variant: "destructive" });
+  const fetchData = async () => {
+    if (!inputUrl.trim()) {
+      toast({ title: "Missing URL", description: "Please paste a URL to import.", variant: "destructive" });
       return;
     }
 
     setLoading(true);
     setParsedData(null);
+    setSourceType(detectUrlType(inputUrl));
     try {
+      // For Google Sheets, also send sheetId for backward compatibility
+      const isSheet = inputUrl.includes('docs.google.com/spreadsheets');
+      const sheetIdMatch = inputUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      
       const { data, error } = await supabase.functions.invoke("fetch-google-sheet", {
-        body: { sheetId },
+        body: isSheet && sheetIdMatch 
+          ? { sheetId: sheetIdMatch[1], url: inputUrl } 
+          : { url: inputUrl },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       setSheetData(data);
+      setSourceType(data.sourceType || detectUrlType(inputUrl));
 
-      // Immediately parse to show preview by calling generate in preview mode
+      // Parse to show preview
       const { data: genData, error: genError } = await supabase.functions.invoke("generate-run-of-show", {
         body: { sheetData: data, template, format: "html" },
       });
@@ -82,11 +92,11 @@ export default function RunOfShowGenerator() {
         setParsedData(genData.parsedData);
       }
 
-      toast({ title: "Sheet loaded", description: `Found ${data.rows.length} rows of data.` });
+      toast({ title: "Data loaded", description: `Imported from ${detectUrlType(inputUrl)}.` });
     } catch (err: any) {
       toast({
-        title: "Failed to fetch sheet",
-        description: err.message || "Make sure the sheet is set to 'Anyone with the link can view'.",
+        title: "Failed to fetch",
+        description: err.message || "Make sure the link is publicly accessible.",
         variant: "destructive",
       });
     } finally {
@@ -170,25 +180,30 @@ export default function RunOfShowGenerator() {
       <Card className="mb-6 bg-card border-border">
         <CardHeader>
           <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
-            <span className="text-primary">1.</span> Import Google Sheet
+            <span className="text-primary">1.</span> Import Data
           </CardTitle>
           <CardDescription>
-            Paste the URL of your Google Sheet. It must be set to "Anyone with the link can view."
+            Paste a URL to import — Google Sheets, Google Docs, CSV files, or any public webpage.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-3">
             <Input
-              placeholder="https://docs.google.com/spreadsheets/d/..."
-              value={sheetUrl}
-              onChange={(e) => setSheetUrl(e.target.value)}
+              placeholder="https://docs.google.com/spreadsheets/d/... or any URL"
+              value={inputUrl}
+              onChange={(e) => setInputUrl(e.target.value)}
               className="flex-1 bg-secondary/50 border-border"
             />
-            <Button onClick={fetchSheet} disabled={loading || !sheetUrl}>
+            <Button onClick={fetchData} disabled={loading || !inputUrl}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
               {loading ? "Fetching..." : "Fetch"}
             </Button>
           </div>
+          {inputUrl && !loading && !sheetData && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Detected: {detectUrlType(inputUrl)}
+            </p>
+          )}
 
           {/* Parsed data preview */}
           {parsedData && (
