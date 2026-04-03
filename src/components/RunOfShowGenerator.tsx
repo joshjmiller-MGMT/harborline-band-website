@@ -109,9 +109,24 @@ export default function RunOfShowGenerator() {
       const html = atob(data.file);
 
       if (format === "print") {
+        // Extract the original <style> and <head> content, then wrap body in dark background
+        const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
+        const originalStyles = styleMatch ? styleMatch[1] : '';
+        const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/);
+        const bodyContent = bodyMatch ? bodyMatch[1] : html;
+        
+        const wrappedHtml = `<!DOCTYPE html><html lang="en"><head>
+          <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            ${originalStyles}
+            html, body { margin: 0; padding: 0; background: #1a1a1a; min-height: 100vh; }
+            .page-shell { max-width: 780px; margin: 40px auto; background: white; box-shadow: 0 4px 40px rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; padding: 0; }
+            @media print { html, body { background: white; } .page-shell { margin: 0; box-shadow: none; border-radius: 0; max-width: none; } }
+          </style>
+        </head><body><div class="page-shell">${bodyContent}</div></body></html>`;
         const newWindow = window.open("", "_blank");
         if (newWindow) {
-          newWindow.document.write(html);
+          newWindow.document.write(wrappedHtml);
           newWindow.document.close();
         }
       } else {
