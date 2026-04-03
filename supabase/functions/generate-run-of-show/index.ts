@@ -477,8 +477,8 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       }
     }
 
-    // ── Bullet point songs: "- SONG TITLE SINGER" or "- Song Title / Artist (notes)" ──
-    const bulletMatch = line.match(/^[-•]\s+(.+)$/);
+    // ── Bullet point songs: "- SONG TITLE SINGER" or "* SONG TITLE SINGER" ──
+    const bulletMatch = line.match(/^[-•*]\s+(.+)$/);
     if (bulletMatch) {
       const songLine = bulletMatch[1].trim();
 
