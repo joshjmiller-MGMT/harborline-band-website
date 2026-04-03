@@ -111,6 +111,13 @@ function parseSheetToEvent(sheetData: any): EventData {
           details[label] = value;
         }
       }
+      // Check for label WITHOUT colon but matching known patterns, with value in next cell
+      if (!cell.includes(':') && nextCell && cell.length > 2 && cell.length < 40) {
+        const cellLower = cell.toLowerCase();
+        if (labelPatterns.some(p => cellLower === p) && !details[cellLower]) {
+          details[cellLower] = nextCell;
+        }
+      }
     }
   }
 
