@@ -130,6 +130,7 @@ const App = () => (
               <Route path="/team/gallery" element={<TeamGallery />} />
               <Route path="/team/scheduler" element={<TeamScheduler />} />
               <Route path="/team/resources" element={<TeamResources />} />
+              <Route path="/team/run-of-show" element={<TeamRunOfShow />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
