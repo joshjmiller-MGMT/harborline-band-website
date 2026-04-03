@@ -61,6 +61,7 @@ import TeamSongs from "./pages/team/TeamSongs";
 import TeamGallery from "./pages/team/TeamGallery";
 import TeamScheduler from "./pages/team/TeamScheduler";
 import TeamResources from "./pages/team/TeamResources";
+import TeamRunOfShow from "./pages/team/TeamRunOfShow";
 
 const queryClient = new QueryClient();
 
@@ -129,6 +130,7 @@ const App = () => (
               <Route path="/team/gallery" element={<TeamGallery />} />
               <Route path="/team/scheduler" element={<TeamScheduler />} />
               <Route path="/team/resources" element={<TeamResources />} />
+              <Route path="/team/run-of-show" element={<TeamRunOfShow />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
