@@ -302,9 +302,9 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
-    // Check for "Label: Value" pattern
+    // Check for "Label: Value" pattern (but not time patterns like "5:30 PM")
     const colonIdx = line.indexOf(':');
-    if (colonIdx > 0 && colonIdx < 60) {
+    if (colonIdx > 0 && colonIdx < 60 && !inSongSection) {
       const label = line.substring(0, colonIdx).trim().toLowerCase();
       const value = line.substring(colonIdx + 1).trim();
       
@@ -313,9 +313,84 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
         continue;
       }
     }
+    // Also parse detail lines even when inSongSection if they clearly match
+    if (colonIdx > 0 && colonIdx < 60) {
+      const label = line.substring(0, colonIdx).trim().toLowerCase();
+      const value = line.substring(colonIdx + 1).trim();
+      if (value && detailKeys.some(k => label === k)) {
+        details[label] = value;
+        continue;
+      }
+    }
+
+    // Check for "Run of Show" header
+    if (/^run of show/i.test(line)) {
+      inSongSection = true;
+      continue;
+    }
+
+    // When in song section, try to parse numbered songs FIRST before checking section headers
+    if (inSongSection) {
+      // Check for numbered songs: "1. Song Title – Artist" or "1. Song Title - Artist"
+      const numberedSong = line.match(/^\d+\.\s+(.+?)\s*[–-]\s*(.+)$/);
+      if (numberedSong) {
+        const part1 = numberedSong[1].trim();
+        const part2 = numberedSong[2].trim();
+        // It's a song if part2 looks like an artist name (short, starts with capital)
+        // and part1 does NOT match a section keyword
+        const isSectionKeyword = /^(prelude|processional|recessional|cocktail|ceremony|reception|dinner)/i.test(part1);
+        if (!isSectionKeyword) {
+          currentSongs.push({
+            order: String(currentSongs.length + 1),
+            request: false,
+            title: part1,
+            artist: part2,
+            notes: '', key: '', bpm: '', singer: '', patches: '',
+          });
+          continue;
+        }
+      }
+
+      // Check for "* Subsection label" markers  
+      const subSectionMatch = line.match(/^\*\s+(.+)/);
+      if (subSectionMatch) {
+        const subLabel = subSectionMatch[1].trim();
+        // Check if next line is a song (indented * Song - Artist)
+        if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1].trim();
+          const songMatch = nextLine.match(/^\*?\s*(.+?)\s*-\s*(.+)$/);
+          if (songMatch) {
+            currentSongs.push({
+              order: String(currentSongs.length + 1), request: false,
+              title: songMatch[1].trim(),
+              artist: songMatch[2].trim(),
+              notes: subLabel,
+              key: '', bpm: '', singer: '', patches: '',
+            });
+            i++;
+            continue;
+          }
+        }
+        continue;
+      }
+
+      // Check for "Song Title - Artist" without number
+      const dashSong = line.match(/^\*?\s*(.+?)\s*-\s*([A-Z][\w\s.]+)$/);
+      if (dashSong && !line.includes(':')) {
+        currentSongs.push({
+          order: String(currentSongs.length + 1),
+          request: false,
+          title: dashSong[1].trim(),
+          artist: dashSong[2].trim(),
+          notes: '', key: '', bpm: '', singer: '', patches: '',
+        });
+        continue;
+      }
+    }
 
     // Check for section headers like "1. Prelude (Guest Arrival) – Approximately 5:40 PM"
-    const sectionMatch = line.match(/^\d+\.\s+(.+?)(?:\s*[–-]\s*(?:Approximately\s*)?(\d{1,2}:\d{2}\s*(?:PM|AM)?))?$/i);
+    // or "3. Recessional"
+    const sectionMatch = line.match(/^\d+\.\s+(.+?)(?:\s*[–-]\s*(?:Approximately\s*)?(\d{1,2}:\d{2}\s*(?:PM|AM)?).*)?$/i);
     if (sectionMatch) {
       const potentialTitle = sectionMatch[1].trim();
       if (potentialTitle.includes('(') || potentialTitle.length > 15 || 
@@ -333,64 +408,6 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
         }
         continue;
       }
-    }
-
-    // Check for "* Subsection label" markers
-    const subSectionMatch = line.match(/^\*\s+(.+)/);
-    if (subSectionMatch && inSongSection) {
-      const subLabel = subSectionMatch[1].trim();
-      if (i + 1 < lines.length) {
-        const nextLine = lines[i + 1].trim();
-        const songMatch = nextLine.match(/^\*?\s*(.+?)\s*-\s*(.+)$/);
-        if (songMatch) {
-          currentSongs.push({
-            order: String(currentSongs.length + 1), request: false,
-            title: songMatch[1].trim(),
-            artist: songMatch[2].trim(),
-            notes: subLabel,
-            key: '', bpm: '', singer: '', patches: '',
-          });
-          i++;
-          continue;
-        }
-      }
-      continue;
-    }
-
-    // Check for numbered songs: "1. Song Title – Artist" or "1. Song Title - Artist"
-    const numberedSong = line.match(/^\d+\.\s+(.+?)\s*[–-]\s*(.+)$/);
-    if (numberedSong && inSongSection) {
-      const songTitle = numberedSong[1].trim();
-      const songArtist = numberedSong[2].trim();
-      if (!/prelude|processional|recessional|cocktail|ceremony/i.test(songTitle)) {
-        currentSongs.push({
-          order: String(currentSongs.length + 1),
-          request: false,
-          title: songTitle,
-          artist: songArtist,
-          notes: '', key: '', bpm: '', singer: '', patches: '',
-        });
-        continue;
-      }
-    }
-
-    // Check for "Song Title - Artist" without number (but with a capital letter after dash)
-    const dashSong = line.match(/^\*?\s*(.+?)\s*-\s*([A-Z][\w\s.]+)$/);
-    if (dashSong && inSongSection && !line.includes(':')) {
-      currentSongs.push({
-        order: String(currentSongs.length + 1),
-        request: false,
-        title: dashSong[1].trim(),
-        artist: dashSong[2].trim(),
-        notes: '', key: '', bpm: '', singer: '', patches: '',
-      });
-      continue;
-    }
-
-    // Check for "Run of Show" header
-    if (/^run of show$/i.test(line)) {
-      inSongSection = true;
-      continue;
     }
 
     // Quoted notes / instructions
