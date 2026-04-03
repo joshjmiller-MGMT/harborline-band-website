@@ -1,6 +1,6 @@
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { useTeamAuth } from "@/hooks/useTeamAuth";
-import { Music, Image, Calendar, FolderOpen, LogOut } from "lucide-react";
+import { Music, Image, Calendar, FolderOpen, LogOut, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo-text.png";
 
@@ -9,6 +9,7 @@ const teamNav = [
   { name: "Gallery", href: "/team/gallery", icon: Image },
   { name: "Scheduler", href: "/team/scheduler", icon: Calendar },
   { name: "Resources", href: "/team/resources", icon: FolderOpen },
+  { name: "Run of Show", href: "/team/run-of-show", icon: FileText },
 ];
 
 export default function TeamLayout({ children }: { children: React.ReactNode }) {
