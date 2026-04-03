@@ -9,7 +9,7 @@ const teamNav = [
   { name: "Gallery", href: "/team/gallery", icon: Image },
   { name: "Scheduler", href: "/team/scheduler", icon: Calendar },
   { name: "Resources", href: "/team/resources", icon: FolderOpen },
-  { name: "Run of Show", href: "/team/run-of-show", icon: FileText },
+  { name: "Doc Generator", href: "/team/run-of-show", icon: FileText },
 ];
 
 export default function TeamLayout({ children }: { children: React.ReactNode }) {

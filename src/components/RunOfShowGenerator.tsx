@@ -6,24 +6,28 @@ import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, U
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-type TemplateType = "wedding-ros" | "wedding-planner" | "corporate-ros" | "party-runsheet";
+type TemplateType = "wedding-ros" | "client-planner" | "corporate-ros" | "party-runsheet";
 
-const TEMPLATE_INFO: Record<TemplateType, { name: string; description: string }> = {
+const TEMPLATE_INFO: Record<TemplateType, { name: string; description: string; audience: "internal" | "client" }> = {
   "wedding-ros": {
     name: "Wedding Ceremony",
     description: "Formal run of show with event details header, timeline sections, and song lists.",
+    audience: "internal",
   },
-  "wedding-planner": {
-    name: "Ceremony Planner",
-    description: "Client-facing template for organizing ceremony music choices.",
+  "client-planner": {
+    name: "Client Planner",
+    description: "Client-facing template for organizing ceremony music choices and event details.",
+    audience: "client",
   },
   "corporate-ros": {
     name: "Corporate Event",
     description: "Multi-day scheduling, sound/production notes, and logistics.",
+    audience: "internal",
   },
   "party-runsheet": {
     name: "Party Run Sheet",
     description: "Day-of run sheet with event details, timeline, team, songlist, and logistics.",
+    audience: "internal",
   },
 };
 
