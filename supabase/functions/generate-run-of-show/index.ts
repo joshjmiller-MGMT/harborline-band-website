@@ -358,45 +358,26 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       }
     }
 
-    // ── Pipe-delimited detail lines (LOAD-IN – TBD | PARKING – TBD) ──
-    if (line.includes('|') && /^[A-Z\s-]+\s*[–-]/.test(line)) {
-      const parts = line.split('|').map(s => s.trim());
-      for (const part of parts) {
-        const kvMatch = part.match(/^([A-Z][A-Z\s-]+?)\s*[–-]\s*(.+)$/i);
-        if (kvMatch) {
-          const k = kvMatch[1].trim().toLowerCase().replace(/\s+/g, ' ');
-          const v = kvMatch[2].trim();
-          // Map to detail keys
-          if (k.includes('load-in') || k.includes('load in')) details['load-in time'] = v;
-          else if (k.includes('parking')) details['parking'] = v;
-          else if (k.includes('soundcheck')) details['soundcheck'] = v;
-          else if (k.includes('final timeline')) details['final timeline'] = v;
-          else details[k] = v;
-        }
-      }
-      continue;
-    }
-
     // ── Role assignment lines: "FULL BAND – ..." or "CEREMONY – ..." ──
-    const roleMatch = line.match(/^([A-Z][A-Z\s/&]+?)\s*[–-]\s*(.+)$/);
+    // Check this BEFORE pipe-delimited details so FULL BAND isn't consumed as key-value
+    const roleMatch = line.match(/^([A-Z][A-Z\s/&()]+?)\s*[–-]\s*(.+)$/);
     if (roleMatch && !line.match(/^\d/)) {
       const roleLabel = roleMatch[1].trim();
       const roleValue = roleMatch[2].trim();
-      const roleLower = roleLabel.toLowerCase();
+      const roleLower = roleLabel.toLowerCase().replace(/\s+/g, ' ');
 
-      if (roleLower.includes('full band') || roleLower.includes('band')) {
+      if (roleLower.includes('full band') || (roleLower === 'band')) {
         // Parse musicians from pipe-separated "Instrument - Name" pairs
-        // May span multiple lines
         let musicianLine = roleValue;
-        // Check if next line continues (starts with spaces or has instrument-name pattern)
+        // Check if next line continues (starts with spaces/instrument pattern)
         while (i + 1 < lines.length) {
-          const nextLine = lines[i + 1].trim();
-          if (nextLine.match(/^[A-Z][a-z]+\s*(\/\s*[A-Z][a-z]+)?\s*-\s*.+/) && nextLine.includes('|')) {
+          const nextLine = lines[i + 1];
+          const trimmed = nextLine.trim();
+          // Continuation: line starts with whitespace or has Instrument - Name pattern
+          if ((nextLine.match(/^\s{4,}/) || trimmed.match(/^[A-Z][a-z]+\s*(\/\s*[A-Z])/)) && 
+              (trimmed.includes('-') || trimmed.includes('|'))) {
             i++;
-            musicianLine += ' | ' + nextLine;
-          } else if (nextLine.match(/^[A-Z][a-z]+\s*(\/\s*[A-Z][a-z]+)?\s*-\s*.+/) && !nextLine.match(/^\d/)) {
-            i++;
-            musicianLine += ' | ' + nextLine;
+            musicianLine += ' | ' + trimmed;
           } else {
             break;
           }
@@ -413,7 +394,26 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
         continue;
       }
 
-      // Other role assignments (CEREMONY, COCKTAIL HOUR, MC, SOUND, LIGHTS, etc.)
+      // Multi-assignment line: "COCKTAIL HOUR – (Duo) Josh Miller, Tom   MC – Tom Starr   SOUND – Jack"
+      // Split by multiple UPPERCASE LABEL – value patterns
+      const multiRoleSegments = line.match(/([A-Z][A-Z\s/&()]+?)\s*[–-]\s*([^A-Z]*(?:[A-Z][a-z][^–-]*)*?)(?=\s{2,}[A-Z]{2,}\s*[–-]|$)/g);
+      if (multiRoleSegments && multiRoleSegments.length > 1) {
+        for (const seg of multiRoleSegments) {
+          const segMatch = seg.match(/^([A-Z][A-Z\s/&()]+?)\s*[–-]\s*(.+)$/);
+          if (segMatch) {
+            const k = segMatch[1].trim().toLowerCase().replace(/\s+/g, ' ');
+            const v = segMatch[2].trim();
+            if (['ceremony', 'cocktail hour', 'cocktail', 'mc', 'sound', 'lights', 'break playlists'].some(kw => k.includes(kw))) {
+              details[k] = v;
+            } else {
+              details[k] = v;
+            }
+          }
+        }
+        continue;
+      }
+
+      // Single role assignment
       if (['ceremony', 'cocktail hour', 'cocktail', 'mc', 'sound', 'lights', 'break playlists'].some(k => roleLower.includes(k))) {
         details[roleLower] = roleValue;
         continue;
@@ -421,6 +421,37 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
 
       // Fallback: store as detail
       details[roleLower] = roleValue;
+      continue;
+    }
+
+    // ── Pipe-delimited detail lines (LOAD-IN – TBD | PARKING – TBD) ──
+    // Only if NOT a FULL BAND / role line (already handled above)
+    if (line.includes('|') && /^[A-Z\s-]+[–-]/.test(line)) {
+      const parts = line.split('|').map(s => s.trim());
+      for (const part of parts) {
+        const kvMatch = part.match(/^([A-Z][A-Z\s-]+?)\s*[–-]\s*(.+)$/i);
+        if (kvMatch) {
+          const k = kvMatch[1].trim().toLowerCase().replace(/\s+/g, ' ');
+          const v = kvMatch[2].trim();
+          if (k.includes('load-in') || k.includes('load in')) details['load-in time'] = v;
+          else if (k.includes('parking')) details['parking'] = v;
+          else if (k.includes('soundcheck')) details['soundcheck'] = v;
+          else if (k.includes('final timeline')) details['final timeline'] = v;
+          else details[k] = v;
+        }
+      }
+      continue;
+    }
+
+    // ── Continuation lines (indented, with pipe-separated instrument-name pairs) ──
+    if (line.includes('|') && line.includes('-') && personnel.length > 0) {
+      const musicians = line.split('|').map(s => s.trim()).filter(Boolean);
+      for (const m of musicians) {
+        const mMatch = m.match(/^(.+?)\s*-\s*(.+)$/);
+        if (mMatch) {
+          personnel.push({ role: mMatch[1].trim(), name: mMatch[2].trim() });
+        }
+      }
       continue;
     }
 
