@@ -120,7 +120,7 @@ export default function RunOfShowGenerator() {
 
       // Parse to show preview
       const { data: genData, error: genError } = await supabase.functions.invoke("generate-run-of-show", {
-        body: { sheetData: data, template, format: "html" },
+        body: { sheetData: data, template, format: "html", logos: logosBase64 },
       });
 
       if (!genError && genData?.parsedData) {
