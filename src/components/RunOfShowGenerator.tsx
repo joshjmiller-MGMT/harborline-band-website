@@ -61,6 +61,12 @@ export default function RunOfShowGenerator() {
     return 'Webpage';
   };
 
+  const decodeBase64Utf8 = (base64: string): string => {
+    const binary = window.atob(base64);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder("utf-8").decode(bytes);
+  };
+
   const fetchData = async () => {
     if (!inputUrl.trim()) {
       toast({ title: "Missing URL", description: "Please paste a URL to import.", variant: "destructive" });
@@ -119,8 +125,9 @@ export default function RunOfShowGenerator() {
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      if (!data?.file) throw new Error("No document was returned.");
 
-      const html = atob(data.file);
+      const html = decodeBase64Utf8(data.file);
 
       if (format === "print") {
         // Extract the original <style> and <head> content, then wrap body in dark background
@@ -144,7 +151,7 @@ export default function RunOfShowGenerator() {
           newWindow.document.close();
         }
       } else {
-        const blob = new Blob([html], { type: "text/html" });
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
