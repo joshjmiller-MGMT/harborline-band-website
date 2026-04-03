@@ -6,24 +6,28 @@ import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, U
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-type TemplateType = "wedding-ros" | "wedding-planner" | "corporate-ros" | "party-runsheet";
+type TemplateType = "wedding-ros" | "client-planner" | "corporate-ros" | "party-runsheet";
 
-const TEMPLATE_INFO: Record<TemplateType, { name: string; description: string }> = {
+const TEMPLATE_INFO: Record<TemplateType, { name: string; description: string; audience: "internal" | "client" }> = {
   "wedding-ros": {
     name: "Wedding Ceremony",
     description: "Formal run of show with event details header, timeline sections, and song lists.",
+    audience: "internal",
   },
-  "wedding-planner": {
-    name: "Ceremony Planner",
-    description: "Client-facing template for organizing ceremony music choices.",
+  "client-planner": {
+    name: "Client Planner",
+    description: "Client-facing template for organizing ceremony music choices and event details.",
+    audience: "client",
   },
   "corporate-ros": {
     name: "Corporate Event",
     description: "Multi-day scheduling, sound/production notes, and logistics.",
+    audience: "internal",
   },
   "party-runsheet": {
     name: "Party Run Sheet",
     description: "Day-of run sheet with event details, timeline, team, songlist, and logistics.",
+    audience: "internal",
   },
 };
 
@@ -169,10 +173,10 @@ export default function RunOfShowGenerator() {
     <div className="container mx-auto px-6 py-10 max-w-4xl">
       <div className="mb-8">
         <h1 className="text-4xl font-display tracking-display text-foreground mb-2">
-          Run of Show Generator
+          Doc Generator
         </h1>
         <p className="text-muted-foreground">
-          Import event data from a Google Sheet and export a branded run of show document.
+          Import event data and export branded documents — internal run sheets or client-facing planners.
         </p>
       </div>
 
@@ -296,7 +300,7 @@ export default function RunOfShowGenerator() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3">
-            {(Object.entries(TEMPLATE_INFO) as [TemplateType, { name: string; description: string }][]).map(([key, info]) => (
+            {(Object.entries(TEMPLATE_INFO) as [TemplateType, { name: string; description: string; audience: "internal" | "client" }][]).map(([key, info]) => (
               <button
                 key={key}
                 onClick={() => setTemplate(key)}
@@ -306,10 +310,19 @@ export default function RunOfShowGenerator() {
                     : "border-border bg-secondary/20 hover:border-muted-foreground/30"
                 }`}
               >
-                <p className={`font-medium text-sm ${template === key ? "text-primary" : "text-foreground"}`}>
-                  {info.name}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">{info.description}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className={`font-medium text-sm ${template === key ? "text-primary" : "text-foreground"}`}>
+                    {info.name}
+                  </p>
+                  <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
+                    info.audience === "client"
+                      ? "bg-accent/20 text-accent-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}>
+                    {info.audience === "client" ? "Client-Facing" : "Internal"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">{info.description}</p>
               </button>
             ))}
           </div>
