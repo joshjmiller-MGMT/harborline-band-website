@@ -18,15 +18,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Parse sheet data into structured event info based on template type
     const eventData = parseSheetToEvent(sheetData, template);
-    
-    // Generate HTML content based on template
     const html = generateHTML(eventData, template);
 
-    // For now, we return the HTML as a "document" 
-    // The client will handle the download
-    // We encode the HTML as base64 for transport
     const encoder = new TextEncoder();
     const htmlBytes = encoder.encode(html);
     const base64 = btoa(String.fromCharCode(...htmlBytes));
@@ -36,7 +30,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ 
       file: base64, 
       filename,
-      format: 'html', // We generate HTML that can be opened/printed as PDF
+      format: 'html',
       contentType: 'text/html',
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -67,6 +61,16 @@ interface EventData {
   salesperson: string;
   coordinator: string;
   venueType: string;
+  contactPerson: string;
+  contactPhone: string;
+  contactRole: string;
+  coordinatorName: string;
+  coordinatorPhone: string;
+  coordinatorRole: string;
+  musicianRefreshments: string;
+  teammates: string;
+  loadInParking: string;
+  arrivalTime: string;
   sections: EventSection[];
   rawRows: Record<string, string>[];
 }
@@ -82,7 +86,6 @@ interface EventSection {
 function parseSheetToEvent(sheetData: any, template: string): EventData {
   const { headers, rows } = sheetData;
   
-  // Convert rows to key-value objects
   const rawRows = rows.map((row: string[]) => {
     const obj: Record<string, string> = {};
     headers.forEach((h: string, i: number) => {
@@ -91,7 +94,6 @@ function parseSheetToEvent(sheetData: any, template: string): EventData {
     return obj;
   });
 
-  // Try to extract event info from common column patterns
   const findVal = (keys: string[]) => {
     for (const row of rawRows) {
       for (const key of keys) {
@@ -103,7 +105,6 @@ function parseSheetToEvent(sheetData: any, template: string): EventData {
     return '';
   };
 
-  // Build sections from rows that look like timeline entries
   const sections: EventSection[] = [];
   let currentSection: EventSection | null = null;
 
@@ -111,8 +112,7 @@ function parseSheetToEvent(sheetData: any, template: string): EventData {
     const values = Object.values(row);
     const firstVal = values[0]?.trim() || '';
     
-    // Check if this row looks like a section header (contains time or section keywords)
-    const isSection = /^\d+\.|prelude|processional|recessional|postlude|cocktail|ceremony|dinner|reception|set\s?\d/i.test(firstVal);
+    const isSection = /^\d+\.|prelude|processional|recessional|postlude|cocktail|ceremony|dinner|reception|set\s?\d|band\s+set/i.test(firstVal);
     
     if (isSection) {
       if (currentSection) sections.push(currentSection);
@@ -124,7 +124,6 @@ function parseSheetToEvent(sheetData: any, template: string): EventData {
         notes: [],
       };
     } else if (currentSection && firstVal) {
-      // This is a song or note within the current section
       if (firstVal.includes(' - ') || firstVal.includes(' – ')) {
         currentSection.songs.push(firstVal);
       } else {
@@ -151,267 +150,437 @@ function parseSheetToEvent(sheetData: any, template: string): EventData {
     audioReinforcement: findVal(['audio', 'sound', 'reinforcement']),
     salesperson: findVal(['salesperson', 'sales']),
     coordinator: findVal(['coordinator', 'point of contact', 'poc']),
-    venueType: findVal(['venue type', 'inside', 'outside']),
+    venueType: findVal(['venue type', 'inside', 'outside', 'indoor']),
+    contactPerson: findVal(['contact person', 'contact name']),
+    contactPhone: findVal(['contact phone', 'phone']),
+    contactRole: findVal(['contact role']),
+    coordinatorName: findVal(['coordinator name', 'coordinator']),
+    coordinatorPhone: findVal(['coordinator phone']),
+    coordinatorRole: findVal(['coordinator role']),
+    musicianRefreshments: findVal(['refreshment', 'meal', 'catering', 'food']),
+    teammates: findVal(['teammate', 'team', 'roster', 'musician']),
+    loadInParking: findVal(['load-in', 'load in', 'parking']),
+    arrivalTime: findVal(['arrival', 'call time']),
     sections,
     rawRows,
   };
 }
 
 function generateHTML(event: EventData, template: string): string {
-  const brandPurple = '#7C3AED';
-  const brandBlue = '#3B82F6';
-  const darkBg = '#0F1117';
-  const cardBg = '#161922';
-  const cream = '#F5F0E8';
-  const mutedText = '#8B8FA3';
+  // Harborline teal → purple theme
+  const teal = '#14B8A6';
+  const purple = '#7C3AED';
+  const blue = '#3B82F6';
+  const sectionColor = '#7C3AED'; // purple for section headers
+  const ruleColor = '#14B8A6'; // teal for horizontal rules
+  const darkText = '#1a1a1a';
+  const bodyText = '#333333';
+  const mutedText = '#666666';
 
-  const baseStyles = `
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap');
+  // Circle colors: teal to purple gradient spectrum
+  const circleColors = ['#14B8A6', '#0EA5E9', '#6366F1', '#7C3AED', '#A855F7', '#3B82F6'];
+
+  const styles = `
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap');
     
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
     body {
-      font-family: 'Inter', sans-serif;
-      background: ${darkBg};
-      color: ${cream};
-      padding: 40px;
-      line-height: 1.6;
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: white;
+      color: ${bodyText};
+      line-height: 1.7;
+      font-size: 14px;
     }
     
-    .container {
-      max-width: 800px;
+    .page {
+      max-width: 720px;
       margin: 0 auto;
+      padding: 50px 60px;
     }
-    
+
+    /* Header */
     .header {
       text-align: center;
-      margin-bottom: 40px;
-      padding-bottom: 30px;
-      border-bottom: 2px solid ${brandPurple};
+      margin-bottom: 48px;
     }
-    
+
+    .circles {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+    }
+
     .brand-text {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 36px;
-      letter-spacing: 0.15em;
-      background: linear-gradient(135deg, ${brandPurple}, ${brandBlue});
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 8px;
+      font-size: 48px;
+      letter-spacing: 0.08em;
+      color: ${darkText};
+      line-height: 1;
     }
-    
+
+    .brand-highlight {
+      color: ${purple};
+    }
+
     .event-title {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 28px;
-      letter-spacing: 0.08em;
-      color: ${cream};
+      font-size: 30px;
+      letter-spacing: 0.06em;
+      color: ${sectionColor};
+      margin-top: 28px;
+    }
+
+    .event-meta {
+      font-size: 14px;
+      color: ${bodyText};
+      margin-top: 6px;
+      line-height: 1.8;
+    }
+
+    /* Section headers - matches the PDF style */
+    .section-title {
+      font-family: 'Inter', sans-serif;
+      font-size: 26px;
+      font-weight: 300;
+      color: ${sectionColor};
+      margin-top: 40px;
       margin-bottom: 4px;
     }
-    
-    .event-subtitle {
+
+    .section-rule {
+      border: none;
+      border-top: 2.5px solid ${ruleColor};
+      margin-bottom: 20px;
+    }
+
+    /* Detail items (bold label + bullet value) */
+    .detail-group {
+      margin-bottom: 18px;
+    }
+
+    .detail-label {
+      font-weight: 700;
+      color: ${darkText};
       font-size: 14px;
-      color: ${mutedText};
-    }
-    
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 40px;
-      background: ${cardBg};
-      padding: 24px;
-      border-radius: 8px;
-      border: 1px solid rgba(124, 58, 237, 0.2);
-    }
-    
-    .info-item {
-      font-size: 13px;
-    }
-    
-    .info-label {
-      color: ${brandPurple};
-      font-weight: 600;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
       margin-bottom: 2px;
     }
-    
-    .info-value {
-      color: ${cream};
+
+    .detail-value {
+      color: ${bodyText};
+      font-size: 14px;
+      padding-left: 24px;
+      position: relative;
     }
-    
-    .section {
-      margin-bottom: 32px;
-      background: ${cardBg};
-      border-radius: 8px;
-      padding: 24px;
-      border-left: 3px solid ${brandPurple};
+
+    .detail-value::before {
+      content: '●';
+      position: absolute;
+      left: 4px;
+      color: ${bodyText};
+      font-size: 8px;
+      top: 4px;
     }
-    
-    .section-header {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 22px;
-      letter-spacing: 0.08em;
-      color: ${cream};
-      margin-bottom: 4px;
+
+    /* Contact blocks */
+    .contact-block {
+      margin-bottom: 18px;
     }
-    
-    .section-time {
-      font-size: 13px;
-      color: ${brandBlue};
+
+    .contact-block .contact-name {
+      padding-left: 24px;
+      color: ${bodyText};
+    }
+
+    /* Timeline */
+    .timeline-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .timeline-item {
+      padding: 4px 0;
+      padding-left: 24px;
+      position: relative;
+      font-size: 14px;
+    }
+
+    .timeline-item::before {
+      content: '●';
+      position: absolute;
+      left: 4px;
+      color: ${bodyText};
+      font-size: 8px;
+      top: 8px;
+    }
+
+    .timeline-time {
       font-weight: 500;
-      margin-bottom: 12px;
     }
-    
-    .section-description {
-      font-size: 13px;
-      color: ${mutedText};
-      font-style: italic;
-      margin-bottom: 12px;
+
+    /* Teammates inline */
+    .teammates-text {
+      font-size: 14px;
+      color: ${bodyText};
+      line-height: 1.8;
     }
-    
+
+    /* Songlist */
+    .set-title {
+      font-weight: 700;
+      font-size: 15px;
+      color: ${darkText};
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+
     .song-list {
       list-style: none;
       padding: 0;
     }
-    
+
     .song-item {
-      padding: 6px 0;
+      padding: 3px 0;
+      padding-left: 24px;
+      position: relative;
       font-size: 14px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      display: flex;
-      gap: 8px;
     }
-    
-    .song-number {
-      color: ${brandPurple};
-      font-weight: 600;
-      min-width: 24px;
+
+    .song-item::before {
+      content: '●';
+      position: absolute;
+      left: 4px;
+      color: ${bodyText};
+      font-size: 8px;
+      top: 7px;
     }
-    
-    .note-item {
-      font-size: 13px;
-      color: ${mutedText};
-      padding: 4px 0;
-      padding-left: 12px;
-      border-left: 2px solid rgba(124, 58, 237, 0.3);
-      margin-top: 4px;
+
+    /* Body text paragraphs */
+    .body-text {
+      font-size: 14px;
+      color: ${bodyText};
+      line-height: 1.8;
+      margin-bottom: 12px;
     }
-    
-    .footer {
-      text-align: center;
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid rgba(255,255,255,0.1);
-      font-size: 12px;
-      color: ${mutedText};
+
+    .body-text strong {
+      color: ${darkText};
+      font-weight: 700;
     }
-    
-    .raw-data {
-      margin-top: 40px;
-    }
-    
+
+    /* Raw data fallback table */
     .raw-table {
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
+      margin-top: 16px;
     }
-    
+
     .raw-table th {
-      background: ${brandPurple};
+      background: ${purple};
       color: white;
       padding: 8px 12px;
       text-align: left;
       font-weight: 600;
       font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
     }
-    
+
     .raw-table td {
       padding: 8px 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      border-bottom: 1px solid #eee;
     }
-    
+
     .raw-table tr:nth-child(even) td {
-      background: rgba(255,255,255,0.02);
+      background: #f9f9f9;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+      font-size: 12px;
+      color: ${mutedText};
     }
 
     @media print {
-      body { background: white; color: #1a1a1a; padding: 20px; }
-      .info-grid, .section { background: #f8f8f8; border-color: ${brandPurple}; }
-      .info-value, .event-title, .section-header { color: #1a1a1a; }
-      .song-item { color: #333; }
+      body { padding: 0; }
+      .page { padding: 30px 40px; }
     }
   `;
 
-  const infoFields = [
-    { label: 'Event Date', value: event.eventDate },
+  // Build circles HTML
+  const circlesHTML = circleColors.map(c => 
+    `<div class="circle" style="background-color: ${c};"></div>`
+  ).join('');
+
+  // Event details section
+  const detailItems = [
     { label: 'Event Type', value: event.eventType },
-    { label: 'Venue', value: event.venue },
-    { label: 'Venue Address', value: event.venueAddress },
-    { label: 'Client', value: event.client },
-    { label: 'Guest Count', value: event.guestCount },
-    { label: 'Setup Time', value: event.setupTime },
-    { label: 'Start / End', value: event.startEnd },
-    { label: 'Musicians', value: event.musicians },
-    { label: 'Other Staff', value: event.otherStaff },
-    { label: 'Attire', value: event.attire },
-    { label: 'Food & Bev', value: event.foodBev },
-    { label: 'Audio Reinforcement', value: event.audioReinforcement },
     { label: 'Venue Type', value: event.venueType },
-    { label: 'Salesperson', value: event.salesperson },
-    { label: 'Coordinator', value: event.coordinator },
-  ].filter(f => f.value);
+    { label: 'Guest Count', value: event.guestCount },
+    { label: 'Musician Refreshments', value: event.musicianRefreshments || event.foodBev },
+    { label: 'Attire', value: event.attire },
+    { label: 'Audio Reinforcement', value: event.audioReinforcement },
+    { label: 'Setup Time', value: event.setupTime },
+  ].filter(d => d.value);
 
-  const infoGridHTML = infoFields.map(f => `
-    <div class="info-item">
-      <div class="info-label">${f.label}</div>
-      <div class="info-value">${f.value}</div>
+  const detailsHTML = detailItems.map(d => `
+    <div class="detail-group">
+      <div class="detail-label">${d.label}</div>
+      <div class="detail-value">${d.value}</div>
     </div>
   `).join('');
 
-  const sectionsHTML = event.sections.map(section => `
-    <div class="section">
-      <div class="section-header">${section.title}</div>
-      ${section.time ? `<div class="section-time">${section.time}</div>` : ''}
-      ${section.description ? `<div class="section-description">${section.description}</div>` : ''}
-      ${section.songs.length > 0 ? `
-        <ol class="song-list">
-          ${section.songs.map((s, i) => `
-            <li class="song-item">
-              <span class="song-number">${i + 1}.</span>
-              <span>${s}</span>
-            </li>
-          `).join('')}
-        </ol>
-      ` : ''}
-      ${section.notes.map(n => `<div class="note-item">${n}</div>`).join('')}
-    </div>
-  `).join('');
+  // Contact / Coordinator / Client sections
+  const contactSections: string[] = [];
+  
+  if (event.contactPerson || event.coordinator) {
+    const name = event.contactPerson || event.coordinator;
+    const phone = event.contactPhone || event.coordinatorPhone || '';
+    const role = event.contactRole || event.coordinatorRole || '';
+    contactSections.push(`
+      <div class="detail-group">
+        <div class="detail-label">Contact Person</div>
+        <div class="contact-block">
+          <div class="contact-name">${name}</div>
+          ${phone ? `<div class="contact-name">${phone}</div>` : ''}
+          ${role ? `<div class="contact-name">Role: ${role}</div>` : ''}
+        </div>
+      </div>
+    `);
+  }
 
-  // If no structured sections were found, show raw data as table
+  if (event.coordinatorName || event.coordinator) {
+    const name = event.coordinatorName || event.coordinator;
+    const phone = event.coordinatorPhone || '';
+    const role = event.coordinatorRole || '';
+    contactSections.push(`
+      <div class="detail-group">
+        <div class="detail-label">Coordinator &amp; Point of Contact</div>
+        <div class="contact-block">
+          <div class="contact-name">${name}</div>
+          ${phone ? `<div class="contact-name">${phone}</div>` : ''}
+          ${role ? `<div class="contact-name">Role: ${role}</div>` : ''}
+        </div>
+      </div>
+    `);
+  }
+
+  // Client section
+  let clientHTML = '';
+  if (event.client) {
+    clientHTML = `
+      <div class="section-title">Client</div>
+      <hr class="section-rule" />
+      <div class="body-text"><strong>${event.client}</strong></div>
+    `;
+  }
+
+  // Timeline from sections
+  const timelineSections = event.sections.filter(s => s.time || /^\d/.test(s.title));
+  let timelineHTML = '';
+  if (timelineSections.length > 0) {
+    const items = timelineSections.map(s => {
+      const time = s.time || '';
+      const desc = s.description || s.title;
+      return `<li class="timeline-item"><span class="timeline-time">${time}</span>${time && desc ? ' : ' : ''}${desc}</li>`;
+    }).join('');
+    timelineHTML = `
+      <div class="section-title">Timeline</div>
+      <hr class="section-rule" />
+      <ul class="timeline-list">${items}</ul>
+    `;
+  }
+
+  // Teammates
+  let teammatesHTML = '';
+  if (event.teammates || event.musicians) {
+    teammatesHTML = `
+      <div class="section-title">Teammates</div>
+      <hr class="section-rule" />
+      <div class="teammates-text">${event.teammates || event.musicians}</div>
+    `;
+  }
+
+  // Songlist - group by sections that look like sets
+  const songSections = event.sections.filter(s => s.songs.length > 0);
+  let songlistHTML = '';
+  if (songSections.length > 0) {
+    const setsHTML = songSections.map(s => {
+      const songsItems = s.songs.map(song => `<li class="song-item">${song}</li>`).join('');
+      return `
+        <div class="set-title">${s.title}</div>
+        <ul class="song-list">${songsItems}</ul>
+      `;
+    }).join('');
+    songlistHTML = `
+      <div class="section-title">Songlist</div>
+      <hr class="section-rule" />
+      ${setsHTML}
+    `;
+  }
+
+  // Load-in & Parking
+  let loadInHTML = '';
+  if (event.loadInParking) {
+    loadInHTML = `
+      <div class="section-title">Load-in &amp; Parking</div>
+      <hr class="section-rule" />
+      <div class="body-text">${event.loadInParking}</div>
+    `;
+  }
+
+  // Arrival Time
+  let arrivalHTML = '';
+  if (event.arrivalTime) {
+    arrivalHTML = `
+      <div class="section-title">Arrival Time</div>
+      <hr class="section-rule" />
+      <div class="body-text">${event.arrivalTime}</div>
+    `;
+  }
+
+  // If no structured sections, show raw data
   let rawDataHTML = '';
   if (event.sections.length === 0 && event.rawRows.length > 0) {
     const cols = Object.keys(event.rawRows[0]);
     rawDataHTML = `
-      <div class="raw-data">
-        <div class="section-header" style="margin-bottom: 16px;">Event Data</div>
-        <table class="raw-table">
-          <thead>
-            <tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr>
-          </thead>
-          <tbody>
-            ${event.rawRows.map(row => `
-              <tr>${cols.map(c => `<td>${row[c] || ''}</td>`).join('')}</tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
+      <div class="section-title">Event Data</div>
+      <hr class="section-rule" />
+      <table class="raw-table">
+        <thead>
+          <tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr>
+        </thead>
+        <tbody>
+          ${event.rawRows.map(row => `
+            <tr>${cols.map(c => `<td>${row[c] || ''}</td>`).join('')}</tr>
+          `).join('')}
+        </tbody>
+      </table>
     `;
   }
+
+  // Additional info fields that didn't fit elsewhere
+  const extraFields = [
+    { label: 'Salesperson', value: event.salesperson },
+    { label: 'Other Staff', value: event.otherStaff },
+  ].filter(f => f.value);
+
+  const extraHTML = extraFields.map(f => `
+    <div class="detail-group">
+      <div class="detail-label">${f.label}</div>
+      <div class="detail-value">${f.value}</div>
+    </div>
+  `).join('');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -419,22 +588,38 @@ function generateHTML(event: EventData, template: string): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${event.eventName} - Run of Show</title>
-  <style>${baseStyles}</style>
+  <style>${styles}</style>
 </head>
 <body>
-  <div class="container">
+  <div class="page">
     <div class="header">
-      <div class="brand-text">HARBORLINE</div>
-      <div class="event-title">${event.eventName}</div>
-      ${event.eventDate ? `<div class="event-subtitle">${event.eventDate}${event.venue ? ` · ${event.venue}` : ''}</div>` : ''}
+      <div class="circles">${circlesHTML}</div>
+      <div class="brand-text">HARBOR<span class="brand-highlight">LINE</span></div>
     </div>
-    
-    ${infoFields.length > 0 ? `<div class="info-grid">${infoGridHTML}</div>` : ''}
-    
-    ${event.sections.length > 0 ? `<h2 class="section-header" style="margin-bottom: 20px; font-size: 26px;">Run of Show</h2>` : ''}
-    ${sectionsHTML}
+
+    <div class="event-title" style="text-align: center;">${event.eventName}</div>
+    <div class="event-meta" style="text-align: center;">
+      ${event.startEnd ? `${event.startEnd}` : ''}${event.eventDate ? `, ${event.eventDate}` : ''}
+      ${event.venue ? `<br/>Location: ${event.venue}` : ''}
+      ${event.venueAddress ? `<br/>Address: ${event.venueAddress}` : ''}
+    </div>
+
+    ${detailsHTML || contactSections.length || extraHTML ? `
+      <div class="section-title">Event Details</div>
+      <hr class="section-rule" />
+      ${detailsHTML}
+      ${contactSections.join('')}
+      ${extraHTML}
+    ` : ''}
+
+    ${clientHTML}
+    ${timelineHTML}
+    ${teammatesHTML}
+    ${songlistHTML}
+    ${loadInHTML}
+    ${arrivalHTML}
     ${rawDataHTML}
-    
+
     <div class="footer">
       HARBORLINE &nbsp;·&nbsp; Baltimore's Go-To Live Band &nbsp;·&nbsp; harborlineband.com
     </div>
