@@ -180,25 +180,30 @@ export default function RunOfShowGenerator() {
       <Card className="mb-6 bg-card border-border">
         <CardHeader>
           <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
-            <span className="text-primary">1.</span> Import Google Sheet
+            <span className="text-primary">1.</span> Import Data
           </CardTitle>
           <CardDescription>
-            Paste the URL of your Google Sheet. It must be set to "Anyone with the link can view."
+            Paste a URL to import — Google Sheets, Google Docs, CSV files, or any public webpage.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-3">
             <Input
-              placeholder="https://docs.google.com/spreadsheets/d/..."
-              value={sheetUrl}
-              onChange={(e) => setSheetUrl(e.target.value)}
+              placeholder="https://docs.google.com/spreadsheets/d/... or any URL"
+              value={inputUrl}
+              onChange={(e) => setInputUrl(e.target.value)}
               className="flex-1 bg-secondary/50 border-border"
             />
-            <Button onClick={fetchSheet} disabled={loading || !sheetUrl}>
+            <Button onClick={fetchData} disabled={loading || !inputUrl}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
               {loading ? "Fetching..." : "Fetch"}
             </Button>
           </div>
+          {inputUrl && !loading && !sheetData && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Detected: {detectUrlType(inputUrl)}
+            </p>
+          )}
 
           {/* Parsed data preview */}
           {parsedData && (
