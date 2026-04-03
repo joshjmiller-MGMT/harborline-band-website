@@ -300,7 +300,7 @@ function generateHTML(event: EventData): string {
   const mutedText = '#666666';
 
   const circleColors = ['#14B8A6', '#0EA5E9', '#6366F1', '#7C3AED', '#A855F7', '#3B82F6'];
-  const logoUrl = 'https://harborline.lovable.app/assets/logo-text-BHIy3Qay.png';
+  const logoUrl = 'https://harborline.lovable.app/logo-text.png';
 
   const styles = `
     @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap');
