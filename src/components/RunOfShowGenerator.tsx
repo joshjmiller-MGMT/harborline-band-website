@@ -47,6 +47,22 @@ interface ParsedEventData {
   songSections: { title: string; time: string; songs: any[] }[];
 }
 
+const imageToBase64 = (src: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext("2d")!.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+};
+
 export default function RunOfShowGenerator() {
   const [inputUrl, setInputUrl] = useState("");
   const [template, setTemplate] = useState<TemplateType>("party-runsheet");
@@ -55,6 +71,13 @@ export default function RunOfShowGenerator() {
   const [parsedData, setParsedData] = useState<ParsedEventData | null>(null);
   const [generating, setGenerating] = useState(false);
   const [sourceType, setSourceType] = useState<string>("");
+  const [logosBase64, setLogosBase64] = useState<{ circle: string; text: string } | null>(null);
+
+  useEffect(() => {
+    Promise.all([imageToBase64(logoCircle), imageToBase64(logoText)])
+      .then(([circle, text]) => setLogosBase64({ circle, text }))
+      .catch(() => console.warn("Failed to preload logos"));
+  }, []);
 
   const detectUrlType = (url: string): string => {
     if (url.includes('docs.google.com/spreadsheets')) return 'Google Sheet';
