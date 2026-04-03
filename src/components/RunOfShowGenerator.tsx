@@ -173,10 +173,10 @@ export default function RunOfShowGenerator() {
     <div className="container mx-auto px-6 py-10 max-w-4xl">
       <div className="mb-8">
         <h1 className="text-4xl font-display tracking-display text-foreground mb-2">
-          Run of Show Generator
+          Doc Generator
         </h1>
         <p className="text-muted-foreground">
-          Import event data from a Google Sheet and export a branded run of show document.
+          Import event data and export branded documents — internal run sheets or client-facing planners.
         </p>
       </div>
 
