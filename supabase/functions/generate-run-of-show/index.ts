@@ -21,9 +21,14 @@ Deno.serve(async (req) => {
     const eventData = parseSheetToEvent(sheetData);
     const html = generateHTML(eventData);
 
+    // Encode to base64 safely handling UTF-8 / special characters
     const encoder = new TextEncoder();
     const htmlBytes = encoder.encode(html);
-    const base64 = btoa(String.fromCharCode(...htmlBytes));
+    let binary = '';
+    for (let i = 0; i < htmlBytes.length; i++) {
+      binary += String.fromCharCode(htmlBytes[i]);
+    }
+    const base64 = btoa(binary);
 
     const filename = `${eventData.eventName || 'run-of-show'}`.replace(/[^a-zA-Z0-9-_]/g, '_');
 
