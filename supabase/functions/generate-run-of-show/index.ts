@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
       filename,
       format: 'html',
       contentType: 'text/html',
+      parsedData: eventData,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -108,6 +109,13 @@ function parseSheetToEvent(sheetData: any): EventData {
         const value = cell.substring(colonIdx + 1).trim();
         if (value && labelPatterns.some(p => label.includes(p))) {
           details[label] = value;
+        }
+      }
+      // Check for label WITHOUT colon but matching known patterns, with value in next cell
+      if (!cell.includes(':') && nextCell && cell.length > 2 && cell.length < 40) {
+        const cellLower = cell.toLowerCase();
+        if (labelPatterns.some(p => cellLower === p) && !details[cellLower]) {
+          details[cellLower] = nextCell;
         }
       }
     }
@@ -232,9 +240,22 @@ function parseSheetToEvent(sheetData: any): EventData {
       
       // If we have artist or title, it's a song
       if (artistVal || titleVal) {
+        // Determine order: prefer col0 if it's a number, then numCol
+        let orderVal = '';
+        if (col0 && /^\d+$/.test(col0)) {
+          orderVal = col0;
+        } else if (numCol >= 0) {
+          const numVal = (row[numCol] || '').trim();
+          if (/^\d+$/.test(numVal)) orderVal = numVal;
+        }
+        // Determine request: check col1 for '*', or reqCol, or numCol value
+        const isRequest = col1 === '*' || 
+          (reqCol >= 0 && (row[reqCol] || '').trim() === '*') ||
+          (numCol >= 0 && (row[numCol] || '').trim() === '*');
+        
         const song: SongEntry = {
-          order: numCol >= 0 ? (row[numCol] || '').trim() : col0,
-          request: reqCol >= 0 ? (row[reqCol] || '').trim() === '*' : col1 === '*',
+          order: orderVal,
+          request: isRequest,
           artist: artistVal,
           title: titleVal,
           notes: notesCol >= 0 ? (row[notesCol] || '').trim() : '',

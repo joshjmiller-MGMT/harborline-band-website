@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Download, Loader2, ExternalLink, AlertCircle } from "lucide-react";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -12,20 +10,20 @@ type TemplateType = "wedding-ros" | "wedding-planner" | "corporate-ros" | "party
 
 const TEMPLATE_INFO: Record<TemplateType, { name: string; description: string }> = {
   "wedding-ros": {
-    name: "Wedding Ceremony Run of Show",
-    description: "Formal run of show with event details header, timeline sections, and song lists. Best for day-of musician documents.",
+    name: "Wedding Ceremony",
+    description: "Formal run of show with event details header, timeline sections, and song lists.",
   },
   "wedding-planner": {
-    name: "Wedding Ceremony Planner",
-    description: "Client-facing template for organizing ceremony music choices. Includes suggested songs and fill-in sections.",
+    name: "Ceremony Planner",
+    description: "Client-facing template for organizing ceremony music choices.",
   },
   "corporate-ros": {
-    name: "Corporate / Multi-Day Event Run of Show",
-    description: "Detailed production run of show with multi-day scheduling, sound/production notes, and logistics.",
+    name: "Corporate Event",
+    description: "Multi-day scheduling, sound/production notes, and logistics.",
   },
   "party-runsheet": {
-    name: "Party / Event Run Sheet",
-    description: "Comprehensive day-of run sheet with event details, timeline, team roster, songlist by set, and logistics (load-in, parking, arrival).",
+    name: "Party Run Sheet",
+    description: "Day-of run sheet with event details, timeline, team, songlist, and logistics.",
   },
 };
 
@@ -35,11 +33,20 @@ interface SheetData {
   sheetTitle: string;
 }
 
+interface ParsedEventData {
+  eventName: string;
+  details: Record<string, string>;
+  personnel: { role: string; name: string }[];
+  timeline: { time: string; description: string }[];
+  songSections: { title: string; time: string; songs: any[] }[];
+}
+
 export default function RunOfShowGenerator() {
   const [sheetUrl, setSheetUrl] = useState("");
-  const [template, setTemplate] = useState<TemplateType>("wedding-ros");
+  const [template, setTemplate] = useState<TemplateType>("party-runsheet");
   const [loading, setLoading] = useState(false);
   const [sheetData, setSheetData] = useState<SheetData | null>(null);
+  const [parsedData, setParsedData] = useState<ParsedEventData | null>(null);
   const [generating, setGenerating] = useState(false);
 
   const extractSheetId = (url: string): string | null => {
@@ -55,6 +62,7 @@ export default function RunOfShowGenerator() {
     }
 
     setLoading(true);
+    setParsedData(null);
     try {
       const { data, error } = await supabase.functions.invoke("fetch-google-sheet", {
         body: { sheetId },
@@ -64,6 +72,16 @@ export default function RunOfShowGenerator() {
       if (data?.error) throw new Error(data.error);
 
       setSheetData(data);
+
+      // Immediately parse to show preview by calling generate in preview mode
+      const { data: genData, error: genError } = await supabase.functions.invoke("generate-run-of-show", {
+        body: { sheetData: data, template, format: "html" },
+      });
+
+      if (!genError && genData?.parsedData) {
+        setParsedData(genData.parsedData);
+      }
+
       toast({ title: "Sheet loaded", description: `Found ${data.rows.length} rows of data.` });
     } catch (err: any) {
       toast({
@@ -88,18 +106,15 @@ export default function RunOfShowGenerator() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      // Decode base64 HTML
       const html = atob(data.file);
 
       if (format === "print") {
-        // Open in new tab for viewing / manual print
         const newWindow = window.open("", "_blank");
         if (newWindow) {
           newWindow.document.write(html);
           newWindow.document.close();
         }
       } else {
-        // Download as HTML file
         const blob = new Blob([html], { type: "text/html" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -111,7 +126,7 @@ export default function RunOfShowGenerator() {
         URL.revokeObjectURL(url);
       }
 
-      toast({ title: "Document generated!", description: format === "print" ? "Print dialog opened in new tab." : "HTML file downloaded." });
+      toast({ title: "Document generated!", description: format === "print" ? "Opened in new tab." : "HTML file downloaded." });
     } catch (err: any) {
       toast({
         title: "Generation failed",
@@ -122,6 +137,8 @@ export default function RunOfShowGenerator() {
       setGenerating(false);
     }
   };
+
+  const totalSongs = parsedData?.songSections.reduce((sum, s) => sum + s.songs.length, 0) || 0;
 
   return (
     <div className="container mx-auto px-6 py-10 max-w-4xl">
@@ -158,42 +175,82 @@ export default function RunOfShowGenerator() {
             </Button>
           </div>
 
-          {sheetData && (
-            <div className="mt-4 p-4 rounded-lg bg-secondary/30 border border-border">
-              <p className="text-sm text-foreground font-medium mb-1">
-                ✅ Sheet loaded: {sheetData.sheetTitle || "Untitled"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {sheetData.headers.length} columns · {sheetData.rows.length} rows
-              </p>
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border">
-                      {sheetData.headers.map((h, i) => (
-                        <th key={i} className="text-left px-2 py-1 text-muted-foreground font-medium">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sheetData.rows.slice(0, 5).map((row, i) => (
-                      <tr key={i} className="border-b border-border/50">
-                        {row.map((cell, j) => (
-                          <td key={j} className="px-2 py-1 text-foreground/80 truncate max-w-[200px]">
-                            {cell}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {sheetData.rows.length > 5 && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Showing first 5 of {sheetData.rows.length} rows
-                  </p>
-                )}
+          {/* Parsed data preview */}
+          {parsedData && (
+            <div className="mt-4 space-y-3">
+              {/* Event Name */}
+              <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                  <span className="text-foreground font-medium text-sm">
+                    Sheet loaded: {sheetData?.sheetTitle || "Untitled"}
+                  </span>
+                </div>
+
+                {/* Key Details Grid */}
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                  {parsedData.eventName && (
+                    <div className="flex items-start gap-2">
+                      <CalendarDays className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Event</span>
+                        <p className="text-foreground">{parsedData.eventName}</p>
+                      </div>
+                    </div>
+                  )}
+                  {parsedData.details['venue'] && (
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Venue</span>
+                        <p className="text-foreground">{parsedData.details['venue']}</p>
+                      </div>
+                    </div>
+                  )}
+                  {parsedData.details['event date'] && (
+                    <div className="flex items-start gap-2">
+                      <CalendarDays className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Date</span>
+                        <p className="text-foreground">{parsedData.details['event date']}</p>
+                      </div>
+                    </div>
+                  )}
+                  {parsedData.details['client'] && (
+                    <div className="flex items-start gap-2">
+                      <Users className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Client</span>
+                        <p className="text-foreground">{parsedData.details['client']}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Summary stats */}
+                <div className="flex gap-4 mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
+                  {Object.keys(parsedData.details).length > 0 && (
+                    <span>{Object.keys(parsedData.details).length} detail fields</span>
+                  )}
+                  {parsedData.personnel.length > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {parsedData.personnel.length} personnel
+                    </span>
+                  )}
+                  {parsedData.timeline.length > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {parsedData.timeline.length} timeline events
+                    </span>
+                  )}
+                  {totalSongs > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Music className="w-3 h-3" />
+                      {totalSongs} songs in {parsedData.songSections.length} set{parsedData.songSections.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -208,26 +265,24 @@ export default function RunOfShowGenerator() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs value={template} onValueChange={(v) => setTemplate(v as TemplateType)}>
-            <TabsList className="w-full bg-secondary/50 h-auto flex-wrap">
-              {Object.entries(TEMPLATE_INFO).map(([key, info]) => (
-                <TabsTrigger
-                  key={key}
-                  value={key}
-                  className="flex-1 min-w-[140px] text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
-                >
+          <div className="grid grid-cols-2 gap-3">
+            {(Object.entries(TEMPLATE_INFO) as [TemplateType, { name: string; description: string }][]).map(([key, info]) => (
+              <button
+                key={key}
+                onClick={() => setTemplate(key)}
+                className={`text-left p-4 rounded-lg border-2 transition-all ${
+                  template === key
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-secondary/20 hover:border-muted-foreground/30"
+                }`}
+              >
+                <p className={`font-medium text-sm ${template === key ? "text-primary" : "text-foreground"}`}>
                   {info.name}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {Object.entries(TEMPLATE_INFO).map(([key, info]) => (
-              <TabsContent key={key} value={key}>
-                <div className="p-4 rounded-lg bg-secondary/20 border border-border mt-3">
-                  <p className="text-sm text-muted-foreground">{info.description}</p>
-                </div>
-              </TabsContent>
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{info.description}</p>
+              </button>
             ))}
-          </Tabs>
+          </div>
         </CardContent>
       </Card>
 
