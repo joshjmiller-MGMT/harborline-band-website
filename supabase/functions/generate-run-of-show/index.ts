@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
       filename,
       format: 'html',
       contentType: 'text/html',
+      parsedData: eventData,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
