@@ -281,7 +281,7 @@ function rebuildText(headers: string[], rows: string[][]): string {
 
 function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
   const text = rawText.replace(/\r/g, '');
-  const lines = text.split('\n').filter(l => l.trim() !== '' && !l.trim().match(/^_{3,}$/));
+  const lines = text.split('\n').filter(l => l.trim() !== '' && !l.trim().match(/^_{3,}$/) && !l.trim().match(/^\*\s*\*\s*\*$/));
 
   const details: Record<string, string> = {};
   const personnel: { role: string; name: string }[] = [];
@@ -295,132 +295,285 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     'musician food & bev', 'musician food and bev', 'musician refreshments',
     'audio reinforcement', "musicians' salesperson", 'salesperson',
     'coordinator or on-site point of contact', 'coordinator', 'on site poc',
-    'organization', 'load-in time', 'soundcheck', 'parking', 'entrance',
-    'green room', 'what to wear', 'posting',
+    'organization', 'load-in time', 'load-in', 'soundcheck', 'parking', 'entrance',
+    'green room', 'what to wear', 'posting', 'address',
+  ];
+
+  // ── Phase 1: Try to parse pipe-delimited header line ──
+  // e.g. "4-11-2026 | Brian Fierstein Wedding | Location: Vandiver Inn | 7-Piece Band | BLACK TIE ATTIRE"
+  const firstLine = lines[0] || '';
+  if (firstLine.includes('|')) {
+    const segments = firstLine.split('|').map(s => s.trim());
+    for (const seg of segments) {
+      // Date pattern
+      if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(seg)) {
+        details['event date'] = seg;
+      } else if (/location\s*:/i.test(seg)) {
+        details['venue'] = seg.replace(/location\s*:\s*/i, '').trim();
+      } else if (/piece|solo|duo|trio|quartet|quintet|band/i.test(seg)) {
+        details['ensemble'] = seg;
+      } else if (/attire|tux|formal|casual|black tie/i.test(seg)) {
+        details['attire'] = seg;
+      } else if (!details['event name'] && seg.length > 3) {
+        details['event name'] = seg;
+      }
+    }
+  }
+
+  // ── Phase 2: Role assignment lines ──
+  // e.g. "FULL BAND – Drums - John Love | Bass - Rob | ..."
+  // e.g. "CEREMONY – Tom Starr (& Jack for PA)"
+  // e.g. "LOAD-IN – TBD | PARKING – TBD"
+  const roleKeywords = [
+    'full band', 'ceremony', 'cocktail hour', 'cocktail', 'mc', 'sound', 'lights',
+    'break playlists', 'load-in', 'parking', 'final timeline',
   ];
 
   let currentSectionTitle = '';
   let currentSectionTime = '';
   let currentSongs: SongEntry[] = [];
-  let inSongSection = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
-    // Check for "Label: Value" pattern (but not time patterns like "5:30 PM")
-    const colonIdx = line.indexOf(':');
-    if (colonIdx > 0 && colonIdx < 60 && !inSongSection) {
-      const label = line.substring(0, colonIdx).trim().toLowerCase();
-      const value = line.substring(colonIdx + 1).trim();
-      
-      if (value && detailKeys.some(k => label === k || label.includes(k))) {
-        details[label] = value;
-        continue;
-      }
-    }
-    // Also parse detail lines even when inSongSection if they clearly match
-    if (colonIdx > 0 && colonIdx < 60) {
-      const label = line.substring(0, colonIdx).trim().toLowerCase();
-      const value = line.substring(colonIdx + 1).trim();
-      if (value && detailKeys.some(k => label === k)) {
-        details[label] = value;
-        continue;
-      }
-    }
+    // Skip if already parsed as header
+    if (i === 0 && firstLine.includes('|') && line === firstLine.trim()) continue;
 
-    // Check for "Run of Show" header
-    if (/^run of show/i.test(line)) {
-      inSongSection = true;
+    // ── ADDRESS: line ──
+    const addrMatch = line.match(/^ADDRESS\s*:\s*(.+)/i);
+    if (addrMatch) {
+      details['venue address'] = addrMatch[1].trim();
       continue;
     }
 
-    // When in song section, try to parse numbered songs FIRST before checking section headers
-    if (inSongSection) {
-      // Check for numbered songs: "1. Song Title – Artist" or "1. Song Title - Artist"
-      const numberedSong = line.match(/^\d+\.\s+(.+?)\s*[–-]\s*(.+)$/);
-      if (numberedSong) {
-        const part1 = numberedSong[1].trim();
-        const part2 = numberedSong[2].trim();
-        // It's a song if part2 looks like an artist name (short, starts with capital)
-        // and part1 does NOT match a section keyword
-        const isSectionKeyword = /^(prelude|processional|recessional|cocktail|ceremony|reception|dinner)/i.test(part1);
-        if (!isSectionKeyword) {
-          currentSongs.push({
-            order: String(currentSongs.length + 1),
-            request: false,
-            title: part1,
-            artist: part2,
-            notes: '', key: '', bpm: '', singer: '', patches: '',
-          });
-          continue;
-        }
+    // ── "Label: Value" pattern (standard) ──
+    const colonIdx = line.indexOf(':');
+    if (colonIdx > 0 && colonIdx < 60) {
+      const label = line.substring(0, colonIdx).trim().toLowerCase();
+      const value = line.substring(colonIdx + 1).trim();
+      // Skip time patterns like "4:00 PM"
+      if (value && !label.match(/^\d{1,2}$/) && detailKeys.some(k => label === k || label.includes(k))) {
+        details[label] = value;
+        continue;
       }
+    }
 
-      // Check for "* Subsection label" markers  
-      const subSectionMatch = line.match(/^\*\s+(.+)/);
-      if (subSectionMatch) {
-        const subLabel = subSectionMatch[1].trim();
-        // Check if next line is a song (indented * Song - Artist)
-        if (i + 1 < lines.length) {
-          const nextLine = lines[i + 1].trim();
-          const songMatch = nextLine.match(/^\*?\s*(.+?)\s*-\s*(.+)$/);
-          if (songMatch) {
-            currentSongs.push({
-              order: String(currentSongs.length + 1), request: false,
-              title: songMatch[1].trim(),
-              artist: songMatch[2].trim(),
-              notes: subLabel,
-              key: '', bpm: '', singer: '', patches: '',
-            });
+    // ── Role assignment lines: "FULL BAND – ..." or "CEREMONY – ..." ──
+    // Check this BEFORE pipe-delimited details so FULL BAND isn't consumed as key-value
+    const roleMatch = line.match(/^([A-Z][A-Z\s/&()-]+?)\s*[–]\s*(.+)$/) || line.match(/^([A-Z][A-Z\s/&()]+?)\s+-\s+(.+)$/);
+    if (roleMatch && !line.match(/^\d/)) {
+      const roleLabel = roleMatch[1].trim();
+      const roleValue = roleMatch[2].trim();
+      const roleLower = roleLabel.toLowerCase().replace(/\s+/g, ' ');
+
+      if (roleLower.includes('full band') || (roleLower === 'band')) {
+        // Parse musicians from pipe-separated "Instrument - Name" pairs
+        let musicianLine = roleValue;
+        // Check if next line continues (starts with spaces/instrument pattern)
+        while (i + 1 < lines.length) {
+          const nextLine = lines[i + 1];
+          const trimmed = nextLine.trim();
+          // Continuation: line starts with whitespace or has Instrument - Name pattern
+          if ((nextLine.match(/^\s{4,}/) || trimmed.match(/^[A-Z][a-z]+\s*(\/\s*[A-Z])/)) && 
+              (trimmed.includes('-') || trimmed.includes('|'))) {
             i++;
-            continue;
+            musicianLine += ' | ' + trimmed;
+          } else {
+            break;
+          }
+        }
+        const musicians = musicianLine.split('|').map(s => s.trim()).filter(Boolean);
+        for (const m of musicians) {
+          const mMatch = m.match(/^(.+?)\s*-\s*(.+)$/);
+          if (mMatch) {
+            personnel.push({ role: mMatch[1].trim(), name: mMatch[2].trim() });
+          } else if (m.length > 2) {
+            personnel.push({ role: 'Musician', name: m });
           }
         }
         continue;
       }
 
-      // Check for "Song Title - Artist" without number
-      const dashSong = line.match(/^\*?\s*(.+?)\s*-\s*([A-Z][\w\s.]+)$/);
-      if (dashSong && !line.includes(':')) {
+      // Multi-assignment line: "COCKTAIL HOUR – (Duo) Josh Miller, Tom   MC – Tom Starr   SOUND – Jack"
+      // Split by multiple UPPERCASE LABEL – value patterns
+      const multiRoleSegments = line.match(/([A-Z][A-Z\s/&()]+?)\s*[–-]\s*([^A-Z]*(?:[A-Z][a-z][^–-]*)*?)(?=\s{2,}[A-Z]{2,}\s*[–-]|$)/g);
+      if (multiRoleSegments && multiRoleSegments.length > 1) {
+        for (const seg of multiRoleSegments) {
+          const segMatch = seg.match(/^([A-Z][A-Z\s/&()]+?)\s*[–-]\s*(.+)$/);
+          if (segMatch) {
+            const k = segMatch[1].trim().toLowerCase().replace(/\s+/g, ' ');
+            const v = segMatch[2].trim();
+            if (['ceremony', 'cocktail hour', 'cocktail', 'mc', 'sound', 'lights', 'break playlists'].some(kw => k.includes(kw))) {
+              details[k] = v;
+            } else {
+              details[k] = v;
+            }
+          }
+        }
+        continue;
+      }
+
+      // Single role assignment
+      if (['ceremony', 'cocktail hour', 'cocktail', 'mc', 'sound', 'lights', 'break playlists'].some(k => roleLower.includes(k))) {
+        details[roleLower] = roleValue;
+        continue;
+      }
+
+      // Fallback: store as detail
+      details[roleLower] = roleValue;
+      continue;
+    }
+
+    // ── Pipe-delimited detail lines (LOAD-IN – TBD | PARKING – TBD) ──
+    // Only if NOT a FULL BAND / role line (already handled above)
+    if (line.includes('|') && /^[A-Z\s-]+[–-]/.test(line)) {
+      const parts = line.split('|').map(s => s.trim());
+      for (const part of parts) {
+        const kvMatch = part.match(/^([A-Z][A-Z\s-]+?)\s*[–-]\s*(.+)$/i);
+        if (kvMatch) {
+          const k = kvMatch[1].trim().toLowerCase().replace(/\s+/g, ' ');
+          const v = kvMatch[2].trim();
+          if (k.includes('load-in') || k.includes('load in')) details['load-in time'] = v;
+          else if (k.includes('parking')) details['parking'] = v;
+          else if (k.includes('soundcheck')) details['soundcheck'] = v;
+          else if (k.includes('final timeline')) details['final timeline'] = v;
+          else details[k] = v;
+        }
+      }
+      continue;
+    }
+
+    // ── Continuation lines (indented, with pipe-separated instrument-name pairs) ──
+    if (line.includes('|') && line.includes('-') && personnel.length > 0) {
+      const musicians = line.split('|').map(s => s.trim()).filter(Boolean);
+      for (const m of musicians) {
+        const mMatch = m.match(/^(.+?)\s*-\s*(.+)$/);
+        if (mMatch) {
+          personnel.push({ role: mMatch[1].trim(), name: mMatch[2].trim() });
+        }
+      }
+      continue;
+    }
+
+    // ── Timeline entries: "4:00 - 4:35 PM – CEREMONY (Tom)" or "8:10 – 9:00 PM – BAND SET 2" ──
+    const timelineMatch = line.match(/^(\d{1,2}:\d{2}(?:\s*[–-]\s*\d{1,2}:\d{2})?\s*(?:PM|AM)?)\s*[–-]\s*(.+)$/i);
+    if (timelineMatch) {
+      // Save previous section
+      if (currentSongs.length > 0) {
+        songSections.push({ title: currentSectionTitle || 'Songs', time: currentSectionTime, songs: currentSongs });
+        currentSongs = [];
+      }
+      currentSectionTime = timelineMatch[1].trim();
+      currentSectionTitle = timelineMatch[2].trim();
+      timeline.push({ time: currentSectionTime, description: currentSectionTitle });
+      continue;
+    }
+
+    // ── "@" instruction lines (NOT * which are bullet songs) ──
+    if (line.startsWith('@')) {
+      const cleanLine = line.replace(/^@\s*/, '').trim();
+      if (cleanLine && timeline.length > 0) {
+        const lastTl = timeline[timeline.length - 1];
+        lastTl.description += ` — ${cleanLine}`;
+      }
+      continue;
+    }
+
+    // ── Numbered section headers: "1. Prelude (Guest Arrival) – Approximately 5:40 PM" ──
+    const numberedSectionMatch = line.match(/^\d+\.\s+(.+?)(?:\s*[–-]\s*(?:Approximately\s*)?(\d{1,2}:\d{2}\s*(?:PM|AM)?).*)?$/i);
+    if (numberedSectionMatch) {
+      const potentialTitle = numberedSectionMatch[1].trim();
+      if (/prelude|processional|recessional|cocktail|ceremony|reception|dinner|guest/i.test(potentialTitle) ||
+          potentialTitle.includes('(') || potentialTitle.length > 20) {
+        if (currentSongs.length > 0) {
+          songSections.push({ title: currentSectionTitle || 'Songs', time: currentSectionTime, songs: currentSongs });
+          currentSongs = [];
+        }
+        currentSectionTitle = potentialTitle;
+        currentSectionTime = numberedSectionMatch[2] || '';
+        if (currentSectionTime) {
+          timeline.push({ time: currentSectionTime, description: potentialTitle });
+        }
+        continue;
+      }
+      // Otherwise it might be a numbered song "1. Song Title – Artist"
+      const numberedSong = line.match(/^\d+\.\s+(.+?)\s*[–-]\s*(.+)$/);
+      if (numberedSong) {
         currentSongs.push({
-          order: String(currentSongs.length + 1),
-          request: false,
-          title: dashSong[1].trim(),
-          artist: dashSong[2].trim(),
+          order: String(currentSongs.length + 1), request: false,
+          title: numberedSong[1].trim(), artist: numberedSong[2].trim(),
           notes: '', key: '', bpm: '', singer: '', patches: '',
         });
         continue;
       }
     }
 
-    // Check for section headers like "1. Prelude (Guest Arrival) – Approximately 5:40 PM"
-    // or "3. Recessional"
-    const sectionMatch = line.match(/^\d+\.\s+(.+?)(?:\s*[–-]\s*(?:Approximately\s*)?(\d{1,2}:\d{2}\s*(?:PM|AM)?).*)?$/i);
-    if (sectionMatch) {
-      const potentialTitle = sectionMatch[1].trim();
-      if (potentialTitle.includes('(') || potentialTitle.length > 15 || 
-          /prelude|processional|recessional|cocktail|ceremony|reception|dinner/i.test(potentialTitle)) {
-        if (currentSongs.length > 0) {
-          songSections.push({ title: currentSectionTitle || 'Songs', time: currentSectionTime, songs: currentSongs });
-          currentSongs = [];
+    // ── Bullet point songs: "- SONG TITLE SINGER" or "* SONG TITLE SINGER" ──
+    const bulletMatch = line.match(/^[-•*]\s+(.+)$/);
+    if (bulletMatch) {
+      const songLine = bulletMatch[1].trim();
+
+      // Try "Song Title – Artist" or "Song Title / Artist"
+      let songTitle = '', songArtist = '', songNotes = '';
+
+      // Pattern: "Mother-Son – Humble & Kind / Tim McGraw (First 60-90 seconds)"
+      const dashArtist = songLine.match(/^(.+?)\s*[–\/]\s*(.+?)(?:\s*\((.+)\))?$/);
+      if (dashArtist && dashArtist[2].trim().length > 1) {
+        songTitle = dashArtist[1].trim();
+        songArtist = dashArtist[2].trim();
+        songNotes = dashArtist[3] ? dashArtist[3].trim() : '';
+      } else {
+        // Pattern: "SEPTEMBER ANG" or "TWIST N SHOUT JACK" — song name in caps, singer is last word(s)
+        // Try to split by looking for a name at the end (2-15 chars, possibly with ?)
+        const capsMatch = songLine.match(/^(.+?)\s+([A-Z]{2,}(?:\s*[/?]?\s*[A-Z]*)*)\s*(\([^)]*\))?\s*$/);
+        if (capsMatch && capsMatch[2]) {
+          songTitle = capsMatch[1].trim();
+          songArtist = '';
+          songNotes = capsMatch[2].trim();
+          if (capsMatch[3]) songNotes += ' ' + capsMatch[3].trim();
+          // The last word might be the singer name
+          // Check if the whole thing is uppercase (indicating song name + singer mashed together)
+          const words = songLine.replace(/\([^)]*\)/g, '').trim().split(/\s+/);
+          const lastWord = words[words.length - 1];
+          if (lastWord && /^[A-Z]+[?]?$/.test(lastWord) && lastWord.length <= 10) {
+            songNotes = lastWord.replace(/\?$/, '');
+            songTitle = words.slice(0, -1).join(' ');
+            if (songLine.includes('(')) {
+              const parenMatch = songLine.match(/\(([^)]*)\)/);
+              if (parenMatch) songTitle = songTitle.replace(parenMatch[0], '').trim();
+              songNotes += parenMatch ? ' ' + parenMatch[1] : '';
+            }
+          }
+        } else {
+          songTitle = songLine;
         }
-        currentSectionTitle = potentialTitle;
-        currentSectionTime = sectionMatch[2] || '';
-        inSongSection = true;
-        
-        if (currentSectionTime) {
-          timeline.push({ time: currentSectionTime, description: potentialTitle });
-        }
-        continue;
       }
+
+      // Clean up arrow notation like "SUPER->FUNKY" → "SUPER → FUNKY" 
+      songTitle = songTitle.replace(/->/g, ' → ').replace(/\s{2,}/g, ' ').trim();
+
+      if (songTitle) {
+        currentSongs.push({
+          order: String(currentSongs.length + 1), request: false,
+          title: songTitle, artist: songArtist,
+          notes: songNotes, key: '', bpm: '', singer: songNotes || '', patches: '',
+        });
+      }
+      continue;
     }
 
-    // Quoted notes / instructions
-    if (line.startsWith('"') && inSongSection) {
-      const lastTimeline = timeline[timeline.length - 1];
-      if (lastTimeline) {
-        lastTimeline.description += ` — ${line.replace(/"/g, '')}`;
+    // ── Quoted instruction lines ──
+    if (line.startsWith('"') || line.startsWith('\u201C')) {
+      const cleanQuote = line.replace(/["\u201C\u201D]/g, '').trim();
+      if (timeline.length > 0) {
+        timeline[timeline.length - 1].description += ` — ${cleanQuote}`;
       }
+      continue;
+    }
+
+    // ── Fallback: lines starting with "First Verse", "@ 90 seconds" etc. are instructions ──
+    if (/^(first|@|\*|note|please)/i.test(line) && timeline.length > 0) {
+      timeline[timeline.length - 1].description += ` — ${line}`;
       continue;
     }
   }
@@ -430,12 +583,25 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     songSections.push({ title: currentSectionTitle || 'Songs', time: currentSectionTime, songs: currentSongs });
   }
 
-  // Extract personnel from details
-  if (details['musicians']) {
-    personnel.push({ role: 'Musicians', name: details['musicians'] });
+  // Extract personnel from details if not already found
+  if (personnel.length === 0) {
+    if (details['musicians']) {
+      personnel.push({ role: 'Musicians', name: details['musicians'] });
+    }
+    if (details['other staff members']) {
+      personnel.push({ role: 'Other Staff', name: details['other staff members'] });
+    }
   }
-  if (details['other staff members']) {
-    personnel.push({ role: 'Other Staff', name: details['other staff members'] });
+
+  // Map role details to personnel if found
+  const roleToPersonnel: [string, string][] = [
+    ['ceremony', 'Ceremony'], ['cocktail hour', 'Cocktail Hour'], ['cocktail', 'Cocktail Hour'],
+    ['mc', 'MC'], ['sound', 'Sound'], ['lights', 'Lights'], ['break playlists', 'Break Playlists'],
+  ];
+  for (const [key, label] of roleToPersonnel) {
+    if (details[key] && !personnel.find(p => p.role === label)) {
+      personnel.push({ role: label, name: details[key] });
+    }
   }
 
   const eventName = details['event name'] || sheetTitle || 'Event';
