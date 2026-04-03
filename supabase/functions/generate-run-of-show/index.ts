@@ -138,9 +138,15 @@ function parseSheetToEvent(sheetData: any): EventData {
     for (let c = 0; c < row.length; c++) {
       const cell = (row[c] || '').trim();
       // Match patterns like "8:45 PM First Dance" or "9:00 PM Dance Floor Opens!"
-      const timeMatch = cell.match(/^(\d{1,2}:\d{2}\s*(?:PM|AM)?)\s+(.+)/i);
-      if (timeMatch) {
+      // Must have real description text after the time (not just "PM" or "AM")
+      const timeMatch = cell.match(/^(\d{1,2}:\d{2}\s*(?:PM|AM))\s+(.+)/i);
+      if (timeMatch && timeMatch[2].trim().length > 2) {
         timeline.push({ time: timeMatch[1].trim(), description: timeMatch[2].trim() });
+      }
+      // Also match "9:50ish band ends" style
+      const fuzzyMatch = cell.match(/^(\d{1,2}:\d{2}\w*)\s+(.{3,})/);
+      if (fuzzyMatch && !timeMatch && fuzzyMatch[2].trim().length > 2) {
+        timeline.push({ time: fuzzyMatch[1].trim(), description: fuzzyMatch[2].trim() });
       }
     }
   }
