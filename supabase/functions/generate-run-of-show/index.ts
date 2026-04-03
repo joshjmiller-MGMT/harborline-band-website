@@ -300,6 +300,7 @@ function generateHTML(event: EventData): string {
   const mutedText = '#666666';
 
   const circleColors = ['#14B8A6', '#0EA5E9', '#6366F1', '#7C3AED', '#A855F7', '#3B82F6'];
+  const logoUrl = 'https://harborline.lovable.app/assets/logo-text-BHIy3Qay.png';
 
   const styles = `
     @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap');
@@ -309,8 +310,7 @@ function generateHTML(event: EventData): string {
     .header { text-align: center; margin-bottom: 48px; }
     .circles { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
     .circle { width: 28px; height: 28px; border-radius: 50%; }
-    .brand-text { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 0.08em; color: ${darkText}; line-height: 1; }
-    .brand-highlight { color: ${purple}; }
+    .brand-logo { max-width: 320px; height: auto; margin: 0 auto; display: block; }
     .event-title { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 0.06em; color: ${purple}; margin-top: 28px; text-align: center; }
     .event-meta { font-size: 14px; color: ${bodyText}; margin-top: 6px; line-height: 1.8; text-align: center; }
     .section-title { font-family: 'Inter', sans-serif; font-size: 26px; font-weight: 300; color: ${purple}; margin-top: 40px; margin-bottom: 4px; }
