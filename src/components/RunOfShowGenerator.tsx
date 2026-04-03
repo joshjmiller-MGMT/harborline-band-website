@@ -300,7 +300,7 @@ export default function RunOfShowGenerator() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3">
-            {(Object.entries(TEMPLATE_INFO) as [TemplateType, { name: string; description: string }][]).map(([key, info]) => (
+            {(Object.entries(TEMPLATE_INFO) as [TemplateType, { name: string; description: string; audience: "internal" | "client" }][]).map(([key, info]) => (
               <button
                 key={key}
                 onClick={() => setTemplate(key)}
@@ -310,10 +310,19 @@ export default function RunOfShowGenerator() {
                     : "border-border bg-secondary/20 hover:border-muted-foreground/30"
                 }`}
               >
-                <p className={`font-medium text-sm ${template === key ? "text-primary" : "text-foreground"}`}>
-                  {info.name}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">{info.description}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className={`font-medium text-sm ${template === key ? "text-primary" : "text-foreground"}`}>
+                    {info.name}
+                  </p>
+                  <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
+                    info.audience === "client"
+                      ? "bg-accent/20 text-accent-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}>
+                    {info.audience === "client" ? "Client-Facing" : "Internal"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">{info.description}</p>
               </button>
             ))}
           </div>
