@@ -145,7 +145,7 @@ export default function RunOfShowGenerator() {
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
-        body: { sheetData, template, format: "html" },
+        body: { sheetData, template, format: "html", logos: logosBase64 },
       });
 
       if (error) throw error;
