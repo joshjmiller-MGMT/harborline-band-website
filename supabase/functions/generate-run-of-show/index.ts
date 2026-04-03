@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { sheetData, template, format } = await req.json();
+    const { sheetData, template, format, logos } = await req.json();
 
     if (!sheetData || !template || !format) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
     }
 
     const eventData = parseSheetToEvent(sheetData);
-    const html = generateHTML(eventData);
+    const html = generateHTML(eventData, logos);
 
     // Encode to base64 safely handling UTF-8 / special characters
     const encoder = new TextEncoder();
@@ -621,7 +621,7 @@ function findColumnIndex(allRows: string[][], keyword: string): number | null {
 
 // ─── HTML Generator ─────────────────────────────────────────────────────
 
-function generateHTML(event: EventData): string {
+function generateHTML(event: EventData, logos?: { circle: string; text: string }): string {
   const purple = '#7C3AED';
   const teal = '#14B8A6';
   const darkText = '#1a1a1a';
@@ -629,7 +629,8 @@ function generateHTML(event: EventData): string {
   const mutedText = '#666666';
 
   const circleColors = ['#14B8A6', '#0EA5E9', '#6366F1', '#7C3AED', '#A855F7', '#3B82F6'];
-  const logoUrl = 'https://zsfkgncdenqzctdzxedl.supabase.co/storage/v1/object/public/assets/logo-text.png';
+  const circleLogo = logos?.circle || '';
+  const textLogo = logos?.text || '';
 
   const styles = `
     @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap');
@@ -637,9 +638,10 @@ function generateHTML(event: EventData): string {
     body { font-family: 'Inter', sans-serif; background: white; color: ${bodyText}; line-height: 1.7; font-size: 14px; }
     .page { max-width: 720px; margin: 0 auto; padding: 50px 60px; }
     .header { text-align: center; margin-bottom: 48px; }
-    .circles { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+    .circles { display: flex; justify-content: center; gap: 10px; margin-bottom: 16px; }
     .circle { width: 28px; height: 28px; border-radius: 50%; }
-    .brand-logo { max-width: 320px; height: auto; margin: 0 auto; display: block; }
+    .brand-circle { width: 80px; height: 80px; margin: 0 auto 8px; display: block; border-radius: 50%; }
+    .brand-text { max-width: 280px; height: auto; margin: 0 auto; display: block; }
     .event-title { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 0.06em; color: ${purple}; margin-top: 28px; text-align: center; }
     .event-meta { font-size: 14px; color: ${bodyText}; margin-top: 6px; line-height: 1.8; text-align: center; }
     .section-title { font-family: 'Inter', sans-serif; font-size: 26px; font-weight: 300; color: ${purple}; margin-top: 40px; margin-bottom: 4px; }
@@ -779,7 +781,8 @@ function generateHTML(event: EventData): string {
   <div class="page">
     <div class="header">
       <div class="circles">${circlesHTML}</div>
-      <img src="${logoUrl}" alt="Harborline" class="brand-logo" />
+      ${circleLogo ? `<img src="${circleLogo}" alt="Harborline" class="brand-circle" />` : ''}
+      ${textLogo ? `<img src="${textLogo}" alt="Harborline" class="brand-text" />` : ''}
     </div>
 
     <div class="event-title">${event.eventName}</div>

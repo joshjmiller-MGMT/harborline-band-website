@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import logoCircle from "@/assets/logo-circle.png";
+import logoText from "@/assets/logo-text.png";
 
 type TemplateType = "wedding-ros" | "client-planner" | "corporate-ros" | "party-runsheet";
 
@@ -45,6 +47,22 @@ interface ParsedEventData {
   songSections: { title: string; time: string; songs: any[] }[];
 }
 
+const imageToBase64 = (src: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext("2d")!.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+};
+
 export default function RunOfShowGenerator() {
   const [inputUrl, setInputUrl] = useState("");
   const [template, setTemplate] = useState<TemplateType>("party-runsheet");
@@ -53,6 +71,13 @@ export default function RunOfShowGenerator() {
   const [parsedData, setParsedData] = useState<ParsedEventData | null>(null);
   const [generating, setGenerating] = useState(false);
   const [sourceType, setSourceType] = useState<string>("");
+  const [logosBase64, setLogosBase64] = useState<{ circle: string; text: string } | null>(null);
+
+  useEffect(() => {
+    Promise.all([imageToBase64(logoCircle), imageToBase64(logoText)])
+      .then(([circle, text]) => setLogosBase64({ circle, text }))
+      .catch(() => console.warn("Failed to preload logos"));
+  }, []);
 
   const detectUrlType = (url: string): string => {
     if (url.includes('docs.google.com/spreadsheets')) return 'Google Sheet';
@@ -95,7 +120,7 @@ export default function RunOfShowGenerator() {
 
       // Parse to show preview
       const { data: genData, error: genError } = await supabase.functions.invoke("generate-run-of-show", {
-        body: { sheetData: data, template, format: "html" },
+        body: { sheetData: data, template, format: "html", logos: logosBase64 },
       });
 
       if (!genError && genData?.parsedData) {
@@ -120,7 +145,7 @@ export default function RunOfShowGenerator() {
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
-        body: { sheetData, template, format: "html" },
+        body: { sheetData, template, format: "html", logos: logosBase64 },
       });
 
       if (error) throw error;
