@@ -109,9 +109,14 @@ export default function RunOfShowGenerator() {
       const html = atob(data.file);
 
       if (format === "print") {
+        const wrappedHtml = `<!DOCTYPE html><html><head><style>
+          html, body { margin: 0; padding: 0; background: #1a1a1a; min-height: 100vh; }
+          .page-wrapper { max-width: 780px; margin: 40px auto; background: white; box-shadow: 0 4px 40px rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; }
+          @media print { html, body { background: white; } .page-wrapper { margin: 0; box-shadow: none; border-radius: 0; max-width: none; } }
+        </style></head><body><div class="page-wrapper">${html.replace(/.*<body[^>]*>/s, '').replace(/<\/body>.*/s, '')}</div></body></html>`;
         const newWindow = window.open("", "_blank");
         if (newWindow) {
-          newWindow.document.write(html);
+          newWindow.document.write(wrappedHtml);
           newWindow.document.close();
         }
       } else {
