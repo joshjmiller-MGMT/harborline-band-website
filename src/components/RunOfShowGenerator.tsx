@@ -92,12 +92,11 @@ export default function RunOfShowGenerator() {
       const html = atob(data.file);
 
       if (format === "print") {
-        // Open in new tab for printing as PDF
+        // Open in new tab for viewing / manual print
         const newWindow = window.open("", "_blank");
         if (newWindow) {
           newWindow.document.write(html);
           newWindow.document.close();
-          setTimeout(() => newWindow.print(), 500);
         }
       } else {
         // Download as HTML file
