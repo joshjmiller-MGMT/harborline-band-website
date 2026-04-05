@@ -827,6 +827,13 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
 
   let songlistHTML = '';
   if (event.songSections.length > 0) {
+    // Determine which optional columns have data
+    const allSongs = event.songSections.flatMap(s => s.songs);
+    const hasKey = allSongs.some(s => s.key);
+    const hasBpm = allSongs.some(s => s.bpm);
+    const hasSinger = allSongs.some(s => s.singer);
+    const hasNotes = allSongs.some(s => s.notes);
+
     const sectionsHTML = event.songSections.map(section => {
       const songRows = section.songs.map(s => {
         const reqStar = s.request ? '<span class="request-star">★</span>' : '';
@@ -835,7 +842,10 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
           <td style="width:24px; text-align:center;">${reqStar}</td>
           <td>${s.artist}</td>
           <td>${s.title}</td>
-          <td>${s.notes}</td>
+          ${hasKey ? `<td>${s.key}</td>` : ''}
+          ${hasBpm ? `<td>${s.bpm}</td>` : ''}
+          ${hasSinger ? `<td>${s.singer}</td>` : ''}
+          ${hasNotes ? `<td>${s.notes}</td>` : ''}
         </tr>`;
       }).join('');
 
@@ -848,7 +858,10 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
               <th></th>
               <th>Artist</th>
               <th>Title</th>
-              <th>Notes</th>
+              ${hasKey ? '<th>Key</th>' : ''}
+              ${hasBpm ? '<th>BPM</th>' : ''}
+              ${hasSinger ? '<th>Singer</th>' : ''}
+              ${hasNotes ? '<th>Notes</th>' : ''}
             </tr>
           </thead>
           <tbody>${songRows}</tbody>
