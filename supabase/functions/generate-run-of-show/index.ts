@@ -366,6 +366,23 @@ function parseSheetToEvent(sheetData: any): EventData {
     }
   }
 
+  // Try to extract event date from sheet title if not already found
+  if (!details['event date'] && sheetTitle) {
+    const dateMatch = sheetTitle.match(/(\d{4}\.\d{2}\.\d{2})/);
+    if (dateMatch) {
+      details['event date'] = dateMatch[1].replace(/\./g, '/');
+    }
+  }
+
+  // Use venue name from the header area if we found it
+  if (!details['event name']) {
+    // Try venue name as event name
+    const venue = details['venue'] || details['name'] || '';
+    if (venue) {
+      details['event name'] = venue;
+    }
+  }
+
   const eventName = details['event name'] || details['event'] || sheetTitle || 'Event';
   return { eventName, details, personnel, timeline, songSections };
 }
