@@ -107,9 +107,13 @@ function parseSheetToEvent(sheetData: any): EventData {
     'salesperson', 'coordinator', 'venue type', 'setup time', 'start', 'end',
     'start / end', 'musicians', 'other staff members', 'musician food & bev',
     "musicians' salesperson", 'coordinator or on-site point of contact',
+    'name', 'street address', 'city/state/zip', 'city', 'address',
+    'warehouse load-out', 'sound load-in', 'lead load-in', 'band load-in',
+    'set 1 time', 'set 2 time', 'set 3 time', 'set 4 time',
   ];
   
   for (const row of allRows) {
+    // Scan pairs of adjacent columns for label/value
     for (let c = 0; c < row.length - 1; c++) {
       const cell = (row[c] || '').trim();
       const nextCell = (row[c + 1] || '').trim();
@@ -130,9 +134,48 @@ function parseSheetToEvent(sheetData: any): EventData {
       }
       if (!cell.includes(':') && nextCell && cell.length > 2 && cell.length < 40) {
         const cellLower = cell.toLowerCase();
-        if (labelPatterns.some(p => cellLower === p) && !details[cellLower]) {
+        if (labelPatterns.some(p => cellLower === p || cellLower.includes(p)) && !details[cellLower]) {
           details[cellLower] = nextCell;
         }
+      }
+    }
+    
+    // Also scan non-adjacent columns: label in col N, value in col N+1 across the full row
+    // This catches layouts where label/value pairs span across separate column groups
+    for (let c = 0; c < row.length; c++) {
+      const cell = (row[c] || '').trim();
+      if (!cell) continue;
+      const cellLower = cell.toLowerCase().replace(/:$/, '');
+      if (labelPatterns.some(p => cellLower === p || cellLower.includes(p))) {
+        const nextCell = c + 1 < row.length ? (row[c + 1] || '').trim() : '';
+        if (nextCell && !details[cellLower]) {
+          details[cellLower] = nextCell;
+        }
+      }
+    }
+  }
+
+  // Map common label aliases to canonical names
+  if (!details['venue'] && details['name']) details['venue'] = details['name'];
+  if (!details['venue address'] && details['street address']) {
+    let addr = details['street address'];
+    if (details['city/state/zip']) addr += ', ' + details['city/state/zip'];
+    details['venue address'] = addr;
+  }
+  
+  const timeline: { time: string; description: string }[] = [];
+
+  // Build timeline from load-in/soundcheck/set time details
+  const timelineDetailKeys = [
+    'warehouse load-out', 'sound load-in', 'lead load-in', 'band load-in',
+    'soundcheck', 'set 1 time', 'set 2 time', 'set 3 time', 'set 4 time',
+  ];
+  
+  for (const key of timelineDetailKeys) {
+    if (details[key]) {
+      const label = key.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      if (!timeline.find(t => t.description.toLowerCase().includes(key))) {
+        timeline.push({ time: details[key], description: label });
       }
     }
   }
@@ -154,17 +197,23 @@ function parseSheetToEvent(sheetData: any): EventData {
     }
   }
 
-  const timeline: { time: string; description: string }[] = [];
+  // Also parse inline time entries from cells (but skip pure time-range values like "3:00 PM - 4:00 PM")
   for (const row of allRows) {
     for (let c = 0; c < row.length; c++) {
       const cell = (row[c] || '').trim();
+      // Skip cells that are already captured as detail values (time ranges or known labels)
+      if (/^\d{1,2}:\d{2}\s*(?:PM|AM)?\s*-\s*\d{1,2}:\d{2}(?::\d{2})?\s*(?:PM|AM)?/i.test(cell)) continue;
+      // Skip if this exact cell value is already in timeline
+      if (timeline.find(t => t.time === cell)) continue;
+      
       const timeMatch = cell.match(/^(\d{1,2}:\d{2}\s*(?:PM|AM))\s+(.+)/i);
       if (timeMatch && timeMatch[2].trim().length > 2) {
-        timeline.push({ time: timeMatch[1].trim(), description: timeMatch[2].trim() });
-      }
-      const fuzzyMatch = cell.match(/^(\d{1,2}:\d{2}\w*)\s+(.{3,})/);
-      if (fuzzyMatch && !timeMatch && fuzzyMatch[2].trim().length > 2) {
-        timeline.push({ time: fuzzyMatch[1].trim(), description: fuzzyMatch[2].trim() });
+        // Skip if description is just another time or a known detail value
+        const desc = timeMatch[2].trim();
+        if (/^\d{1,2}:\d{2}/i.test(desc)) continue;
+        if (!timeline.find(t => t.time === timeMatch[1].trim() && t.description === desc)) {
+          timeline.push({ time: timeMatch[1].trim(), description: desc });
+        }
       }
     }
   }
@@ -182,89 +231,163 @@ function parseSheetToEvent(sheetData: any): EventData {
   }
 
   const songSections: SongSection[] = [];
-  let songHeaderRow = -1;
-  let titleCol = -1, artistCol = -1, notesCol = -1, keyCol = -1, bpmCol = -1, singerCol = -1, patchesCol = -1, numCol = -1, reqCol = -1;
 
+  // ── Detect SET sections and their respective header rows ──
+  // A SET divider row looks like ["SET 1", "", "", ...] or ["SET 2", "", "", ...]
+  // After each divider there's a header row with column names
+  
+  interface SectionRange {
+    title: string;
+    time: string;
+    headerRow: number;
+    titleCol: number;
+    artistCol: number;
+    notesCol: number;
+    keyCol: number;
+    bpmCol: number;
+    singerCol: number;
+    patchesCol: number;
+    numCol: number;
+    reqCol: number;
+    startRow: number;
+    endRow: number;
+  }
+
+  const sectionRanges: SectionRange[] = [];
+
+  function detectSongHeader(row: string[]): { titleCol: number; artistCol: number; notesCol: number; keyCol: number; bpmCol: number; singerCol: number; patchesCol: number; numCol: number; reqCol: number } | null {
+    let tCol = -1;
+    for (let c = 0; c < row.length; c++) {
+      if ((row[c] || '').trim().toLowerCase() === 'title') { tCol = c; break; }
+    }
+    if (tCol < 0) return null;
+    let aCol = -1, nCol = -1, kCol = -1, bCol = -1, sCol = -1, pCol = -1, numC = -1, rCol = -1;
+    for (let c = 0; c < row.length; c++) {
+      const h = (row[c] || '').trim().toLowerCase();
+      if (h === '#') numC = c;
+      if (h === 'artist') aCol = c;
+      if (h === 'arrangement notes' || h === 'notes') nCol = c;
+      if (h === 'key') kCol = c;
+      if (h === 'bpm') bCol = c;
+      if (h === 'singer' || h === 'lead vox' || h === 'lead vocal' || h === 'vocals') sCol = c;
+      if (h.includes('patch')) pCol = c;
+      if (h.includes('request') || h === '*') rCol = c;
+    }
+    return { titleCol: tCol, artistCol: aCol, notesCol: nCol, keyCol: kCol, bpmCol: bCol, singerCol: sCol, patchesCol: pCol, numCol: numC, reqCol: rCol };
+  }
+
+  // First pass: find SET divider rows and song header rows
   for (let r = 0; r < allRows.length; r++) {
     const row = allRows[r];
-    for (let c = 0; c < row.length; c++) {
-      if ((row[c] || '').trim().toLowerCase() === 'title') {
-        songHeaderRow = r;
-        titleCol = c;
-        for (let cc = 0; cc < row.length; cc++) {
-          const h = (row[cc] || '').trim().toLowerCase();
-          if (h === '#') numCol = cc;
-          if (h === 'artist') artistCol = cc;
-          if (h === 'arrangement notes') notesCol = cc;
-          if (h === 'key') keyCol = cc;
-          if (h === 'bpm') bpmCol = cc;
-          if (h === 'singer') singerCol = cc;
-          if (h.includes('patch')) patchesCol = cc;
+    const col0 = (row[0] || '').trim().toUpperCase();
+    
+    // Detect "SET 1", "SET 2", etc.
+    const setMatch = col0.match(/^SET\s*(\d+)$/);
+    if (setMatch) {
+      // Look at the time info from details already extracted
+      const setNum = setMatch[1];
+      const setTimeKey = Object.keys(details).find(k => k.includes(`set ${setNum}`) && k.includes('time'));
+      const setTime = setTimeKey ? details[setTimeKey] : '';
+      
+      // Next row should be the header row
+      const nextRow = allRows[r + 1];
+      if (nextRow) {
+        const cols = detectSongHeader(nextRow);
+        if (cols) {
+          sectionRanges.push({
+            title: `Set ${setNum}`,
+            time: setTime,
+            headerRow: r + 1,
+            ...cols,
+            startRow: r + 2,
+            endRow: allRows.length, // will be trimmed later
+          });
         }
-        if (numCol === -1 && titleCol > 0) {
-          for (let cc = 0; cc < titleCol; cc++) {
-            const h = (row[cc] || '').trim();
-            if (h === '#') numCol = cc;
-            if (h.includes('Request') || h === '*') reqCol = cc;
-          }
-        }
+      }
+      continue;
+    }
+  }
+
+  // If no SET sections found, fall back to single section detection
+  if (sectionRanges.length === 0) {
+    for (let r = 0; r < allRows.length; r++) {
+      const cols = detectSongHeader(allRows[r]);
+      if (cols) {
+        sectionRanges.push({
+          title: 'Songs',
+          time: '',
+          headerRow: r,
+          ...cols,
+          startRow: r + 1,
+          endRow: allRows.length,
+        });
         break;
       }
     }
-    if (songHeaderRow >= 0) break;
   }
 
-  if (songHeaderRow >= 0) {
-    let currentSection: SongSection = { title: 'Songs', time: '', songs: [] };
-    
-    for (let r = songHeaderRow + 1; r < allRows.length; r++) {
+  // Trim endRow for each section to the start of the next section
+  for (let i = 0; i < sectionRanges.length - 1; i++) {
+    // End at the SET divider row of next section (headerRow - 1)
+    sectionRanges[i].endRow = sectionRanges[i + 1].headerRow - 1;
+  }
+
+  // Parse songs from each section
+  for (const sec of sectionRanges) {
+    const songs: SongEntry[] = [];
+    for (let r = sec.startRow; r < sec.endRow; r++) {
       const row = allRows[r];
+      const titleVal = sec.titleCol >= 0 ? (row[sec.titleCol] || '').trim() : '';
+      const artistVal = sec.artistCol >= 0 ? (row[sec.artistCol] || '').trim() : '';
+      
+      if (!titleVal && !artistVal) continue;
+      
+      // Skip if this row looks like another header
+      if (titleVal.toLowerCase() === 'title' || titleVal.toLowerCase() === 'setlist') continue;
+      
+      let orderVal = '';
       const col0 = (row[0] || '').trim();
-      const col1 = (row[1] || '').trim();
-      const titleVal = titleCol >= 0 ? (row[titleCol] || '').trim() : '';
-      const artistVal = artistCol >= 0 ? (row[artistCol] || '').trim() : '';
-      
-      const sectionMatch = col0.match(/^(\d{1,2}:\d{2}\s*(?:PM|AM)?)/i);
-      if (sectionMatch && col1 && !artistVal) {
-        if (currentSection.songs.length > 0) {
-          songSections.push(currentSection);
-        }
-        currentSection = { title: col1, time: sectionMatch[1], songs: [] };
-        continue;
+      if (/^\d+$/.test(col0)) {
+        orderVal = col0;
+      } else if (sec.numCol >= 0) {
+        const numVal = (row[sec.numCol] || '').trim();
+        if (/^\d+$/.test(numVal)) orderVal = numVal;
       }
-      
-      if (col1.toLowerCase().includes('request')) continue;
-      if (titleVal.toLowerCase() === 'setlist' || col0.toLowerCase() === 'setlist') continue;
-      
-      if (artistVal || titleVal) {
-        let orderVal = '';
-        if (col0 && /^\d+$/.test(col0)) {
-          orderVal = col0;
-        } else if (numCol >= 0) {
-          const numVal = (row[numCol] || '').trim();
-          if (/^\d+$/.test(numVal)) orderVal = numVal;
-        }
-        const isRequest = col1 === '*' || 
-          (reqCol >= 0 && (row[reqCol] || '').trim() === '*') ||
-          (numCol >= 0 && (row[numCol] || '').trim() === '*');
-        
-        const song: SongEntry = {
-          order: orderVal,
-          request: isRequest,
-          artist: artistVal,
-          title: titleVal,
-          notes: notesCol >= 0 ? (row[notesCol] || '').trim() : '',
-          key: keyCol >= 0 ? (row[keyCol] || '').trim() : '',
-          bpm: bpmCol >= 0 ? (row[bpmCol] || '').trim() : '',
-          singer: singerCol >= 0 ? (row[singerCol] || '').trim() : '',
-          patches: patchesCol >= 0 ? (row[patchesCol] || '').trim() : '',
-        };
-        currentSection.songs.push(song);
-      }
+
+      const isRequest = (sec.reqCol >= 0 && (row[sec.reqCol] || '').trim() === '*') ||
+        col0 === '*';
+
+      songs.push({
+        order: orderVal,
+        request: isRequest,
+        artist: artistVal,
+        title: titleVal,
+        notes: sec.notesCol >= 0 ? (row[sec.notesCol] || '').trim() : '',
+        key: sec.keyCol >= 0 ? (row[sec.keyCol] || '').trim() : '',
+        bpm: sec.bpmCol >= 0 ? (row[sec.bpmCol] || '').trim() : '',
+        singer: sec.singerCol >= 0 ? (row[sec.singerCol] || '').trim() : '',
+        patches: sec.patchesCol >= 0 ? (row[sec.patchesCol] || '').trim() : '',
+      });
     }
-    
-    if (currentSection.songs.length > 0) {
-      songSections.push(currentSection);
+    if (songs.length > 0) {
+      songSections.push({ title: sec.title, time: sec.time, songs });
+    }
+  }
+
+  // Try to extract event date from sheet title if not already found
+  if (!details['event date'] && sheetTitle) {
+    const dateMatch = sheetTitle.match(/(\d{4}\.\d{2}\.\d{2})/);
+    if (dateMatch) {
+      details['event date'] = dateMatch[1].replace(/\./g, '/');
+    }
+  }
+
+  // Use venue name from the header area if we found it
+  if (!details['event name']) {
+    // Try venue name as event name
+    const venue = details['venue'] || details['name'] || '';
+    if (venue) {
+      details['event name'] = venue;
     }
   }
 
@@ -729,6 +852,13 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
 
   let songlistHTML = '';
   if (event.songSections.length > 0) {
+    // Determine which optional columns have data
+    const allSongs = event.songSections.flatMap(s => s.songs);
+    const hasKey = allSongs.some(s => s.key);
+    const hasBpm = allSongs.some(s => s.bpm);
+    const hasSinger = allSongs.some(s => s.singer);
+    const hasNotes = allSongs.some(s => s.notes);
+
     const sectionsHTML = event.songSections.map(section => {
       const songRows = section.songs.map(s => {
         const reqStar = s.request ? '<span class="request-star">★</span>' : '';
@@ -737,7 +867,10 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
           <td style="width:24px; text-align:center;">${reqStar}</td>
           <td>${s.artist}</td>
           <td>${s.title}</td>
-          <td>${s.notes}</td>
+          ${hasKey ? `<td>${s.key}</td>` : ''}
+          ${hasBpm ? `<td>${s.bpm}</td>` : ''}
+          ${hasSinger ? `<td>${s.singer}</td>` : ''}
+          ${hasNotes ? `<td>${s.notes}</td>` : ''}
         </tr>`;
       }).join('');
 
@@ -750,7 +883,10 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
               <th></th>
               <th>Artist</th>
               <th>Title</th>
-              <th>Notes</th>
+              ${hasKey ? '<th>Key</th>' : ''}
+              ${hasBpm ? '<th>BPM</th>' : ''}
+              ${hasSinger ? '<th>Singer</th>' : ''}
+              ${hasNotes ? '<th>Notes</th>' : ''}
             </tr>
           </thead>
           <tbody>${songRows}</tbody>
