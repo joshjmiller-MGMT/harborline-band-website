@@ -6,7 +6,7 @@ import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, U
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import logoCircle from "@/assets/logo-circle.png";
-import logoText from "@/assets/logo-text.png";
+import logoText from "@/assets/logo-text-dark.png";
 
 type TemplateType = "wedding-ros" | "client-planner" | "corporate-ros" | "party-runsheet";
 
