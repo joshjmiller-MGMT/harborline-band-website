@@ -197,17 +197,21 @@ function parseSheetToEvent(sheetData: any): EventData {
     }
   }
 
-  // Also parse inline time entries from cells
+  // Also parse inline time entries from cells (but skip pure time-range values like "3:00 PM - 4:00 PM")
   for (const row of allRows) {
     for (let c = 0; c < row.length; c++) {
       const cell = (row[c] || '').trim();
+      // Skip cells that are pure time ranges (already captured as detail values)
+      if (/^\d{1,2}:\d{2}\s*(?:PM|AM)?\s*-\s*\d{1,2}:\d{2}(?::\d{2})?\s*(?:PM|AM)?\s*$/i.test(cell)) continue;
+      
       const timeMatch = cell.match(/^(\d{1,2}:\d{2}\s*(?:PM|AM))\s+(.+)/i);
       if (timeMatch && timeMatch[2].trim().length > 2) {
-        timeline.push({ time: timeMatch[1].trim(), description: timeMatch[2].trim() });
-      }
-      const fuzzyMatch = cell.match(/^(\d{1,2}:\d{2}\w*)\s+(.{3,})/);
-      if (fuzzyMatch && !timeMatch && fuzzyMatch[2].trim().length > 2) {
-        timeline.push({ time: fuzzyMatch[1].trim(), description: fuzzyMatch[2].trim() });
+        // Skip if description is just another time or a known detail value
+        const desc = timeMatch[2].trim();
+        if (/^\d{1,2}:\d{2}/i.test(desc)) continue;
+        if (!timeline.find(t => t.time === timeMatch[1].trim() && t.description === desc)) {
+          timeline.push({ time: timeMatch[1].trim(), description: desc });
+        }
       }
     }
   }
