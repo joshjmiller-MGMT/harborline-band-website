@@ -182,89 +182,146 @@ function parseSheetToEvent(sheetData: any): EventData {
   }
 
   const songSections: SongSection[] = [];
-  let songHeaderRow = -1;
-  let titleCol = -1, artistCol = -1, notesCol = -1, keyCol = -1, bpmCol = -1, singerCol = -1, patchesCol = -1, numCol = -1, reqCol = -1;
 
+  // ── Detect SET sections and their respective header rows ──
+  // A SET divider row looks like ["SET 1", "", "", ...] or ["SET 2", "", "", ...]
+  // After each divider there's a header row with column names
+  
+  interface SectionRange {
+    title: string;
+    time: string;
+    headerRow: number;
+    titleCol: number;
+    artistCol: number;
+    notesCol: number;
+    keyCol: number;
+    bpmCol: number;
+    singerCol: number;
+    patchesCol: number;
+    numCol: number;
+    reqCol: number;
+    startRow: number;
+    endRow: number;
+  }
+
+  const sectionRanges: SectionRange[] = [];
+
+  function detectSongHeader(row: string[]): { titleCol: number; artistCol: number; notesCol: number; keyCol: number; bpmCol: number; singerCol: number; patchesCol: number; numCol: number; reqCol: number } | null {
+    let tCol = -1;
+    for (let c = 0; c < row.length; c++) {
+      if ((row[c] || '').trim().toLowerCase() === 'title') { tCol = c; break; }
+    }
+    if (tCol < 0) return null;
+    let aCol = -1, nCol = -1, kCol = -1, bCol = -1, sCol = -1, pCol = -1, numC = -1, rCol = -1;
+    for (let c = 0; c < row.length; c++) {
+      const h = (row[c] || '').trim().toLowerCase();
+      if (h === '#') numC = c;
+      if (h === 'artist') aCol = c;
+      if (h === 'arrangement notes' || h === 'notes') nCol = c;
+      if (h === 'key') kCol = c;
+      if (h === 'bpm') bCol = c;
+      if (h === 'singer' || h === 'lead vox' || h === 'lead vocal' || h === 'vocals') sCol = c;
+      if (h.includes('patch')) pCol = c;
+      if (h.includes('request') || h === '*') rCol = c;
+    }
+    return { titleCol: tCol, artistCol: aCol, notesCol: nCol, keyCol: kCol, bpmCol: bCol, singerCol: sCol, patchesCol: pCol, numCol: numC, reqCol: rCol };
+  }
+
+  // First pass: find SET divider rows and song header rows
   for (let r = 0; r < allRows.length; r++) {
     const row = allRows[r];
-    for (let c = 0; c < row.length; c++) {
-      if ((row[c] || '').trim().toLowerCase() === 'title') {
-        songHeaderRow = r;
-        titleCol = c;
-        for (let cc = 0; cc < row.length; cc++) {
-          const h = (row[cc] || '').trim().toLowerCase();
-          if (h === '#') numCol = cc;
-          if (h === 'artist') artistCol = cc;
-          if (h === 'arrangement notes') notesCol = cc;
-          if (h === 'key') keyCol = cc;
-          if (h === 'bpm') bpmCol = cc;
-          if (h === 'singer') singerCol = cc;
-          if (h.includes('patch')) patchesCol = cc;
+    const col0 = (row[0] || '').trim().toUpperCase();
+    
+    // Detect "SET 1", "SET 2", etc.
+    const setMatch = col0.match(/^SET\s*(\d+)$/);
+    if (setMatch) {
+      // Look at the time info from details already extracted
+      const setNum = setMatch[1];
+      const setTimeKey = Object.keys(details).find(k => k.includes(`set ${setNum}`) && k.includes('time'));
+      const setTime = setTimeKey ? details[setTimeKey] : '';
+      
+      // Next row should be the header row
+      const nextRow = allRows[r + 1];
+      if (nextRow) {
+        const cols = detectSongHeader(nextRow);
+        if (cols) {
+          sectionRanges.push({
+            title: `Set ${setNum}`,
+            time: setTime,
+            headerRow: r + 1,
+            ...cols,
+            startRow: r + 2,
+            endRow: allRows.length, // will be trimmed later
+          });
         }
-        if (numCol === -1 && titleCol > 0) {
-          for (let cc = 0; cc < titleCol; cc++) {
-            const h = (row[cc] || '').trim();
-            if (h === '#') numCol = cc;
-            if (h.includes('Request') || h === '*') reqCol = cc;
-          }
-        }
+      }
+      continue;
+    }
+  }
+
+  // If no SET sections found, fall back to single section detection
+  if (sectionRanges.length === 0) {
+    for (let r = 0; r < allRows.length; r++) {
+      const cols = detectSongHeader(allRows[r]);
+      if (cols) {
+        sectionRanges.push({
+          title: 'Songs',
+          time: '',
+          headerRow: r,
+          ...cols,
+          startRow: r + 1,
+          endRow: allRows.length,
+        });
         break;
       }
     }
-    if (songHeaderRow >= 0) break;
   }
 
-  if (songHeaderRow >= 0) {
-    let currentSection: SongSection = { title: 'Songs', time: '', songs: [] };
-    
-    for (let r = songHeaderRow + 1; r < allRows.length; r++) {
+  // Trim endRow for each section to the start of the next section
+  for (let i = 0; i < sectionRanges.length - 1; i++) {
+    // End at the SET divider row of next section (headerRow - 1)
+    sectionRanges[i].endRow = sectionRanges[i + 1].headerRow - 1;
+  }
+
+  // Parse songs from each section
+  for (const sec of sectionRanges) {
+    const songs: SongEntry[] = [];
+    for (let r = sec.startRow; r < sec.endRow; r++) {
       const row = allRows[r];
+      const titleVal = sec.titleCol >= 0 ? (row[sec.titleCol] || '').trim() : '';
+      const artistVal = sec.artistCol >= 0 ? (row[sec.artistCol] || '').trim() : '';
+      
+      if (!titleVal && !artistVal) continue;
+      
+      // Skip if this row looks like another header
+      if (titleVal.toLowerCase() === 'title' || titleVal.toLowerCase() === 'setlist') continue;
+      
+      let orderVal = '';
       const col0 = (row[0] || '').trim();
-      const col1 = (row[1] || '').trim();
-      const titleVal = titleCol >= 0 ? (row[titleCol] || '').trim() : '';
-      const artistVal = artistCol >= 0 ? (row[artistCol] || '').trim() : '';
-      
-      const sectionMatch = col0.match(/^(\d{1,2}:\d{2}\s*(?:PM|AM)?)/i);
-      if (sectionMatch && col1 && !artistVal) {
-        if (currentSection.songs.length > 0) {
-          songSections.push(currentSection);
-        }
-        currentSection = { title: col1, time: sectionMatch[1], songs: [] };
-        continue;
+      if (/^\d+$/.test(col0)) {
+        orderVal = col0;
+      } else if (sec.numCol >= 0) {
+        const numVal = (row[sec.numCol] || '').trim();
+        if (/^\d+$/.test(numVal)) orderVal = numVal;
       }
-      
-      if (col1.toLowerCase().includes('request')) continue;
-      if (titleVal.toLowerCase() === 'setlist' || col0.toLowerCase() === 'setlist') continue;
-      
-      if (artistVal || titleVal) {
-        let orderVal = '';
-        if (col0 && /^\d+$/.test(col0)) {
-          orderVal = col0;
-        } else if (numCol >= 0) {
-          const numVal = (row[numCol] || '').trim();
-          if (/^\d+$/.test(numVal)) orderVal = numVal;
-        }
-        const isRequest = col1 === '*' || 
-          (reqCol >= 0 && (row[reqCol] || '').trim() === '*') ||
-          (numCol >= 0 && (row[numCol] || '').trim() === '*');
-        
-        const song: SongEntry = {
-          order: orderVal,
-          request: isRequest,
-          artist: artistVal,
-          title: titleVal,
-          notes: notesCol >= 0 ? (row[notesCol] || '').trim() : '',
-          key: keyCol >= 0 ? (row[keyCol] || '').trim() : '',
-          bpm: bpmCol >= 0 ? (row[bpmCol] || '').trim() : '',
-          singer: singerCol >= 0 ? (row[singerCol] || '').trim() : '',
-          patches: patchesCol >= 0 ? (row[patchesCol] || '').trim() : '',
-        };
-        currentSection.songs.push(song);
-      }
+
+      const isRequest = (sec.reqCol >= 0 && (row[sec.reqCol] || '').trim() === '*') ||
+        col0 === '*';
+
+      songs.push({
+        order: orderVal,
+        request: isRequest,
+        artist: artistVal,
+        title: titleVal,
+        notes: sec.notesCol >= 0 ? (row[sec.notesCol] || '').trim() : '',
+        key: sec.keyCol >= 0 ? (row[sec.keyCol] || '').trim() : '',
+        bpm: sec.bpmCol >= 0 ? (row[sec.bpmCol] || '').trim() : '',
+        singer: sec.singerCol >= 0 ? (row[sec.singerCol] || '').trim() : '',
+        patches: sec.patchesCol >= 0 ? (row[sec.patchesCol] || '').trim() : '',
+      });
     }
-    
-    if (currentSection.songs.length > 0) {
-      songSections.push(currentSection);
+    if (songs.length > 0) {
+      songSections.push({ title: sec.title, time: sec.time, songs });
     }
   }
 
