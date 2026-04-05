@@ -324,6 +324,14 @@ const Header = () => {
                     Request a Quote
                   </a>
                 </Button>
+                <Link
+                  to="/team/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-2 py-3 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors justify-center mt-2"
+                >
+                  <Lock className="w-4 h-4" />
+                  Team Login
+                </Link>
               </div>
             </motion.div>
           )}
