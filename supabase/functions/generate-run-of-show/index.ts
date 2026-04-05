@@ -917,7 +917,6 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
   <div class="page">
     <div class="header">
       <div class="circles">${circlesHTML}</div>
-      ${circleLogo ? `<img src="${circleLogo}" alt="Harborline" class="brand-circle" />` : ''}
       ${textLogo ? `<img src="${textLogo}" alt="Harborline" class="brand-text" />` : ''}
     </div>
 
