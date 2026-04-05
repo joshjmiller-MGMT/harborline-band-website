@@ -163,6 +163,8 @@ function parseSheetToEvent(sheetData: any): EventData {
     details['venue address'] = addr;
   }
   
+  const timeline: { time: string; description: string }[] = [];
+
   // Build timeline from load-in/soundcheck/set time details
   const timelineDetailKeys = [
     'warehouse load-out', 'sound load-in', 'lead load-in', 'band load-in',
