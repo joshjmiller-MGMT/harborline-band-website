@@ -107,9 +107,13 @@ function parseSheetToEvent(sheetData: any): EventData {
     'salesperson', 'coordinator', 'venue type', 'setup time', 'start', 'end',
     'start / end', 'musicians', 'other staff members', 'musician food & bev',
     "musicians' salesperson", 'coordinator or on-site point of contact',
+    'name', 'street address', 'city/state/zip', 'city', 'address',
+    'warehouse load-out', 'sound load-in', 'lead load-in', 'band load-in',
+    'set 1 time', 'set 2 time', 'set 3 time', 'set 4 time',
   ];
   
   for (const row of allRows) {
+    // Scan pairs of adjacent columns for label/value
     for (let c = 0; c < row.length - 1; c++) {
       const cell = (row[c] || '').trim();
       const nextCell = (row[c + 1] || '').trim();
@@ -130,9 +134,46 @@ function parseSheetToEvent(sheetData: any): EventData {
       }
       if (!cell.includes(':') && nextCell && cell.length > 2 && cell.length < 40) {
         const cellLower = cell.toLowerCase();
-        if (labelPatterns.some(p => cellLower === p) && !details[cellLower]) {
+        if (labelPatterns.some(p => cellLower === p || cellLower.includes(p)) && !details[cellLower]) {
           details[cellLower] = nextCell;
         }
+      }
+    }
+    
+    // Also scan non-adjacent columns: label in col N, value in col N+1 across the full row
+    // This catches layouts where label/value pairs span across separate column groups
+    for (let c = 0; c < row.length; c++) {
+      const cell = (row[c] || '').trim();
+      if (!cell) continue;
+      const cellLower = cell.toLowerCase().replace(/:$/, '');
+      if (labelPatterns.some(p => cellLower === p || cellLower.includes(p))) {
+        const nextCell = c + 1 < row.length ? (row[c + 1] || '').trim() : '';
+        if (nextCell && !details[cellLower]) {
+          details[cellLower] = nextCell;
+        }
+      }
+    }
+  }
+
+  // Map common label aliases to canonical names
+  if (!details['venue'] && details['name']) details['venue'] = details['name'];
+  if (!details['venue address'] && details['street address']) {
+    let addr = details['street address'];
+    if (details['city/state/zip']) addr += ', ' + details['city/state/zip'];
+    details['venue address'] = addr;
+  }
+  
+  // Build timeline from load-in/soundcheck/set time details
+  const timelineDetailKeys = [
+    'warehouse load-out', 'sound load-in', 'lead load-in', 'band load-in',
+    'soundcheck', 'set 1 time', 'set 2 time', 'set 3 time', 'set 4 time',
+  ];
+  
+  for (const key of timelineDetailKeys) {
+    if (details[key]) {
+      const label = key.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      if (!timeline.find(t => t.description.toLowerCase().includes(key))) {
+        timeline.push({ time: details[key], description: label });
       }
     }
   }
