@@ -197,7 +197,7 @@ function parseSheetToEvent(sheetData: any): EventData {
     }
   }
 
-  const timeline: { time: string; description: string }[] = [];
+  // Also parse inline time entries from cells
   for (const row of allRows) {
     for (let c = 0; c < row.length; c++) {
       const cell = (row[c] || '').trim();
