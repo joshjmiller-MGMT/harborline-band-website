@@ -201,8 +201,10 @@ function parseSheetToEvent(sheetData: any): EventData {
   for (const row of allRows) {
     for (let c = 0; c < row.length; c++) {
       const cell = (row[c] || '').trim();
-      // Skip cells that are pure time ranges (already captured as detail values)
-      if (/^\d{1,2}:\d{2}\s*(?:PM|AM)?\s*-\s*\d{1,2}:\d{2}(?::\d{2})?\s*(?:PM|AM)?\s*$/i.test(cell)) continue;
+      // Skip cells that are already captured as detail values (time ranges or known labels)
+      if (/^\d{1,2}:\d{2}\s*(?:PM|AM)?\s*-\s*\d{1,2}:\d{2}(?::\d{2})?\s*(?:PM|AM)?/i.test(cell)) continue;
+      // Skip if this exact cell value is already in timeline
+      if (timeline.find(t => t.time === cell)) continue;
       
       const timeMatch = cell.match(/^(\d{1,2}:\d{2}\s*(?:PM|AM))\s+(.+)/i);
       if (timeMatch && timeMatch[2].trim().length > 2) {
