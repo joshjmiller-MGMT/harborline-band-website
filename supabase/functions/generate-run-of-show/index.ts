@@ -710,6 +710,25 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       continue;
     }
 
+    // ── Bare song lines: "Song Title – Artist" or "Song Title - Artist" (no bullet/number) ──
+    // Only if we're inside a section (currentSectionTitle is set)
+    if (currentSectionTitle) {
+      const bareSongMatch = line.match(/^(.+?)\s*[–-]\s*(.+)$/);
+      if (bareSongMatch && bareSongMatch[1].trim().length > 1 && bareSongMatch[2].trim().length > 1) {
+        const title = bareSongMatch[1].trim();
+        const artist = bareSongMatch[2].trim();
+        // Skip if this looks like a label:value pair
+        if (!detailKeys.some(k => title.toLowerCase().includes(k))) {
+          currentSongs.push({
+            order: String(currentSongs.length + 1), request: false,
+            title, artist,
+            notes: '', key: '', bpm: '', singer: '', patches: '',
+          });
+          continue;
+        }
+      }
+    }
+
     // ── Quoted instruction lines ──
     if (line.startsWith('"') || line.startsWith('\u201C')) {
       const cleanQuote = line.replace(/["\u201C\u201D]/g, '').trim();
