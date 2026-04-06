@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2 } from "lucide-react";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -44,6 +45,77 @@ const TEMPLATE_INFO: Record<TemplateType, { name: string; description: string; a
   },
 };
 
+// Required fields per template type
+const TEMPLATE_FIELDS: Record<TemplateType, { label: string; key: string }[]> = {
+  "wedding-ros": [
+    { label: "Event Name", key: "event name" },
+    { label: "Event Date", key: "event date" },
+    { label: "Setup Time", key: "setup time" },
+    { label: "Start / End", key: "start / end" },
+    { label: "Client", key: "client" },
+    { label: "Event Type", key: "event type" },
+    { label: "Venue", key: "venue" },
+    { label: "Venue Address", key: "venue address" },
+    { label: "Venue Type", key: "venue type" },
+    { label: "Musicians", key: "musicians" },
+    { label: "Other Staff Members", key: "other staff members" },
+    { label: "Guest Count", key: "guest count" },
+    { label: "Attire", key: "attire" },
+    { label: "Musician Food & Bev", key: "musician food & bev" },
+    { label: "Audio Reinforcement", key: "audio reinforcement" },
+    { label: "Musicians' Salesperson", key: "musicians' salesperson" },
+    { label: "Coordinator", key: "coordinator or on-site point of contact" },
+  ],
+  "client-planner": [
+    { label: "Event Name", key: "event name" },
+    { label: "Event Date", key: "event date" },
+    { label: "Event Type", key: "event type" },
+    { label: "Venue", key: "venue" },
+    { label: "Musicians", key: "musicians" },
+    { label: "Ensemble", key: "ensemble" },
+    { label: "Guest Count", key: "guest count" },
+  ],
+  "corporate-ros": [
+    { label: "Event Name", key: "event name" },
+    { label: "Event Date", key: "event date" },
+    { label: "Event Type", key: "event type" },
+    { label: "Client", key: "client" },
+    { label: "Organization", key: "organization" },
+    { label: "Venue", key: "venue" },
+    { label: "Venue Address", key: "venue address" },
+    { label: "Guest Count", key: "guest count" },
+    { label: "Setup Time", key: "setup time" },
+    { label: "Start / End", key: "start / end" },
+    { label: "Load-in Time", key: "load-in time" },
+    { label: "Soundcheck", key: "soundcheck" },
+    { label: "Parking", key: "parking" },
+    { label: "Attire", key: "attire" },
+    { label: "Audio Reinforcement", key: "audio reinforcement" },
+  ],
+  "party-runsheet": [
+    { label: "Event Name", key: "event name" },
+    { label: "Event Date", key: "event date" },
+    { label: "Event Type", key: "event type" },
+    { label: "Client", key: "client" },
+    { label: "Venue", key: "venue" },
+    { label: "Venue Address", key: "venue address" },
+    { label: "Guest Count", key: "guest count" },
+    { label: "Setup Time", key: "setup time" },
+    { label: "Start / End", key: "start / end" },
+    { label: "Load-in Time", key: "load-in time" },
+    { label: "Soundcheck", key: "soundcheck" },
+    { label: "Parking", key: "parking" },
+    { label: "Entrance", key: "entrance" },
+    { label: "On Site POC", key: "on site poc" },
+    { label: "Green Room", key: "green room" },
+    { label: "What to Wear", key: "what to wear" },
+    { label: "Attire", key: "attire" },
+    { label: "Posting", key: "posting" },
+    { label: "Musician Food & Bev", key: "musician food & bev" },
+    { label: "Audio Reinforcement", key: "audio reinforcement" },
+  ],
+};
+
 interface SheetData {
   headers: string[];
   rows: string[][];
@@ -83,8 +155,8 @@ export default function RunOfShowGenerator() {
   const [generating, setGenerating] = useState(false);
   const [sourceType, setSourceType] = useState<string>("");
   const [logosBase64, setLogosBase64] = useState<{ circle: string; text: string } | null>(null);
-
   const [organization, setOrganization] = useState<OrgKey>("harborline");
+  const [manualOverrides, setManualOverrides] = useState("");
 
   const currentLogoText = ORG_INFO[organization].logoText;
 
@@ -107,6 +179,42 @@ export default function RunOfShowGenerator() {
     return new TextDecoder("utf-8").decode(bytes);
   };
 
+  // Parse manual overrides text into key-value pairs
+  const parseManualOverrides = (): Record<string, string> => {
+    const overrides: Record<string, string> = {};
+    if (!manualOverrides.trim()) return overrides;
+    const lines = manualOverrides.split("\n");
+    for (const line of lines) {
+      const colonIdx = line.indexOf(":");
+      if (colonIdx > 0) {
+        const key = line.substring(0, colonIdx).trim().toLowerCase();
+        const value = line.substring(colonIdx + 1).trim();
+        if (key && value) {
+          overrides[key] = value;
+        }
+      }
+    }
+    return overrides;
+  };
+
+  // Get merged details (parsed + overrides)
+  const getMergedDetails = (): Record<string, string> => {
+    const base = parsedData?.details || {};
+    const overrides = parseManualOverrides();
+    return { ...base, ...overrides };
+  };
+
+  // Get the list of fields for the current template and their status
+  const getFieldStatus = () => {
+    const fields = TEMPLATE_FIELDS[template] || [];
+    const merged = getMergedDetails();
+    return fields.map(f => ({
+      ...f,
+      value: merged[f.key] || "",
+      found: !!merged[f.key],
+    }));
+  };
+
   const fetchData = async () => {
     if (!inputUrl.trim()) {
       toast({ title: "Missing URL", description: "Please paste a URL to import.", variant: "destructive" });
@@ -117,13 +225,12 @@ export default function RunOfShowGenerator() {
     setParsedData(null);
     setSourceType(detectUrlType(inputUrl));
     try {
-      // For Google Sheets, also send sheetId for backward compatibility
       const isSheet = inputUrl.includes('docs.google.com/spreadsheets');
       const sheetIdMatch = inputUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-      
+
       const { data, error } = await supabase.functions.invoke("fetch-google-sheet", {
-        body: isSheet && sheetIdMatch 
-          ? { sheetId: sheetIdMatch[1], url: inputUrl } 
+        body: isSheet && sheetIdMatch
+          ? { sheetId: sheetIdMatch[1], url: inputUrl }
           : { url: inputUrl },
       });
 
@@ -133,7 +240,6 @@ export default function RunOfShowGenerator() {
       setSheetData(data);
       setSourceType(data.sourceType || detectUrlType(inputUrl));
 
-      // Parse to show preview
       const { data: genData, error: genError } = await supabase.functions.invoke("generate-run-of-show", {
         body: { sheetData: data, template, format: "html", logos: logosBase64 },
       });
@@ -155,12 +261,21 @@ export default function RunOfShowGenerator() {
   };
 
   const generateDocument = async (format: "html" | "print") => {
-    if (!sheetData) return;
-
     setGenerating(true);
     try {
+      // Merge overrides into the sheet data for generation
+      const overrides = parseManualOverrides();
+      const mergedSheetData = sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
+
       const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
-        body: { sheetData, template, format: "html", logos: logosBase64 },
+        body: {
+          sheetData: mergedSheetData,
+          template,
+          format: "html",
+          logos: logosBase64,
+          overrides,
+          requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
+        },
       });
 
       if (error) throw error;
@@ -170,12 +285,11 @@ export default function RunOfShowGenerator() {
       const html = decodeBase64Utf8(data.file);
 
       if (format === "print") {
-        // Extract the original <style> and <head> content, then wrap body in dark background
         const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
         const originalStyles = styleMatch ? styleMatch[1] : '';
         const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/);
         const bodyContent = bodyMatch ? bodyMatch[1] : html;
-        
+
         const wrappedHtml = `<!DOCTYPE html><html lang="en"><head>
           <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
@@ -215,6 +329,9 @@ export default function RunOfShowGenerator() {
   };
 
   const totalSongs = parsedData?.songSections.reduce((sum, s) => sum + s.songs.length, 0) || 0;
+  const fieldStatus = getFieldStatus();
+  const missingFields = fieldStatus.filter(f => !f.found);
+  const foundFields = fieldStatus.filter(f => f.found);
 
   return (
     <div className="container mx-auto px-6 py-10 max-w-4xl">
@@ -227,7 +344,7 @@ export default function RunOfShowGenerator() {
         </p>
       </div>
 
-      {/* Step 1: Google Sheet URL */}
+      {/* Step 1: Import Data */}
       <Card className="mb-6 bg-card border-border">
         <CardHeader>
           <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
@@ -256,10 +373,8 @@ export default function RunOfShowGenerator() {
             </p>
           )}
 
-          {/* Parsed data preview */}
           {parsedData && (
             <div className="mt-4 space-y-3">
-              {/* Event Name */}
               <div className="p-4 rounded-lg bg-secondary/30 border border-border">
                 <div className="flex items-center gap-2 mb-3">
                   <CheckCircle2 className="w-5 h-5 text-primary" />
@@ -268,7 +383,6 @@ export default function RunOfShowGenerator() {
                   </span>
                 </div>
 
-                {/* Key Details Grid */}
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                   {parsedData.eventName && (
                     <div className="flex items-start gap-2">
@@ -308,7 +422,6 @@ export default function RunOfShowGenerator() {
                   )}
                 </div>
 
-                {/* Summary stats */}
                 <div className="flex gap-4 mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
                   {Object.keys(parsedData.details).length > 0 && (
                     <span>{Object.keys(parsedData.details).length} detail fields</span>
@@ -376,7 +489,7 @@ export default function RunOfShowGenerator() {
         </CardContent>
       </Card>
 
-      {/* Step 2.5: Organization / Brand */}
+      {/* Step 3: Organization / Brand */}
       <Card className="mb-6 bg-card border-border">
         <CardHeader>
           <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
@@ -400,40 +513,113 @@ export default function RunOfShowGenerator() {
         </CardContent>
       </Card>
 
+      {/* Step 4: Review */}
+      <Card className="mb-6 bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
+            <span className="text-primary">4.</span> Review Fields
+          </CardTitle>
+          <CardDescription>
+            Check which fields were found in the imported data. Missing fields will appear as blank lines in the exported document. Use the text box below to manually add missing data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Field status report */}
+          <div className="grid grid-cols-2 gap-2">
+            {fieldStatus.map((field) => (
+              <div
+                key={field.key}
+                className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md ${
+                  field.found
+                    ? "bg-primary/5 text-foreground"
+                    : "bg-destructive/5 text-muted-foreground"
+                }`}
+              >
+                {field.found ? (
+                  <CircleCheck className="w-3.5 h-3.5 text-primary shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
+                )}
+                <span className="font-medium text-xs">{field.label}</span>
+                {field.found && (
+                  <span className="text-xs text-muted-foreground truncate ml-auto max-w-[140px]">
+                    {field.value}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Summary */}
+          <div className="flex items-center gap-2 text-xs pt-2 border-t border-border/50">
+            {missingFields.length === 0 ? (
+              <span className="text-primary flex items-center gap-1">
+                <CircleCheck className="w-3.5 h-3.5" />
+                All {fieldStatus.length} fields populated
+              </span>
+            ) : (
+              <span className="text-destructive flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                {missingFields.length} of {fieldStatus.length} fields missing — will appear as blank lines
+              </span>
+            )}
+          </div>
+
+          {/* Manual overrides */}
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">
+              Add or override fields manually
+            </label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Enter one field per line as <code className="bg-secondary/50 px-1 py-0.5 rounded text-[11px]">Label: Value</code>. 
+              {missingFields.length > 0 && (
+                <> Missing: {missingFields.map(f => f.label).join(", ")}</>
+              )}
+            </p>
+            <Textarea
+              placeholder={`Event Name: Smith Wedding\nVenue: Baltimore Country Club\nEvent Date: April 24, 2026\nClient: John Smith`}
+              value={manualOverrides}
+              onChange={(e) => setManualOverrides(e.target.value)}
+              className="bg-secondary/50 border-border font-mono text-sm min-h-[100px]"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Step 5: Export */}
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
-            <span className="text-primary">4.</span> Export Document
+            <span className="text-primary">5.</span> Export Document
           </CardTitle>
+          {missingFields.length > 0 && !sheetData && (
+            <CardDescription className="flex items-center gap-1 text-xs">
+              <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground" />
+              No data imported — document will have blank fields. You can still export.
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent>
-          {!sheetData ? (
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <AlertCircle className="w-4 h-4" />
-              Import a Google Sheet first to enable export.
-            </div>
-          ) : (
-            <div className="flex gap-3">
-              <Button
-                onClick={() => generateDocument("html")}
-                disabled={generating}
-                className="flex-1"
-                variant="hero"
-              >
-                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                Download HTML
-              </Button>
-              <Button
-                onClick={() => generateDocument("print")}
-                disabled={generating}
-                className="flex-1"
-                variant="heroOutline"
-              >
-                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                Print / Save as PDF
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-3">
+            <Button
+              onClick={() => generateDocument("html")}
+              disabled={generating}
+              className="flex-1"
+              variant="hero"
+            >
+              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Download HTML
+            </Button>
+            <Button
+              onClick={() => generateDocument("print")}
+              disabled={generating}
+              className="flex-1"
+              variant="heroOutline"
+            >
+              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+              Print / Save as PDF
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
