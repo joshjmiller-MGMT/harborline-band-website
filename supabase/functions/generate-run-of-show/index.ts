@@ -602,17 +602,42 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       continue;
     }
 
-    // ── Numbered section headers: "1. Prelude (Guest Arrival) – Approximately 5:40 PM" ──
+    // ── "Vibe:" description lines — attach to current section ──
+    const vibeMatch = line.match(/^Vibe\s*:\s*(.+)$/i);
+    if (vibeMatch) {
+      // Store as a detail on the current section (we'll use it in rendering)
+      if (currentSectionTitle) {
+        const vibeKey = `vibe:${currentSectionTitle.toLowerCase()}`;
+        details[vibeKey] = vibeMatch[1].trim();
+      }
+      continue;
+    }
+
+    // ── Parenthetical timing notes like "(Approx. 15-20 minutes before the ceremony)" ──
+    if (line.startsWith('(') && line.endsWith(')') && currentSectionTitle) {
+      const vibeKey = `timing:${currentSectionTitle.toLowerCase()}`;
+      details[vibeKey] = line;
+      continue;
+    }
+
+    // ── Descriptive lines like "Typically, we select a style..." — skip ──
+    if (/^(Typically|Moments for|Fill out|Email me|I've put|If you'd|It was great)/i.test(line)) {
+      continue;
+    }
+
+    // ── Numbered section headers: "1. Prelude (Guest Arrival) – 5–7 songs" ──
     const numberedSectionMatch = line.match(/^\d+\.\s+(.+?)(?:\s*[–-]\s*(?:Approximately\s*)?(\d{1,2}:\d{2}\s*(?:PM|AM)?).*)?$/i);
     if (numberedSectionMatch) {
       const potentialTitle = numberedSectionMatch[1].trim();
-      if (/prelude|processional|recessional|cocktail|ceremony|reception|dinner|guest/i.test(potentialTitle) ||
+      if (/prelude|processional|recessional|cocktail|ceremony|reception|dinner|guest|postlude/i.test(potentialTitle) ||
           potentialTitle.includes('(') || potentialTitle.length > 20) {
         if (currentSongs.length > 0) {
           songSections.push({ title: currentSectionTitle || 'Songs', time: currentSectionTime, songs: currentSongs });
           currentSongs = [];
         }
-        currentSectionTitle = potentialTitle;
+        // Capture the full section name including song count hint (e.g. "5–7 songs")
+        const fullTitle = line.match(/^\d+\.\s+(.+)$/);
+        currentSectionTitle = fullTitle ? fullTitle[1].trim() : potentialTitle;
         currentSectionTime = numberedSectionMatch[2] || '';
         if (currentSectionTime) {
           timeline.push({ time: currentSectionTime, description: potentialTitle });
