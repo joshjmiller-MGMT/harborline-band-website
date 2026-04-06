@@ -1246,27 +1246,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
 
   const circlesHTML = circleColors.map(c => `<div class="circle" style="background-color: ${c};"></div>`).join('');
 
-  const detailDisplayOrder = [
-    ['Event Type', 'event type'], ['Venue', 'venue'], ['Venue Address', 'venue address'],
-    ['Event Date', 'event date'], ['Client', 'client'], ['Organization', 'organization'],
-    ['Guest Count', 'guest count'], ['Setup Time', 'setup time'], ['Start / End', 'start / end'],
-    ['Load-in Time', 'load-in time'], ['Soundcheck', 'soundcheck'], ['Parking', 'parking'],
-    ['Entrance', 'entrance'], ['On Site POC', 'on site poc'], ['Green Room', 'green room'],
-    ['What to Wear', 'what to wear'], ['Attire', 'attire'], ['Posting', 'posting'],
-    ['Musician Food & Bev', 'musician food & bev'], ['Musician Refreshments', 'musician refreshments'],
-    ['Audio Reinforcement', 'audio reinforcement'], ['Venue Type', 'venue type'],
-    ["Musicians' Salesperson", "musicians' salesperson"],
-    ['Coordinator', 'coordinator or on-site point of contact'],
-  ];
-
-  const detailsHTML = detailDisplayOrder
-    .filter(([, key]) => event.details[key])
-    .map(([label, key]) => `
-      <div class="detail-group">
-        <div class="detail-label">${label}</div>
-        <div class="detail-value">${event.details[key]}</div>
-      </div>
-    `).join('');
+  const detailsHTML = buildAllFieldsHTML(event, requiredFields, 'detail-group', 'detail-label', 'detail-value');
 
   let personnelHTML = '';
   if (event.personnel.length > 0) {
