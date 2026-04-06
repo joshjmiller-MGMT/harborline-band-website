@@ -802,17 +802,45 @@ function findColumnIndex(allRows: string[][], keyword: string): number | null {
 
 // ─── HTML Generator ─────────────────────────────────────────────────────
 
-function generateHTML(event: EventData, logos?: { circle: string; text: string }, template?: string): string {
-  if (template === 'client-planner') return generateClientPlannerHTML(event, logos);
-  if (template === 'wedding-ros') return generateWeddingROSHTML(event, logos);
-  if (template === 'corporate-ros') return generateCorporateHTML(event, logos);
-  // party-runsheet uses the colorful internal style
-  return generateInternalHTML(event, logos);
+type RequiredField = { label: string; key: string };
+
+// Build detail HTML showing all required fields, with blanks for missing ones
+function buildAllFieldsHTML(event: EventData, requiredFields?: RequiredField[], cssClass = 'detail-group', labelClass = 'detail-label', valueClass = 'detail-value'): string {
+  if (!requiredFields || requiredFields.length === 0) {
+    // Fallback: just show what we have
+    return Object.entries(event.details)
+      .filter(([k]) => !k.startsWith('vibe:') && !k.startsWith('timing:'))
+      .map(([k, v]) => `<div class="${cssClass}"><div class="${labelClass}">${k.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</div><div class="${valueClass}">${v}</div></div>`)
+      .join('');
+  }
+  return requiredFields.map(f => {
+    const value = event.details[f.key] || '';
+    const display = value || '<span style="color:#ccc; letter-spacing:0.1em;">________</span>';
+    return `<div class="${cssClass}"><div class="${labelClass}">${f.label}</div><div class="${valueClass}">${display}</div></div>`;
+  }).join('');
 }
 
-// ─── Client Planner (Elegant, client-facing) ────────────────────────────
+// Simpler line-based version for clean templates
+function buildAllFieldsLines(event: EventData, requiredFields?: RequiredField[]): string {
+  if (!requiredFields || requiredFields.length === 0) {
+    return Object.entries(event.details)
+      .filter(([k]) => !k.startsWith('vibe:') && !k.startsWith('timing:'))
+      .map(([k, v]) => `<div class="detail-row"><strong>${k.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}:</strong> ${v}</div>`)
+      .join('');
+  }
+  return requiredFields.map(f => {
+    const value = event.details[f.key] || '';
+    const display = value || '<span style="color:#ccc; letter-spacing:0.1em;">________</span>';
+    return `<div class="detail-row"><strong>${f.label}:</strong> ${display}</div>`;
+  }).join('');
+}
 
-function generateClientPlannerHTML(event: EventData, logos?: { circle: string; text: string }): string {
+function generateHTML(event: EventData, logos?: { circle: string; text: string }, template?: string, requiredFields?: RequiredField[]): string {
+  if (template === 'client-planner') return generateClientPlannerHTML(event, logos, requiredFields);
+  if (template === 'wedding-ros') return generateWeddingROSHTML(event, logos, requiredFields);
+  if (template === 'corporate-ros') return generateCorporateHTML(event, logos, requiredFields);
+  return generateInternalHTML(event, logos, requiredFields);
+}
   const textLogo = logos?.text || '';
 
   const styles = `
