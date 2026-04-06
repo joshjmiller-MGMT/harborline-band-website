@@ -1063,7 +1063,7 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
 
 // ─── Corporate Event (Internal, teal-only, cleaner) ─────────────────────
 
-function generateCorporateHTML(event: EventData, logos?: { circle: string; text: string }): string {
+function generateCorporateHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
   const teal = '#14B8A6';
   const darkText = '#1a1a1a';
   const bodyText = '#333333';
@@ -1217,7 +1217,7 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
 
 // ─── Internal Template (Party Run Sheet) ────────────────────────────────
 
-function generateInternalHTML(event: EventData, logos?: { circle: string; text: string }): string {
+function generateInternalHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
   const purple = '#7C3AED';
   const teal = '#14B8A6';
   const darkText = '#1a1a1a';
