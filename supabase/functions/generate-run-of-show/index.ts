@@ -9,17 +9,31 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { sheetData, template, format, logos } = await req.json();
+    const { sheetData, template, format, logos, overrides, requiredFields } = await req.json();
 
-    if (!sheetData || !template || !format) {
+    if (!template || !format) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const eventData = parseSheetToEvent(sheetData);
-    const html = generateHTML(eventData, logos, template);
+    const eventData = parseSheetToEvent(sheetData || { headers: [], rows: [], sheetTitle: 'Untitled' });
+    
+    // Merge manual overrides into parsed data
+    if (overrides && typeof overrides === 'object') {
+      for (const [key, value] of Object.entries(overrides)) {
+        if (typeof value === 'string' && value.trim()) {
+          eventData.details[key.toLowerCase()] = value.trim();
+          // Also set event name if overridden
+          if (key.toLowerCase() === 'event name') {
+            eventData.eventName = value.trim();
+          }
+        }
+      }
+    }
+
+    const html = generateHTML(eventData, logos, template, requiredFields);
 
     // Encode to base64 safely handling UTF-8 / special characters
     const encoder = new TextEncoder();
