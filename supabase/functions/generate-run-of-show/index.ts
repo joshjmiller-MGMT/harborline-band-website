@@ -602,17 +602,42 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       continue;
     }
 
-    // ── Numbered section headers: "1. Prelude (Guest Arrival) – Approximately 5:40 PM" ──
+    // ── "Vibe:" description lines — attach to current section ──
+    const vibeMatch = line.match(/^Vibe\s*:\s*(.+)$/i);
+    if (vibeMatch) {
+      // Store as a detail on the current section (we'll use it in rendering)
+      if (currentSectionTitle) {
+        const vibeKey = `vibe:${currentSectionTitle.toLowerCase()}`;
+        details[vibeKey] = vibeMatch[1].trim();
+      }
+      continue;
+    }
+
+    // ── Parenthetical timing notes like "(Approx. 15-20 minutes before the ceremony)" ──
+    if (line.startsWith('(') && line.endsWith(')') && currentSectionTitle) {
+      const vibeKey = `timing:${currentSectionTitle.toLowerCase()}`;
+      details[vibeKey] = line;
+      continue;
+    }
+
+    // ── Descriptive lines like "Typically, we select a style..." — skip ──
+    if (/^(Typically|Moments for|Fill out|Email me|I've put|If you'd|It was great)/i.test(line)) {
+      continue;
+    }
+
+    // ── Numbered section headers: "1. Prelude (Guest Arrival) – 5–7 songs" ──
     const numberedSectionMatch = line.match(/^\d+\.\s+(.+?)(?:\s*[–-]\s*(?:Approximately\s*)?(\d{1,2}:\d{2}\s*(?:PM|AM)?).*)?$/i);
     if (numberedSectionMatch) {
       const potentialTitle = numberedSectionMatch[1].trim();
-      if (/prelude|processional|recessional|cocktail|ceremony|reception|dinner|guest/i.test(potentialTitle) ||
+      if (/prelude|processional|recessional|cocktail|ceremony|reception|dinner|guest|postlude/i.test(potentialTitle) ||
           potentialTitle.includes('(') || potentialTitle.length > 20) {
         if (currentSongs.length > 0) {
           songSections.push({ title: currentSectionTitle || 'Songs', time: currentSectionTime, songs: currentSongs });
           currentSongs = [];
         }
-        currentSectionTitle = potentialTitle;
+        // Capture the full section name including song count hint (e.g. "5–7 songs")
+        const fullTitle = line.match(/^\d+\.\s+(.+)$/);
+        currentSectionTitle = fullTitle ? fullTitle[1].trim() : potentialTitle;
         currentSectionTime = numberedSectionMatch[2] || '';
         if (currentSectionTime) {
           timeline.push({ time: currentSectionTime, description: potentialTitle });
@@ -685,6 +710,25 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       continue;
     }
 
+    // ── Bare song lines: "Song Title – Artist" or "Song Title - Artist" (no bullet/number) ──
+    // Only if we're inside a section (currentSectionTitle is set)
+    if (currentSectionTitle) {
+      const bareSongMatch = line.match(/^(.+?)\s*[–-]\s*(.+)$/);
+      if (bareSongMatch && bareSongMatch[1].trim().length > 1 && bareSongMatch[2].trim().length > 1) {
+        const title = bareSongMatch[1].trim();
+        const artist = bareSongMatch[2].trim();
+        // Skip if this looks like a label:value pair
+        if (!detailKeys.some(k => title.toLowerCase().includes(k))) {
+          currentSongs.push({
+            order: String(currentSongs.length + 1), request: false,
+            title, artist,
+            notes: '', key: '', bpm: '', singer: '', patches: '',
+          });
+          continue;
+        }
+      }
+    }
+
     // ── Quoted instruction lines ──
     if (line.startsWith('"') || line.startsWith('\u201C')) {
       const cleanQuote = line.replace(/["\u201C\u201D]/g, '').trim();
@@ -747,7 +791,8 @@ function findColumnIndex(allRows: string[][], keyword: string): number | null {
 function generateHTML(event: EventData, logos?: { circle: string; text: string }, template?: string): string {
   if (template === 'client-planner') return generateClientPlannerHTML(event, logos);
   if (template === 'wedding-ros') return generateWeddingROSHTML(event, logos);
-  // party-runsheet and corporate-ros use the internal style
+  if (template === 'corporate-ros') return generateCorporateHTML(event, logos);
+  // party-runsheet uses the colorful internal style
   return generateInternalHTML(event, logos);
 }
 
@@ -796,17 +841,28 @@ function generateClientPlannerHTML(event: EventData, logos?: { circle: string; t
   let sectionsHTML = '';
   for (const section of event.songSections) {
     sectionsHTML += `<div class="section-heading">${section.title}</div>`;
+
+    // Look for timing/vibe data stored in details
+    const sectionKey = section.title.replace(/\s*[–-]\s*\d.*$/, '').trim().toLowerCase();
+    const timingNote = Object.entries(event.details).find(([k]) => k.startsWith('timing:') && k.includes(sectionKey));
+    const vibeNote = Object.entries(event.details).find(([k]) => k.startsWith('vibe:') && k.includes(sectionKey));
+
+    if (timingNote) {
+      sectionsHTML += `<div class="section-timing">${timingNote[1]}</div>`;
+    }
     if (section.time) {
       sectionsHTML += `<div class="section-timing">${section.time}</div>`;
+    }
+    if (vibeNote) {
+      sectionsHTML += `<div class="section-vibe"><strong>Vibe:</strong> ${vibeNote[1]}</div>`;
     }
     sectionsHTML += `<hr class="divider" />`;
 
     for (const song of section.songs) {
-      if (song.notes && !song.title.includes('–') && !song.artist) {
-        // This might be a "moment" like "Bride Entrance"
-        sectionsHTML += `<div class="moment-line">${song.title}${song.notes ? ' — ' + song.notes : ''}</div>`;
+      if (song.notes && !song.title.includes('\u2013') && !song.artist) {
+        sectionsHTML += `<div class="moment-line">${song.title}${song.notes ? ' \u2014 ' + song.notes : ''}</div>`;
       } else {
-        const artistPart = song.artist ? ` – ${song.artist}` : '';
+        const artistPart = song.artist ? ` \u2013 ${song.artist}` : '';
         sectionsHTML += `<div class="song-line">${song.title}${artistPart}</div>`;
       }
     }
@@ -976,7 +1032,161 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
 </html>`;
 }
 
-// ─── Internal Templates (Party Run Sheet / Corporate) ───────────────────
+// ─── Corporate Event (Internal, teal-only, cleaner) ─────────────────────
+
+function generateCorporateHTML(event: EventData, logos?: { circle: string; text: string }): string {
+  const teal = '#14B8A6';
+  const darkText = '#1a1a1a';
+  const bodyText = '#333333';
+  const textLogo = logos?.text || '';
+
+  const styles = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: white; color: ${bodyText}; line-height: 1.7; font-size: 14px; }
+    .page { max-width: 720px; margin: 0 auto; padding: 50px 60px; }
+    .header { text-align: center; margin-bottom: 40px; border-bottom: 3px solid ${teal}; padding-bottom: 24px; }
+    .brand-text { max-width: 260px; height: auto; margin: 0 auto 12px; display: block; }
+    .event-title { font-family: 'Inter', sans-serif; font-size: 24px; font-weight: 700; color: ${darkText}; margin-top: 20px; text-align: center; letter-spacing: 0.02em; }
+    .event-meta { font-size: 14px; color: ${bodyText}; margin-top: 6px; line-height: 1.8; text-align: center; }
+    .section-title { font-size: 18px; font-weight: 600; color: ${teal}; margin-top: 36px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .section-rule { border: none; border-top: 2px solid ${teal}; margin-bottom: 18px; }
+    .detail-group { margin-bottom: 10px; }
+    .detail-label { font-weight: 600; color: ${darkText}; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+    .detail-value { color: ${bodyText}; font-size: 14px; padding-left: 16px; }
+    .personnel-text { font-size: 14px; color: ${bodyText}; line-height: 1.8; }
+    .timeline-list { list-style: none; padding: 0; }
+    .timeline-item { padding: 6px 0; padding-left: 20px; position: relative; font-size: 14px; border-left: 2px solid ${teal}; margin-left: 4px; }
+    .timeline-time { font-weight: 600; color: ${darkText}; }
+    .set-title { font-weight: 600; font-size: 15px; color: ${darkText}; margin-top: 20px; margin-bottom: 10px; }
+    .song-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+    .song-table th { text-align: left; padding: 6px 8px; border-bottom: 2px solid ${teal}; color: ${teal}; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .song-table td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+    .song-table tr:nth-child(even) td { background: #f8fafa; }
+    .footer { text-align: center; margin-top: 48px; padding-top: 20px; border-top: 2px solid ${teal}; font-size: 12px; color: #888; }
+    @media print { body { padding: 0; } .page { padding: 30px 40px; } }
+  `;
+
+  const detailDisplayOrder = [
+    ['Event Type', 'event type'], ['Venue', 'venue'], ['Venue Address', 'venue address'],
+    ['Event Date', 'event date'], ['Client', 'client'], ['Organization', 'organization'],
+    ['Guest Count', 'guest count'], ['Setup Time', 'setup time'], ['Start / End', 'start / end'],
+    ['Load-in Time', 'load-in time'], ['Soundcheck', 'soundcheck'], ['Parking', 'parking'],
+    ['Entrance', 'entrance'], ['On Site POC', 'on site poc'], ['Green Room', 'green room'],
+    ['What to Wear', 'what to wear'], ['Attire', 'attire'], ['Posting', 'posting'],
+    ['Musician Food & Bev', 'musician food & bev'], ['Audio Reinforcement', 'audio reinforcement'],
+  ];
+
+  const detailsHTML = detailDisplayOrder
+    .filter(([, key]) => event.details[key])
+    .map(([label, key]) => `
+      <div class="detail-group">
+        <div class="detail-label">${label}</div>
+        <div class="detail-value">${event.details[key]}</div>
+      </div>
+    `).join('');
+
+  let personnelHTML = '';
+  if (event.personnel.length > 0) {
+    const personnelStr = event.personnel.map(p => `<strong>${p.role}:</strong> ${p.name}`).join(' &nbsp;|&nbsp; ');
+    personnelHTML = `
+      <div class="section-title">Team</div>
+      <hr class="section-rule" />
+      <div class="personnel-text">${personnelStr}</div>
+    `;
+  }
+
+  let timelineHTML = '';
+  if (event.timeline.length > 0) {
+    const items = event.timeline.map(t =>
+      `<div class="timeline-item"><span class="timeline-time">${t.time}</span> &mdash; ${t.description}</div>`
+    ).join('');
+    timelineHTML = `
+      <div class="section-title">Schedule</div>
+      <hr class="section-rule" />
+      ${items}
+    `;
+  }
+
+  let songlistHTML = '';
+  if (event.songSections.length > 0) {
+    const allSongs = event.songSections.flatMap(s => s.songs);
+    const hasKey = allSongs.some(s => s.key);
+    const hasBpm = allSongs.some(s => s.bpm);
+    const hasSinger = allSongs.some(s => s.singer);
+    const hasNotes = allSongs.some(s => s.notes);
+
+    const sectionsHTML = event.songSections.map(section => {
+      const songRows = section.songs.map(s => {
+        return `<tr>
+          <td style="width:36px; text-align:center;">${s.order || ''}</td>
+          <td>${s.artist}</td>
+          <td>${s.title}</td>
+          ${hasKey ? `<td>${s.key}</td>` : ''}
+          ${hasBpm ? `<td>${s.bpm}</td>` : ''}
+          ${hasSinger ? `<td>${s.singer}</td>` : ''}
+          ${hasNotes ? `<td>${s.notes}</td>` : ''}
+        </tr>`;
+      }).join('');
+
+      return `
+        <div class="set-title">${section.time ? section.time + ' &mdash; ' : ''}${section.title}</div>
+        <table class="song-table">
+          <thead><tr>
+            <th>#</th><th>Artist</th><th>Title</th>
+            ${hasKey ? '<th>Key</th>' : ''}${hasBpm ? '<th>BPM</th>' : ''}
+            ${hasSinger ? '<th>Singer</th>' : ''}${hasNotes ? '<th>Notes</th>' : ''}
+          </tr></thead>
+          <tbody>${songRows}</tbody>
+        </table>
+      `;
+    }).join('');
+
+    songlistHTML = `
+      <div class="section-title">Songlist</div>
+      <hr class="section-rule" />
+      ${sectionsHTML}
+    `;
+  }
+
+  const eventDate = event.details['event date'] || '';
+  const venue = event.details['venue'] || '';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${event.eventName} - Corporate Event</title>
+  <style>${styles}</style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      ${textLogo ? `<img src="${textLogo}" alt="Logo" class="brand-text" />` : ''}
+      <div class="event-title">${event.eventName}</div>
+      <div class="event-meta">
+        ${eventDate ? eventDate : ''}${venue ? ` &nbsp;&bull;&nbsp; ${venue}` : ''}
+      </div>
+    </div>
+
+    ${detailsHTML ? `
+      <div class="section-title">Event Details</div>
+      <hr class="section-rule" />
+      ${detailsHTML}
+    ` : ''}
+
+    ${personnelHTML}
+    ${timelineHTML}
+    ${songlistHTML}
+
+    <div class="footer">Internal Document &nbsp;&bull;&nbsp; Confidential</div>
+  </div>
+</body>
+</html>`;
+}
+
+// ─── Internal Template (Party Run Sheet) ────────────────────────────────
 
 function generateInternalHTML(event: EventData, logos?: { circle: string; text: string }): string {
   const purple = '#7C3AED';
