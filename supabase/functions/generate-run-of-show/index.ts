@@ -953,7 +953,7 @@ function generateClientPlannerHTML(event: EventData, logos?: { circle: string; t
 
 // ─── Wedding Run of Show (Musician-facing, professional) ────────────────
 
-function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text: string }): string {
+function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
   const textLogo = logos?.text || '';
 
   const styles = `
@@ -972,29 +972,14 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
     .song-list { list-style: decimal; padding-left: 24px; margin: 8px 0; }
     .song-list li { font-size: 14px; color: #222; padding: 2px 0; }
     .moment-item { font-size: 14px; color: #222; padding: 3px 0 3px 20px; position: relative; }
-    .moment-item::before { content: '–'; position: absolute; left: 4px; color: #666; }
+    .moment-item::before { content: '\\2013'; position: absolute; left: 4px; color: #666; }
     .quote-text { font-size: 13px; color: #555; font-style: italic; margin: 6px 0 10px 8px; border-left: 2px solid #ddd; padding-left: 12px; }
     .personnel-block { font-size: 14px; color: #222; margin-bottom: 4px; }
     .footer { text-align: center; margin-top: 48px; padding-top: 16px; border-top: 1px solid #ccc; font-size: 11px; color: #999; letter-spacing: 0.06em; text-transform: uppercase; }
     @media print { body { padding: 0; } .page { padding: 30px 40px; } }
   `;
 
-  // Event details as bold-label lines
-  const allDetailKeys: [string, string][] = [
-    ['Event Date', 'event date'], ['Event Name', 'event name'], ['Setup Time', 'setup time'],
-    ['Start / End', 'start / end'], ['Client', 'client'], ['Event Type', 'event type'],
-    ['Venue', 'venue'], ['Venue Address', 'venue address'], ['Venue Type', 'venue type'],
-    ['Musicians', 'musicians'], ['Other Staff Members', 'other staff members'],
-    ['Guest Count', 'guest count'], ['Attire', 'attire'],
-    ['Musician Food & Bev', 'musician food & bev'], ['Audio Reinforcement', 'audio reinforcement'],
-    ["Musicians' Salesperson", "musicians' salesperson"],
-    ['Coordinator or On-Site Point of Contact', 'coordinator or on-site point of contact'],
-  ];
-
-  const detailsHTML = allDetailKeys
-    .filter(([, k]) => event.details[k])
-    .map(([label, k]) => `<div class="detail-row"><strong>${label}:</strong> ${event.details[k]}</div>`)
-    .join('');
+  const detailsHTML = buildAllFieldsLines(event, requiredFields);
 
   // Personnel
   let personnelHTML = '';
