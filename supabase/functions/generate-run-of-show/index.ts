@@ -792,6 +792,14 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     }
   }
 
+  // Normalize salesperson aliases
+  if (!details["musicians' salesperson"] && details["musicians salesperson"]) {
+    details["musicians' salesperson"] = details["musicians salesperson"];
+  }
+  if (!details["musicians' salesperson"] && details["salesperson"]) {
+    details["musicians' salesperson"] = details["salesperson"];
+  }
+
   const eventName = details['event name'] || sheetTitle || 'Event';
   return { eventName, details, personnel, timeline, songSections };
 }
