@@ -91,6 +91,58 @@ interface SongEntry {
   patches: string;
 }
 
+const DETAIL_KEY_ALIASES: Record<string, string> = {
+  "musicians salesperson": "musician salesperson",
+  "musicians sales person": "musician salesperson",
+  "musician sales person": "musician salesperson",
+  salesperson: "musician salesperson",
+  "sales person": "musician salesperson",
+  "sales rep": "musician salesperson",
+  "coordinator or on-site point of contact": "coordinator",
+  "coordinator or on site point of contact": "coordinator",
+  "on-site point of contact": "coordinator",
+  "on site point of contact": "coordinator",
+  "event coordinator": "coordinator",
+  "day-of coordinator": "coordinator",
+  "day of coordinator": "coordinator",
+  "wedding coordinator": "coordinator",
+  "band project lead": "project lead",
+  "music project lead": "project lead",
+  "musician project lead": "project lead",
+  "on site poc": "musician pos",
+  "on-site poc": "musician pos",
+  "musician p o s": "musician pos",
+  "musician poc": "musician pos",
+  "musician point of contact": "musician pos",
+  "musician on-site point of contact": "musician pos",
+  "musician on site point of contact": "musician pos",
+  "musician on-site poc": "musician pos",
+  "musician on site poc": "musician pos",
+  "musician onsite poc": "musician pos",
+  "musician point person": "musician pos",
+};
+
+function normalizeDetailKey(rawKey: string): string {
+  return rawKey
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getDetailValue(details: Record<string, string>, lookupKey: string): string {
+  const normalizedLookup = DETAIL_KEY_ALIASES[normalizeDetailKey(lookupKey)] || normalizeDetailKey(lookupKey);
+
+  for (const [key, value] of Object.entries(details)) {
+    const normalizedKey = DETAIL_KEY_ALIASES[normalizeDetailKey(key)] || normalizeDetailKey(key);
+    if (normalizedKey === normalizedLookup && value) {
+      return value;
+    }
+  }
+
+  return details[lookupKey] || '';
+}
+
 // ─── Parser ─────────────────────────────────────────────────────────────
 
 function parseSheetToEvent(sheetData: any): EventData {
@@ -118,9 +170,9 @@ function parseSheetToEvent(sheetData: any): EventData {
     'event type', 'event name', 'load-in time', 'soundcheck', 'parking',
     'entrance', 'on site poc', 'green room', 'posting', 'what to wear',
     'attire', 'guest count', 'musician refreshments', 'audio reinforcement',
-    'salesperson', 'musicians salesperson', 'coordinator', 'venue type', 'setup time', 'start', 'end',
+    'salesperson', 'sales person', 'sales rep', 'musicians salesperson', 'musicians sales person', 'musician salesperson', 'musician sales person', 'coordinator', 'event coordinator', 'day-of coordinator', 'day of coordinator', 'wedding coordinator', 'project lead', 'band project lead', 'music project lead', 'musician project lead', 'musician pos', 'musician poc', 'musician point of contact', 'musician point person', 'venue type', 'setup time', 'start', 'end',
     'start / end', 'musicians', 'other staff members', 'musician food & bev',
-    "musicians' salesperson", 'coordinator or on-site point of contact',
+    "musicians' salesperson", 'coordinator or on-site point of contact', 'on-site point of contact', 'on site point of contact',
     'name', 'street address', 'city/state/zip', 'city', 'address',
     'warehouse load-out', 'sound load-in', 'lead load-in', 'band load-in',
     'set 1 time', 'set 2 time', 'set 3 time', 'set 4 time',
@@ -437,8 +489,8 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     'client', 'event type', 'venue', 'venue address', 'venue type',
     'musicians', 'other staff members', 'guest count', 'attire',
     'musician food & bev', 'musician food and bev', 'musician refreshments',
-    'audio reinforcement', "musicians' salesperson", 'musicians salesperson', 'salesperson',
-    'coordinator or on-site point of contact', 'coordinator', 'on site poc',
+    'audio reinforcement', "musicians' salesperson", 'musicians salesperson', 'musicians sales person', 'musician salesperson', 'musician sales person', 'salesperson', 'sales person', 'sales rep',
+    'coordinator or on-site point of contact', 'coordinator', 'event coordinator', 'day-of coordinator', 'day of coordinator', 'wedding coordinator', 'on-site point of contact', 'on site point of contact', 'on site poc', 'project lead', 'band project lead', 'music project lead', 'musician project lead', 'musician pos', 'musician poc', 'musician point of contact', 'musician point person',
     'organization', 'load-in time', 'load-in', 'soundcheck', 'parking', 'entrance',
     'green room', 'what to wear', 'posting', 'address',
   ];
@@ -829,7 +881,7 @@ function buildAllFieldsHTML(event: EventData, requiredFields?: RequiredField[], 
       .join('');
   }
   return requiredFields.map(f => {
-    const value = event.details[f.key] || '';
+    const value = getDetailValue(event.details, f.key);
     const display = value || '<span style="color:#ccc; letter-spacing:0.1em;">________</span>';
     return `<div class="${cssClass}"><div class="${labelClass}">${f.label}</div><div class="${valueClass}">${display}</div></div>`;
   }).join('');
@@ -844,7 +896,7 @@ function buildAllFieldsLines(event: EventData, requiredFields?: RequiredField[])
       .join('');
   }
   return requiredFields.map(f => {
-    const value = event.details[f.key] || '';
+    const value = getDetailValue(event.details, f.key);
     const display = value || '<span style="color:#ccc; letter-spacing:0.1em;">________</span>';
     return `<div class="detail-row"><strong>${f.label}:</strong> ${display}</div>`;
   }).join('');

@@ -130,6 +130,8 @@ const DETAIL_KEY_ALIASES: Record<string, string> = {
   "sales rep": "musician salesperson",
   "coordinator or on-site point of contact": "coordinator",
   "coordinator or on site point of contact": "coordinator",
+  "on-site point of contact": "coordinator",
+  "on site point of contact": "coordinator",
   "event coordinator": "coordinator",
   "day-of coordinator": "coordinator",
   "day of coordinator": "coordinator",
@@ -622,12 +624,12 @@ export default function RunOfShowGenerator() {
             <span className="text-primary">4.</span> Review Fields
           </CardTitle>
           <CardDescription>
-            Check which fields were found in the imported data. Missing fields will appear as blank lines in the exported document. Use the text box below to manually add missing data.
+            Check which fields were found in the imported data. Missing fields will export as blanks unless you add them with Manual entry below.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Field status report */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {fieldStatus.map((field) => (
               <div
                 key={field.key}
@@ -653,17 +655,23 @@ export default function RunOfShowGenerator() {
           </div>
 
           {/* Summary */}
-          <div className="flex items-center gap-2 text-xs pt-2 border-t border-border/50">
+          <div className="flex flex-col gap-3 pt-2 border-t border-border/50 sm:flex-row sm:items-center sm:justify-between">
             {missingFields.length === 0 ? (
-              <span className="text-primary flex items-center gap-1">
+              <span className="text-primary flex items-center gap-1 text-xs">
                 <CircleCheck className="w-3.5 h-3.5" />
                 All {fieldStatus.length} fields populated
               </span>
             ) : (
-              <span className="text-destructive flex items-center gap-1">
+              <span className="text-destructive flex items-center gap-1 text-xs">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 {missingFields.length} of {fieldStatus.length} fields missing — will appear as blank lines
               </span>
+            )}
+
+            {missingFields.length > 0 && (
+              <Button type="button" variant="outline" size="sm" onClick={addManualEntry}>
+                Manual entry
+              </Button>
             )}
           </div>
 
@@ -679,6 +687,7 @@ export default function RunOfShowGenerator() {
               )}
             </p>
             <Textarea
+              ref={manualOverridesRef}
               placeholder={`Event Name: Smith Wedding\nVenue: Baltimore Country Club\nEvent Date: April 24, 2026\nClient: John Smith`}
               value={manualOverrides}
               onChange={(e) => setManualOverrides(e.target.value)}
