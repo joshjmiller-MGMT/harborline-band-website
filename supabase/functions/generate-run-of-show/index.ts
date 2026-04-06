@@ -791,7 +791,8 @@ function findColumnIndex(allRows: string[][], keyword: string): number | null {
 function generateHTML(event: EventData, logos?: { circle: string; text: string }, template?: string): string {
   if (template === 'client-planner') return generateClientPlannerHTML(event, logos);
   if (template === 'wedding-ros') return generateWeddingROSHTML(event, logos);
-  // party-runsheet and corporate-ros use the internal style
+  if (template === 'corporate-ros') return generateCorporateHTML(event, logos);
+  // party-runsheet uses the colorful internal style
   return generateInternalHTML(event, logos);
 }
 
