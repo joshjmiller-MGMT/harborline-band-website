@@ -872,15 +872,14 @@ function generateClientPlannerHTML(event: EventData, logos?: { circle: string; t
     @media print { body { padding: 0; } .page { padding: 30px 40px; } }
   `;
 
-  // Build event details section
-  const detailKeys: [string, string][] = [
-    ['Event Date', 'event date'], ['Event Type', 'event type'], ['Venue', 'venue'],
-    ['Musicians', 'musicians'], ['Ensemble', 'ensemble'], ['Guest Count', 'guest count'],
-  ];
-  const detailsHTML = detailKeys
-    .filter(([, k]) => event.details[k])
-    .map(([label, k]) => `<div class="detail-line"><strong>${label}:</strong> ${event.details[k]}</div>`)
-    .join('');
+  // Build event details section — use requiredFields if provided
+  const detailsHTML = requiredFields 
+    ? buildAllFieldsLines(event, requiredFields)
+    : [['Event Date', 'event date'], ['Event Type', 'event type'], ['Venue', 'venue'],
+       ['Musicians', 'musicians'], ['Ensemble', 'ensemble'], ['Guest Count', 'guest count']]
+      .filter(([, k]) => event.details[k as string])
+      .map(([label, k]) => `<div class="detail-line"><strong>${label}:</strong> ${event.details[k as string]}</div>`)
+      .join('');
 
   // Build song sections — elegant style with vibes and simple song lines
   let sectionsHTML = '';
