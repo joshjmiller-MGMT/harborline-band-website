@@ -1,6 +1,6 @@
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { useTeamAuth } from "@/hooks/useTeamAuth";
-import { Music, Image, Calendar, FolderOpen, LogOut, FileText } from "lucide-react";
+import { Music, Image, Calendar, FolderOpen, LogOut, FileText, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo-text.png";
 
