@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,8 +63,8 @@ const TEMPLATE_FIELDS: Record<TemplateType, { label: string; key: string }[]> = 
     { label: "Attire", key: "attire" },
     { label: "Musician Food & Bev", key: "musician food & bev" },
     { label: "Audio Reinforcement", key: "audio reinforcement" },
-    { label: "Musicians' Salesperson", key: "musicians' salesperson" },
-    { label: "Coordinator", key: "coordinator or on-site point of contact" },
+    { label: "Project Lead", key: "project lead" },
+    { label: "Musician POS", key: "musician pos" },
   ],
   "client-planner": [
     { label: "Event Name", key: "event name" },
@@ -74,6 +74,8 @@ const TEMPLATE_FIELDS: Record<TemplateType, { label: string; key: string }[]> = 
     { label: "Musicians", key: "musicians" },
     { label: "Ensemble", key: "ensemble" },
     { label: "Guest Count", key: "guest count" },
+    { label: "Musician Salesperson", key: "musician salesperson" },
+    { label: "Coordinator", key: "coordinator" },
   ],
   "corporate-ros": [
     { label: "Event Name", key: "event name" },
@@ -91,6 +93,8 @@ const TEMPLATE_FIELDS: Record<TemplateType, { label: string; key: string }[]> = 
     { label: "Parking", key: "parking" },
     { label: "Attire", key: "attire" },
     { label: "Audio Reinforcement", key: "audio reinforcement" },
+    { label: "Project Lead", key: "project lead" },
+    { label: "Musician POS", key: "musician pos" },
   ],
   "party-runsheet": [
     { label: "Event Name", key: "event name" },
@@ -106,7 +110,8 @@ const TEMPLATE_FIELDS: Record<TemplateType, { label: string; key: string }[]> = 
     { label: "Soundcheck", key: "soundcheck" },
     { label: "Parking", key: "parking" },
     { label: "Entrance", key: "entrance" },
-    { label: "On Site POC", key: "on site poc" },
+    { label: "Project Lead", key: "project lead" },
+    { label: "Musician POS", key: "musician pos" },
     { label: "Green Room", key: "green room" },
     { label: "What to Wear", key: "what to wear" },
     { label: "Attire", key: "attire" },
@@ -114,6 +119,71 @@ const TEMPLATE_FIELDS: Record<TemplateType, { label: string; key: string }[]> = 
     { label: "Musician Food & Bev", key: "musician food & bev" },
     { label: "Audio Reinforcement", key: "audio reinforcement" },
   ],
+};
+
+const DETAIL_KEY_ALIASES: Record<string, string> = {
+  "musicians salesperson": "musician salesperson",
+  "musicians sales person": "musician salesperson",
+  "musician sales person": "musician salesperson",
+  salesperson: "musician salesperson",
+  "sales person": "musician salesperson",
+  "sales rep": "musician salesperson",
+  "coordinator or on-site point of contact": "coordinator",
+  "coordinator or on site point of contact": "coordinator",
+  "on-site point of contact": "coordinator",
+  "on site point of contact": "coordinator",
+  "event coordinator": "coordinator",
+  "day-of coordinator": "coordinator",
+  "day of coordinator": "coordinator",
+  "wedding coordinator": "coordinator",
+  "band project lead": "project lead",
+  "music project lead": "project lead",
+  "musician project lead": "project lead",
+  "on site poc": "musician pos",
+  "on-site poc": "musician pos",
+  onsite: "musician pos",
+  "musician p o s": "musician pos",
+  "musician poc": "musician pos",
+  "musician point of contact": "musician pos",
+  "musician on-site point of contact": "musician pos",
+  "musician on site point of contact": "musician pos",
+  "musician on-site poc": "musician pos",
+  "musician on site poc": "musician pos",
+  "musician onsite poc": "musician pos",
+  "musician point person": "musician pos",
+};
+
+const normalizeDetailKey = (rawKey: string): string => {
+  const cleaned = rawKey
+    .toLowerCase()
+    .replace(/[’']/g, "")
+    .replace(/[.]/g, " ")
+    .replace(/:$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (DETAIL_KEY_ALIASES[cleaned]) return DETAIL_KEY_ALIASES[cleaned];
+  if (cleaned.includes("musician") && (cleaned.includes("salesperson") || cleaned.includes("sales person") || cleaned.includes("sales rep"))) {
+    return "musician salesperson";
+  }
+  if (cleaned.includes("coordinator")) return "coordinator";
+  if (cleaned.includes("project") && cleaned.includes("lead")) return "project lead";
+  if (cleaned.includes("musician") && (cleaned.includes("pos") || cleaned.includes("poc") || cleaned.includes("point of contact") || cleaned.includes("point person"))) {
+    return "musician pos";
+  }
+
+  return cleaned;
+};
+
+const normalizeDetails = (details: Record<string, string>): Record<string, string> => {
+  return Object.entries(details).reduce<Record<string, string>>((acc, [key, value]) => {
+    const normalizedKey = normalizeDetailKey(key);
+    if (!value) return acc;
+    if (!acc[normalizedKey] || value.length > acc[normalizedKey].length) {
+      acc[normalizedKey] = value;
+    }
+    return acc;
+  }, {});
 };
 
 interface SheetData {
@@ -157,6 +227,7 @@ export default function RunOfShowGenerator() {
   const [logosBase64, setLogosBase64] = useState<{ circle: string; text: string } | null>(null);
   const [organization, setOrganization] = useState<OrgKey>("harborline");
   const [manualOverrides, setManualOverrides] = useState("");
+  const manualOverridesRef = useRef<HTMLTextAreaElement>(null);
 
   const currentLogoText = ORG_INFO[organization].logoText;
 
@@ -187,7 +258,7 @@ export default function RunOfShowGenerator() {
     for (const line of lines) {
       const colonIdx = line.indexOf(":");
       if (colonIdx > 0) {
-        const key = line.substring(0, colonIdx).trim().toLowerCase();
+        const key = normalizeDetailKey(line.substring(0, colonIdx).trim());
         const value = line.substring(colonIdx + 1).trim();
         if (key && value) {
           overrides[key] = value;
@@ -199,7 +270,7 @@ export default function RunOfShowGenerator() {
 
   // Get merged details (parsed + overrides)
   const getMergedDetails = (): Record<string, string> => {
-    const base = parsedData?.details || {};
+    const base = normalizeDetails(parsedData?.details || {});
     const overrides = parseManualOverrides();
     return { ...base, ...overrides };
   };
@@ -332,6 +403,37 @@ export default function RunOfShowGenerator() {
   const fieldStatus = getFieldStatus();
   const missingFields = fieldStatus.filter(f => !f.found);
   const foundFields = fieldStatus.filter(f => f.found);
+
+  const focusManualOverrides = () => {
+    window.requestAnimationFrame(() => {
+      const textarea = manualOverridesRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      const cursor = textarea.value.length;
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  };
+
+  const addManualEntry = () => {
+    setManualOverrides((prev) => {
+      const existingKeys = new Set(
+        prev
+          .split("\n")
+          .map((line) => line.split(":")[0]?.trim())
+          .filter(Boolean)
+          .map((key) => normalizeDetailKey(key)),
+      );
+
+      const linesToAdd = missingFields
+        .filter((field) => !existingKeys.has(field.key))
+        .map((field) => `${field.label}: `);
+
+      if (linesToAdd.length === 0) return prev;
+      return prev.trimEnd() ? `${prev.trimEnd()}\n${linesToAdd.join("\n")}` : linesToAdd.join("\n");
+    });
+
+    focusManualOverrides();
+  };
 
   return (
     <div className="container mx-auto px-6 py-10 max-w-4xl">
@@ -520,12 +622,12 @@ export default function RunOfShowGenerator() {
             <span className="text-primary">4.</span> Review Fields
           </CardTitle>
           <CardDescription>
-            Check which fields were found in the imported data. Missing fields will appear as blank lines in the exported document. Use the text box below to manually add missing data.
+            Check which fields were found in the imported data. Missing fields will export as blanks unless you add them with Manual entry below.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Field status report */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {fieldStatus.map((field) => (
               <div
                 key={field.key}
@@ -551,17 +653,23 @@ export default function RunOfShowGenerator() {
           </div>
 
           {/* Summary */}
-          <div className="flex items-center gap-2 text-xs pt-2 border-t border-border/50">
+          <div className="flex flex-col gap-3 pt-2 border-t border-border/50 sm:flex-row sm:items-center sm:justify-between">
             {missingFields.length === 0 ? (
-              <span className="text-primary flex items-center gap-1">
+              <span className="text-primary flex items-center gap-1 text-xs">
                 <CircleCheck className="w-3.5 h-3.5" />
                 All {fieldStatus.length} fields populated
               </span>
             ) : (
-              <span className="text-destructive flex items-center gap-1">
+              <span className="text-destructive flex items-center gap-1 text-xs">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 {missingFields.length} of {fieldStatus.length} fields missing — will appear as blank lines
               </span>
+            )}
+
+            {missingFields.length > 0 && (
+              <Button type="button" variant="outline" size="sm" onClick={addManualEntry}>
+                Manual entry
+              </Button>
             )}
           </div>
 
@@ -577,6 +685,7 @@ export default function RunOfShowGenerator() {
               )}
             </p>
             <Textarea
+              ref={manualOverridesRef}
               placeholder={`Event Name: Smith Wedding\nVenue: Baltimore Country Club\nEvent Date: April 24, 2026\nClient: John Smith`}
               value={manualOverrides}
               onChange={(e) => setManualOverrides(e.target.value)}
