@@ -9,17 +9,31 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { sheetData, template, format, logos } = await req.json();
+    const { sheetData, template, format, logos, overrides, requiredFields } = await req.json();
 
-    if (!sheetData || !template || !format) {
+    if (!template || !format) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const eventData = parseSheetToEvent(sheetData);
-    const html = generateHTML(eventData, logos, template);
+    const eventData = parseSheetToEvent(sheetData || { headers: [], rows: [], sheetTitle: 'Untitled' });
+    
+    // Merge manual overrides into parsed data
+    if (overrides && typeof overrides === 'object') {
+      for (const [key, value] of Object.entries(overrides)) {
+        if (typeof value === 'string' && value.trim()) {
+          eventData.details[key.toLowerCase()] = value.trim();
+          // Also set event name if overridden
+          if (key.toLowerCase() === 'event name') {
+            eventData.eventName = value.trim();
+          }
+        }
+      }
+    }
+
+    const html = generateHTML(eventData, logos, template, requiredFields);
 
     // Encode to base64 safely handling UTF-8 / special characters
     const encoder = new TextEncoder();
@@ -788,17 +802,48 @@ function findColumnIndex(allRows: string[][], keyword: string): number | null {
 
 // ─── HTML Generator ─────────────────────────────────────────────────────
 
-function generateHTML(event: EventData, logos?: { circle: string; text: string }, template?: string): string {
-  if (template === 'client-planner') return generateClientPlannerHTML(event, logos);
-  if (template === 'wedding-ros') return generateWeddingROSHTML(event, logos);
-  if (template === 'corporate-ros') return generateCorporateHTML(event, logos);
-  // party-runsheet uses the colorful internal style
-  return generateInternalHTML(event, logos);
+type RequiredField = { label: string; key: string };
+
+// Build detail HTML showing all required fields, with blanks for missing ones
+function buildAllFieldsHTML(event: EventData, requiredFields?: RequiredField[], cssClass = 'detail-group', labelClass = 'detail-label', valueClass = 'detail-value'): string {
+  if (!requiredFields || requiredFields.length === 0) {
+    // Fallback: just show what we have
+    return Object.entries(event.details)
+      .filter(([k]) => !k.startsWith('vibe:') && !k.startsWith('timing:'))
+      .map(([k, v]) => `<div class="${cssClass}"><div class="${labelClass}">${k.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</div><div class="${valueClass}">${v}</div></div>`)
+      .join('');
+  }
+  return requiredFields.map(f => {
+    const value = event.details[f.key] || '';
+    const display = value || '<span style="color:#ccc; letter-spacing:0.1em;">________</span>';
+    return `<div class="${cssClass}"><div class="${labelClass}">${f.label}</div><div class="${valueClass}">${display}</div></div>`;
+  }).join('');
 }
+
+// Simpler line-based version for clean templates
+function buildAllFieldsLines(event: EventData, requiredFields?: RequiredField[]): string {
+  if (!requiredFields || requiredFields.length === 0) {
+    return Object.entries(event.details)
+      .filter(([k]) => !k.startsWith('vibe:') && !k.startsWith('timing:'))
+      .map(([k, v]) => `<div class="detail-row"><strong>${k.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}:</strong> ${v}</div>`)
+      .join('');
+  }
+  return requiredFields.map(f => {
+    const value = event.details[f.key] || '';
+    const display = value || '<span style="color:#ccc; letter-spacing:0.1em;">________</span>';
+    return `<div class="detail-row"><strong>${f.label}:</strong> ${display}</div>`;
+  }).join('');
+}
+
+function generateHTML(event: EventData, logos?: { circle: string; text: string }, template?: string, requiredFields?: RequiredField[]): string {
+  if (template === 'client-planner') return generateClientPlannerHTML(event, logos, requiredFields);
+  if (template === 'wedding-ros') return generateWeddingROSHTML(event, logos, requiredFields);
+  if (template === 'corporate-ros') return generateCorporateHTML(event, logos, requiredFields);
+  return generateInternalHTML(event, logos, requiredFields);
 
 // ─── Client Planner (Elegant, client-facing) ────────────────────────────
 
-function generateClientPlannerHTML(event: EventData, logos?: { circle: string; text: string }): string {
+function generateClientPlannerHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
   const textLogo = logos?.text || '';
 
   const styles = `
@@ -827,15 +872,14 @@ function generateClientPlannerHTML(event: EventData, logos?: { circle: string; t
     @media print { body { padding: 0; } .page { padding: 30px 40px; } }
   `;
 
-  // Build event details section
-  const detailKeys: [string, string][] = [
-    ['Event Date', 'event date'], ['Event Type', 'event type'], ['Venue', 'venue'],
-    ['Musicians', 'musicians'], ['Ensemble', 'ensemble'], ['Guest Count', 'guest count'],
-  ];
-  const detailsHTML = detailKeys
-    .filter(([, k]) => event.details[k])
-    .map(([label, k]) => `<div class="detail-line"><strong>${label}:</strong> ${event.details[k]}</div>`)
-    .join('');
+  // Build event details section — use requiredFields if provided
+  const detailsHTML = requiredFields 
+    ? buildAllFieldsLines(event, requiredFields)
+    : [['Event Date', 'event date'], ['Event Type', 'event type'], ['Venue', 'venue'],
+       ['Musicians', 'musicians'], ['Ensemble', 'ensemble'], ['Guest Count', 'guest count']]
+      .filter(([, k]) => event.details[k as string])
+      .map(([label, k]) => `<div class="detail-line"><strong>${label}:</strong> ${event.details[k as string]}</div>`)
+      .join('');
 
   // Build song sections — elegant style with vibes and simple song lines
   let sectionsHTML = '';
@@ -909,7 +953,7 @@ function generateClientPlannerHTML(event: EventData, logos?: { circle: string; t
 
 // ─── Wedding Run of Show (Musician-facing, professional) ────────────────
 
-function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text: string }): string {
+function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
   const textLogo = logos?.text || '';
 
   const styles = `
@@ -928,29 +972,14 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
     .song-list { list-style: decimal; padding-left: 24px; margin: 8px 0; }
     .song-list li { font-size: 14px; color: #222; padding: 2px 0; }
     .moment-item { font-size: 14px; color: #222; padding: 3px 0 3px 20px; position: relative; }
-    .moment-item::before { content: '–'; position: absolute; left: 4px; color: #666; }
+    .moment-item::before { content: '\\2013'; position: absolute; left: 4px; color: #666; }
     .quote-text { font-size: 13px; color: #555; font-style: italic; margin: 6px 0 10px 8px; border-left: 2px solid #ddd; padding-left: 12px; }
     .personnel-block { font-size: 14px; color: #222; margin-bottom: 4px; }
     .footer { text-align: center; margin-top: 48px; padding-top: 16px; border-top: 1px solid #ccc; font-size: 11px; color: #999; letter-spacing: 0.06em; text-transform: uppercase; }
     @media print { body { padding: 0; } .page { padding: 30px 40px; } }
   `;
 
-  // Event details as bold-label lines
-  const allDetailKeys: [string, string][] = [
-    ['Event Date', 'event date'], ['Event Name', 'event name'], ['Setup Time', 'setup time'],
-    ['Start / End', 'start / end'], ['Client', 'client'], ['Event Type', 'event type'],
-    ['Venue', 'venue'], ['Venue Address', 'venue address'], ['Venue Type', 'venue type'],
-    ['Musicians', 'musicians'], ['Other Staff Members', 'other staff members'],
-    ['Guest Count', 'guest count'], ['Attire', 'attire'],
-    ['Musician Food & Bev', 'musician food & bev'], ['Audio Reinforcement', 'audio reinforcement'],
-    ["Musicians' Salesperson", "musicians' salesperson"],
-    ['Coordinator or On-Site Point of Contact', 'coordinator or on-site point of contact'],
-  ];
-
-  const detailsHTML = allDetailKeys
-    .filter(([, k]) => event.details[k])
-    .map(([label, k]) => `<div class="detail-row"><strong>${label}:</strong> ${event.details[k]}</div>`)
-    .join('');
+  const detailsHTML = buildAllFieldsLines(event, requiredFields);
 
   // Personnel
   let personnelHTML = '';
@@ -1034,7 +1063,7 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
 
 // ─── Corporate Event (Internal, teal-only, cleaner) ─────────────────────
 
-function generateCorporateHTML(event: EventData, logos?: { circle: string; text: string }): string {
+function generateCorporateHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
   const teal = '#14B8A6';
   const darkText = '#1a1a1a';
   const bodyText = '#333333';
@@ -1067,24 +1096,7 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
     @media print { body { padding: 0; } .page { padding: 30px 40px; } }
   `;
 
-  const detailDisplayOrder = [
-    ['Event Type', 'event type'], ['Venue', 'venue'], ['Venue Address', 'venue address'],
-    ['Event Date', 'event date'], ['Client', 'client'], ['Organization', 'organization'],
-    ['Guest Count', 'guest count'], ['Setup Time', 'setup time'], ['Start / End', 'start / end'],
-    ['Load-in Time', 'load-in time'], ['Soundcheck', 'soundcheck'], ['Parking', 'parking'],
-    ['Entrance', 'entrance'], ['On Site POC', 'on site poc'], ['Green Room', 'green room'],
-    ['What to Wear', 'what to wear'], ['Attire', 'attire'], ['Posting', 'posting'],
-    ['Musician Food & Bev', 'musician food & bev'], ['Audio Reinforcement', 'audio reinforcement'],
-  ];
-
-  const detailsHTML = detailDisplayOrder
-    .filter(([, key]) => event.details[key])
-    .map(([label, key]) => `
-      <div class="detail-group">
-        <div class="detail-label">${label}</div>
-        <div class="detail-value">${event.details[key]}</div>
-      </div>
-    `).join('');
+  const detailsHTML = buildAllFieldsHTML(event, requiredFields, 'detail-group', 'detail-label', 'detail-value');
 
   let personnelHTML = '';
   if (event.personnel.length > 0) {
@@ -1188,7 +1200,7 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
 
 // ─── Internal Template (Party Run Sheet) ────────────────────────────────
 
-function generateInternalHTML(event: EventData, logos?: { circle: string; text: string }): string {
+function generateInternalHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
   const purple = '#7C3AED';
   const teal = '#14B8A6';
   const darkText = '#1a1a1a';
@@ -1234,27 +1246,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
 
   const circlesHTML = circleColors.map(c => `<div class="circle" style="background-color: ${c};"></div>`).join('');
 
-  const detailDisplayOrder = [
-    ['Event Type', 'event type'], ['Venue', 'venue'], ['Venue Address', 'venue address'],
-    ['Event Date', 'event date'], ['Client', 'client'], ['Organization', 'organization'],
-    ['Guest Count', 'guest count'], ['Setup Time', 'setup time'], ['Start / End', 'start / end'],
-    ['Load-in Time', 'load-in time'], ['Soundcheck', 'soundcheck'], ['Parking', 'parking'],
-    ['Entrance', 'entrance'], ['On Site POC', 'on site poc'], ['Green Room', 'green room'],
-    ['What to Wear', 'what to wear'], ['Attire', 'attire'], ['Posting', 'posting'],
-    ['Musician Food & Bev', 'musician food & bev'], ['Musician Refreshments', 'musician refreshments'],
-    ['Audio Reinforcement', 'audio reinforcement'], ['Venue Type', 'venue type'],
-    ["Musicians' Salesperson", "musicians' salesperson"],
-    ['Coordinator', 'coordinator or on-site point of contact'],
-  ];
-
-  const detailsHTML = detailDisplayOrder
-    .filter(([, key]) => event.details[key])
-    .map(([label, key]) => `
-      <div class="detail-group">
-        <div class="detail-label">${label}</div>
-        <div class="detail-value">${event.details[key]}</div>
-      </div>
-    `).join('');
+  const detailsHTML = buildAllFieldsHTML(event, requiredFields, 'detail-group', 'detail-label', 'detail-value');
 
   let personnelHTML = '';
   if (event.personnel.length > 0) {
