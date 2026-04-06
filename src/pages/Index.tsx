@@ -54,11 +54,7 @@ const organizationSchema = {
     "bestRating": "5",
     "worstRating": "1"
   },
-  "award": [
-    "The Knot Best of Weddings 2024",
-    "WeddingWire Couples' Choice Award",
-    "Baltimore Magazine Best Live Band"
-  ]
+  "knowsAbout": ["Wedding Music", "Corporate Entertainment", "Live Events"]
 };
 
 const localBusinessSchema = {
@@ -146,13 +142,13 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Helmet>
         <title>Harborline | Baltimore's Premier Event & Corporate Band</title>
-        <meta name="description" content="Award-winning live entertainment for weddings, galas, corporate events, and private celebrations in Baltimore, Maryland, Washington DC, and the Mid-Atlantic region." />
+        <meta name="description" content="Top-rated live entertainment for weddings, galas, corporate events, and private celebrations in Baltimore, Maryland, Washington DC, and the Mid-Atlantic region." />
         <meta name="keywords" content="Baltimore wedding band, corporate event band, live music Baltimore, wedding entertainment Maryland, jazz band Baltimore, gala entertainment, party band DC" />
         <link rel="canonical" href="https://harborlinemusic.com" />
         
         {/* Open Graph */}
         <meta property="og:title" content="Harborline | Baltimore's Premier Event Band" />
-        <meta property="og:description" content="Award-winning live entertainment for weddings, galas, and corporate events in Baltimore and the Mid-Atlantic." />
+        <meta property="og:description" content="Top-rated live entertainment for weddings, galas, and corporate events in Baltimore and the Mid-Atlantic." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://harborlinemusic.com" />
         <meta property="og:image" content="https://harborlinemusic.com/og-image.jpg" />
@@ -162,7 +158,7 @@ const Index = () => {
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Harborline | Baltimore Event Band" />
-        <meta name="twitter:description" content="Award-winning live entertainment for weddings, galas, and corporate events." />
+        <meta name="twitter:description" content="Top-rated live entertainment for weddings, galas, and corporate events." />
         <meta name="twitter:image" content="https://harborlinemusic.com/og-image.jpg" />
         
         {/* Additional SEO Meta */}

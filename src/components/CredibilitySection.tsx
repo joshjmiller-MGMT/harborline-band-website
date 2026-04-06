@@ -56,7 +56,7 @@ const CredibilitySection = () => {
             WHY CLIENTS CHOOSE US
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Award-winning entertainment trusted by Fortune 500 companies, luxury venues, and discerning clients throughout the Mid-Atlantic.
+            Top-rated entertainment trusted by Fortune 500 companies, luxury venues, and discerning clients throughout the Mid-Atlantic.
           </p>
         </motion.div>
 
