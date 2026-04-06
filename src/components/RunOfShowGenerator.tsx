@@ -376,7 +376,30 @@ export default function RunOfShowGenerator() {
         </CardContent>
       </Card>
 
-      {/* Step 3: Export */}
+      {/* Step 2.5: Organization / Brand */}
+      <Card className="mb-6 bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
+            <span className="text-primary">3.</span> Organization
+          </CardTitle>
+          <CardDescription>
+            Choose which brand logo appears on the generated document.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select value={organization} onValueChange={(v) => setOrganization(v as OrgKey)}>
+            <SelectTrigger className="w-full bg-secondary/50 border-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.entries(ORG_INFO) as [OrgKey, { name: string }][]).map(([key, info]) => (
+                <SelectItem key={key} value={key}>{info.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
