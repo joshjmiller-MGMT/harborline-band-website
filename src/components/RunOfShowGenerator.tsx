@@ -3,10 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import logoCircle from "@/assets/logo-circle.png";
-import logoText from "@/assets/logo-text-dark.png";
+import logoTextHarborline from "@/assets/logo-text-dark.png";
+import logoTextBSE from "@/assets/logo-bse-dark.png";
+import logoTextTSB from "@/assets/logo-tsb-dark.png";
+
+type OrgKey = "harborline" | "bse" | "tsb";
+
+const ORG_INFO: Record<OrgKey, { name: string; logoText: string }> = {
+  harborline: { name: "Harborline", logoText: logoTextHarborline },
+  bse: { name: "Baltimore Sound Entertainment", logoText: logoTextBSE },
+  tsb: { name: "Tom Starr Band", logoText: logoTextTSB },
+};
 
 type TemplateType = "wedding-ros" | "client-planner" | "corporate-ros" | "party-runsheet";
 
