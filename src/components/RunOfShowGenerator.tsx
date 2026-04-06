@@ -3,10 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import logoCircle from "@/assets/logo-circle.png";
-import logoText from "@/assets/logo-text-dark.png";
+import logoTextHarborline from "@/assets/logo-text-dark.png";
+import logoTextBSE from "@/assets/logo-bse-dark.png";
+import logoTextTSB from "@/assets/logo-tsb-dark.png";
+
+type OrgKey = "harborline" | "bse" | "tsb";
+
+const ORG_INFO: Record<OrgKey, { name: string; logoText: string }> = {
+  harborline: { name: "Harborline", logoText: logoTextHarborline },
+  bse: { name: "Baltimore Sound Entertainment", logoText: logoTextBSE },
+  tsb: { name: "Tom Starr Band", logoText: logoTextTSB },
+};
 
 type TemplateType = "wedding-ros" | "client-planner" | "corporate-ros" | "party-runsheet";
 
@@ -73,11 +84,15 @@ export default function RunOfShowGenerator() {
   const [sourceType, setSourceType] = useState<string>("");
   const [logosBase64, setLogosBase64] = useState<{ circle: string; text: string } | null>(null);
 
+  const [organization, setOrganization] = useState<OrgKey>("harborline");
+
+  const currentLogoText = ORG_INFO[organization].logoText;
+
   useEffect(() => {
-    Promise.all([imageToBase64(logoCircle), imageToBase64(logoText)])
+    Promise.all([imageToBase64(logoCircle), imageToBase64(currentLogoText)])
       .then(([circle, text]) => setLogosBase64({ circle, text }))
       .catch(() => console.warn("Failed to preload logos"));
-  }, []);
+  }, [currentLogoText]);
 
   const detectUrlType = (url: string): string => {
     if (url.includes('docs.google.com/spreadsheets')) return 'Google Sheet';
@@ -361,11 +376,34 @@ export default function RunOfShowGenerator() {
         </CardContent>
       </Card>
 
-      {/* Step 3: Export */}
+      {/* Step 2.5: Organization / Brand */}
+      <Card className="mb-6 bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
+            <span className="text-primary">3.</span> Organization
+          </CardTitle>
+          <CardDescription>
+            Choose which brand logo appears on the generated document.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select value={organization} onValueChange={(v) => setOrganization(v as OrgKey)}>
+            <SelectTrigger className="w-full bg-secondary/50 border-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.entries(ORG_INFO) as [OrgKey, { name: string }][]).map(([key, info]) => (
+                <SelectItem key={key} value={key}>{info.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
-            <span className="text-primary">3.</span> Export Document
+            <span className="text-primary">4.</span> Export Document
           </CardTitle>
         </CardHeader>
         <CardContent>
