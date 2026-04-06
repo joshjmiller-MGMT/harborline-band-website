@@ -1096,24 +1096,7 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
     @media print { body { padding: 0; } .page { padding: 30px 40px; } }
   `;
 
-  const detailDisplayOrder = [
-    ['Event Type', 'event type'], ['Venue', 'venue'], ['Venue Address', 'venue address'],
-    ['Event Date', 'event date'], ['Client', 'client'], ['Organization', 'organization'],
-    ['Guest Count', 'guest count'], ['Setup Time', 'setup time'], ['Start / End', 'start / end'],
-    ['Load-in Time', 'load-in time'], ['Soundcheck', 'soundcheck'], ['Parking', 'parking'],
-    ['Entrance', 'entrance'], ['On Site POC', 'on site poc'], ['Green Room', 'green room'],
-    ['What to Wear', 'what to wear'], ['Attire', 'attire'], ['Posting', 'posting'],
-    ['Musician Food & Bev', 'musician food & bev'], ['Audio Reinforcement', 'audio reinforcement'],
-  ];
-
-  const detailsHTML = detailDisplayOrder
-    .filter(([, key]) => event.details[key])
-    .map(([label, key]) => `
-      <div class="detail-group">
-        <div class="detail-label">${label}</div>
-        <div class="detail-value">${event.details[key]}</div>
-      </div>
-    `).join('');
+  const detailsHTML = buildAllFieldsHTML(event, requiredFields, 'detail-group', 'detail-label', 'detail-value');
 
   let personnelHTML = '';
   if (event.personnel.length > 0) {
