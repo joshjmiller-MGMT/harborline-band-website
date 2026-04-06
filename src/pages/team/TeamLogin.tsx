@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, Link } from "react-router-dom";
 import { useTeamAuth } from "@/hooks/useTeamAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lock } from "lucide-react";
+import { Lock, Home } from "lucide-react";
 import logo from "@/assets/logo-circle.png";
 
 export default function TeamLogin() {
@@ -31,7 +31,10 @@ export default function TeamLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+      <Link to="/" className="absolute top-6 left-6 text-muted-foreground hover:text-foreground transition-colors" title="Back to website">
+        <Home className="w-5 h-5" />
+      </Link>
       <Card className="w-full max-w-sm border-border bg-card">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
