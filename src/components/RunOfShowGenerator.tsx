@@ -142,8 +142,6 @@ const DETAIL_KEY_ALIASES: Record<string, string> = {
   "on site poc": "musician pos",
   "on-site poc": "musician pos",
   onsite: "musician pos",
-  "on site point of contact": "musician pos",
-  "on-site point of contact": "musician pos",
   "musician p o s": "musician pos",
   "musician poc": "musician pos",
   "musician point of contact": "musician pos",
