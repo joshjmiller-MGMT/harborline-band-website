@@ -744,7 +744,241 @@ function findColumnIndex(allRows: string[][], keyword: string): number | null {
 
 // ─── HTML Generator ─────────────────────────────────────────────────────
 
-function generateHTML(event: EventData, logos?: { circle: string; text: string }): string {
+function generateHTML(event: EventData, logos?: { circle: string; text: string }, template?: string): string {
+  if (template === 'client-planner') return generateClientPlannerHTML(event, logos);
+  if (template === 'wedding-ros') return generateWeddingROSHTML(event, logos);
+  // party-runsheet and corporate-ros use the internal style
+  return generateInternalHTML(event, logos);
+}
+
+// ─── Client Planner (Elegant, client-facing) ────────────────────────────
+
+function generateClientPlannerHTML(event: EventData, logos?: { circle: string; text: string }): string {
+  const textLogo = logos?.text || '';
+
+  const styles = `
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: white; color: #333; line-height: 1.8; font-size: 14px; }
+    .page { max-width: 680px; margin: 0 auto; padding: 60px 50px; }
+    .header { text-align: center; margin-bottom: 40px; }
+    .brand-text { max-width: 220px; height: auto; margin: 0 auto 24px; display: block; }
+    .intro-text { font-size: 14px; color: #444; line-height: 1.9; margin-bottom: 24px; font-style: italic; }
+    .divider { border: none; border-top: 1px solid #ccc; margin: 28px 0; }
+    .doc-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: #1a1a1a; text-align: center; margin-bottom: 8px; letter-spacing: 0.02em; }
+    .doc-subtitle { font-size: 13px; color: #888; text-align: center; margin-bottom: 24px; }
+    .section-heading { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 500; color: #1a1a1a; margin-top: 32px; margin-bottom: 4px; }
+    .section-timing { font-size: 12px; color: #888; margin-bottom: 6px; font-style: italic; }
+    .section-vibe { font-size: 13px; color: #666; margin-bottom: 12px; }
+    .section-vibe strong { color: #444; }
+    .song-line { font-size: 14px; color: #333; padding: 3px 0 3px 16px; position: relative; }
+    .song-line::before { content: ''; position: absolute; left: 0; top: 12px; width: 5px; height: 5px; border-radius: 50%; background: #bbb; }
+    .moment-line { font-size: 14px; color: #333; padding: 3px 0 3px 20px; position: relative; }
+    .moment-line::before { content: '–'; position: absolute; left: 4px; color: #999; }
+    .note-text { font-size: 13px; color: #666; font-style: italic; margin: 8px 0 8px 16px; }
+    .detail-line { font-size: 14px; color: #333; margin-bottom: 4px; }
+    .detail-line strong { color: #1a1a1a; }
+    .footer { text-align: center; margin-top: 48px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 11px; color: #aaa; letter-spacing: 0.08em; text-transform: uppercase; }
+    @media print { body { padding: 0; } .page { padding: 30px 40px; } }
+  `;
+
+  // Build event details section
+  const detailKeys: [string, string][] = [
+    ['Event Date', 'event date'], ['Event Type', 'event type'], ['Venue', 'venue'],
+    ['Musicians', 'musicians'], ['Ensemble', 'ensemble'], ['Guest Count', 'guest count'],
+  ];
+  const detailsHTML = detailKeys
+    .filter(([, k]) => event.details[k])
+    .map(([label, k]) => `<div class="detail-line"><strong>${label}:</strong> ${event.details[k]}</div>`)
+    .join('');
+
+  // Build song sections — elegant style with vibes and simple song lines
+  let sectionsHTML = '';
+  for (const section of event.songSections) {
+    sectionsHTML += `<div class="section-heading">${section.title}</div>`;
+    if (section.time) {
+      sectionsHTML += `<div class="section-timing">${section.time}</div>`;
+    }
+    sectionsHTML += `<hr class="divider" />`;
+
+    for (const song of section.songs) {
+      if (song.notes && !song.title.includes('–') && !song.artist) {
+        // This might be a "moment" like "Bride Entrance"
+        sectionsHTML += `<div class="moment-line">${song.title}${song.notes ? ' — ' + song.notes : ''}</div>`;
+      } else {
+        const artistPart = song.artist ? ` – ${song.artist}` : '';
+        sectionsHTML += `<div class="song-line">${song.title}${artistPart}</div>`;
+      }
+    }
+  }
+
+  // Build timeline if present
+  let timelineHTML = '';
+  if (event.timeline.length > 0) {
+    timelineHTML = `<div class="section-heading">Timeline</div><hr class="divider" />`;
+    for (const t of event.timeline) {
+      timelineHTML += `<div class="song-line"><strong>${t.time}</strong> — ${t.description}</div>`;
+    }
+  }
+
+  const eventName = event.eventName || 'Wedding Ceremony Planner';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${eventName}</title>
+  <style>${styles}</style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      ${textLogo ? `<img src="${textLogo}" alt="Logo" class="brand-text" />` : ''}
+    </div>
+
+    <div class="doc-title">${eventName}</div>
+    ${detailsHTML ? `<div style="margin: 16px 0 8px;">${detailsHTML}</div>` : ''}
+
+    <hr class="divider" />
+
+    ${timelineHTML}
+    ${sectionsHTML}
+
+    <div class="footer">Thank you for choosing us for your special day</div>
+  </div>
+</body>
+</html>`;
+}
+
+// ─── Wedding Run of Show (Musician-facing, professional) ────────────────
+
+function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text: string }): string {
+  const textLogo = logos?.text || '';
+
+  const styles = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: white; color: #222; line-height: 1.7; font-size: 14px; }
+    .page { max-width: 720px; margin: 0 auto; padding: 50px 55px; }
+    .header { text-align: center; margin-bottom: 32px; }
+    .brand-text { max-width: 240px; height: auto; margin: 0 auto 20px; display: block; }
+    .divider { border: none; border-top: 1.5px solid #222; margin: 20px 0; }
+    .divider-light { border: none; border-top: 1px solid #ccc; margin: 16px 0; }
+    .detail-row { font-size: 14px; color: #222; margin-bottom: 5px; line-height: 1.6; }
+    .detail-row strong { font-weight: 600; }
+    .section-title { font-size: 18px; font-weight: 700; color: #222; margin-top: 32px; margin-bottom: 6px; }
+    .section-subtitle { font-size: 13px; color: #666; font-style: italic; margin-bottom: 10px; }
+    .song-list { list-style: decimal; padding-left: 24px; margin: 8px 0; }
+    .song-list li { font-size: 14px; color: #222; padding: 2px 0; }
+    .moment-item { font-size: 14px; color: #222; padding: 3px 0 3px 20px; position: relative; }
+    .moment-item::before { content: '–'; position: absolute; left: 4px; color: #666; }
+    .quote-text { font-size: 13px; color: #555; font-style: italic; margin: 6px 0 10px 8px; border-left: 2px solid #ddd; padding-left: 12px; }
+    .personnel-block { font-size: 14px; color: #222; margin-bottom: 4px; }
+    .footer { text-align: center; margin-top: 48px; padding-top: 16px; border-top: 1px solid #ccc; font-size: 11px; color: #999; letter-spacing: 0.06em; text-transform: uppercase; }
+    @media print { body { padding: 0; } .page { padding: 30px 40px; } }
+  `;
+
+  // Event details as bold-label lines
+  const allDetailKeys: [string, string][] = [
+    ['Event Date', 'event date'], ['Event Name', 'event name'], ['Setup Time', 'setup time'],
+    ['Start / End', 'start / end'], ['Client', 'client'], ['Event Type', 'event type'],
+    ['Venue', 'venue'], ['Venue Address', 'venue address'], ['Venue Type', 'venue type'],
+    ['Musicians', 'musicians'], ['Other Staff Members', 'other staff members'],
+    ['Guest Count', 'guest count'], ['Attire', 'attire'],
+    ['Musician Food & Bev', 'musician food & bev'], ['Audio Reinforcement', 'audio reinforcement'],
+    ["Musicians' Salesperson", "musicians' salesperson"],
+    ['Coordinator or On-Site Point of Contact', 'coordinator or on-site point of contact'],
+  ];
+
+  const detailsHTML = allDetailKeys
+    .filter(([, k]) => event.details[k])
+    .map(([label, k]) => `<div class="detail-row"><strong>${label}:</strong> ${event.details[k]}</div>`)
+    .join('');
+
+  // Personnel
+  let personnelHTML = '';
+  if (event.personnel.length > 0) {
+    personnelHTML = event.personnel
+      .map(p => `<div class="personnel-block"><strong>${p.role}:</strong> ${p.name}</div>`)
+      .join('');
+  }
+
+  // Song sections as numbered lists with dividers
+  let sectionsHTML = '';
+  for (const section of event.songSections) {
+    sectionsHTML += `<div class="section-title">${section.title}</div>`;
+    if (section.time) {
+      sectionsHTML += `<div class="section-subtitle">${section.time}</div>`;
+    }
+    sectionsHTML += `<hr class="divider-light" />`;
+
+    // Check if songs have processional-style moments (no artist, short titles with context)
+    const hasMoments = section.songs.some(s => !s.artist && (s.notes || '').length > 0);
+
+    if (hasMoments) {
+      for (const song of section.songs) {
+        if (song.artist) {
+          sectionsHTML += `<div class="moment-item">${song.title} – ${song.artist}</div>`;
+        } else {
+          sectionsHTML += `<div class="moment-item">${song.title}${song.notes ? ' (' + song.notes + ')' : ''}</div>`;
+        }
+      }
+    } else {
+      sectionsHTML += `<ol class="song-list">`;
+      for (const song of section.songs) {
+        const artistPart = song.artist ? ` – ${song.artist}` : '';
+        sectionsHTML += `<li>${song.title}${artistPart}</li>`;
+      }
+      sectionsHTML += `</ol>`;
+    }
+  }
+
+  // Timeline
+  let timelineHTML = '';
+  if (event.timeline.length > 0) {
+    timelineHTML = `<div class="section-title">Timeline</div><hr class="divider-light" />`;
+    for (const t of event.timeline) {
+      timelineHTML += `<div class="detail-row"><strong>${t.time}</strong> — ${t.description}</div>`;
+    }
+  }
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${event.eventName} - Run of Show</title>
+  <style>${styles}</style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      ${textLogo ? `<img src="${textLogo}" alt="Logo" class="brand-text" />` : ''}
+    </div>
+
+    <hr class="divider" />
+
+    ${detailsHTML}
+
+    ${personnelHTML ? `<div style="margin-top: 12px;">${personnelHTML}</div>` : ''}
+
+    <hr class="divider" />
+
+    <div class="section-title">Run of Show</div>
+
+    ${timelineHTML}
+    ${sectionsHTML}
+
+    <div class="footer">Confidential — For musician use only</div>
+  </div>
+</body>
+</html>`;
+}
+
+// ─── Internal Templates (Party Run Sheet / Corporate) ───────────────────
+
+function generateInternalHTML(event: EventData, logos?: { circle: string; text: string }): string {
   const purple = '#7C3AED';
   const teal = '#14B8A6';
   const darkText = '#1a1a1a';
@@ -752,7 +986,6 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
   const mutedText = '#666666';
 
   const circleColors = ['#14B8A6', '#0EA5E9', '#6366F1', '#7C3AED', '#A855F7', '#3B82F6'];
-  const circleLogo = logos?.circle || '';
   const textLogo = logos?.text || '';
 
   const styles = `
@@ -763,7 +996,6 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
     .header { text-align: center; margin-bottom: 48px; }
     .circles { display: flex; justify-content: center; gap: 10px; margin-bottom: 16px; }
     .circle { width: 28px; height: 28px; border-radius: 50%; }
-    .brand-circle { width: 80px; height: 80px; margin: 0 auto 8px; display: block; border-radius: 50%; }
     .brand-text { max-width: 280px; height: auto; margin: 0 auto; display: block; }
     .event-title { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 0.06em; color: ${purple}; margin-top: 28px; text-align: center; }
     .event-meta { font-size: 14px; color: ${bodyText}; margin-top: 6px; line-height: 1.8; text-align: center; }
@@ -772,11 +1004,11 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
     .detail-group { margin-bottom: 14px; }
     .detail-label { font-weight: 700; color: ${darkText}; font-size: 14px; margin-bottom: 2px; }
     .detail-value { color: ${bodyText}; font-size: 14px; padding-left: 24px; position: relative; }
-    .detail-value::before { content: '●'; position: absolute; left: 4px; color: ${bodyText}; font-size: 8px; top: 4px; }
+    .detail-value::before { content: '\\25CF'; position: absolute; left: 4px; color: ${bodyText}; font-size: 8px; top: 4px; }
     .personnel-text { font-size: 14px; color: ${bodyText}; line-height: 1.8; }
     .timeline-list { list-style: none; padding: 0; }
     .timeline-item { padding: 4px 0; padding-left: 24px; position: relative; font-size: 14px; }
-    .timeline-item::before { content: '●'; position: absolute; left: 4px; color: ${bodyText}; font-size: 8px; top: 8px; }
+    .timeline-item::before { content: '\\25CF'; position: absolute; left: 4px; color: ${bodyText}; font-size: 8px; top: 8px; }
     .timeline-time { font-weight: 600; }
     .set-title { font-weight: 700; font-size: 16px; color: ${darkText}; margin-top: 24px; margin-bottom: 10px; }
     .song-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
@@ -793,28 +1025,14 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
   const circlesHTML = circleColors.map(c => `<div class="circle" style="background-color: ${c};"></div>`).join('');
 
   const detailDisplayOrder = [
-    ['Event Type', 'event type'],
-    ['Venue', 'venue'],
-    ['Venue Address', 'venue address'],
-    ['Event Date', 'event date'],
-    ['Client', 'client'],
-    ['Organization', 'organization'],
-    ['Guest Count', 'guest count'],
-    ['Setup Time', 'setup time'],
-    ['Start / End', 'start / end'],
-    ['Load-in Time', 'load-in time'],
-    ['Soundcheck', 'soundcheck'],
-    ['Parking', 'parking'],
-    ['Entrance', 'entrance'],
-    ['On Site POC', 'on site poc'],
-    ['Green Room', 'green room'],
-    ['What to Wear', 'what to wear'],
-    ['Attire', 'attire'],
-    ['Posting', 'posting'],
-    ['Musician Food & Bev', 'musician food & bev'],
-    ['Musician Refreshments', 'musician refreshments'],
-    ['Audio Reinforcement', 'audio reinforcement'],
-    ['Venue Type', 'venue type'],
+    ['Event Type', 'event type'], ['Venue', 'venue'], ['Venue Address', 'venue address'],
+    ['Event Date', 'event date'], ['Client', 'client'], ['Organization', 'organization'],
+    ['Guest Count', 'guest count'], ['Setup Time', 'setup time'], ['Start / End', 'start / end'],
+    ['Load-in Time', 'load-in time'], ['Soundcheck', 'soundcheck'], ['Parking', 'parking'],
+    ['Entrance', 'entrance'], ['On Site POC', 'on site poc'], ['Green Room', 'green room'],
+    ['What to Wear', 'what to wear'], ['Attire', 'attire'], ['Posting', 'posting'],
+    ['Musician Food & Bev', 'musician food & bev'], ['Musician Refreshments', 'musician refreshments'],
+    ['Audio Reinforcement', 'audio reinforcement'], ['Venue Type', 'venue type'],
     ["Musicians' Salesperson", "musicians' salesperson"],
     ['Coordinator', 'coordinator or on-site point of contact'],
   ];
@@ -840,7 +1058,7 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
 
   let timelineHTML = '';
   if (event.timeline.length > 0) {
-    const items = event.timeline.map(t => 
+    const items = event.timeline.map(t =>
       `<li class="timeline-item"><span class="timeline-time">${t.time}</span> : ${t.description}</li>`
     ).join('');
     timelineHTML = `
@@ -852,7 +1070,6 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
 
   let songlistHTML = '';
   if (event.songSections.length > 0) {
-    // Determine which optional columns have data
     const allSongs = event.songSections.flatMap(s => s.songs);
     const hasKey = allSongs.some(s => s.key);
     const hasBpm = allSongs.some(s => s.bpm);
@@ -861,7 +1078,7 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
 
     const sectionsHTML = event.songSections.map(section => {
       const songRows = section.songs.map(s => {
-        const reqStar = s.request ? '<span class="request-star">★</span>' : '';
+        const reqStar = s.request ? '<span class="request-star">&#9733;</span>' : '';
         return `<tr>
           <td style="width:36px; text-align:center;">${s.order || ''}</td>
           <td style="width:24px; text-align:center;">${reqStar}</td>
@@ -875,7 +1092,7 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
       }).join('');
 
       return `
-        <div class="set-title">${section.time ? section.time + ' — ' : ''}${section.title}</div>
+        <div class="set-title">${section.time ? section.time + ' \\u2014 ' : ''}${section.title}</div>
         <table class="song-table">
           <thead>
             <tr>
@@ -917,7 +1134,7 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
   <div class="page">
     <div class="header">
       <div class="circles">${circlesHTML}</div>
-      ${textLogo ? `<img src="${textLogo}" alt="Harborline" class="brand-text" />` : ''}
+      ${textLogo ? `<img src="${textLogo}" alt="Logo" class="brand-text" />` : ''}
     </div>
 
     <div class="event-title">${event.eventName}</div>
@@ -938,7 +1155,7 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
     ${songlistHTML}
 
     <div class="footer">
-      HARBORLINE &nbsp;·&nbsp; Baltimore's Go-To Live Band &nbsp;·&nbsp; harborlineband.com
+      HARBORLINE &nbsp;\\u00B7&nbsp; Baltimore's Go-To Live Band &nbsp;\\u00B7&nbsp; harborlineband.com
     </div>
   </div>
 </body>
