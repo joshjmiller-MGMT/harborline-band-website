@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
     }
 
     const eventData = parseSheetToEvent(sheetData);
-    const html = generateHTML(eventData, logos);
+    const html = generateHTML(eventData, logos, template);
 
     // Encode to base64 safely handling UTF-8 / special characters
     const encoder = new TextEncoder();
