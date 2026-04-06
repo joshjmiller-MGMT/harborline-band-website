@@ -840,17 +840,28 @@ function generateClientPlannerHTML(event: EventData, logos?: { circle: string; t
   let sectionsHTML = '';
   for (const section of event.songSections) {
     sectionsHTML += `<div class="section-heading">${section.title}</div>`;
+
+    // Look for timing/vibe data stored in details
+    const sectionKey = section.title.replace(/\s*[–-]\s*\d.*$/, '').trim().toLowerCase();
+    const timingNote = Object.entries(event.details).find(([k]) => k.startsWith('timing:') && k.includes(sectionKey));
+    const vibeNote = Object.entries(event.details).find(([k]) => k.startsWith('vibe:') && k.includes(sectionKey));
+
+    if (timingNote) {
+      sectionsHTML += `<div class="section-timing">${timingNote[1]}</div>`;
+    }
     if (section.time) {
       sectionsHTML += `<div class="section-timing">${section.time}</div>`;
+    }
+    if (vibeNote) {
+      sectionsHTML += `<div class="section-vibe"><strong>Vibe:</strong> ${vibeNote[1]}</div>`;
     }
     sectionsHTML += `<hr class="divider" />`;
 
     for (const song of section.songs) {
-      if (song.notes && !song.title.includes('–') && !song.artist) {
-        // This might be a "moment" like "Bride Entrance"
-        sectionsHTML += `<div class="moment-line">${song.title}${song.notes ? ' — ' + song.notes : ''}</div>`;
+      if (song.notes && !song.title.includes('\u2013') && !song.artist) {
+        sectionsHTML += `<div class="moment-line">${song.title}${song.notes ? ' \u2014 ' + song.notes : ''}</div>`;
       } else {
-        const artistPart = song.artist ? ` – ${song.artist}` : '';
+        const artistPart = song.artist ? ` \u2013 ${song.artist}` : '';
         sectionsHTML += `<div class="song-line">${song.title}${artistPart}</div>`;
       }
     }
