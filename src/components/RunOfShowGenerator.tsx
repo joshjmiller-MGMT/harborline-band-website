@@ -403,7 +403,7 @@ export default function RunOfShowGenerator() {
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
-            <span className="text-primary">3.</span> Export Document
+            <span className="text-primary">4.</span> Export Document
           </CardTitle>
         </CardHeader>
         <CardContent>
