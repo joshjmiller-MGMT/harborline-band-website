@@ -84,11 +84,15 @@ export default function RunOfShowGenerator() {
   const [sourceType, setSourceType] = useState<string>("");
   const [logosBase64, setLogosBase64] = useState<{ circle: string; text: string } | null>(null);
 
+  const [organization, setOrganization] = useState<OrgKey>("harborline");
+
+  const currentLogoText = ORG_INFO[organization].logoText;
+
   useEffect(() => {
-    Promise.all([imageToBase64(logoCircle), imageToBase64(logoText)])
+    Promise.all([imageToBase64(logoCircle), imageToBase64(currentLogoText)])
       .then(([circle, text]) => setLogosBase64({ circle, text }))
       .catch(() => console.warn("Failed to preload logos"));
-  }, []);
+  }, [currentLogoText]);
 
   const detectUrlType = (url: string): string => {
     if (url.includes('docs.google.com/spreadsheets')) return 'Google Sheet';
