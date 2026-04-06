@@ -176,6 +176,13 @@ function parseSheetToEvent(sheetData: any): EventData {
     if (details['city/state/zip']) addr += ', ' + details['city/state/zip'];
     details['venue address'] = addr;
   }
+  // Normalize salesperson aliases
+  if (!details["musicians' salesperson"] && details["musicians salesperson"]) {
+    details["musicians' salesperson"] = details["musicians salesperson"];
+  }
+  if (!details["musicians' salesperson"] && details["salesperson"]) {
+    details["musicians' salesperson"] = details["salesperson"];
+  }
   
   const timeline: { time: string; description: string }[] = [];
 
