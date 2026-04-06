@@ -840,7 +840,10 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
   if (template === 'wedding-ros') return generateWeddingROSHTML(event, logos, requiredFields);
   if (template === 'corporate-ros') return generateCorporateHTML(event, logos, requiredFields);
   return generateInternalHTML(event, logos, requiredFields);
-}
+
+// ─── Client Planner (Elegant, client-facing) ────────────────────────────
+
+function generateClientPlannerHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
   const textLogo = logos?.text || '';
 
   const styles = `
