@@ -25,9 +25,14 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
       {/* Top Nav */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-6 flex items-center justify-between h-16">
-          <Link to="/team/songs" className="block">
-            <img src={logo} alt="Harborline" className="h-5 w-auto opacity-80" />
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link to="/team/songs" className="block">
+              <img src={logo} alt="Harborline" className="h-5 w-auto opacity-80" />
+            </Link>
+            <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors" title="Back to website">
+              <Home className="w-4 h-4" />
+            </Link>
+          </div>
 
           <nav className="flex items-center gap-1">
             {teamNav.map((item) => {
