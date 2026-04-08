@@ -28,6 +28,37 @@ interface SongEntry {
 }
 
 type TemplateType = "wedding-ros" | "client-planner" | "corporate-ros" | "party-runsheet";
+
+// ─── Personnel Grouping ─────────────────────────────────────────────────
+
+interface PersonnelGroup {
+  label: string;
+  members: { role: string; name: string }[];
+}
+
+function groupPersonnelByDept(personnel: { role: string; name: string }[]): PersonnelGroup[] {
+  const soundKeywords = ['sound', 'audio', 'a/v', 'av ', 'a1', 'a2', 'monitor', 'foh'];
+  const lightKeywords = ['light', 'lighting', 'ld', 'spots', 'spot op'];
+  const productionKeywords = ['mc', 'emcee', 'stage manager', 'production', 'break playlist', 'dj'];
+  const coordKeywords = ['coordinator', 'planner', 'ceremony', 'cocktail hour', 'cocktail'];
+
+  const groups: Record<string, { role: string; name: string }[]> = {
+    'Band': [], 'Sound': [], 'Lighting': [], 'Production': [], 'Coordination': [],
+  };
+
+  for (const p of personnel) {
+    const r = p.role.toLowerCase();
+    if (soundKeywords.some(k => r.includes(k))) groups['Sound'].push(p);
+    else if (lightKeywords.some(k => r.includes(k))) groups['Lighting'].push(p);
+    else if (productionKeywords.some(k => r.includes(k))) groups['Production'].push(p);
+    else if (coordKeywords.some(k => r.includes(k))) groups['Coordination'].push(p);
+    else groups['Band'].push(p);
+  }
+
+  return Object.entries(groups)
+    .filter(([_, members]) => members.length > 0)
+    .map(([label, members]) => ({ label, members }));
+}
 type OrgKey = "harborline" | "bse" | "tsb";
 type RequiredField = { label: string; key: string };
 
