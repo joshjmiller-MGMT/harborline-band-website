@@ -101,16 +101,18 @@ interface SongEntry {
 /** Parse a time string like "4:00 PM", "4:00 - 4:40 PM", "1:00 PM OR EARLIER" into minutes since midnight for sorting */
 function parseTimeToMinutes(timeStr: string): number {
   if (!timeStr) return 9999;
-  // Extract first HH:MM AM/PM occurrence
-  const m = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  // Try to find AM/PM anywhere in the string (e.g. "8:10 - 9:00 PM" → PM applies)
+  const hasAM = /AM/i.test(timeStr);
+  const hasPM = /PM/i.test(timeStr);
+  // Extract first HH:MM occurrence
+  const m = timeStr.match(/(\d{1,2}):(\d{2})/);
   if (!m) return 9999;
   let hours = parseInt(m[1], 10);
   const mins = parseInt(m[2], 10);
-  const ampm = (m[3] || '').toUpperCase();
-  if (ampm === 'PM' && hours < 12) hours += 12;
-  if (ampm === 'AM' && hours === 12) hours = 0;
-  // If no AM/PM specified, assume PM for typical event times (after noon)
-  if (!ampm && hours < 8) hours += 12;
+  if (hasPM && !hasAM && hours < 12) hours += 12;
+  if (hasAM && !hasPM && hours === 12) hours = 0;
+  // If no AM/PM anywhere in string, assume PM for typical event times (all hours)
+  if (!hasAM && !hasPM && hours < 12) hours += 12;
   return hours * 60 + mins;
 }
 
