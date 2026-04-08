@@ -106,6 +106,9 @@ const DETAIL_KEY_ALIASES: Record<string, string> = {
   "day-of coordinator": "coordinator",
   "day of coordinator": "coordinator",
   "wedding coordinator": "coordinator",
+  "day-of planner": "coordinator",
+  "day of planner": "coordinator",
+  "planner": "coordinator",
   "band project lead": "project lead",
   "music project lead": "project lead",
   "musician project lead": "project lead",
@@ -120,6 +123,12 @@ const DETAIL_KEY_ALIASES: Record<string, string> = {
   "musician on site poc": "musician pos",
   "musician onsite poc": "musician pos",
   "musician point person": "musician pos",
+  "couple": "client",
+  "bride and groom": "client",
+  "bride & groom": "client",
+  "officiant": "officiant",
+  "location": "venue",
+  "address": "venue address",
 };
 
 function normalizeDetailKey(rawKey: string): string {
