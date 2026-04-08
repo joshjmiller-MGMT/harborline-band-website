@@ -1512,7 +1512,6 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
     const hasKey = allSongs.some(s => s.key);
     const hasBpm = allSongs.some(s => s.bpm);
     const hasSinger = allSongs.some(s => s.singer);
-    const hasNotes = allSongs.some(s => s.notes);
 
     const sectionsHTML = event.songSections.map(section => {
       const songRows = section.songs.map(s => {
@@ -1523,7 +1522,7 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
           ${hasKey ? `<td>${s.key}</td>` : ''}
           ${hasBpm ? `<td>${s.bpm}</td>` : ''}
           ${hasSinger ? `<td>${s.singer}</td>` : ''}
-          ${hasNotes ? `<td>${s.notes}</td>` : ''}
+          <td>${s.notes || ''}</td>
         </tr>`;
       }).join('');
 
@@ -1533,7 +1532,7 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
           <thead><tr>
             <th>#</th><th>Artist</th><th>Title</th>
             ${hasKey ? '<th>Key</th>' : ''}${hasBpm ? '<th>BPM</th>' : ''}
-            ${hasSinger ? '<th>Singer</th>' : ''}${hasNotes ? '<th>Notes</th>' : ''}
+            ${hasSinger ? '<th>Singer</th>' : ''}<th>Notes</th>
           </tr></thead>
           <tbody>${songRows}</tbody>
         </table>
