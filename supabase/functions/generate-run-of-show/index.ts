@@ -20,6 +20,11 @@ Deno.serve(async (req) => {
 
     const eventData = parseSheetToEvent(sheetData || { headers: [], rows: [], sheetTitle: 'Untitled' });
     
+    // TSB default: project lead is always Tom Starr unless otherwise specified
+    if (organization === 'tsb' && !eventData.details['project lead'] && !eventData.details['bandleader']) {
+      eventData.details['project lead'] = 'Tom Starr';
+    }
+
     // Merge manual overrides into parsed data
     if (overrides && typeof overrides === 'object') {
       for (const [key, value] of Object.entries(overrides)) {
@@ -112,6 +117,8 @@ const DETAIL_KEY_ALIASES: Record<string, string> = {
   "band project lead": "project lead",
   "music project lead": "project lead",
   "musician project lead": "project lead",
+  "bandleader": "project lead",
+  "band leader": "project lead",
   "on site poc": "musician pos",
   "on-site poc": "musician pos",
   "musician p o s": "musician pos",
@@ -667,8 +674,8 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       continue;
     }
 
-    // ── Timeline entries: "4:00 - 4:35 PM – CEREMONY (Tom)" or "8:10 – 9:00 PM – BAND SET 2" ──
-    const timelineMatch = line.match(/^(\d{1,2}:\d{2}(?:\s*[–-]\s*\d{1,2}:\d{2})?\s*(?:PM|AM)?)\s*[–-]\s*(.+)$/i);
+    // ── Timeline entries: "4:00 - 4:35 PM – CEREMONY (Tom)" or "1:00 PM OR EARLIER – LOAD-IN" ──
+    const timelineMatch = line.match(/^(\d{1,2}:\d{2}(?:\s*[–-]\s*\d{1,2}:\d{2})?\s*(?:PM|AM)?(?:\s+(?:OR\s+)?[A-Z]+)?)\s*[–-]\s*(.+)$/i);
     if (timelineMatch) {
       // Save previous section
       if (currentSongs.length > 0) {
@@ -866,7 +873,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     const sectionHeaderMatch = line.match(/^([A-Z][A-Z\s/&]+?)(?:\s*\((.+)\))?\s*[–-]?\s*$/);
     if (sectionHeaderMatch && line.length > 4 && /^[A-Z]/.test(line) && !line.includes(':')) {
       const sectionName = sectionHeaderMatch[1].trim();
-      if (/^(CEREMONY|COCKTAIL|RECEPTION|DINNER|BAND|SET|PRELUDE|PROCESSIONAL|RECESSIONAL)/i.test(sectionName)) {
+      if (/^(CEREMONY|COCKTAIL|RECEPTION|DINNER|BAND|SET|PRELUDE|PROCESSIONAL|RECESSIONAL|INTROS|FIRST DANCE|SPEECHES)/i.test(sectionName)) {
         if (currentSongs.length > 0) {
           songSections.push({ title: currentSectionTitle || 'Songs', time: currentSectionTime, songs: currentSongs });
           currentSongs = [];
@@ -928,6 +935,39 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
   }
   if (!details["musicians' salesperson"] && details["salesperson"]) {
     details["musicians' salesperson"] = details["salesperson"];
+  }
+
+  // Apply alias normalization to all stored detail keys
+  for (const [rawKey, val] of Object.entries(details)) {
+    const normalized = DETAIL_KEY_ALIASES[normalizeDetailKey(rawKey)];
+    if (normalized && normalized !== rawKey && !details[normalized]) {
+      details[normalized] = val;
+    }
+  }
+
+  // Derive event name from client if not explicitly set
+  if (!details['event name'] && details['client']) {
+    details['event name'] = details['client'];
+  }
+
+  // Derive start/end from first and last timeline entries
+  if (!details['start / end'] && timeline.length >= 2) {
+    const firstTime = timeline[0]?.time || '';
+    const lastTime = timeline[timeline.length - 1]?.time || '';
+    if (firstTime && lastTime) {
+      details['start / end'] = `${firstTime} – ${lastTime}`;
+    }
+  }
+
+  // Derive load-in time from timeline if present
+  if (!details['load-in time']) {
+    const loadInEntry = timeline.find(t => /load[- ]?in/i.test(t.description));
+    if (loadInEntry) details['load-in time'] = loadInEntry.time;
+  }
+
+  // Derive setup time from load-in if missing
+  if (!details['setup time'] && details['load-in time']) {
+    details['setup time'] = details['load-in time'];
   }
 
   const eventName = details['event name'] || sheetTitle || 'Event';
