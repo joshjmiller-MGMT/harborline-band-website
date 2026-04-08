@@ -732,7 +732,26 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     // ── Role assignment lines: "FULL BAND – ..." or "CEREMONY – ..." or "Day-Of Planner – ..." ──
     // Check this BEFORE pipe-delimited details so FULL BAND isn't consumed as key-value
     const roleMatch = line.match(/^([A-Z][A-Z\s/&()-]+?)\s*[–]\s*(.+)$/) || line.match(/^([A-Z][A-Z\s/&()]+?)\s+-\s+(.+)$/) || line.match(/^([A-Za-z][A-Za-z\s/&()-]+?)\s*[–]\s*(.+)$/);
-    const isRoleLine = roleMatch && !line.match(/^\d/) && !line.match(/^(Extras|Typically|Moments|Fill|Email|Note)/i);
+    // Skip lines that look like song/event descriptions ending with "– MC" or similar short role tags
+    // e.g. "Private Last Dance / Everyone leave the room / 'Wildflowers & Wine' – MC"
+    const looksLikeSongNote = roleMatch && roleMatch[1].trim().length > 30;
+    // If we're inside a song section and the "role" is just MC, treat as a song/event note instead
+    const isMCInsideSongSection = roleMatch && currentSectionTitle && currentSongs.length > 0 && 
+      (roleMatch[1].trim().toUpperCase() === 'MC' || roleMatch[2].trim().toUpperCase() === 'MC');
+    const isRoleLine = roleMatch && !looksLikeSongNote && !isMCInsideSongSection && !line.match(/^\d/) && !line.match(/^(Extras|Typically|Moments|Fill|Email|Note|Private|I WANNA|WANNA)/i);
+    
+    // If it's an MC line inside a song section, add it as a song/event note
+    if (isMCInsideSongSection && roleMatch) {
+      const mcNote = roleMatch[1].trim().toUpperCase() === 'MC' 
+        ? roleMatch[2].trim() 
+        : roleMatch[1].trim();
+      currentSongs.push({
+        order: String(currentSongs.length + 1), request: false,
+        title: mcNote, artist: '',
+        notes: 'MC', key: '', bpm: '', singer: '', patches: '',
+      });
+      continue;
+    }
     if (isRoleLine && roleMatch) {
       const roleLabel = roleMatch[1].trim();
       const roleValue = roleMatch[2].trim();
@@ -937,29 +956,23 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
         songArtist = dashArtist[2].trim();
         songNotes = dashArtist[3] ? dashArtist[3].trim() : '';
       } else {
-        // Pattern: "SEPTEMBER ANG" or "TWIST N SHOUT JACK" — song name in caps, singer is last word(s)
-        // Try to split by looking for a name at the end (2-15 chars, possibly with ?)
-        const capsMatch = songLine.match(/^(.+?)\s+([A-Z]{2,}(?:\s*[/?]?\s*[A-Z]*)*)\s*(\([^)]*\))?\s*$/);
-        if (capsMatch && capsMatch[2]) {
-          songTitle = capsMatch[1].trim();
-          songArtist = '';
-          songNotes = capsMatch[2].trim();
-          if (capsMatch[3]) songNotes += ' ' + capsMatch[3].trim();
-          // The last word might be the singer name
-          // Check if the whole thing is uppercase (indicating song name + singer mashed together)
-          const words = songLine.replace(/\([^)]*\)/g, '').trim().split(/\s+/);
-          const lastWord = words[words.length - 1];
-          if (lastWord && /^[A-Z]+[?]?$/.test(lastWord) && lastWord.length <= 10) {
-            songNotes = lastWord.replace(/\?$/, '');
-            songTitle = words.slice(0, -1).join(' ');
-            if (songLine.includes('(')) {
-              const parenMatch = songLine.match(/\(([^)]*)\)/);
-              if (parenMatch) songTitle = songTitle.replace(parenMatch[0], '').trim();
-              songNotes += parenMatch ? ' ' + parenMatch[1] : '';
-            }
-          }
+        // Pattern: "SEPTEMBER ANG" or "TWIST N SHOUT JACK" — song name, singer is last word(s)
+        // Also handles "HEY YA -> BROWN EYED GIRL TOM" where singer trails
+        const words = songLine.replace(/\([^)]*\)/g, '').trim().split(/\s+/);
+        const lastWord = words[words.length - 1];
+        let songSinger = '';
+        // If last word is a short uppercase name (2-10 chars), it's the singer
+        if (lastWord && /^[A-Z]+[?]?$/.test(lastWord) && lastWord.length >= 2 && lastWord.length <= 10 && words.length > 1) {
+          songSinger = lastWord.replace(/\?$/, '');
+          songTitle = words.slice(0, -1).join(' ');
         } else {
           songTitle = songLine;
+        }
+        // Extract parenthetical notes
+        const parenMatch = songLine.match(/\(([^)]*)\)/);
+        if (parenMatch) {
+          songNotes = parenMatch[1].trim();
+          songTitle = songTitle.replace(parenMatch[0], '').trim();
         }
       }
 
@@ -970,7 +983,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
         currentSongs.push({
           order: String(currentSongs.length + 1), request: false,
           title: songTitle, artist: songArtist,
-          notes: songNotes, key: '', bpm: '', singer: '', patches: '',
+          notes: songNotes, key: '', bpm: '', singer: songSinger, patches: '',
         });
       }
       continue;
