@@ -1591,8 +1591,8 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
       const songRows = section.songs.map(s => {
         return `<tr>
           <td style="width:36px; text-align:center;">${s.order || ''}</td>
-          <td>${s.artist}</td>
           <td>${s.title}</td>
+          <td>${s.artist}</td>
           ${hasKey ? `<td>${s.key}</td>` : ''}
           ${hasBpm ? `<td>${s.bpm}</td>` : ''}
           ${hasSinger ? `<td>${s.singer}</td>` : ''}
@@ -1604,7 +1604,7 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
         <div class="set-title">${section.time ? section.time + ' &mdash; ' : ''}${section.title}</div>
         <table class="song-table">
           <thead><tr>
-            <th>#</th><th>Artist</th><th>Title</th>
+            <th>#</th><th>Title</th><th>Artist</th>
             ${hasKey ? '<th>Key</th>' : ''}${hasBpm ? '<th>BPM</th>' : ''}
             ${hasSinger ? '<th>Singer</th>' : ''}<th>Notes</th>
           </tr></thead>
