@@ -156,7 +156,6 @@ function buildSongTable(songs: SongEntry[], accentColor: string, showRequest = f
   const hasKey = allSongs.some(s => s.key);
   const hasBpm = allSongs.some(s => s.bpm);
   const hasSinger = allSongs.some(s => s.singer);
-  const hasNotes = allSongs.some(s => s.notes);
 
   const cols: { header: string; width: number; getter: (s: SongEntry) => string }[] = [
     { header: "#", width: 500, getter: s => s.order || "" },
@@ -167,7 +166,7 @@ function buildSongTable(songs: SongEntry[], accentColor: string, showRequest = f
   if (hasKey) cols.push({ header: "Key", width: 600, getter: s => s.key });
   if (hasBpm) cols.push({ header: "BPM", width: 600, getter: s => s.bpm });
   if (hasSinger) cols.push({ header: "Singer", width: 1200, getter: s => s.singer });
-  if (hasNotes) cols.push({ header: "Notes", width: 1800, getter: s => s.notes });
+  cols.push({ header: "Notes", width: 1800, getter: s => s.notes || "" });
 
   // Normalize widths to fit ~9360 DXA
   const totalRaw = cols.reduce((s, c) => s + c.width, 0);
