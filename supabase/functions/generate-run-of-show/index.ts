@@ -674,8 +674,8 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       continue;
     }
 
-    // ── Timeline entries: "4:00 - 4:35 PM – CEREMONY (Tom)" or "8:10 – 9:00 PM – BAND SET 2" ──
-    const timelineMatch = line.match(/^(\d{1,2}:\d{2}(?:\s*[–-]\s*\d{1,2}:\d{2})?\s*(?:PM|AM)?)\s*[–-]\s*(.+)$/i);
+    // ── Timeline entries: "4:00 - 4:35 PM – CEREMONY (Tom)" or "1:00 PM OR EARLIER – LOAD-IN" ──
+    const timelineMatch = line.match(/^(\d{1,2}:\d{2}(?:\s*[–-]\s*\d{1,2}:\d{2})?\s*(?:PM|AM)?(?:\s+(?:OR\s+)?[A-Z]+)?)\s*[–-]\s*(.+)$/i);
     if (timelineMatch) {
       // Save previous section
       if (currentSongs.length > 0) {
