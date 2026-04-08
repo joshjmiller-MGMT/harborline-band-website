@@ -219,6 +219,11 @@ const DETAIL_KEY_ALIASES: Record<string, string> = {
   "location": "venue",
   "address": "venue address",
   "sound": "audio reinforcement",
+  "sound system": "audio reinforcement",
+  "pa": "audio reinforcement",
+  "pa system": "audio reinforcement",
+  "audio": "audio reinforcement",
+  "sound reinforcement": "audio reinforcement",
   "what to wear": "attire",
   "black tie attire": "attire",
 };
