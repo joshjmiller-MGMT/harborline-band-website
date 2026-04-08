@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { sheetData, template, format, logos, overrides, requiredFields } = await req.json();
+    const { sheetData, template, format, logos, overrides, requiredFields, organization } = await req.json();
 
     if (!template || !format) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const html = generateHTML(eventData, logos, template, requiredFields);
+    const html = generateHTML(eventData, logos, template, requiredFields, organization);
 
     // Encode to base64 safely handling UTF-8 / special characters
     const encoder = new TextEncoder();
