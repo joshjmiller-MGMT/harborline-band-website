@@ -10,7 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import logoCircle from "@/assets/logo-circle.png";
 import logoTextHarborline from "@/assets/logo-text-dark.png";
 import logoTextBSE from "@/assets/logo-bse-dark.png";
-import logoTextTSB from "@/assets/logo-tsb-dark.png";
+import logoTextTSB from "@/assets/logo-tsb.webp";
 
 type OrgKey = "harborline" | "bse" | "tsb";
 
@@ -57,10 +57,13 @@ const TEMPLATE_FIELDS: Record<TemplateType, { label: string; key: string }[]> = 
     { label: "Venue", key: "venue" },
     { label: "Venue Address", key: "venue address" },
     { label: "Venue Type", key: "venue type" },
+    { label: "Ensemble", key: "ensemble" },
     { label: "Musicians", key: "musicians" },
     { label: "Other Staff Members", key: "other staff members" },
     { label: "Guest Count", key: "guest count" },
     { label: "Attire", key: "attire" },
+    { label: "Officiant", key: "officiant" },
+    { label: "Coordinator", key: "coordinator" },
     { label: "Musician Food & Bev", key: "musician food & bev" },
     { label: "Audio Reinforcement", key: "audio reinforcement" },
     { label: "Project Lead", key: "project lead" },
@@ -103,6 +106,7 @@ const TEMPLATE_FIELDS: Record<TemplateType, { label: string; key: string }[]> = 
     { label: "Client", key: "client" },
     { label: "Venue", key: "venue" },
     { label: "Venue Address", key: "venue address" },
+    { label: "Ensemble", key: "ensemble" },
     { label: "Guest Count", key: "guest count" },
     { label: "Setup Time", key: "setup time" },
     { label: "Start / End", key: "start / end" },
@@ -110,6 +114,8 @@ const TEMPLATE_FIELDS: Record<TemplateType, { label: string; key: string }[]> = 
     { label: "Soundcheck", key: "soundcheck" },
     { label: "Parking", key: "parking" },
     { label: "Entrance", key: "entrance" },
+    { label: "Officiant", key: "officiant" },
+    { label: "Coordinator", key: "coordinator" },
     { label: "Project Lead", key: "project lead" },
     { label: "Musician POS", key: "musician pos" },
     { label: "Green Room", key: "green room" },
@@ -345,6 +351,7 @@ export default function RunOfShowGenerator() {
           format: "html",
           logos: logosBase64,
           overrides,
+          organization,
           requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
         },
       });

@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { sheetData, template, format, logos, overrides, requiredFields } = await req.json();
+    const { sheetData, template, format, logos, overrides, requiredFields, organization } = await req.json();
 
     if (!template || !format) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const html = generateHTML(eventData, logos, template, requiredFields);
+    const html = generateHTML(eventData, logos, template, requiredFields, organization);
 
     // Encode to base64 safely handling UTF-8 / special characters
     const encoder = new TextEncoder();
@@ -106,6 +106,9 @@ const DETAIL_KEY_ALIASES: Record<string, string> = {
   "day-of coordinator": "coordinator",
   "day of coordinator": "coordinator",
   "wedding coordinator": "coordinator",
+  "day-of planner": "coordinator",
+  "day of planner": "coordinator",
+  "planner": "coordinator",
   "band project lead": "project lead",
   "music project lead": "project lead",
   "musician project lead": "project lead",
@@ -120,6 +123,12 @@ const DETAIL_KEY_ALIASES: Record<string, string> = {
   "musician on site poc": "musician pos",
   "musician onsite poc": "musician pos",
   "musician point person": "musician pos",
+  "couple": "client",
+  "bride and groom": "client",
+  "bride & groom": "client",
+  "officiant": "officiant",
+  "location": "venue",
+  "address": "venue address",
 };
 
 function normalizeDetailKey(rawKey: string): string {
@@ -493,10 +502,12 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     'coordinator or on-site point of contact', 'coordinator', 'event coordinator', 'day-of coordinator', 'day of coordinator', 'wedding coordinator', 'on-site point of contact', 'on site point of contact', 'on site poc', 'project lead', 'band project lead', 'music project lead', 'musician project lead', 'musician pos', 'musician poc', 'musician point of contact', 'musician point person',
     'organization', 'load-in time', 'load-in', 'soundcheck', 'parking', 'entrance',
     'green room', 'what to wear', 'posting', 'address',
+    'officiant', 'day-of planner', 'day of planner', 'planner',
+    'couple', 'bride and groom', 'bride & groom', 'location',
   ];
 
   // ── Phase 1: Try to parse pipe-delimited header line ──
-  // e.g. "4-11-2026 | Brian Fierstein Wedding | Location: Vandiver Inn | 7-Piece Band | BLACK TIE ATTIRE"
+  // e.g. "4-11-2026 | Couple: Brian Fierstein & Jessica Cochran | Location: Vandiver Inn | 7-Piece Band | BLACK TIE ATTIRE | ADDRESS:301 S Union Ave"
   const firstLine = lines[0] || '';
   if (firstLine.includes('|')) {
     const segments = firstLine.split('|').map(s => s.trim());
@@ -504,8 +515,12 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       // Date pattern
       if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(seg)) {
         details['event date'] = seg;
-      } else if (/location\s*:/i.test(seg)) {
-        details['venue'] = seg.replace(/location\s*:\s*/i, '').trim();
+      } else if (/^couple\s*:/i.test(seg)) {
+        details['client'] = seg.replace(/^couple\s*:\s*/i, '').trim();
+      } else if (/^location\s*:/i.test(seg)) {
+        details['venue'] = seg.replace(/^location\s*:\s*/i, '').trim();
+      } else if (/^address\s*:/i.test(seg)) {
+        details['venue address'] = seg.replace(/^address\s*:\s*/i, '').trim();
       } else if (/piece|solo|duo|trio|quartet|quintet|band/i.test(seg)) {
         details['ensemble'] = seg;
       } else if (/attire|tux|formal|casual|black tie/i.test(seg)) {
@@ -554,10 +569,11 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       }
     }
 
-    // ── Role assignment lines: "FULL BAND – ..." or "CEREMONY – ..." ──
+    // ── Role assignment lines: "FULL BAND – ..." or "CEREMONY – ..." or "Day-Of Planner – ..." ──
     // Check this BEFORE pipe-delimited details so FULL BAND isn't consumed as key-value
-    const roleMatch = line.match(/^([A-Z][A-Z\s/&()-]+?)\s*[–]\s*(.+)$/) || line.match(/^([A-Z][A-Z\s/&()]+?)\s+-\s+(.+)$/);
-    if (roleMatch && !line.match(/^\d/)) {
+    const roleMatch = line.match(/^([A-Z][A-Z\s/&()-]+?)\s*[–]\s*(.+)$/) || line.match(/^([A-Z][A-Z\s/&()]+?)\s+-\s+(.+)$/) || line.match(/^([A-Za-z][A-Za-z\s/&()-]+?)\s*[–]\s*(.+)$/);
+    const isRoleLine = roleMatch && !line.match(/^\d/) && !line.match(/^(Extras|Typically|Moments|Fill|Email|Note)/i);
+    if (isRoleLine && roleMatch) {
       const roleLabel = roleMatch[1].trim();
       const roleValue = roleMatch[2].trim();
       const roleLower = roleLabel.toLowerCase().replace(/\s+/g, ' ');
@@ -729,10 +745,27 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       }
     }
 
-    // ── Bullet point songs: "- SONG TITLE SINGER" or "* SONG TITLE SINGER" ──
+    // ── Bullet point lines ──
     const bulletMatch = line.match(/^[-•*]\s+(.+)$/);
     if (bulletMatch) {
       const songLine = bulletMatch[1].trim();
+
+      // Check if this is a detail line like "Load-in – ..." or "Parking – ..."
+      const bulletDetailMatch = songLine.match(/^(Load-?in|Parking|Entrance|Soundcheck|Green Room)\s*[–-]\s*(.+)$/i);
+      if (bulletDetailMatch) {
+        const k = bulletDetailMatch[1].trim().toLowerCase().replace(/\s+/g, ' ');
+        const v = bulletDetailMatch[2].trim();
+        if (k.includes('load')) details['load-in time'] = v;
+        else if (k.includes('parking')) details['parking'] = v;
+        else if (k.includes('entrance')) details['entrance'] = v;
+        else if (k.includes('soundcheck')) details['soundcheck'] = v;
+        else if (k.includes('green')) details['green room'] = v;
+        else details[k] = v;
+        continue;
+      }
+
+      // Check if this is "Hold on, I'm Comin'" type instruction within a timeline section (not a setlist)
+      // If we're in a timeline section (like INTROS, FIRST DANCES) treat these as song entries
 
       // Try "Song Title – Artist" or "Song Title / Artist"
       let songTitle = '', songArtist = '', songNotes = '';
@@ -799,6 +832,51 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
           });
           continue;
         }
+      }
+      // ── Bare uppercase song line (no bullet): "FRANKLIN'S TOWER" or "AIN'T NO SUNSHINE" ──
+      // Only if line is mostly uppercase and looks like a song, not a section header
+      if (/^[A-Z]/.test(line) && line.length > 2 && line.length < 80 && !line.includes(':') && !line.match(/^(BASIC|PERSONNEL|TIMELINE|LOAD|INTROS|EXTRAS)/i)) {
+        const keyMatch = line.match(/^(.+?)\s*\(([A-G][#b]?m?)\)\s*$/);
+        const songTitle = keyMatch ? keyMatch[1].trim() : line;
+        const songKey = keyMatch ? keyMatch[2] : '';
+        currentSongs.push({
+          order: String(currentSongs.length + 1), request: false,
+          title: songTitle, artist: '',
+          notes: '', key: songKey, bpm: '', singer: '', patches: '',
+        });
+        continue;
+      }
+    }
+
+    // ── "Extras:" line — attach extra songs to current section ──
+    const extrasMatch = line.match(/^Extras?\s*:\s*(.+)$/i);
+    if (extrasMatch && currentSectionTitle) {
+      const extras = extrasMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+      for (const extra of extras) {
+        currentSongs.push({
+          order: '', request: false,
+          title: extra, artist: '',
+          notes: 'Extra', key: '', bpm: '', singer: '', patches: '',
+        });
+      }
+      continue;
+    }
+
+    // ── Section headers without time: "CEREMONY(TOM & JACK)", "COCKTAIL HOUR SET(TOM & JOSH)" ──
+    const sectionHeaderMatch = line.match(/^([A-Z][A-Z\s/&]+?)(?:\s*\((.+)\))?\s*[–-]?\s*$/);
+    if (sectionHeaderMatch && line.length > 4 && /^[A-Z]/.test(line) && !line.includes(':')) {
+      const sectionName = sectionHeaderMatch[1].trim();
+      if (/^(CEREMONY|COCKTAIL|RECEPTION|DINNER|BAND|SET|PRELUDE|PROCESSIONAL|RECESSIONAL)/i.test(sectionName)) {
+        if (currentSongs.length > 0) {
+          songSections.push({ title: currentSectionTitle || 'Songs', time: currentSectionTime, songs: currentSongs });
+          currentSongs = [];
+        }
+        currentSectionTitle = sectionName;
+        currentSectionTime = '';
+        if (sectionHeaderMatch[2]) {
+          details[sectionName.toLowerCase()] = sectionHeaderMatch[2].trim();
+        }
+        continue;
       }
     }
 
@@ -902,16 +980,16 @@ function buildAllFieldsLines(event: EventData, requiredFields?: RequiredField[])
   }).join('');
 }
 
-function generateHTML(event: EventData, logos?: { circle: string; text: string }, template?: string, requiredFields?: RequiredField[]): string {
-  if (template === 'client-planner') return generateClientPlannerHTML(event, logos, requiredFields);
-  if (template === 'wedding-ros') return generateWeddingROSHTML(event, logos, requiredFields);
-  if (template === 'corporate-ros') return generateCorporateHTML(event, logos, requiredFields);
-  return generateInternalHTML(event, logos, requiredFields);
+function generateHTML(event: EventData, logos?: { circle: string; text: string }, template?: string, requiredFields?: RequiredField[], organization?: string): string {
+  if (template === 'client-planner') return generateClientPlannerHTML(event, logos, requiredFields, organization);
+  if (template === 'wedding-ros') return generateWeddingROSHTML(event, logos, requiredFields, organization);
+  if (template === 'corporate-ros') return generateCorporateHTML(event, logos, requiredFields, organization);
+  return generateInternalHTML(event, logos, requiredFields, organization);
 }
 
 // ─── Client Planner (Elegant, client-facing) ────────────────────────────
 
-function generateClientPlannerHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
+function generateClientPlannerHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[], organization?: string): string {
   const textLogo = logos?.text || '';
 
   const styles = `
@@ -1021,7 +1099,7 @@ function generateClientPlannerHTML(event: EventData, logos?: { circle: string; t
 
 // ─── Wedding Run of Show (Musician-facing, professional) ────────────────
 
-function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
+function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[], organization?: string): string {
   const textLogo = logos?.text || '';
 
   const styles = `
@@ -1131,8 +1209,9 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
 
 // ─── Corporate Event (Internal, teal-only, cleaner) ─────────────────────
 
-function generateCorporateHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
-  const teal = '#14B8A6';
+function generateCorporateHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[], organization?: string): string {
+  const isTSB = organization === 'tsb';
+  const teal = isTSB ? '#E85D04' : '#14B8A6';
   const darkText = '#1a1a1a';
   const bodyText = '#333333';
   const textLogo = logos?.text || '';
@@ -1268,14 +1347,17 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
 
 // ─── Internal Template (Party Run Sheet) ────────────────────────────────
 
-function generateInternalHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
-  const purple = '#7C3AED';
-  const teal = '#14B8A6';
+function generateInternalHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[], organization?: string): string {
+  const isTSB = organization === 'tsb';
+  const purple = isTSB ? '#DC2626' : '#7C3AED';
+  const teal = isTSB ? '#E85D04' : '#14B8A6';
   const darkText = '#1a1a1a';
   const bodyText = '#333333';
   const mutedText = '#666666';
 
-  const circleColors = ['#14B8A6', '#0EA5E9', '#6366F1', '#7C3AED', '#A855F7', '#3B82F6'];
+  const circleColors = isTSB 
+    ? ['#DC2626', '#E85D04', '#F59E0B', '#EF4444', '#D97706', '#FBBF24']
+    : ['#14B8A6', '#0EA5E9', '#6366F1', '#7C3AED', '#A855F7', '#3B82F6'];
   const textLogo = logos?.text || '';
 
   const styles = `
@@ -1425,7 +1507,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
     ${songlistHTML}
 
     <div class="footer">
-      HARBORLINE &nbsp;\\u00B7&nbsp; Baltimore's Go-To Live Band &nbsp;\\u00B7&nbsp; harborlineband.com
+      ${isTSB ? 'TOM STARR BAND &nbsp;\\u00B7&nbsp; tomstarrband.com' : organization === 'bse' ? 'BALTIMORE SOUND ENTERTAINMENT &nbsp;\\u00B7&nbsp; baltimoresound.net' : 'HARBORLINE &nbsp;\\u00B7&nbsp; Baltimore\'s Go-To Live Band &nbsp;\\u00B7&nbsp; harborlineband.com'}
     </div>
   </div>
 </body>
