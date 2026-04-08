@@ -369,17 +369,24 @@ function buildWeddingRoS(event: EventData, requiredFields: RequiredField[], logo
   // Details
   children.push(...buildDetailParagraphs(event, requiredFields, { fontSize: 12 }));
 
-  // Personnel
+  // Personnel grouped by department
   if (event.personnel.length > 0) {
     children.push(emptyLine());
-    for (const p of event.personnel) {
+    const groups = groupPersonnelByDept(event.personnel);
+    for (const g of groups) {
       children.push(new Paragraph({
-        spacing: { after: 60 },
-        children: [
-          new TextRun({ text: `${p.role}: `, bold: true, size: 24, font: "Inter", color: "222222" }),
-          new TextRun({ text: p.name, size: 24, font: "Inter", color: "222222" }),
-        ],
+        spacing: { after: 40 },
+        children: [new TextRun({ text: g.label.toUpperCase(), size: 20, font: "Inter", color: "999999", bold: true })],
       }));
+      for (const p of g.members) {
+        children.push(new Paragraph({
+          spacing: { after: 60 },
+          children: [
+            new TextRun({ text: `${p.role}: `, bold: true, size: 24, font: "Inter", color: "222222" }),
+            new TextRun({ text: p.name, size: 24, font: "Inter", color: "222222" }),
+          ],
+        }));
+      }
     }
   }
 
