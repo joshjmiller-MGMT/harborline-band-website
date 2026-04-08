@@ -873,7 +873,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     const sectionHeaderMatch = line.match(/^([A-Z][A-Z\s/&]+?)(?:\s*\((.+)\))?\s*[–-]?\s*$/);
     if (sectionHeaderMatch && line.length > 4 && /^[A-Z]/.test(line) && !line.includes(':')) {
       const sectionName = sectionHeaderMatch[1].trim();
-      if (/^(CEREMONY|COCKTAIL|RECEPTION|DINNER|BAND|SET|PRELUDE|PROCESSIONAL|RECESSIONAL)/i.test(sectionName)) {
+      if (/^(CEREMONY|COCKTAIL|RECEPTION|DINNER|BAND|SET|PRELUDE|PROCESSIONAL|RECESSIONAL|INTROS|FIRST DANCE|SPEECHES)/i.test(sectionName)) {
         if (currentSongs.length > 0) {
           songSections.push({ title: currentSectionTitle || 'Songs', time: currentSectionTime, songs: currentSongs });
           currentSongs = [];
