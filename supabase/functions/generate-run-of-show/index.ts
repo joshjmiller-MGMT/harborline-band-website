@@ -117,6 +117,8 @@ const DETAIL_KEY_ALIASES: Record<string, string> = {
   "band project lead": "project lead",
   "music project lead": "project lead",
   "musician project lead": "project lead",
+  "bandleader": "project lead",
+  "band leader": "project lead",
   "on site poc": "musician pos",
   "on-site poc": "musician pos",
   "musician p o s": "musician pos",
