@@ -1237,7 +1237,7 @@ function generateClientPlannerHTML(event: EventData, logos?: { circle: string; t
     body { font-family: 'Inter', sans-serif; background: white; color: #333; line-height: 1.8; font-size: 14px; }
     .page { max-width: 680px; margin: 0 auto; padding: 60px 50px; }
     .header { text-align: center; margin-bottom: 40px; }
-    .brand-text { max-width: 220px; height: auto; margin: 0 auto 24px; display: block; }
+    .brand-text { max-height: 80px; width: auto; max-width: 220px; margin: 0 auto 24px; display: block; }
     .intro-text { font-size: 14px; color: #444; line-height: 1.9; margin-bottom: 24px; font-style: italic; }
     .divider { border: none; border-top: 1px solid #ccc; margin: 28px 0; }
     .doc-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: #1a1a1a; text-align: center; margin-bottom: 8px; letter-spacing: 0.02em; }
@@ -1347,7 +1347,7 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
     body { font-family: 'Inter', sans-serif; background: white; color: #222; line-height: 1.7; font-size: 14px; }
     .page { max-width: 720px; margin: 0 auto; padding: 50px 55px; }
     .header { text-align: center; margin-bottom: 32px; }
-    .brand-text { max-width: 240px; height: auto; margin: 0 auto 20px; display: block; }
+    .brand-text { max-height: 80px; width: auto; max-width: 240px; margin: 0 auto 20px; display: block; }
     .divider { border: none; border-top: 1.5px solid #222; margin: 20px 0; }
     .divider-light { border: none; border-top: 1px solid #ccc; margin: 16px 0; }
     .detail-row { font-size: 14px; color: #222; margin-bottom: 5px; line-height: 1.6; }
@@ -1461,7 +1461,7 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
     body { font-family: 'Inter', sans-serif; background: white; color: ${bodyText}; line-height: 1.7; font-size: 14px; }
     .page { max-width: 720px; margin: 0 auto; padding: 50px 60px; }
     .header { text-align: center; margin-bottom: 40px; border-bottom: 3px solid ${teal}; padding-bottom: 24px; }
-    .brand-text { max-width: 260px; height: auto; margin: 0 auto 12px; display: block; }
+    .brand-text { max-height: 80px; width: auto; max-width: 260px; margin: 0 auto 12px; display: block; }
     .event-title { font-family: 'Inter', sans-serif; font-size: 24px; font-weight: 700; color: ${darkText}; margin-top: 20px; text-align: center; letter-spacing: 0.02em; }
     .event-meta { font-size: 14px; color: ${bodyText}; margin-top: 6px; line-height: 1.8; text-align: center; }
     .section-title { font-size: 18px; font-weight: 600; color: ${teal}; margin-top: 36px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -1607,7 +1607,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
     .header { text-align: center; margin-bottom: 48px; }
     .circles { display: flex; justify-content: center; gap: 10px; margin-bottom: 16px; }
     .circle { width: 28px; height: 28px; border-radius: 50%; }
-    .brand-text { max-width: 280px; height: auto; margin: 0 auto; display: block; }
+    .brand-text { max-height: 80px; width: auto; max-width: 280px; margin: 0 auto; display: block; }
     .event-title { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 0.06em; color: ${purple}; margin-top: 28px; text-align: center; }
     .event-meta { font-size: 14px; color: ${bodyText}; margin-top: 6px; line-height: 1.8; text-align: center; }
     .section-title { font-family: 'Inter', sans-serif; font-size: 26px; font-weight: 300; color: ${purple}; margin-top: 40px; margin-bottom: 4px; }
