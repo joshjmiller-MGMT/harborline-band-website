@@ -560,6 +560,29 @@ function parseSheetToEvent(sheetData: any): EventData {
         patches: sec.patchesCol >= 0 ? (row[sec.patchesCol] || '').trim() : '',
       });
     }
+    // Extract singer from parenthetical notes like (JACK), (TOM or Angela), (Tom/Angela)
+    for (const song of songs) {
+      if (!song.singer && song.notes) {
+        const singerMatch = song.notes.match(/\(([A-Za-z][A-Za-z\s\/,&or]+?)\)/);
+        if (singerMatch) {
+          const candidate = singerMatch[1].trim();
+          // Only treat as singer if it looks like a name (short, no equipment words)
+          if (candidate.length <= 40 && !/speaker|mic|pa|jbl|monitor|provided|acoustic/i.test(candidate)) {
+            song.singer = candidate;
+            // Remove the singer parenthetical from notes to avoid duplication
+            song.notes = song.notes.replace(singerMatch[0], '').replace(/\s{2,}/g, ' ').trim();
+          }
+        }
+      }
+      // Move key data into singer if key looks like a name (no musical key patterns)
+      if (song.key && !song.singer) {
+        const isMusicalKey = /^[A-G][b#]?\s*(maj|min|m|major|minor)?$/i.test(song.key.trim());
+        if (!isMusicalKey) {
+          song.singer = song.key;
+          song.key = '';
+        }
+      }
+    }
     if (songs.length > 0) {
       songSections.push({ title: sec.title, time: sec.time, songs });
     }
@@ -1227,7 +1250,7 @@ function groupPersonnelByDept(personnel: { role: string; name: string }[]): Pers
   const soundKeywords = ['sound', 'audio', 'a/v', 'av ', 'a1', 'a2', 'monitor', 'foh'];
   const lightKeywords = ['light', 'lighting', 'ld', 'spots', 'spot op'];
   const productionKeywords = ['mc', 'emcee', 'stage manager', 'production', 'break playlist', 'dj'];
-  const coordKeywords = ['coordinator', 'planner', 'ceremony', 'cocktail hour', 'cocktail'];
+  const coordKeywords = ['coordinator', 'planner'];
 
   const groups: Record<string, { role: string; name: string }[]> = {
     'Band': [],
@@ -1238,14 +1261,15 @@ function groupPersonnelByDept(personnel: { role: string; name: string }[]): Pers
   };
 
   for (const p of personnel) {
-    const r = p.role.toLowerCase();
-    if (soundKeywords.some(k => r.includes(k))) {
+    // Check both role AND name for department keywords (handles "JACK - SOUND – Ceremony" where name contains dept info)
+    const combined = (p.role + ' ' + p.name).toLowerCase();
+    if (soundKeywords.some(k => combined.includes(k))) {
       groups['Sound'].push(p);
-    } else if (lightKeywords.some(k => r.includes(k))) {
+    } else if (lightKeywords.some(k => combined.includes(k))) {
       groups['Lighting'].push(p);
-    } else if (productionKeywords.some(k => r.includes(k))) {
+    } else if (productionKeywords.some(k => combined.includes(k))) {
       groups['Production'].push(p);
-    } else if (coordKeywords.some(k => r.includes(k))) {
+    } else if (coordKeywords.some(k => combined.includes(k))) {
       groups['Coordination'].push(p);
     } else {
       groups['Band'].push(p);
@@ -1595,7 +1619,7 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
   let songlistHTML = '';
   if (event.songSections.length > 0) {
     const allSongs = event.songSections.flatMap(s => s.songs);
-    const hasKey = allSongs.some(s => s.key);
+    const hasKey = allSongs.some(s => s.key && /^[A-G][b#]?\s*(maj|min|m|major|minor)?$/i.test(s.key.trim()));
     const hasBpm = allSongs.some(s => s.bpm);
     const hasSinger = allSongs.some(s => s.singer);
 
@@ -1605,9 +1629,9 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
           <td style="width:36px; text-align:center;">${s.order || ''}</td>
           <td>${s.title}</td>
           <td>${s.artist}</td>
+          ${hasSinger ? `<td>${s.singer || ''}</td>` : ''}
           ${hasKey ? `<td>${s.key}</td>` : ''}
           ${hasBpm ? `<td>${s.bpm}</td>` : ''}
-          ${hasSinger ? `<td>${s.singer}</td>` : ''}
           <td>${s.notes || ''}</td>
         </tr>`;
       }).join('');
@@ -1617,8 +1641,9 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
         <table class="song-table">
           <thead><tr>
             <th>#</th><th>Title</th><th>Artist</th>
+            ${hasSinger ? '<th>Singer</th>' : ''}
             ${hasKey ? '<th>Key</th>' : ''}${hasBpm ? '<th>BPM</th>' : ''}
-            ${hasSinger ? '<th>Singer</th>' : ''}<th>Notes</th>
+            <th>Notes</th>
           </tr></thead>
           <tbody>${songRows}</tbody>
         </table>
@@ -1751,7 +1776,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
   let songlistHTML = '';
   if (event.songSections.length > 0) {
     const allSongs = event.songSections.flatMap(s => s.songs);
-    const hasKey = allSongs.some(s => s.key);
+    const hasKey = allSongs.some(s => s.key && /^[A-G][b#]?\s*(maj|min|m|major|minor)?$/i.test(s.key.trim()));
     const hasBpm = allSongs.some(s => s.bpm);
     const hasSinger = allSongs.some(s => s.singer);
 
@@ -1763,9 +1788,9 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
           <td style="width:24px; text-align:center;">${reqStar}</td>
           <td>${s.title}</td>
           <td>${s.artist}</td>
+          ${hasSinger ? `<td>${s.singer || ''}</td>` : ''}
           ${hasKey ? `<td>${s.key}</td>` : ''}
           ${hasBpm ? `<td>${s.bpm}</td>` : ''}
-          ${hasSinger ? `<td>${s.singer}</td>` : ''}
           <td>${s.notes || ''}</td>
         </tr>`;
       }).join('');
@@ -1779,9 +1804,9 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
               <th></th>
               <th>Title</th>
               <th>Artist</th>
+              ${hasSinger ? '<th>Singer</th>' : ''}
               ${hasKey ? '<th>Key</th>' : ''}
               ${hasBpm ? '<th>BPM</th>' : ''}
-              ${hasSinger ? '<th>Singer</th>' : ''}
               <th>Notes</th>
             </tr>
           </thead>
