@@ -918,11 +918,11 @@ function buildAllFieldsLines(event: EventData, requiredFields?: RequiredField[])
   }).join('');
 }
 
-function generateHTML(event: EventData, logos?: { circle: string; text: string }, template?: string, requiredFields?: RequiredField[]): string {
-  if (template === 'client-planner') return generateClientPlannerHTML(event, logos, requiredFields);
-  if (template === 'wedding-ros') return generateWeddingROSHTML(event, logos, requiredFields);
-  if (template === 'corporate-ros') return generateCorporateHTML(event, logos, requiredFields);
-  return generateInternalHTML(event, logos, requiredFields);
+function generateHTML(event: EventData, logos?: { circle: string; text: string }, template?: string, requiredFields?: RequiredField[], organization?: string): string {
+  if (template === 'client-planner') return generateClientPlannerHTML(event, logos, requiredFields, organization);
+  if (template === 'wedding-ros') return generateWeddingROSHTML(event, logos, requiredFields, organization);
+  if (template === 'corporate-ros') return generateCorporateHTML(event, logos, requiredFields, organization);
+  return generateInternalHTML(event, logos, requiredFields, organization);
 }
 
 // ─── Client Planner (Elegant, client-facing) ────────────────────────────
