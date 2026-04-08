@@ -1269,6 +1269,11 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     details['ensemble'] = details['musicians'];
   }
 
+  // DEBUG: Log all parsed detail keys
+  console.log('PARSED DETAILS KEYS:', JSON.stringify(Object.keys(details)));
+  console.log('VENUE ADDRESS VALUE:', JSON.stringify(details['venue address'] || 'NOT FOUND'));
+  console.log('ADDRESS VALUE:', JSON.stringify(details['address'] || 'NOT FOUND'));
+
   // ── Sort timeline chronologically ──
   const sortedTimeline = sortTimeline(timeline);
 
