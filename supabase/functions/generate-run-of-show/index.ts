@@ -745,10 +745,27 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       }
     }
 
-    // ── Bullet point songs: "- SONG TITLE SINGER" or "* SONG TITLE SINGER" ──
+    // ── Bullet point lines ──
     const bulletMatch = line.match(/^[-•*]\s+(.+)$/);
     if (bulletMatch) {
       const songLine = bulletMatch[1].trim();
+
+      // Check if this is a detail line like "Load-in – ..." or "Parking – ..."
+      const bulletDetailMatch = songLine.match(/^(Load-?in|Parking|Entrance|Soundcheck|Green Room)\s*[–-]\s*(.+)$/i);
+      if (bulletDetailMatch) {
+        const k = bulletDetailMatch[1].trim().toLowerCase().replace(/\s+/g, ' ');
+        const v = bulletDetailMatch[2].trim();
+        if (k.includes('load')) details['load-in time'] = v;
+        else if (k.includes('parking')) details['parking'] = v;
+        else if (k.includes('entrance')) details['entrance'] = v;
+        else if (k.includes('soundcheck')) details['soundcheck'] = v;
+        else if (k.includes('green')) details['green room'] = v;
+        else details[k] = v;
+        continue;
+      }
+
+      // Check if this is "Hold on, I'm Comin'" type instruction within a timeline section (not a setlist)
+      // If we're in a timeline section (like INTROS, FIRST DANCES) treat these as song entries
 
       // Try "Song Title – Artist" or "Song Title / Artist"
       let songTitle = '', songArtist = '', songNotes = '';
