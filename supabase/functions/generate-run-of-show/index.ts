@@ -96,6 +96,77 @@ interface SongEntry {
   patches: string;
 }
 
+// ─── Time Utilities ─────────────────────────────────────────────────────
+
+/** Parse a time string like "4:00 PM", "4:00 - 4:40 PM", "1:00 PM OR EARLIER" into minutes since midnight for sorting */
+function parseTimeToMinutes(timeStr: string): number {
+  if (!timeStr) return 9999;
+  // Extract first HH:MM AM/PM occurrence
+  const m = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!m) return 9999;
+  let hours = parseInt(m[1], 10);
+  const mins = parseInt(m[2], 10);
+  const ampm = (m[3] || '').toUpperCase();
+  if (ampm === 'PM' && hours < 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+  // If no AM/PM specified, assume PM for typical event times (after noon)
+  if (!ampm && hours < 8) hours += 12;
+  return hours * 60 + mins;
+}
+
+/** Clean up a time string — remove noise like "OR EARLIER", trailing location info in parens */
+function cleanTimeString(timeStr: string): string {
+  return timeStr
+    .replace(/\s+OR\s+EARLIER/gi, '')
+    .replace(/\s+OR\s+LATER/gi, '')
+    .trim();
+}
+
+/** Sort timeline entries chronologically by parsed time */
+function sortTimeline(timeline: { time: string; description: string }[]): { time: string; description: string }[] {
+  return [...timeline].sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
+}
+
+/** Section ordering priority — lower = earlier in the event flow */
+const SECTION_ORDER: [RegExp, number][] = [
+  [/prelud/i, 10],
+  [/guest\s*arrival/i, 15],
+  [/processional/i, 20],
+  [/ceremon/i, 30],
+  [/recessional/i, 40],
+  [/postlude/i, 45],
+  [/cocktail/i, 50],
+  [/dinner/i, 60],
+  [/reception/i, 65],
+  [/intro/i, 68],
+  [/first\s*dance/i, 70],
+  [/speech/i, 72],
+  [/toast/i, 73],
+  [/band\s*set\s*1|set\s*1/i, 80],
+  [/band\s*set\s*2|set\s*2/i, 90],
+  [/band\s*set\s*3|set\s*3/i, 100],
+  [/band\s*set\s*4|set\s*4/i, 110],
+  [/extra/i, 120],
+];
+
+function getSectionSortOrder(title: string): number {
+  for (const [pattern, order] of SECTION_ORDER) {
+    if (pattern.test(title)) return order;
+  }
+  return 75; // default: after cocktail, before sets
+}
+
+/** Sort song sections in proper event chronological order */
+function sortSongSections(sections: SongSection[]): SongSection[] {
+  return [...sections].sort((a, b) => {
+    const orderA = getSectionSortOrder(a.title);
+    const orderB = getSectionSortOrder(b.title);
+    if (orderA !== orderB) return orderA - orderB;
+    // If same order, sort by time
+    return parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time);
+  });
+}
+
 const DETAIL_KEY_ALIASES: Record<string, string> = {
   "musicians salesperson": "musician salesperson",
   "musicians sales person": "musician salesperson",
