@@ -927,7 +927,7 @@ function generateHTML(event: EventData, logos?: { circle: string; text: string }
 
 // ─── Client Planner (Elegant, client-facing) ────────────────────────────
 
-function generateClientPlannerHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
+function generateClientPlannerHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[], organization?: string): string {
   const textLogo = logos?.text || '';
 
   const styles = `
