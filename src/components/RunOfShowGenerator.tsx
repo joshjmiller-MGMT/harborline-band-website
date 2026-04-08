@@ -279,7 +279,20 @@ export default function RunOfShowGenerator() {
   const getMergedDetails = (): Record<string, string> => {
     const base = normalizeDetails(parsedData?.details || {});
     const overrides = parseManualOverrides();
-    return { ...base, ...overrides };
+    const merged = { ...base, ...overrides };
+
+    // Apply org-specific defaults for project lead
+    if (!merged['project lead'] && !merged['bandleader']) {
+      if (organization === 'tsb') merged['project lead'] = 'Tom Starr';
+      else if (organization === 'harborline') merged['project lead'] = 'Josh Miller';
+    }
+    // Default musician POS to project lead / bandleader
+    if (!merged['musician pos']) {
+      if (merged['project lead']) merged['musician pos'] = merged['project lead'];
+      else if (merged['bandleader']) merged['musician pos'] = merged['bandleader'];
+    }
+
+    return merged;
   };
 
   // Get the list of fields for the current template and their status
@@ -319,7 +332,7 @@ export default function RunOfShowGenerator() {
       setSourceType(data.sourceType || detectUrlType(inputUrl));
 
       const { data: genData, error: genError } = await supabase.functions.invoke("generate-run-of-show", {
-        body: { sheetData: data, template, format: "html", logos: logosBase64 },
+        body: { sheetData: data, template, format: "html", logos: logosBase64, organization },
       });
 
       if (!genError && genData?.parsedData) {
