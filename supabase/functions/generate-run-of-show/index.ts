@@ -560,6 +560,29 @@ function parseSheetToEvent(sheetData: any): EventData {
         patches: sec.patchesCol >= 0 ? (row[sec.patchesCol] || '').trim() : '',
       });
     }
+    // Extract singer from parenthetical notes like (JACK), (TOM or Angela), (Tom/Angela)
+    for (const song of songs) {
+      if (!song.singer && song.notes) {
+        const singerMatch = song.notes.match(/\(([A-Za-z][A-Za-z\s\/,&or]+?)\)/);
+        if (singerMatch) {
+          const candidate = singerMatch[1].trim();
+          // Only treat as singer if it looks like a name (short, no equipment words)
+          if (candidate.length <= 40 && !/speaker|mic|pa|jbl|monitor|provided|acoustic/i.test(candidate)) {
+            song.singer = candidate;
+            // Remove the singer parenthetical from notes to avoid duplication
+            song.notes = song.notes.replace(singerMatch[0], '').replace(/\s{2,}/g, ' ').trim();
+          }
+        }
+      }
+      // Move key data into singer if key looks like a name (no musical key patterns)
+      if (song.key && !song.singer) {
+        const isMusicalKey = /^[A-G][b#]?\s*(maj|min|m|major|minor)?$/i.test(song.key.trim());
+        if (!isMusicalKey) {
+          song.singer = song.key;
+          song.key = '';
+        }
+      }
+    }
     if (songs.length > 0) {
       songSections.push({ title: sec.title, time: sec.time, songs });
     }
