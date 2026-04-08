@@ -569,10 +569,11 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       }
     }
 
-    // ── Role assignment lines: "FULL BAND – ..." or "CEREMONY – ..." ──
+    // ── Role assignment lines: "FULL BAND – ..." or "CEREMONY – ..." or "Day-Of Planner – ..." ──
     // Check this BEFORE pipe-delimited details so FULL BAND isn't consumed as key-value
-    const roleMatch = line.match(/^([A-Z][A-Z\s/&()-]+?)\s*[–]\s*(.+)$/) || line.match(/^([A-Z][A-Z\s/&()]+?)\s+-\s+(.+)$/);
-    if (roleMatch && !line.match(/^\d/)) {
+    const roleMatch = line.match(/^([A-Z][A-Z\s/&()-]+?)\s*[–]\s*(.+)$/) || line.match(/^([A-Z][A-Z\s/&()]+?)\s+-\s+(.+)$/) || line.match(/^([A-Za-z][A-Za-z\s/&()-]+?)\s*[–]\s*(.+)$/);
+    const isRoleLine = roleMatch && !line.match(/^\d/) && !line.match(/^(Extras|Typically|Moments|Fill|Email|Note)/i);
+    if (isRoleLine && roleMatch) {
       const roleLabel = roleMatch[1].trim();
       const roleValue = roleMatch[2].trim();
       const roleLower = roleLabel.toLowerCase().replace(/\s+/g, ' ');
