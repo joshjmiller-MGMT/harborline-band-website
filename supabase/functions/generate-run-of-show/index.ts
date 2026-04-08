@@ -945,9 +945,41 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     }
   }
 
-  // Derive event name from client if not explicitly set
+  // If "couple" was found, this is a wedding — derive event type and event name
+  if (details['client'] && !details['event type']) {
+    // If there's a "couple" field, it's a wedding
+    const clientLower = (details['client'] || '').toLowerCase();
+    const hasCouple = Object.keys(details).some(k => normalizeDetailKey(k) === 'couple' || normalizeDetailKey(k) === 'bride and groom' || normalizeDetailKey(k) === 'bride & groom');
+    if (hasCouple || clientLower.includes('&') || clientLower.includes(' and ')) {
+      details['event type'] = 'Wedding';
+    }
+  }
+
+  // Derive event name: "Couple Names - Wedding" if it's a wedding
   if (!details['event name'] && details['client']) {
-    details['event name'] = details['client'];
+    if (details['event type'] && details['event type'].toLowerCase() === 'wedding') {
+      details['event name'] = `${details['client']} - Wedding`;
+    } else {
+      details['event name'] = details['client'];
+    }
+  }
+
+  // Map "sound" detail to "audio reinforcement" if not set
+  if (!details['audio reinforcement'] && details['sound']) {
+    details['audio reinforcement'] = details['sound'];
+  }
+
+  // Map "attire" to "what to wear" and vice versa
+  if (!details['what to wear'] && details['attire']) {
+    details['what to wear'] = details['attire'];
+  }
+  if (!details['attire'] && details['what to wear']) {
+    details['attire'] = details['what to wear'];
+  }
+
+  // Map "ensemble" from pipe-delimited header if present
+  if (!details['ensemble'] && details['musicians']) {
+    details['ensemble'] = details['musicians'];
   }
 
   // Derive start/end from first and last timeline entries
