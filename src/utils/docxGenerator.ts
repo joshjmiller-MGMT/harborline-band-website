@@ -627,11 +627,14 @@ function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], o
     children.push(new Paragraph({ spacing: { after: 120 }, border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: teal, space: 1 } }, children: [] }));
     const groups = groupPersonnelByDept(event.personnel);
     for (const g of groups) {
-      const memberStr = g.members.map(p => `${p.name} - ${p.role}`).join("  |  ");
-      children.push(new Paragraph({ spacing: { after: 80 }, children: [
-        new TextRun({ text: `${g.label}: `, bold: true, size: 24, font: "Inter", color: purple }),
-        new TextRun({ text: memberStr, size: 24, font: "Inter", color: "333333" }),
+      children.push(new Paragraph({ spacing: { after: 40 }, children: [
+        new TextRun({ text: g.label.toUpperCase(), bold: true, size: 22, font: "Inter", color: purple }),
       ] }));
+      for (const p of g.members) {
+        children.push(new Paragraph({ spacing: { after: 40 }, indent: { left: 240 }, children: [
+          new TextRun({ text: `${p.name} – ${p.role}`, size: 24, font: "Inter", color: "333333" }),
+        ] }));
+      }
     }
   }
 
