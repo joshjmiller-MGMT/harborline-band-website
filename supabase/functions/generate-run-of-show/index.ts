@@ -505,7 +505,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
   ];
 
   // ── Phase 1: Try to parse pipe-delimited header line ──
-  // e.g. "4-11-2026 | Brian Fierstein Wedding | Location: Vandiver Inn | 7-Piece Band | BLACK TIE ATTIRE"
+  // e.g. "4-11-2026 | Couple: Brian Fierstein & Jessica Cochran | Location: Vandiver Inn | 7-Piece Band | BLACK TIE ATTIRE | ADDRESS:301 S Union Ave"
   const firstLine = lines[0] || '';
   if (firstLine.includes('|')) {
     const segments = firstLine.split('|').map(s => s.trim());
@@ -513,8 +513,12 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       // Date pattern
       if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(seg)) {
         details['event date'] = seg;
-      } else if (/location\s*:/i.test(seg)) {
-        details['venue'] = seg.replace(/location\s*:\s*/i, '').trim();
+      } else if (/^couple\s*:/i.test(seg)) {
+        details['client'] = seg.replace(/^couple\s*:\s*/i, '').trim();
+      } else if (/^location\s*:/i.test(seg)) {
+        details['venue'] = seg.replace(/^location\s*:\s*/i, '').trim();
+      } else if (/^address\s*:/i.test(seg)) {
+        details['venue address'] = seg.replace(/^address\s*:\s*/i, '').trim();
       } else if (/piece|solo|duo|trio|quartet|quintet|band/i.test(seg)) {
         details['ensemble'] = seg;
       } else if (/attire|tux|formal|casual|black tie/i.test(seg)) {
