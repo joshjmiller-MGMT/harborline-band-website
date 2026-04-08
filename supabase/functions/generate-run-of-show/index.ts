@@ -517,10 +517,18 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
   ];
 
   // ── Phase 1: Try to parse pipe-delimited header line ──
+  // Scan first ~5 lines for a pipe-delimited detail line
   // e.g. "4-11-2026 | Couple: Brian Fierstein & Jessica Cochran | Location: Vandiver Inn | 7-Piece Band | BLACK TIE ATTIRE | ADDRESS:301 S Union Ave"
-  const firstLine = lines[0] || '';
-  if (firstLine.includes('|')) {
-    const segments = firstLine.split('|').map(s => s.trim());
+  let pipeLineIndex = -1;
+  for (let pi = 0; pi < Math.min(lines.length, 8); pi++) {
+    if (lines[pi].includes('|') && (lines[pi].match(/\|/g) || []).length >= 2) {
+      pipeLineIndex = pi;
+      break;
+    }
+  }
+  const pipeHeaderLine = pipeLineIndex >= 0 ? lines[pipeLineIndex] : '';
+  if (pipeHeaderLine) {
+    const segments = pipeHeaderLine.split('|').map(s => s.trim());
     for (const seg of segments) {
       // Date pattern
       if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(seg)) {
@@ -529,14 +537,12 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
         details['client'] = seg.replace(/^couple\s*:\s*/i, '').trim();
       } else if (/^location\s*:/i.test(seg)) {
         details['venue'] = seg.replace(/^location\s*:\s*/i, '').trim();
-      } else if (/^address\s*:/i.test(seg)) {
+      } else if (/^address\s*:\s*/i.test(seg)) {
         details['venue address'] = seg.replace(/^address\s*:\s*/i, '').trim();
-      } else if (/piece|solo|duo|trio|quartet|quintet|band/i.test(seg)) {
+      } else if (/\d+[\s-]*piece|solo|duo|trio|quartet|quintet|band/i.test(seg)) {
         details['ensemble'] = seg;
-      } else if (/attire|tux|formal|casual|black tie/i.test(seg)) {
+      } else if (/attire|tux|formal|casual|black\s*tie/i.test(seg)) {
         details['attire'] = seg;
-      } else if (!details['event name'] && seg.length > 3) {
-        details['event name'] = seg;
       }
     }
   }
