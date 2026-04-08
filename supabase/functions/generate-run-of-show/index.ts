@@ -732,7 +732,10 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     // ── Role assignment lines: "FULL BAND – ..." or "CEREMONY – ..." or "Day-Of Planner – ..." ──
     // Check this BEFORE pipe-delimited details so FULL BAND isn't consumed as key-value
     const roleMatch = line.match(/^([A-Z][A-Z\s/&()-]+?)\s*[–]\s*(.+)$/) || line.match(/^([A-Z][A-Z\s/&()]+?)\s+-\s+(.+)$/) || line.match(/^([A-Za-z][A-Za-z\s/&()-]+?)\s*[–]\s*(.+)$/);
-    const isRoleLine = roleMatch && !line.match(/^\d/) && !line.match(/^(Extras|Typically|Moments|Fill|Email|Note)/i);
+    // Skip lines that look like song/event descriptions ending with "– MC" or similar short role tags
+    // e.g. "Private Last Dance / Everyone leave the room / 'Wildflowers & Wine' – MC"
+    const looksLikeSongNote = roleMatch && roleMatch[1].trim().length > 30;
+    const isRoleLine = roleMatch && !looksLikeSongNote && !line.match(/^\d/) && !line.match(/^(Extras|Typically|Moments|Fill|Email|Note|Private|I WANNA|WANNA)/i);
     if (isRoleLine && roleMatch) {
       const roleLabel = roleMatch[1].trim();
       const roleValue = roleMatch[2].trim();
