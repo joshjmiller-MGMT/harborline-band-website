@@ -1417,9 +1417,11 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
   // Personnel
   let personnelHTML = '';
   if (event.personnel.length > 0) {
-    personnelHTML = event.personnel
-      .map(p => `<div class="personnel-block"><strong>${p.role}:</strong> ${p.name}</div>`)
-      .join('');
+    const groups = groupPersonnelByDept(event.personnel);
+    personnelHTML = groups.map(g => {
+      const memberStr = g.members.map(p => `<div class="personnel-block"><strong>${p.role}:</strong> ${p.name}</div>`).join('');
+      return `<div style="margin-bottom: 12px;"><div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin-bottom: 4px;">${g.label}</div>${memberStr}</div>`;
+    }).join('');
   }
 
   // Song sections as numbered lists with dividers
