@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck } from "lucide-react";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -734,13 +734,13 @@ export default function RunOfShowGenerator() {
         <CardContent>
           <div className="flex gap-3">
             <Button
-              onClick={() => generateDocument("html")}
+              onClick={() => generateDocument("preview")}
               disabled={generating}
               className="flex-1"
               variant="hero"
             >
-              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              Download HTML
+              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+              Preview
             </Button>
             <Button
               onClick={() => generateDocument("print")}
@@ -748,8 +748,17 @@ export default function RunOfShowGenerator() {
               className="flex-1"
               variant="heroOutline"
             >
-              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-              Print / Save as PDF
+              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+              Print / PDF
+            </Button>
+            <Button
+              onClick={() => generateDocument("download")}
+              disabled={generating}
+              className="flex-1"
+              variant="outline"
+            >
+              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Download HTML
             </Button>
           </div>
         </CardContent>
