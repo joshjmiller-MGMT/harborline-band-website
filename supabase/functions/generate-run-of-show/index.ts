@@ -930,7 +930,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
         currentSongs.push({
           order: String(currentSongs.length + 1), request: false,
           title: songTitle, artist: songArtist,
-          notes: songNotes, key: '', bpm: '', singer: songNotes || '', patches: '',
+          notes: songNotes, key: '', bpm: '', singer: '', patches: '',
         });
       }
       continue;
