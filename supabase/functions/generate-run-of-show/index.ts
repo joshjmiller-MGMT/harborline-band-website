@@ -1064,23 +1064,28 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     details['ensemble'] = details['musicians'];
   }
 
-  // Derive start/end from first and last timeline entries
-  if (!details['start / end'] && timeline.length >= 2) {
-    const firstTime = timeline[0]?.time || '';
-    const lastTime = timeline[timeline.length - 1]?.time || '';
-    if (firstTime && lastTime) {
-      details['start / end'] = `${firstTime} – ${lastTime}`;
+  // ── Sort timeline chronologically ──
+  const sortedTimeline = sortTimeline(timeline);
+
+  // ── Derive start/end from event timeline (skip load-in/setup; use ceremony/guest arrival → last item) ──
+  if (!details['start / end'] && sortedTimeline.length >= 2) {
+    // Find first non-load-in/setup entry as the "start"
+    const eventStart = sortedTimeline.find(t => 
+      !/load[- ]?in|setup|sound\s*check|warehouse|band\s*load/i.test(t.description)
+    );
+    const eventEnd = sortedTimeline[sortedTimeline.length - 1];
+    if (eventStart && eventEnd && eventStart !== eventEnd) {
+      details['start / end'] = `${cleanTimeString(eventStart.time)} – ${cleanTimeString(eventEnd.time)}`;
     }
   }
 
   // Derive load-in time from timeline if present (always prefer timeline time over bullet text)
-  const loadInEntry = timeline.find(t => /load[- ]?in/i.test(t.description));
+  const loadInEntry = sortedTimeline.find(t => /load[- ]?in/i.test(t.description));
   if (loadInEntry) {
-    // Store the bullet-parsed load-in info as "load-in notes" if it's descriptive text, not a time
     if (details['load-in time'] && !/^\d{1,2}:\d{2}/i.test(details['load-in time'])) {
       details['load-in notes'] = details['load-in time'];
     }
-    details['load-in time'] = loadInEntry.time;
+    details['load-in time'] = cleanTimeString(loadInEntry.time);
   }
 
   // Derive setup time from load-in if missing
@@ -1088,7 +1093,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     details['setup time'] = details['load-in time'];
   }
 
-  // Extract date from sheetTitle if not found (e.g. "4.11.2026 Fierstein Wedding")
+  // Extract date from sheetTitle if not found
   if (!details['event date'] && sheetTitle) {
     const titleDateMatch = sheetTitle.match(/(\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4})/);
     if (titleDateMatch) {
@@ -1096,7 +1101,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     }
   }
 
-  // Also try extracting date from any line if still missing
+  // Also try extracting date from any detail value if still missing
   if (!details['event date']) {
     for (const [_k, v] of Object.entries(details)) {
       const dMatch = (v || '').match(/(\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4})/);
@@ -1117,8 +1122,18 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     details['mc'] = personnel.find(p => p.role === 'MC')!.name;
   }
 
+  // ── Sort song sections in proper event order ──
+  const sortedSongSections = sortSongSections(songSections);
+
+  // ── Clean up time strings in details ──
+  for (const key of ['load-in time', 'setup time', 'start / end', 'soundcheck']) {
+    if (details[key]) {
+      details[key] = cleanTimeString(details[key]);
+    }
+  }
+
   const eventName = details['event name'] || sheetTitle || 'Event';
-  return { eventName, details, personnel, timeline, songSections };
+  return { eventName, details, personnel, timeline: sortedTimeline, songSections: sortedSongSections };
 }
 
 function findColumnIndex(allRows: string[][], keyword: string): number | null {
