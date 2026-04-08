@@ -1078,7 +1078,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
   // ── Sort timeline chronologically ──
   const sortedTimeline = sortTimeline(timeline);
 
-  // ── Derive start/end from event timeline (skip load-in/setup; use ceremony/guest arrival → last item) ──
+  // ── Derive start/end from event timeline (skip load-in/setup; use ceremony/guest arrival → last item's end time) ──
   if (!details['start / end'] && sortedTimeline.length >= 2) {
     // Find first non-load-in/setup entry as the "start"
     const eventStart = sortedTimeline.find(t => 
@@ -1086,7 +1086,13 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     );
     const eventEnd = sortedTimeline[sortedTimeline.length - 1];
     if (eventStart && eventEnd && eventStart !== eventEnd) {
-      details['start / end'] = `${cleanTimeString(eventStart.time)} – ${cleanTimeString(eventEnd.time)}`;
+      // Extract the start time (first time from the start entry)
+      const startClean = cleanTimeString(eventStart.time).replace(/\s*[–-]\s*\d.*$/, '').trim();
+      // Extract the end time (last time from the end entry — if it's a range like "8:10 - 9:00 PM", use the end)
+      const endTimeStr = cleanTimeString(eventEnd.time);
+      const endRangeMatch = endTimeStr.match(/\d{1,2}:\d{2}\s*(?:AM|PM)?\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:AM|PM)?)/i);
+      const endClean = endRangeMatch ? endRangeMatch[1].trim() : endTimeStr;
+      details['start / end'] = `${startClean} – ${endClean}`;
     }
   }
 
