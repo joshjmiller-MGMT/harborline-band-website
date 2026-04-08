@@ -1077,9 +1077,24 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     }
   }
 
-  // Map "sound" detail to "audio reinforcement" if not set
+  // Map "sound" detail to "audio reinforcement" — but only if it looks like equipment/setup info, not a person's name
   if (!details['audio reinforcement'] && details['sound']) {
-    details['audio reinforcement'] = details['sound'];
+    const soundVal = details['sound'].toLowerCase();
+    // If it contains PA-related keywords, it's equipment info; otherwise it's a person assigned to sound
+    const isEquipment = /pa|speaker|monitor|system|mic|provided|jbl|qsc|bose|reinforcement|channel|mixer|console|di|sub|amp|in-house|house sound|wireless|wired/i.test(details['sound']);
+    if (isEquipment) {
+      details['audio reinforcement'] = details['sound'];
+    }
+    // If it's a person name, don't overwrite audio reinforcement — it stays as personnel
+  }
+
+  // Default musician POS to project lead / bandleader if not specified
+  if (!details['musician pos']) {
+    if (details['project lead']) {
+      details['musician pos'] = details['project lead'];
+    } else if (details['bandleader']) {
+      details['musician pos'] = details['bandleader'];
+    }
   }
 
   // Map "attire" to "what to wear" and vice versa
