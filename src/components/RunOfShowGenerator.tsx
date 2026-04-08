@@ -120,7 +120,6 @@ const TEMPLATE_FIELDS: Record<TemplateType, { label: string; key: string }[]> = 
     { label: "Project Lead", key: "project lead" },
     { label: "Musician POS", key: "musician pos" },
     { label: "Green Room", key: "green room" },
-    { label: "What to Wear", key: "what to wear" },
     { label: "Attire", key: "attire" },
     { label: "Posting", key: "posting" },
     { label: "Musician Food & Bev", key: "musician food & bev" },

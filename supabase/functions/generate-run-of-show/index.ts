@@ -1233,12 +1233,12 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     }
   }
 
-  // Map "attire" to "what to wear" and vice versa
-  if (!details['what to wear'] && details['attire']) {
-    details['what to wear'] = details['attire'];
-  }
-  if (!details['attire'] && details['what to wear']) {
-    details['attire'] = details['what to wear'];
+  // Consolidate "what to wear" into "attire"
+  if (details['what to wear']) {
+    if (!details['attire']) {
+      details['attire'] = details['what to wear'];
+    }
+    delete details['what to wear'];
   }
 
   // Map "ensemble" from pipe-delimited header if present
