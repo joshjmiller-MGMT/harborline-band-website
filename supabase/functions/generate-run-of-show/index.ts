@@ -1558,8 +1558,8 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
   if (event.personnel.length > 0) {
     const groups = groupPersonnelByDept(event.personnel);
     const groupsHTML = groups.map(g => {
-      const memberStr = g.members.map(p => `<strong>${p.role}:</strong> ${p.name}`).join(' &nbsp;|&nbsp; ');
-      return `<div style="margin-bottom: 8px;"><span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: ${teal}; font-weight: 600;">${g.label}:</span> ${memberStr}</div>`;
+      const memberLines = g.members.map(p => `<div style="padding-left: 12px; margin-bottom: 2px;">${p.role}: ${p.name}</div>`).join('');
+      return `<div style="margin-bottom: 14px;"><div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: ${teal}; font-weight: 600; margin-bottom: 4px;">${g.label}</div>${memberLines}</div>`;
     }).join('');
     personnelHTML = `
       <div class="section-title">Team</div>
@@ -1714,8 +1714,8 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
   if (event.personnel.length > 0) {
     const groups = groupPersonnelByDept(event.personnel);
     const groupsHTML = groups.map(g => {
-      const memberStr = g.members.map(p => `${p.name} - ${p.role}`).join(' | ');
-      return `<div style="margin-bottom: 8px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: ${purple}; font-weight: 600;">${g.label}:</span> ${memberStr}</div>`;
+      const memberLines = g.members.map(p => `<div style="padding-left: 12px; margin-bottom: 2px;">${p.name} – ${p.role}</div>`).join('');
+      return `<div style="margin-bottom: 14px;"><div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: ${purple}; font-weight: 600; margin-bottom: 4px;">${g.label}</div>${memberLines}</div>`;
     }).join('');
     personnelHTML = `
       <div class="section-title">Teammates</div>
