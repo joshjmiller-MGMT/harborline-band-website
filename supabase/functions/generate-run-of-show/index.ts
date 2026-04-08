@@ -1776,7 +1776,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
   let songlistHTML = '';
   if (event.songSections.length > 0) {
     const allSongs = event.songSections.flatMap(s => s.songs);
-    const hasKey = allSongs.some(s => s.key);
+    const hasKey = allSongs.some(s => s.key && /^[A-G][b#]?\s*(maj|min|m|major|minor)?$/i.test(s.key.trim()));
     const hasBpm = allSongs.some(s => s.bpm);
     const hasSinger = allSongs.some(s => s.singer);
 
@@ -1788,9 +1788,9 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
           <td style="width:24px; text-align:center;">${reqStar}</td>
           <td>${s.title}</td>
           <td>${s.artist}</td>
+          ${hasSinger ? `<td>${s.singer || ''}</td>` : ''}
           ${hasKey ? `<td>${s.key}</td>` : ''}
           ${hasBpm ? `<td>${s.bpm}</td>` : ''}
-          ${hasSinger ? `<td>${s.singer}</td>` : ''}
           <td>${s.notes || ''}</td>
         </tr>`;
       }).join('');
@@ -1804,9 +1804,9 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
               <th></th>
               <th>Title</th>
               <th>Artist</th>
+              ${hasSinger ? '<th>Singer</th>' : ''}
               ${hasKey ? '<th>Key</th>' : ''}
               ${hasBpm ? '<th>BPM</th>' : ''}
-              ${hasSinger ? '<th>Singer</th>' : ''}
               <th>Notes</th>
             </tr>
           </thead>
