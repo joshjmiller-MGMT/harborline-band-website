@@ -1005,6 +1005,35 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     details['setup time'] = details['load-in time'];
   }
 
+  // Extract date from sheetTitle if not found (e.g. "4.11.2026 Fierstein Wedding")
+  if (!details['event date'] && sheetTitle) {
+    const titleDateMatch = sheetTitle.match(/(\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4})/);
+    if (titleDateMatch) {
+      details['event date'] = titleDateMatch[1].replace(/\./g, '/');
+    }
+  }
+
+  // Also try extracting date from any line if still missing
+  if (!details['event date']) {
+    for (const [_k, v] of Object.entries(details)) {
+      const dMatch = (v || '').match(/(\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4})/);
+      if (dMatch) {
+        details['event date'] = dMatch[1].replace(/\./g, '/');
+        break;
+      }
+    }
+  }
+
+  // Map "Day-Of Planner" stored under its role key to coordinator
+  if (!details['coordinator'] && details['day-of planner']) {
+    details['coordinator'] = details['day-of planner'];
+  }
+
+  // Map MC to a detail for templates
+  if (!details['mc'] && personnel.find(p => p.role === 'MC')) {
+    details['mc'] = personnel.find(p => p.role === 'MC')!.name;
+  }
+
   const eventName = details['event name'] || sheetTitle || 'Event';
   return { eventName, details, personnel, timeline, songSections };
 }
