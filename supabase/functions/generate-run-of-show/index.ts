@@ -1660,8 +1660,8 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
     .header { text-align: center; margin-bottom: 48px; }
     .circles { display: flex; justify-content: center; gap: 10px; margin-bottom: 16px; }
     .circle { width: 28px; height: 28px; border-radius: 50%; }
-    .brand-text { max-height: 80px; width: auto; max-width: 280px; margin: 0 auto; display: block; }
-    .event-title { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 0.06em; color: ${purple}; margin-top: 28px; text-align: center; }
+    .brand-text { max-height: 140px; width: auto; max-width: 340px; margin: 0 auto; display: block; }
+    .event-title { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 0.06em; color: #111111; margin-top: 28px; text-align: center; }
     .event-meta { font-size: 14px; color: ${bodyText}; margin-top: 6px; line-height: 1.8; text-align: center; }
     .section-title { font-family: 'Inter', sans-serif; font-size: 26px; font-weight: 300; color: ${purple}; margin-top: 40px; margin-bottom: 4px; }
     .section-rule { border: none; border-top: 2.5px solid ${teal}; margin-bottom: 20px; }
