@@ -1619,7 +1619,7 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
   let songlistHTML = '';
   if (event.songSections.length > 0) {
     const allSongs = event.songSections.flatMap(s => s.songs);
-    const hasKey = allSongs.some(s => s.key);
+    const hasKey = allSongs.some(s => s.key && /^[A-G][b#]?\s*(maj|min|m|major|minor)?$/i.test(s.key.trim()));
     const hasBpm = allSongs.some(s => s.bpm);
     const hasSinger = allSongs.some(s => s.singer);
 
@@ -1629,9 +1629,9 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
           <td style="width:36px; text-align:center;">${s.order || ''}</td>
           <td>${s.title}</td>
           <td>${s.artist}</td>
+          ${hasSinger ? `<td>${s.singer || ''}</td>` : ''}
           ${hasKey ? `<td>${s.key}</td>` : ''}
           ${hasBpm ? `<td>${s.bpm}</td>` : ''}
-          ${hasSinger ? `<td>${s.singer}</td>` : ''}
           <td>${s.notes || ''}</td>
         </tr>`;
       }).join('');
@@ -1641,8 +1641,9 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
         <table class="song-table">
           <thead><tr>
             <th>#</th><th>Title</th><th>Artist</th>
+            ${hasSinger ? '<th>Singer</th>' : ''}
             ${hasKey ? '<th>Key</th>' : ''}${hasBpm ? '<th>BPM</th>' : ''}
-            ${hasSinger ? '<th>Singer</th>' : ''}<th>Notes</th>
+            <th>Notes</th>
           </tr></thead>
           <tbody>${songRows}</tbody>
         </table>
