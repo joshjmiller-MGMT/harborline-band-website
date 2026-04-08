@@ -319,7 +319,7 @@ export default function RunOfShowGenerator() {
       setSourceType(data.sourceType || detectUrlType(inputUrl));
 
       const { data: genData, error: genError } = await supabase.functions.invoke("generate-run-of-show", {
-        body: { sheetData: data, template, format: "html", logos: logosBase64 },
+        body: { sheetData: data, template, format: "html", logos: logosBase64, organization },
       });
 
       if (!genError && genData?.parsedData) {
