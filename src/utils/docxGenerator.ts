@@ -618,12 +618,18 @@ function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], o
   children.push(new Paragraph({ spacing: { after: 120 }, border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: teal, space: 1 } }, children: [] }));
   children.push(...buildDetailParagraphs(event, requiredFields, { fontSize: 12 }));
 
-  // Personnel
+  // Personnel grouped by department
   if (event.personnel.length > 0) {
     children.push(sectionHeading("Teammates", { font: "Inter", size: 22, color: purple, bold: false }));
     children.push(new Paragraph({ spacing: { after: 120 }, border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: teal, space: 1 } }, children: [] }));
-    const personnelText = event.personnel.map(p => `${p.name} - ${p.role}`).join("  |  ");
-    children.push(new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: personnelText, size: 24, font: "Inter", color: "333333" })] }));
+    const groups = groupPersonnelByDept(event.personnel);
+    for (const g of groups) {
+      const memberStr = g.members.map(p => `${p.name} - ${p.role}`).join("  |  ");
+      children.push(new Paragraph({ spacing: { after: 80 }, children: [
+        new TextRun({ text: `${g.label}: `, bold: true, size: 24, font: "Inter", color: purple }),
+        new TextRun({ text: memberStr, size: 24, font: "Inter", color: "333333" }),
+      ] }));
+    }
   }
 
   // Timeline
