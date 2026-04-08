@@ -1074,6 +1074,89 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     songSections.push({ title: currentSectionTitle || 'Songs', time: currentSectionTime, songs: currentSongs });
   }
 
+  // ── Post-process all songs: extract singer/key from notes, deduplicate info ──
+  for (const section of songSections) {
+    for (const song of section.songs) {
+      // 1. Extract singer names from notes parentheticals like (JACK), (TOM OR ANGELA), (JACK OR TOM)
+      if (!song.singer && song.notes) {
+        const singerParenMatch = song.notes.match(/^\(?\s*([A-Za-z]+(?:\s+(?:OR|AND|&|\/)\s+[A-Za-z]+)*)\s*\)?$/i);
+        if (singerParenMatch) {
+          const candidate = singerParenMatch[1].trim();
+          // Verify it's a name (all words are short, no numbers, no musical terms)
+          const isName = candidate.split(/\s+(?:OR|AND|&|\/)\s+/i).every(
+            w => w.length >= 2 && w.length <= 12 && !/^\d/.test(w) && !/^(first|full|short|seconds?|song|do|ending|minutes?)$/i.test(w)
+          );
+          if (isName) {
+            song.singer = candidate.toUpperCase();
+            song.notes = '';
+          }
+        }
+      }
+      // Also extract singer from inside notes like "First 60-90 seconds (JACK)"
+      if (!song.singer && song.notes) {
+        const embeddedSinger = song.notes.match(/\(([A-Z][A-Za-z]*(?:\s+(?:OR|AND|&|\/)\s+[A-Z][A-Za-z]*)*)\)\s*$/);
+        if (embeddedSinger) {
+          const candidate = embeddedSinger[1].trim();
+          const isName = candidate.split(/\s+(?:OR|AND|&|\/)\s+/i).every(
+            w => w.length >= 2 && w.length <= 12 && !/^(first|full|short|seconds?|do|ending|minutes?)$/i.test(w)
+          );
+          if (isName) {
+            song.singer = candidate.toUpperCase();
+            song.notes = song.notes.replace(embeddedSinger[0], '').trim();
+          }
+        }
+      }
+
+      // 2. Extract musical keys from notes like "(Bb)" or "Key: Am"
+      if (!song.key && song.notes) {
+        const keyInNotes = song.notes.match(/\b([A-G][b#]?\s*(?:maj|min|m|major|minor)?)\b/i);
+        if (keyInNotes) {
+          const keyCandidate = keyInNotes[1].trim();
+          // Only extract if it really looks like a musical key (not part of a longer word)
+          if (/^[A-G][b#]?\s*(?:maj|min|m|major|minor)?$/i.test(keyCandidate)) {
+            song.key = keyCandidate;
+            song.notes = song.notes.replace(keyInNotes[0], '').replace(/^\s*[,;–-]\s*/, '').replace(/\s*[,;–-]\s*$/, '').trim();
+          }
+        }
+      }
+
+      // 3. Extract singer from title if it's embedded like "First Verse from both vocalists - Joy Stapleton (JACK OR TOM)"
+      if (!song.singer && song.title) {
+        const titleSingerMatch = song.title.match(/\(([A-Z][A-Za-z]*(?:\s+(?:OR|AND|&|\/)\s+[A-Z][A-Za-z]*)*)\)\s*$/);
+        if (titleSingerMatch) {
+          const candidate = titleSingerMatch[1].trim();
+          const isName = candidate.split(/\s+(?:OR|AND|&|\/)\s+/i).every(
+            w => w.length >= 2 && w.length <= 12 && !/^(first|full|short|seconds?|do|ending|minutes?)$/i.test(w)
+          );
+          if (isName) {
+            song.singer = candidate.toUpperCase();
+            song.title = song.title.replace(titleSingerMatch[0], '').trim();
+          }
+        }
+      }
+
+      // 4. If key ended up in singer field (musical key pattern), move it
+      if (song.singer && /^[A-G][b#]?\s*(?:maj|min|m|major|minor)?$/i.test(song.singer.trim()) && !song.key) {
+        song.key = song.singer.trim();
+        song.singer = '';
+      }
+
+      // 5. If singer info is in key field (not a musical key), move it
+      if (song.key && !/^[A-G][b#]?\s*(?:maj|min|m|major|minor)?$/i.test(song.key.trim())) {
+        if (!song.singer) {
+          song.singer = song.key;
+        } else {
+          song.notes = song.notes ? `${song.notes}, ${song.key}` : song.key;
+        }
+        song.key = '';
+      }
+
+      // 6. Clean up: remove empty parens, extra whitespace
+      song.notes = song.notes.replace(/\(\s*\)/g, '').replace(/\s{2,}/g, ' ').trim();
+      song.title = song.title.replace(/\s{2,}/g, ' ').trim();
+    }
+  }
+
   // Extract personnel from details if not already found
   if (personnel.length === 0) {
     if (details['musicians']) {
