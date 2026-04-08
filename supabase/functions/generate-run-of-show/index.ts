@@ -937,6 +937,39 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     details["musicians' salesperson"] = details["salesperson"];
   }
 
+  // Apply alias normalization to all stored detail keys
+  for (const [rawKey, val] of Object.entries(details)) {
+    const normalized = DETAIL_KEY_ALIASES[normalizeDetailKey(rawKey)];
+    if (normalized && normalized !== rawKey && !details[normalized]) {
+      details[normalized] = val;
+    }
+  }
+
+  // Derive event name from client if not explicitly set
+  if (!details['event name'] && details['client']) {
+    details['event name'] = details['client'];
+  }
+
+  // Derive start/end from first and last timeline entries
+  if (!details['start / end'] && timeline.length >= 2) {
+    const firstTime = timeline[0]?.time || '';
+    const lastTime = timeline[timeline.length - 1]?.time || '';
+    if (firstTime && lastTime) {
+      details['start / end'] = `${firstTime} – ${lastTime}`;
+    }
+  }
+
+  // Derive load-in time from timeline if present
+  if (!details['load-in time']) {
+    const loadInEntry = timeline.find(t => /load[- ]?in/i.test(t.description));
+    if (loadInEntry) details['load-in time'] = loadInEntry.time;
+  }
+
+  // Derive setup time from load-in if missing
+  if (!details['setup time'] && details['load-in time']) {
+    details['setup time'] = details['load-in time'];
+  }
+
   const eventName = details['event name'] || sheetTitle || 'Event';
   return { eventName, details, personnel, timeline, songSections };
 }
