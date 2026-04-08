@@ -1445,7 +1445,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
     ${songlistHTML}
 
     <div class="footer">
-      HARBORLINE &nbsp;\\u00B7&nbsp; Baltimore's Go-To Live Band &nbsp;\\u00B7&nbsp; harborlineband.com
+      ${isTSB ? 'TOM STARR BAND &nbsp;\\u00B7&nbsp; tomstarrband.com' : organization === 'bse' ? 'BALTIMORE SOUND ENTERTAINMENT &nbsp;\\u00B7&nbsp; baltimoresound.net' : 'HARBORLINE &nbsp;\\u00B7&nbsp; Baltimore\'s Go-To Live Band &nbsp;\\u00B7&nbsp; harborlineband.com'}
     </div>
   </div>
 </body>
