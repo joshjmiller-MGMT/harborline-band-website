@@ -776,11 +776,11 @@ export default function RunOfShowGenerator() {
           )}
         </CardHeader>
         <CardContent>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <Button
               onClick={() => generateDocument("preview")}
               disabled={generating}
-              className="flex-1"
+              className="flex-1 min-w-[120px]"
               variant="hero"
             >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
@@ -789,16 +789,25 @@ export default function RunOfShowGenerator() {
             <Button
               onClick={() => generateDocument("print")}
               disabled={generating}
-              className="flex-1"
+              className="flex-1 min-w-[120px]"
               variant="heroOutline"
             >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
               Print / PDF
             </Button>
             <Button
+              onClick={() => generateDocument("docx")}
+              disabled={generating}
+              className="flex-1 min-w-[120px]"
+              variant="heroOutline"
+            >
+              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+              Download DOCX
+            </Button>
+            <Button
               onClick={() => generateDocument("download")}
               disabled={generating}
-              className="flex-1"
+              className="flex-1 min-w-[120px]"
               variant="outline"
             >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
