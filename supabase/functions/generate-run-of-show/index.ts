@@ -1227,7 +1227,7 @@ function groupPersonnelByDept(personnel: { role: string; name: string }[]): Pers
   const soundKeywords = ['sound', 'audio', 'a/v', 'av ', 'a1', 'a2', 'monitor', 'foh'];
   const lightKeywords = ['light', 'lighting', 'ld', 'spots', 'spot op'];
   const productionKeywords = ['mc', 'emcee', 'stage manager', 'production', 'break playlist', 'dj'];
-  const coordKeywords = ['coordinator', 'planner', 'ceremony', 'cocktail hour', 'cocktail'];
+  const coordKeywords = ['coordinator', 'planner'];
 
   const groups: Record<string, { role: string; name: string }[]> = {
     'Band': [],
@@ -1238,14 +1238,15 @@ function groupPersonnelByDept(personnel: { role: string; name: string }[]): Pers
   };
 
   for (const p of personnel) {
-    const r = p.role.toLowerCase();
-    if (soundKeywords.some(k => r.includes(k))) {
+    // Check both role AND name for department keywords (handles "JACK - SOUND – Ceremony" where name contains dept info)
+    const combined = (p.role + ' ' + p.name).toLowerCase();
+    if (soundKeywords.some(k => combined.includes(k))) {
       groups['Sound'].push(p);
-    } else if (lightKeywords.some(k => r.includes(k))) {
+    } else if (lightKeywords.some(k => combined.includes(k))) {
       groups['Lighting'].push(p);
-    } else if (productionKeywords.some(k => r.includes(k))) {
+    } else if (productionKeywords.some(k => combined.includes(k))) {
       groups['Production'].push(p);
-    } else if (coordKeywords.some(k => r.includes(k))) {
+    } else if (coordKeywords.some(k => combined.includes(k))) {
       groups['Coordination'].push(p);
     } else {
       groups['Band'].push(p);
