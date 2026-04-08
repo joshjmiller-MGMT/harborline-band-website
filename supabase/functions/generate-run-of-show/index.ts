@@ -1037,7 +1037,7 @@ function generateClientPlannerHTML(event: EventData, logos?: { circle: string; t
 
 // ─── Wedding Run of Show (Musician-facing, professional) ────────────────
 
-function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
+function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[], organization?: string): string {
   const textLogo = logos?.text || '';
 
   const styles = `
@@ -1147,8 +1147,9 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
 
 // ─── Corporate Event (Internal, teal-only, cleaner) ─────────────────────
 
-function generateCorporateHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
-  const teal = '#14B8A6';
+function generateCorporateHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[], organization?: string): string {
+  const isTSB = organization === 'tsb';
+  const teal = isTSB ? '#E85D04' : '#14B8A6';
   const darkText = '#1a1a1a';
   const bodyText = '#333333';
   const textLogo = logos?.text || '';
@@ -1284,14 +1285,17 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
 
 // ─── Internal Template (Party Run Sheet) ────────────────────────────────
 
-function generateInternalHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[]): string {
-  const purple = '#7C3AED';
-  const teal = '#14B8A6';
+function generateInternalHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[], organization?: string): string {
+  const isTSB = organization === 'tsb';
+  const purple = isTSB ? '#DC2626' : '#7C3AED';
+  const teal = isTSB ? '#E85D04' : '#14B8A6';
   const darkText = '#1a1a1a';
   const bodyText = '#333333';
   const mutedText = '#666666';
 
-  const circleColors = ['#14B8A6', '#0EA5E9', '#6366F1', '#7C3AED', '#A855F7', '#3B82F6'];
+  const circleColors = isTSB 
+    ? ['#DC2626', '#E85D04', '#F59E0B', '#EF4444', '#D97706', '#FBBF24']
+    : ['#14B8A6', '#0EA5E9', '#6366F1', '#7C3AED', '#A855F7', '#3B82F6'];
   const textLogo = logos?.text || '';
 
   const styles = `
