@@ -947,7 +947,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       // If we're in a timeline section (like INTROS, FIRST DANCES) treat these as song entries
 
       // Try "Song Title – Artist" or "Song Title / Artist"
-      let songTitle = '', songArtist = '', songNotes = '';
+      let songTitle = '', songArtist = '', songNotes = '', songSinger = '';
 
       // Pattern: "Mother-Son – Humble & Kind / Tim McGraw (First 60-90 seconds)"
       const dashArtist = songLine.match(/^(.+?)\s*[–\/]\s*(.+?)(?:\s*\((.+)\))?$/);
@@ -960,7 +960,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
         // Also handles "HEY YA -> BROWN EYED GIRL TOM" where singer trails
         const words = songLine.replace(/\([^)]*\)/g, '').trim().split(/\s+/);
         const lastWord = words[words.length - 1];
-        let songSinger = '';
+        songSinger = '';
         // If last word is a short uppercase name (2-10 chars), it's the singer
         if (lastWord && /^[A-Z]+[?]?$/.test(lastWord) && lastWord.length >= 2 && lastWord.length <= 10 && words.length > 1) {
           songSinger = lastWord.replace(/\?$/, '');
