@@ -338,11 +338,54 @@ export default function RunOfShowGenerator() {
     }
   };
 
-  const generateDocument = async (mode: "download" | "preview" | "print") => {
+  const generateDocument = async (mode: "download" | "preview" | "print" | "docx") => {
     setGenerating(true);
     try {
       const overrides = parseManualOverrides();
       const mergedSheetData = sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
+
+      // For DOCX, we need parsed data — fetch it if needed, then generate client-side
+      if (mode === "docx") {
+        // Get parsed data from edge function
+        const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
+          body: {
+            sheetData: mergedSheetData,
+            template,
+            format: "html",
+            logos: logosBase64,
+            overrides,
+            organization,
+            requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
+          },
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        const eventData = data?.parsedData || parsedData;
+        if (!eventData) throw new Error("No parsed data available for DOCX export.");
+
+        // Apply overrides to eventData
+        if (overrides && typeof overrides === "object") {
+          for (const [key, value] of Object.entries(overrides)) {
+            if (value.trim()) {
+              eventData.details[key.toLowerCase()] = value.trim();
+              if (key.toLowerCase() === "event name") eventData.eventName = value.trim();
+            }
+          }
+        }
+
+        await generateDocx(
+          eventData,
+          template,
+          organization,
+          TEMPLATE_FIELDS[template],
+          currentLogoText,
+        );
+        toast({ title: "Downloaded!", description: "DOCX file saved — ready for Google Drive." });
+        setGenerating(false);
+        return;
+      }
 
       const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
         body: {
