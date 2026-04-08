@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { generateDocx } from "@/utils/docxGenerator";
-import logoCircle from "@/assets/logo-circle.png";
-import logoTextHarborline from "@/assets/logo-circle.png";
+import logoCircle from "@/assets/logo-harborline-doc.png";
+import logoTextHarborline from "@/assets/logo-harborline-doc.png";
 import logoTextBSE from "@/assets/logo-bse-dark.png";
 import logoTextTSB from "@/assets/logo-tsb.webp";
 
