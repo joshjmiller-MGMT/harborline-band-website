@@ -1693,11 +1693,15 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
 
   let personnelHTML = '';
   if (event.personnel.length > 0) {
-    const personnelStr = event.personnel.map(p => `${p.name} - ${p.role}`).join(' | ');
+    const groups = groupPersonnelByDept(event.personnel);
+    const groupsHTML = groups.map(g => {
+      const memberStr = g.members.map(p => `${p.name} - ${p.role}`).join(' | ');
+      return `<div style="margin-bottom: 8px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: ${purple}; font-weight: 600;">${g.label}:</span> ${memberStr}</div>`;
+    }).join('');
     personnelHTML = `
       <div class="section-title">Teammates</div>
       <hr class="section-rule" />
-      <div class="personnel-text">${personnelStr}</div>
+      <div class="personnel-text">${groupsHTML}</div>
     `;
   }
 
