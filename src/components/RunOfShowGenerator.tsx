@@ -337,10 +337,9 @@ export default function RunOfShowGenerator() {
     }
   };
 
-  const generateDocument = async (format: "html" | "print") => {
+  const generateDocument = async (mode: "download" | "preview" | "print") => {
     setGenerating(true);
     try {
-      // Merge overrides into the sheet data for generation
       const overrides = parseManualOverrides();
       const mergedSheetData = sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
 
@@ -362,27 +361,7 @@ export default function RunOfShowGenerator() {
 
       const html = decodeBase64Utf8(data.file);
 
-      if (format === "print") {
-        const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
-        const originalStyles = styleMatch ? styleMatch[1] : '';
-        const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/);
-        const bodyContent = bodyMatch ? bodyMatch[1] : html;
-
-        const wrappedHtml = `<!DOCTYPE html><html lang="en"><head>
-          <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            ${originalStyles}
-            html, body { margin: 0; padding: 0; background: #1a1a1a; min-height: 100vh; }
-            .page-shell { max-width: 780px; margin: 40px auto; background: white; box-shadow: 0 4px 40px rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; padding: 0; }
-            @media print { html, body { background: white; } .page-shell { margin: 0; box-shadow: none; border-radius: 0; max-width: none; } }
-          </style>
-        </head><body><div class="page-shell">${bodyContent}</div></body></html>`;
-        const newWindow = window.open("", "_blank");
-        if (newWindow) {
-          newWindow.document.write(wrappedHtml);
-          newWindow.document.close();
-        }
-      } else {
+      if (mode === "download") {
         const blob = new Blob([html], { type: "text/html;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -392,9 +371,46 @@ export default function RunOfShowGenerator() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-      }
+        toast({ title: "Downloaded!", description: "HTML file saved." });
+      } else {
+        // Build wrapped HTML for preview/print
+        const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
+        const originalStyles = styleMatch ? styleMatch[1] : '';
+        const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/);
+        const bodyContent = bodyMatch ? bodyMatch[1] : html;
 
-      toast({ title: "Document generated!", description: format === "print" ? "Opened in new tab." : "HTML file downloaded." });
+        const wrappedHtml = `<!DOCTYPE html><html lang="en"><head>
+          <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${data.filename || "Document"}</title>
+          <style>
+            ${originalStyles}
+            html, body { margin: 0; padding: 0; background: #1a1a1a; min-height: 100vh; }
+            .page-shell { max-width: 780px; margin: 40px auto; background: white; box-shadow: 0 4px 40px rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; padding: 0; }
+            @media print { html, body { background: white; } .page-shell { margin: 0; box-shadow: none; border-radius: 0; max-width: none; } }
+          </style>
+        </head><body><div class="page-shell">${bodyContent}</div></body></html>`;
+
+        // Use blob URL — works reliably in Safari unlike document.write
+        const blob = new Blob([wrappedHtml], { type: "text/html;charset=utf-8" });
+        const blobUrl = URL.createObjectURL(blob);
+        const newWindow = window.open(blobUrl, "_blank");
+
+        if (mode === "print" && newWindow) {
+          newWindow.addEventListener("load", () => {
+            newWindow.print();
+          });
+        }
+
+        if (!newWindow) {
+          // Fallback if popup blocked — download instead
+          const a = document.createElement("a");
+          a.href = blobUrl;
+          a.target = "_blank";
+          a.click();
+        }
+
+        toast({ title: mode === "print" ? "Print dialog opened" : "Preview opened", description: "Opened in a new tab." });
+      }
     } catch (err: any) {
       toast({
         title: "Generation failed",
