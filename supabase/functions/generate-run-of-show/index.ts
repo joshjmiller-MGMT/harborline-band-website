@@ -735,7 +735,23 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     // Skip lines that look like song/event descriptions ending with "– MC" or similar short role tags
     // e.g. "Private Last Dance / Everyone leave the room / 'Wildflowers & Wine' – MC"
     const looksLikeSongNote = roleMatch && roleMatch[1].trim().length > 30;
-    const isRoleLine = roleMatch && !looksLikeSongNote && !line.match(/^\d/) && !line.match(/^(Extras|Typically|Moments|Fill|Email|Note|Private|I WANNA|WANNA)/i);
+    // If we're inside a song section and the "role" is just MC, treat as a song/event note instead
+    const isMCInsideSongSection = roleMatch && currentSectionTitle && currentSongs.length > 0 && 
+      (roleMatch[1].trim().toUpperCase() === 'MC' || roleMatch[2].trim().toUpperCase() === 'MC');
+    const isRoleLine = roleMatch && !looksLikeSongNote && !isMCInsideSongSection && !line.match(/^\d/) && !line.match(/^(Extras|Typically|Moments|Fill|Email|Note|Private|I WANNA|WANNA)/i);
+    
+    // If it's an MC line inside a song section, add it as a song/event note
+    if (isMCInsideSongSection && roleMatch) {
+      const mcNote = roleMatch[1].trim().toUpperCase() === 'MC' 
+        ? roleMatch[2].trim() 
+        : roleMatch[1].trim();
+      currentSongs.push({
+        order: String(currentSongs.length + 1), request: false,
+        title: mcNote, artist: '',
+        notes: 'MC', key: '', bpm: '', singer: '', patches: '',
+      });
+      continue;
+    }
     if (isRoleLine && roleMatch) {
       const roleLabel = roleMatch[1].trim();
       const roleValue = roleMatch[2].trim();
