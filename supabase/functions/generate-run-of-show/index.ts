@@ -1189,12 +1189,24 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
   // Apply alias normalization to all stored detail keys
   for (const [rawKey, val] of Object.entries(details)) {
     const normalized = DETAIL_KEY_ALIASES[normalizeDetailKey(rawKey)];
-    if (normalized && normalized !== rawKey && !details[normalized]) {
-      details[normalized] = val;
+    if (normalized && normalized !== rawKey) {
+      // Overwrite if target is empty/missing, or if source has more content
+      if (!details[normalized] || (!details[normalized].trim() && val.trim())) {
+        details[normalized] = val;
+      }
     }
   }
 
-  // If "couple" was found, this is a wedding — derive event type and event name
+  // Fallback: if venue address still missing, check for any key containing "address"
+  if (!details['venue address']) {
+    for (const [key, val] of Object.entries(details)) {
+      if (key.includes('address') && val && val.trim()) {
+        details['venue address'] = val;
+        break;
+      }
+    }
+  }
+
   if (details['client'] && !details['event type']) {
     // If there's a "couple" field, it's a wedding
     const clientLower = (details['client'] || '').toLowerCase();
@@ -1268,6 +1280,11 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
   if (!details['ensemble'] && details['musicians']) {
     details['ensemble'] = details['musicians'];
   }
+
+  // DEBUG: Log all parsed detail keys
+  console.log('PARSED DETAILS KEYS:', JSON.stringify(Object.keys(details)));
+  console.log('VENUE ADDRESS VALUE:', JSON.stringify(details['venue address'] || 'NOT FOUND'));
+  console.log('ADDRESS VALUE:', JSON.stringify(details['address'] || 'NOT FOUND'));
 
   // ── Sort timeline chronologically ──
   const sortedTimeline = sortTimeline(timeline);
