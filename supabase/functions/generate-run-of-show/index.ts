@@ -502,6 +502,8 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     'coordinator or on-site point of contact', 'coordinator', 'event coordinator', 'day-of coordinator', 'day of coordinator', 'wedding coordinator', 'on-site point of contact', 'on site point of contact', 'on site poc', 'project lead', 'band project lead', 'music project lead', 'musician project lead', 'musician pos', 'musician poc', 'musician point of contact', 'musician point person',
     'organization', 'load-in time', 'load-in', 'soundcheck', 'parking', 'entrance',
     'green room', 'what to wear', 'posting', 'address',
+    'officiant', 'day-of planner', 'day of planner', 'planner',
+    'couple', 'bride and groom', 'bride & groom', 'location',
   ];
 
   // ── Phase 1: Try to parse pipe-delimited header line ──
