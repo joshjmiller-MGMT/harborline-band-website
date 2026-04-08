@@ -563,8 +563,10 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
-    // Skip if already parsed as header
-    if (i === 0 && firstLine.includes('|') && line === firstLine.trim()) continue;
+    // Skip if already parsed as pipe-delimited header
+    if (pipeLineIndex >= 0 && i === pipeLineIndex) continue;
+    // Skip section headers like "BASIC DETAILS", "PERSONNEL / ROLES", "TIMELINE", "LOAD-IN / PARKING"
+    if (/^(BASIC DETAILS|PERSONNEL\s*\/?\s*ROLES|TIMELINE|LOAD-IN\s*\/?\s*PARKING)$/i.test(line)) continue;
 
     // ── ADDRESS: line ──
     const addrMatch = line.match(/^ADDRESS\s*:\s*(.+)/i);
