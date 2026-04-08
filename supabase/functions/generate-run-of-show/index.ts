@@ -1749,8 +1749,8 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
         return `<tr>
           <td style="width:36px; text-align:center;">${s.order || ''}</td>
           <td style="width:24px; text-align:center;">${reqStar}</td>
-          <td>${s.artist}</td>
           <td>${s.title}</td>
+          <td>${s.artist}</td>
           ${hasKey ? `<td>${s.key}</td>` : ''}
           ${hasBpm ? `<td>${s.bpm}</td>` : ''}
           ${hasSinger ? `<td>${s.singer}</td>` : ''}
@@ -1759,14 +1759,14 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
       }).join('');
 
       return `
-        <div class="set-title">${section.time ? section.time + ' \u2014 ' : ''}${section.title}</div>
+        <div class="set-title">${section.time ? section.time + ' &mdash; ' : ''}${section.title}</div>
         <table class="song-table">
           <thead>
             <tr>
               <th>#</th>
               <th></th>
-              <th>Artist</th>
               <th>Title</th>
+              <th>Artist</th>
               ${hasKey ? '<th>Key</th>' : ''}
               ${hasBpm ? '<th>BPM</th>' : ''}
               ${hasSinger ? '<th>Singer</th>' : ''}
