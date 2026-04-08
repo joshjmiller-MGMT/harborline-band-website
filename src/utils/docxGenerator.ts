@@ -184,7 +184,7 @@ function buildDetailParagraphs(event: EventData, requiredFields: RequiredField[]
 
 function buildSongTable(songs: SongEntry[], accentColor: string, showRequest = false): Table {
   const allSongs = songs;
-  const hasKey = allSongs.some(s => s.key);
+  const hasKey = allSongs.some(s => s.key && /^[A-G][b#]?\s*(maj|min|m|major|minor)?$/i.test(s.key.trim()));
   const hasBpm = allSongs.some(s => s.bpm);
   const hasSinger = allSongs.some(s => s.singer);
 
@@ -192,11 +192,11 @@ function buildSongTable(songs: SongEntry[], accentColor: string, showRequest = f
     { header: "#", width: 500, getter: s => s.order || "" },
   ];
   if (showRequest) cols.push({ header: "★", width: 400, getter: s => s.request ? "★" : "" });
-  cols.push({ header: "Artist", width: 2200, getter: s => s.artist });
   cols.push({ header: "Title", width: 2800, getter: s => s.title });
+  cols.push({ header: "Artist", width: 2200, getter: s => s.artist });
+  if (hasSinger) cols.push({ header: "Singer", width: 1200, getter: s => s.singer });
   if (hasKey) cols.push({ header: "Key", width: 600, getter: s => s.key });
   if (hasBpm) cols.push({ header: "BPM", width: 600, getter: s => s.bpm });
-  if (hasSinger) cols.push({ header: "Singer", width: 1200, getter: s => s.singer });
   cols.push({ header: "Notes", width: 1800, getter: s => s.notes || "" });
 
   // Normalize widths to fit ~9360 DXA
