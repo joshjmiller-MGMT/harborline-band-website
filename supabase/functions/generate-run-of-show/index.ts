@@ -20,6 +20,11 @@ Deno.serve(async (req) => {
 
     const eventData = parseSheetToEvent(sheetData || { headers: [], rows: [], sheetTitle: 'Untitled' });
     
+    // TSB default: project lead is always Tom Starr unless otherwise specified
+    if (organization === 'tsb' && !eventData.details['project lead'] && !eventData.details['bandleader']) {
+      eventData.details['project lead'] = 'Tom Starr';
+    }
+
     // Merge manual overrides into parsed data
     if (overrides && typeof overrides === 'object') {
       for (const [key, value] of Object.entries(overrides)) {
