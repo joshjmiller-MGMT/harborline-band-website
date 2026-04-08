@@ -136,6 +136,9 @@ const DETAIL_KEY_ALIASES: Record<string, string> = {
   "officiant": "officiant",
   "location": "venue",
   "address": "venue address",
+  "sound": "audio reinforcement",
+  "what to wear": "attire",
+  "black tie attire": "attire",
 };
 
 function normalizeDetailKey(rawKey: string): string {
