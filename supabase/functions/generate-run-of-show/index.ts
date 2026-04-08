@@ -1002,10 +1002,14 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     }
   }
 
-  // Derive load-in time from timeline if present
-  if (!details['load-in time']) {
-    const loadInEntry = timeline.find(t => /load[- ]?in/i.test(t.description));
-    if (loadInEntry) details['load-in time'] = loadInEntry.time;
+  // Derive load-in time from timeline if present (always prefer timeline time over bullet text)
+  const loadInEntry = timeline.find(t => /load[- ]?in/i.test(t.description));
+  if (loadInEntry) {
+    // Store the bullet-parsed load-in info as "load-in notes" if it's descriptive text, not a time
+    if (details['load-in time'] && !/^\d{1,2}:\d{2}/i.test(details['load-in time'])) {
+      details['load-in notes'] = details['load-in time'];
+    }
+    details['load-in time'] = loadInEntry.time;
   }
 
   // Derive setup time from load-in if missing
