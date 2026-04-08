@@ -1759,7 +1759,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
       }).join('');
 
       return `
-        <div class="set-title">${section.time ? section.time + ' \\u2014 ' : ''}${section.title}</div>
+        <div class="set-title">${section.time ? section.time + ' \u2014 ' : ''}${section.title}</div>
         <table class="song-table">
           <thead>
             <tr>
