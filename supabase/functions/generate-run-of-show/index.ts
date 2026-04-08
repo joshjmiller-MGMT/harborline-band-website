@@ -555,7 +555,7 @@ function parseSheetToEvent(sheetData: any): EventData {
   }
 
   const eventName = details['event name'] || details['event'] || sheetTitle || 'Event';
-  return { eventName, details, personnel, timeline, songSections };
+  return { eventName, details, personnel, timeline: sortTimeline(timeline), songSections: sortSongSections(songSections) };
 }
 
 // ─── Text-based Parser (Google Docs, webpages) ─────────────────────────
