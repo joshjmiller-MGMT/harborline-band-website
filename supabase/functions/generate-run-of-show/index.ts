@@ -1536,11 +1536,15 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
 
   let personnelHTML = '';
   if (event.personnel.length > 0) {
-    const personnelStr = event.personnel.map(p => `<strong>${p.role}:</strong> ${p.name}`).join(' &nbsp;|&nbsp; ');
+    const groups = groupPersonnelByDept(event.personnel);
+    const groupsHTML = groups.map(g => {
+      const memberStr = g.members.map(p => `<strong>${p.role}:</strong> ${p.name}`).join(' &nbsp;|&nbsp; ');
+      return `<div style="margin-bottom: 8px;"><span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: ${teal}; font-weight: 600;">${g.label}:</span> ${memberStr}</div>`;
+    }).join('');
     personnelHTML = `
       <div class="section-title">Team</div>
       <hr class="section-rule" />
-      <div class="personnel-text">${personnelStr}</div>
+      <div class="personnel-text">${groupsHTML}</div>
     `;
   }
 
