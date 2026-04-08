@@ -96,6 +96,88 @@ interface SongEntry {
   patches: string;
 }
 
+// ─── Time Utilities ─────────────────────────────────────────────────────
+
+/** Parse a time string like "4:00 PM", "4:00 - 4:40 PM", "1:00 PM OR EARLIER" into minutes since midnight for sorting */
+function parseTimeToMinutes(timeStr: string): number {
+  if (!timeStr) return 9999;
+  // Try to find AM/PM anywhere in the string (e.g. "8:10 - 9:00 PM" → PM applies)
+  const hasAM = /AM/i.test(timeStr);
+  const hasPM = /PM/i.test(timeStr);
+  // Extract first HH:MM occurrence
+  const m = timeStr.match(/(\d{1,2}):(\d{2})/);
+  if (!m) return 9999;
+  let hours = parseInt(m[1], 10);
+  const mins = parseInt(m[2], 10);
+  if (hasPM && !hasAM && hours < 12) hours += 12;
+  if (hasAM && !hasPM && hours === 12) hours = 0;
+  // If no AM/PM anywhere in string, assume PM for typical event times (all hours)
+  if (!hasAM && !hasPM && hours < 12) hours += 12;
+  return hours * 60 + mins;
+}
+
+/** Clean up a time string — remove noise like "OR EARLIER", trailing location info in parens */
+function cleanTimeString(timeStr: string): string {
+  return timeStr
+    .replace(/\s+OR\s+EARLIER/gi, '')
+    .replace(/\s+OR\s+LATER/gi, '')
+    .trim();
+}
+
+/** Sort timeline entries chronologically by parsed time, and deduplicate */
+function sortTimeline(timeline: { time: string; description: string }[]): { time: string; description: string }[] {
+  // Deduplicate: entries with same description (case-insensitive) — keep the one with the cleaner time
+  const seen = new Map<string, { time: string; description: string }>();
+  for (const entry of timeline) {
+    const key = entry.description.toLowerCase().replace(/\s+/g, ' ').replace(/\([^)]*\)/g, '').trim();
+    if (!seen.has(key)) {
+      seen.set(key, entry);
+    }
+  }
+  const deduped = Array.from(seen.values());
+  return deduped.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
+}
+
+/** Section ordering priority — lower = earlier in the event flow */
+const SECTION_ORDER: [RegExp, number][] = [
+  [/prelud/i, 10],
+  [/guest\s*arrival/i, 15],
+  [/processional/i, 20],
+  [/ceremon/i, 30],
+  [/recessional/i, 40],
+  [/postlude/i, 45],
+  [/cocktail/i, 50],
+  [/dinner/i, 60],
+  [/reception/i, 65],
+  [/intro/i, 68],
+  [/first\s*dance/i, 70],
+  [/speech/i, 72],
+  [/toast/i, 73],
+  [/band\s*set\s*1|set\s*1/i, 80],
+  [/band\s*set\s*2|set\s*2/i, 90],
+  [/band\s*set\s*3|set\s*3/i, 100],
+  [/band\s*set\s*4|set\s*4/i, 110],
+  [/extra/i, 120],
+];
+
+function getSectionSortOrder(title: string): number {
+  for (const [pattern, order] of SECTION_ORDER) {
+    if (pattern.test(title)) return order;
+  }
+  return 75; // default: after cocktail, before sets
+}
+
+/** Sort song sections in proper event chronological order */
+function sortSongSections(sections: SongSection[]): SongSection[] {
+  return [...sections].sort((a, b) => {
+    const orderA = getSectionSortOrder(a.title);
+    const orderB = getSectionSortOrder(b.title);
+    if (orderA !== orderB) return orderA - orderB;
+    // If same order, sort by time
+    return parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time);
+  });
+}
+
 const DETAIL_KEY_ALIASES: Record<string, string> = {
   "musicians salesperson": "musician salesperson",
   "musicians sales person": "musician salesperson",
@@ -484,7 +566,7 @@ function parseSheetToEvent(sheetData: any): EventData {
   }
 
   const eventName = details['event name'] || details['event'] || sheetTitle || 'Event';
-  return { eventName, details, personnel, timeline, songSections };
+  return { eventName, details, personnel, timeline: sortTimeline(timeline), songSections: sortSongSections(songSections) };
 }
 
 // ─── Text-based Parser (Google Docs, webpages) ─────────────────────────
@@ -585,6 +667,26 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
         details[label] = value;
         continue;
       }
+    }
+
+    // ── Section headers that might look like role lines: "CEREMONY (TOM SOLO) JACK - SOUND" ──
+    // Must check BEFORE role matching so known event sections become song section headers
+    const eventSectionKeywords = /^(CEREMONY|COCKTAIL\s*HOUR|COCKTAIL|RECEPTION|PRELUDE|PROCESSIONAL|RECESSIONAL|POSTLUDE)/i;
+    if (eventSectionKeywords.test(line) && !line.includes(':')) {
+      if (currentSongs.length > 0) {
+        songSections.push({ title: currentSectionTitle || 'Songs', time: currentSectionTime, songs: currentSongs });
+        currentSongs = [];
+      }
+      // Extract section name (up to first paren or dash)
+      const sectionClean = line.match(/^([A-Z][A-Z\s/&]+)/i);
+      currentSectionTitle = sectionClean ? sectionClean[1].trim() : line;
+      currentSectionTime = '';
+      // Store the rest as a detail (e.g., personnel for that section)
+      const afterSection = line.replace(eventSectionKeywords, '').trim().replace(/^\([^)]*\)\s*/, '').trim();
+      if (afterSection) {
+        details[currentSectionTitle.toLowerCase()] = afterSection;
+      }
+      continue;
     }
 
     // ── Role assignment lines: "FULL BAND – ..." or "CEREMONY – ..." or "Day-Of Planner – ..." ──
@@ -993,23 +1095,34 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     details['ensemble'] = details['musicians'];
   }
 
-  // Derive start/end from first and last timeline entries
-  if (!details['start / end'] && timeline.length >= 2) {
-    const firstTime = timeline[0]?.time || '';
-    const lastTime = timeline[timeline.length - 1]?.time || '';
-    if (firstTime && lastTime) {
-      details['start / end'] = `${firstTime} – ${lastTime}`;
+  // ── Sort timeline chronologically ──
+  const sortedTimeline = sortTimeline(timeline);
+
+  // ── Derive start/end from event timeline (skip load-in/setup; use ceremony/guest arrival → last item's end time) ──
+  if (!details['start / end'] && sortedTimeline.length >= 2) {
+    // Find first non-load-in/setup entry as the "start"
+    const eventStart = sortedTimeline.find(t => 
+      !/load[- ]?in|setup|sound\s*check|warehouse|band\s*load/i.test(t.description)
+    );
+    const eventEnd = sortedTimeline[sortedTimeline.length - 1];
+    if (eventStart && eventEnd && eventStart !== eventEnd) {
+      // Extract the start time (first time from the start entry)
+      const startClean = cleanTimeString(eventStart.time).replace(/\s*[–-]\s*\d.*$/, '').trim();
+      // Extract the end time (last time from the end entry — if it's a range like "8:10 - 9:00 PM", use the end)
+      const endTimeStr = cleanTimeString(eventEnd.time);
+      const endRangeMatch = endTimeStr.match(/\d{1,2}:\d{2}\s*(?:AM|PM)?\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:AM|PM)?)/i);
+      const endClean = endRangeMatch ? endRangeMatch[1].trim() : endTimeStr;
+      details['start / end'] = `${startClean} – ${endClean}`;
     }
   }
 
   // Derive load-in time from timeline if present (always prefer timeline time over bullet text)
-  const loadInEntry = timeline.find(t => /load[- ]?in/i.test(t.description));
+  const loadInEntry = sortedTimeline.find(t => /load[- ]?in/i.test(t.description));
   if (loadInEntry) {
-    // Store the bullet-parsed load-in info as "load-in notes" if it's descriptive text, not a time
     if (details['load-in time'] && !/^\d{1,2}:\d{2}/i.test(details['load-in time'])) {
       details['load-in notes'] = details['load-in time'];
     }
-    details['load-in time'] = loadInEntry.time;
+    details['load-in time'] = cleanTimeString(loadInEntry.time);
   }
 
   // Derive setup time from load-in if missing
@@ -1017,7 +1130,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     details['setup time'] = details['load-in time'];
   }
 
-  // Extract date from sheetTitle if not found (e.g. "4.11.2026 Fierstein Wedding")
+  // Extract date from sheetTitle if not found
   if (!details['event date'] && sheetTitle) {
     const titleDateMatch = sheetTitle.match(/(\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4})/);
     if (titleDateMatch) {
@@ -1025,7 +1138,7 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     }
   }
 
-  // Also try extracting date from any line if still missing
+  // Also try extracting date from any detail value if still missing
   if (!details['event date']) {
     for (const [_k, v] of Object.entries(details)) {
       const dMatch = (v || '').match(/(\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4})/);
@@ -1046,8 +1159,18 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     details['mc'] = personnel.find(p => p.role === 'MC')!.name;
   }
 
+  // ── Sort song sections in proper event order ──
+  const sortedSongSections = sortSongSections(songSections);
+
+  // ── Clean up time strings in details ──
+  for (const key of ['load-in time', 'setup time', 'start / end', 'soundcheck']) {
+    if (details[key]) {
+      details[key] = cleanTimeString(details[key]);
+    }
+  }
+
   const eventName = details['event name'] || sheetTitle || 'Event';
-  return { eventName, details, personnel, timeline, songSections };
+  return { eventName, details, personnel, timeline: sortedTimeline, songSections: sortedSongSections };
 }
 
 function findColumnIndex(allRows: string[][], keyword: string): number | null {
