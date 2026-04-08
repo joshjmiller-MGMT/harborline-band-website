@@ -1184,6 +1184,54 @@ function findColumnIndex(allRows: string[][], keyword: string): number | null {
   return null;
 }
 
+// ─── Personnel Grouping ─────────────────────────────────────────────────
+
+interface PersonnelGroup {
+  label: string;
+  members: { role: string; name: string }[];
+}
+
+function groupPersonnelByDept(personnel: { role: string; name: string }[]): PersonnelGroup[] {
+  const soundKeywords = ['sound', 'audio', 'a/v', 'av ', 'a1', 'a2', 'monitor', 'foh'];
+  const lightKeywords = ['light', 'lighting', 'ld', 'spots', 'spot op'];
+  const productionKeywords = ['mc', 'emcee', 'stage manager', 'production', 'break playlist', 'dj'];
+  const coordKeywords = ['coordinator', 'planner', 'ceremony', 'cocktail hour', 'cocktail'];
+
+  const groups: Record<string, { role: string; name: string }[]> = {
+    'Band': [],
+    'Sound': [],
+    'Lighting': [],
+    'Production': [],
+    'Coordination': [],
+  };
+
+  for (const p of personnel) {
+    const r = p.role.toLowerCase();
+    if (soundKeywords.some(k => r.includes(k))) {
+      groups['Sound'].push(p);
+    } else if (lightKeywords.some(k => r.includes(k))) {
+      groups['Lighting'].push(p);
+    } else if (productionKeywords.some(k => r.includes(k))) {
+      groups['Production'].push(p);
+    } else if (coordKeywords.some(k => r.includes(k))) {
+      groups['Coordination'].push(p);
+    } else {
+      groups['Band'].push(p);
+    }
+  }
+
+  return Object.entries(groups)
+    .filter(([_, members]) => members.length > 0)
+    .map(([label, members]) => ({ label, members }));
+}
+
+function personnelGroupsToHTML(groups: PersonnelGroup[], roleFirst = true): string {
+  return groups.map(g => {
+    const memberStr = g.members.map(p => roleFirst ? `${p.role}: ${p.name}` : `${p.name} - ${p.role}`).join('  |  ');
+    return `<div style="margin-bottom: 8px;"><strong style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em;">${g.label}:</strong> <span>${memberStr}</span></div>`;
+  }).join('');
+}
+
 // ─── HTML Generator ─────────────────────────────────────────────────────
 
 type RequiredField = { label: string; key: string };
@@ -1369,9 +1417,11 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
   // Personnel
   let personnelHTML = '';
   if (event.personnel.length > 0) {
-    personnelHTML = event.personnel
-      .map(p => `<div class="personnel-block"><strong>${p.role}:</strong> ${p.name}</div>`)
-      .join('');
+    const groups = groupPersonnelByDept(event.personnel);
+    personnelHTML = groups.map(g => {
+      const memberStr = g.members.map(p => `<div class="personnel-block"><strong>${p.role}:</strong> ${p.name}</div>`).join('');
+      return `<div style="margin-bottom: 12px;"><div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin-bottom: 4px;">${g.label}</div>${memberStr}</div>`;
+    }).join('');
   }
 
   // Song sections as numbered lists with dividers
@@ -1486,11 +1536,15 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
 
   let personnelHTML = '';
   if (event.personnel.length > 0) {
-    const personnelStr = event.personnel.map(p => `<strong>${p.role}:</strong> ${p.name}`).join(' &nbsp;|&nbsp; ');
+    const groups = groupPersonnelByDept(event.personnel);
+    const groupsHTML = groups.map(g => {
+      const memberStr = g.members.map(p => `<strong>${p.role}:</strong> ${p.name}`).join(' &nbsp;|&nbsp; ');
+      return `<div style="margin-bottom: 8px;"><span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: ${teal}; font-weight: 600;">${g.label}:</span> ${memberStr}</div>`;
+    }).join('');
     personnelHTML = `
       <div class="section-title">Team</div>
       <hr class="section-rule" />
-      <div class="personnel-text">${personnelStr}</div>
+      <div class="personnel-text">${groupsHTML}</div>
     `;
   }
 
@@ -1638,11 +1692,15 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
 
   let personnelHTML = '';
   if (event.personnel.length > 0) {
-    const personnelStr = event.personnel.map(p => `${p.name} - ${p.role}`).join(' | ');
+    const groups = groupPersonnelByDept(event.personnel);
+    const groupsHTML = groups.map(g => {
+      const memberStr = g.members.map(p => `${p.name} - ${p.role}`).join(' | ');
+      return `<div style="margin-bottom: 8px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: ${purple}; font-weight: 600;">${g.label}:</span> ${memberStr}</div>`;
+    }).join('');
     personnelHTML = `
       <div class="section-title">Teammates</div>
       <hr class="section-rule" />
-      <div class="personnel-text">${personnelStr}</div>
+      <div class="personnel-text">${groupsHTML}</div>
     `;
   }
 

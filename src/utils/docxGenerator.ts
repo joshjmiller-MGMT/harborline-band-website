@@ -28,6 +28,37 @@ interface SongEntry {
 }
 
 type TemplateType = "wedding-ros" | "client-planner" | "corporate-ros" | "party-runsheet";
+
+// ─── Personnel Grouping ─────────────────────────────────────────────────
+
+interface PersonnelGroup {
+  label: string;
+  members: { role: string; name: string }[];
+}
+
+function groupPersonnelByDept(personnel: { role: string; name: string }[]): PersonnelGroup[] {
+  const soundKeywords = ['sound', 'audio', 'a/v', 'av ', 'a1', 'a2', 'monitor', 'foh'];
+  const lightKeywords = ['light', 'lighting', 'ld', 'spots', 'spot op'];
+  const productionKeywords = ['mc', 'emcee', 'stage manager', 'production', 'break playlist', 'dj'];
+  const coordKeywords = ['coordinator', 'planner', 'ceremony', 'cocktail hour', 'cocktail'];
+
+  const groups: Record<string, { role: string; name: string }[]> = {
+    'Band': [], 'Sound': [], 'Lighting': [], 'Production': [], 'Coordination': [],
+  };
+
+  for (const p of personnel) {
+    const r = p.role.toLowerCase();
+    if (soundKeywords.some(k => r.includes(k))) groups['Sound'].push(p);
+    else if (lightKeywords.some(k => r.includes(k))) groups['Lighting'].push(p);
+    else if (productionKeywords.some(k => r.includes(k))) groups['Production'].push(p);
+    else if (coordKeywords.some(k => r.includes(k))) groups['Coordination'].push(p);
+    else groups['Band'].push(p);
+  }
+
+  return Object.entries(groups)
+    .filter(([_, members]) => members.length > 0)
+    .map(([label, members]) => ({ label, members }));
+}
 type OrgKey = "harborline" | "bse" | "tsb";
 type RequiredField = { label: string; key: string };
 
@@ -337,17 +368,24 @@ function buildWeddingRoS(event: EventData, requiredFields: RequiredField[], logo
   // Details
   children.push(...buildDetailParagraphs(event, requiredFields, { fontSize: 12 }));
 
-  // Personnel
+  // Personnel grouped by department
   if (event.personnel.length > 0) {
     children.push(emptyLine());
-    for (const p of event.personnel) {
+    const groups = groupPersonnelByDept(event.personnel);
+    for (const g of groups) {
       children.push(new Paragraph({
-        spacing: { after: 60 },
-        children: [
-          new TextRun({ text: `${p.role}: `, bold: true, size: 24, font: "Inter", color: "222222" }),
-          new TextRun({ text: p.name, size: 24, font: "Inter", color: "222222" }),
-        ],
+        spacing: { after: 40 },
+        children: [new TextRun({ text: g.label.toUpperCase(), size: 20, font: "Inter", color: "999999", bold: true })],
       }));
+      for (const p of g.members) {
+        children.push(new Paragraph({
+          spacing: { after: 60 },
+          children: [
+            new TextRun({ text: `${p.role}: `, bold: true, size: 24, font: "Inter", color: "222222" }),
+            new TextRun({ text: p.name, size: 24, font: "Inter", color: "222222" }),
+          ],
+        }));
+      }
     }
   }
 
@@ -465,12 +503,18 @@ function buildCorporateRoS(event: EventData, requiredFields: RequiredField[], or
   children.push(new Paragraph({ spacing: { after: 120 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: accentColor, space: 1 } }, children: [] }));
   children.push(...buildDetailParagraphs(event, requiredFields, { fontSize: 12, labelColor: "1a1a1a" }));
 
-  // Personnel
+  // Personnel grouped by department
   if (event.personnel.length > 0) {
     children.push(sectionHeading("Team", { font: "Inter", size: 16, color: accentColor, allCaps: true }));
     children.push(new Paragraph({ spacing: { after: 120 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: accentColor, space: 1 } }, children: [] }));
-    const personnelText = event.personnel.map(p => `${p.role}: ${p.name}`).join("  |  ");
-    children.push(new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: personnelText, size: 24, font: "Inter", color: "333333" })] }));
+    const groups = groupPersonnelByDept(event.personnel);
+    for (const g of groups) {
+      const memberStr = g.members.map(p => `${p.role}: ${p.name}`).join("  |  ");
+      children.push(new Paragraph({ spacing: { after: 80 }, children: [
+        new TextRun({ text: `${g.label}: `, bold: true, size: 22, font: "Inter", color: accentColor, allCaps: true }),
+        new TextRun({ text: memberStr, size: 24, font: "Inter", color: "333333" }),
+      ] }));
+    }
   }
 
   // Timeline
@@ -573,12 +617,18 @@ function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], o
   children.push(new Paragraph({ spacing: { after: 120 }, border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: teal, space: 1 } }, children: [] }));
   children.push(...buildDetailParagraphs(event, requiredFields, { fontSize: 12 }));
 
-  // Personnel
+  // Personnel grouped by department
   if (event.personnel.length > 0) {
     children.push(sectionHeading("Teammates", { font: "Inter", size: 22, color: purple, bold: false }));
     children.push(new Paragraph({ spacing: { after: 120 }, border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: teal, space: 1 } }, children: [] }));
-    const personnelText = event.personnel.map(p => `${p.name} - ${p.role}`).join("  |  ");
-    children.push(new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: personnelText, size: 24, font: "Inter", color: "333333" })] }));
+    const groups = groupPersonnelByDept(event.personnel);
+    for (const g of groups) {
+      const memberStr = g.members.map(p => `${p.name} - ${p.role}`).join("  |  ");
+      children.push(new Paragraph({ spacing: { after: 80 }, children: [
+        new TextRun({ text: `${g.label}: `, bold: true, size: 24, font: "Inter", color: purple }),
+        new TextRun({ text: memberStr, size: 24, font: "Inter", color: "333333" }),
+      ] }));
+    }
   }
 
   // Timeline
