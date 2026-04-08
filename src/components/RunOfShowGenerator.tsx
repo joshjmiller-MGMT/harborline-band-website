@@ -10,7 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import logoCircle from "@/assets/logo-circle.png";
 import logoTextHarborline from "@/assets/logo-text-dark.png";
 import logoTextBSE from "@/assets/logo-bse-dark.png";
-import logoTextTSB from "@/assets/logo-tsb-dark.png";
+import logoTextTSB from "@/assets/logo-tsb.webp";
 
 type OrgKey = "harborline" | "bse" | "tsb";
 
@@ -345,6 +345,7 @@ export default function RunOfShowGenerator() {
           format: "html",
           logos: logosBase64,
           overrides,
+          organization,
           requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
         },
       });
