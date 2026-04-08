@@ -1197,7 +1197,16 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     }
   }
 
-  // If "couple" was found, this is a wedding — derive event type and event name
+  // Fallback: if venue address still missing, check for any key containing "address"
+  if (!details['venue address']) {
+    for (const [key, val] of Object.entries(details)) {
+      if (key.includes('address') && val && val.trim()) {
+        details['venue address'] = val;
+        break;
+      }
+    }
+  }
+
   if (details['client'] && !details['event type']) {
     // If there's a "couple" field, it's a wedding
     const clientLower = (details['client'] || '').toLowerCase();
