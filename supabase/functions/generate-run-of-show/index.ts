@@ -1213,15 +1213,38 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     }
   }
 
-  // Map "sound" detail to "audio reinforcement" — but only if it looks like equipment/setup info, not a person's name
-  if (!details['audio reinforcement'] && details['sound']) {
-    const soundVal = details['sound'].toLowerCase();
-    // If it contains PA-related keywords, it's equipment info; otherwise it's a person assigned to sound
-    const isEquipment = /pa|speaker|monitor|system|mic|provided|jbl|qsc|bose|reinforcement|channel|mixer|console|di|sub|amp|in-house|house sound|wireless|wired/i.test(details['sound']);
-    if (isEquipment) {
+  // Auto-populate "audio reinforcement" from sound personnel or sound detail
+  if (!details['audio reinforcement']) {
+    if (details['sound']) {
+      // Use explicit sound detail value
       details['audio reinforcement'] = details['sound'];
     }
-    // If it's a person name, don't overwrite audio reinforcement — it stays as personnel
+  }
+  // If still empty, derive from sound personnel
+  if (!details['audio reinforcement'] && personnel.length > 0) {
+    const soundKeywords = ['sound', 'audio', 'a/v', 'av ', 'a1', 'a2', 'monitor', 'foh'];
+    const soundPeople = personnel.filter(p => {
+      const combined = (p.role + ' ' + p.name).toLowerCase();
+      return soundKeywords.some(k => combined.includes(k));
+    });
+    if (soundPeople.length > 0) {
+      // Extract just the person's name (strip sound-related role info)
+      const names = soundPeople.map(p => {
+        // If the name contains "SOUND", the actual name might be in the role or vice versa
+        const nameClean = p.name.replace(/\b(sound|audio|ceremony|cocktail|reception|dinner|foh|monitor)\b/gi, '').replace(/[-–—]/g, ' ').replace(/\s+/g, ' ').trim();
+        const roleClean = p.role.replace(/\b(sound|audio|ceremony|cocktail|reception|dinner|foh|monitor)\b/gi, '').replace(/[-–—]/g, ' ').replace(/\s+/g, ' ').trim();
+        return nameClean || roleClean || p.name;
+      });
+      // Deduplicate names
+      const uniqueNames = [...new Set(names.filter(n => n.length > 0))];
+      if (uniqueNames.length > 0) {
+        details['audio reinforcement'] = uniqueNames.join(', ');
+      }
+    }
+  }
+  // Clean up the standalone "sound" key to avoid duplication
+  if (details['sound'] && details['audio reinforcement']) {
+    delete details['sound'];
   }
 
   // Default musician POS to project lead / bandleader if not specified
