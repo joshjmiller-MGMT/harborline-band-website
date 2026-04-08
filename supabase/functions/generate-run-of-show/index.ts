@@ -124,9 +124,18 @@ function cleanTimeString(timeStr: string): string {
     .trim();
 }
 
-/** Sort timeline entries chronologically by parsed time */
+/** Sort timeline entries chronologically by parsed time, and deduplicate */
 function sortTimeline(timeline: { time: string; description: string }[]): { time: string; description: string }[] {
-  return [...timeline].sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
+  // Deduplicate: entries with same description (case-insensitive) — keep the one with the cleaner time
+  const seen = new Map<string, { time: string; description: string }>();
+  for (const entry of timeline) {
+    const key = entry.description.toLowerCase().replace(/\s+/g, ' ').replace(/\([^)]*\)/g, '').trim();
+    if (!seen.has(key)) {
+      seen.set(key, entry);
+    }
+  }
+  const deduped = Array.from(seen.values());
+  return deduped.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
 }
 
 /** Section ordering priority — lower = earlier in the event flow */
