@@ -504,12 +504,18 @@ function buildCorporateRoS(event: EventData, requiredFields: RequiredField[], or
   children.push(new Paragraph({ spacing: { after: 120 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: accentColor, space: 1 } }, children: [] }));
   children.push(...buildDetailParagraphs(event, requiredFields, { fontSize: 12, labelColor: "1a1a1a" }));
 
-  // Personnel
+  // Personnel grouped by department
   if (event.personnel.length > 0) {
     children.push(sectionHeading("Team", { font: "Inter", size: 16, color: accentColor, allCaps: true }));
     children.push(new Paragraph({ spacing: { after: 120 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: accentColor, space: 1 } }, children: [] }));
-    const personnelText = event.personnel.map(p => `${p.role}: ${p.name}`).join("  |  ");
-    children.push(new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: personnelText, size: 24, font: "Inter", color: "333333" })] }));
+    const groups = groupPersonnelByDept(event.personnel);
+    for (const g of groups) {
+      const memberStr = g.members.map(p => `${p.role}: ${p.name}`).join("  |  ");
+      children.push(new Paragraph({ spacing: { after: 80 }, children: [
+        new TextRun({ text: `${g.label}: `, bold: true, size: 22, font: "Inter", color: accentColor, allCaps: true }),
+        new TextRun({ text: memberStr, size: 24, font: "Inter", color: "333333" }),
+      ] }));
+    }
   }
 
   // Timeline
