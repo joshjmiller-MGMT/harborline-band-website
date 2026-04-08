@@ -136,6 +136,9 @@ const DETAIL_KEY_ALIASES: Record<string, string> = {
   "officiant": "officiant",
   "location": "venue",
   "address": "venue address",
+  "sound": "audio reinforcement",
+  "what to wear": "attire",
+  "black tie attire": "attire",
 };
 
 function normalizeDetailKey(rawKey: string): string {
@@ -514,10 +517,18 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
   ];
 
   // ── Phase 1: Try to parse pipe-delimited header line ──
+  // Scan first ~5 lines for a pipe-delimited detail line
   // e.g. "4-11-2026 | Couple: Brian Fierstein & Jessica Cochran | Location: Vandiver Inn | 7-Piece Band | BLACK TIE ATTIRE | ADDRESS:301 S Union Ave"
-  const firstLine = lines[0] || '';
-  if (firstLine.includes('|')) {
-    const segments = firstLine.split('|').map(s => s.trim());
+  let pipeLineIndex = -1;
+  for (let pi = 0; pi < Math.min(lines.length, 8); pi++) {
+    if (lines[pi].includes('|') && (lines[pi].match(/\|/g) || []).length >= 2) {
+      pipeLineIndex = pi;
+      break;
+    }
+  }
+  const pipeHeaderLine = pipeLineIndex >= 0 ? lines[pipeLineIndex] : '';
+  if (pipeHeaderLine) {
+    const segments = pipeHeaderLine.split('|').map(s => s.trim());
     for (const seg of segments) {
       // Date pattern
       if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(seg)) {
@@ -526,14 +537,12 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
         details['client'] = seg.replace(/^couple\s*:\s*/i, '').trim();
       } else if (/^location\s*:/i.test(seg)) {
         details['venue'] = seg.replace(/^location\s*:\s*/i, '').trim();
-      } else if (/^address\s*:/i.test(seg)) {
+      } else if (/^address\s*:\s*/i.test(seg)) {
         details['venue address'] = seg.replace(/^address\s*:\s*/i, '').trim();
-      } else if (/piece|solo|duo|trio|quartet|quintet|band/i.test(seg)) {
+      } else if (/\d+[\s-]*piece|solo|duo|trio|quartet|quintet|band/i.test(seg)) {
         details['ensemble'] = seg;
-      } else if (/attire|tux|formal|casual|black tie/i.test(seg)) {
+      } else if (/attire|tux|formal|casual|black\s*tie/i.test(seg)) {
         details['attire'] = seg;
-      } else if (!details['event name'] && seg.length > 3) {
-        details['event name'] = seg;
       }
     }
   }
@@ -554,8 +563,10 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
-    // Skip if already parsed as header
-    if (i === 0 && firstLine.includes('|') && line === firstLine.trim()) continue;
+    // Skip if already parsed as pipe-delimited header
+    if (pipeLineIndex >= 0 && i === pipeLineIndex) continue;
+    // Skip section headers like "BASIC DETAILS", "PERSONNEL / ROLES", "TIMELINE", "LOAD-IN / PARKING"
+    if (/^(BASIC DETAILS|PERSONNEL\s*\/?\s*ROLES|TIMELINE|LOAD-IN\s*\/?\s*PARKING)$/i.test(line)) continue;
 
     // ── ADDRESS: line ──
     const addrMatch = line.match(/^ADDRESS\s*:\s*(.+)/i);
@@ -945,9 +956,41 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     }
   }
 
-  // Derive event name from client if not explicitly set
+  // If "couple" was found, this is a wedding — derive event type and event name
+  if (details['client'] && !details['event type']) {
+    // If there's a "couple" field, it's a wedding
+    const clientLower = (details['client'] || '').toLowerCase();
+    const hasCouple = Object.keys(details).some(k => normalizeDetailKey(k) === 'couple' || normalizeDetailKey(k) === 'bride and groom' || normalizeDetailKey(k) === 'bride & groom');
+    if (hasCouple || clientLower.includes('&') || clientLower.includes(' and ')) {
+      details['event type'] = 'Wedding';
+    }
+  }
+
+  // Derive event name: "Couple Names - Wedding" if it's a wedding
   if (!details['event name'] && details['client']) {
-    details['event name'] = details['client'];
+    if (details['event type'] && details['event type'].toLowerCase() === 'wedding') {
+      details['event name'] = `${details['client']} - Wedding`;
+    } else {
+      details['event name'] = details['client'];
+    }
+  }
+
+  // Map "sound" detail to "audio reinforcement" if not set
+  if (!details['audio reinforcement'] && details['sound']) {
+    details['audio reinforcement'] = details['sound'];
+  }
+
+  // Map "attire" to "what to wear" and vice versa
+  if (!details['what to wear'] && details['attire']) {
+    details['what to wear'] = details['attire'];
+  }
+  if (!details['attire'] && details['what to wear']) {
+    details['attire'] = details['what to wear'];
+  }
+
+  // Map "ensemble" from pipe-delimited header if present
+  if (!details['ensemble'] && details['musicians']) {
+    details['ensemble'] = details['musicians'];
   }
 
   // Derive start/end from first and last timeline entries
@@ -959,15 +1002,48 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
     }
   }
 
-  // Derive load-in time from timeline if present
-  if (!details['load-in time']) {
-    const loadInEntry = timeline.find(t => /load[- ]?in/i.test(t.description));
-    if (loadInEntry) details['load-in time'] = loadInEntry.time;
+  // Derive load-in time from timeline if present (always prefer timeline time over bullet text)
+  const loadInEntry = timeline.find(t => /load[- ]?in/i.test(t.description));
+  if (loadInEntry) {
+    // Store the bullet-parsed load-in info as "load-in notes" if it's descriptive text, not a time
+    if (details['load-in time'] && !/^\d{1,2}:\d{2}/i.test(details['load-in time'])) {
+      details['load-in notes'] = details['load-in time'];
+    }
+    details['load-in time'] = loadInEntry.time;
   }
 
   // Derive setup time from load-in if missing
   if (!details['setup time'] && details['load-in time']) {
     details['setup time'] = details['load-in time'];
+  }
+
+  // Extract date from sheetTitle if not found (e.g. "4.11.2026 Fierstein Wedding")
+  if (!details['event date'] && sheetTitle) {
+    const titleDateMatch = sheetTitle.match(/(\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4})/);
+    if (titleDateMatch) {
+      details['event date'] = titleDateMatch[1].replace(/\./g, '/');
+    }
+  }
+
+  // Also try extracting date from any line if still missing
+  if (!details['event date']) {
+    for (const [_k, v] of Object.entries(details)) {
+      const dMatch = (v || '').match(/(\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4})/);
+      if (dMatch) {
+        details['event date'] = dMatch[1].replace(/\./g, '/');
+        break;
+      }
+    }
+  }
+
+  // Map "Day-Of Planner" stored under its role key to coordinator
+  if (!details['coordinator'] && details['day-of planner']) {
+    details['coordinator'] = details['day-of planner'];
+  }
+
+  // Map MC to a detail for templates
+  if (!details['mc'] && personnel.find(p => p.role === 'MC')) {
+    details['mc'] = personnel.find(p => p.role === 'MC')!.name;
   }
 
   const eventName = details['event name'] || sheetTitle || 'Event';
