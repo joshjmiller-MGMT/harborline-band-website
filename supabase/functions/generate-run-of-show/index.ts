@@ -669,6 +669,26 @@ function parseTextToEvent(rawText: string, sheetTitle: string): EventData {
       }
     }
 
+    // ── Section headers that might look like role lines: "CEREMONY (TOM SOLO) JACK - SOUND" ──
+    // Must check BEFORE role matching so known event sections become song section headers
+    const eventSectionKeywords = /^(CEREMONY|COCKTAIL\s*HOUR|COCKTAIL|RECEPTION|PRELUDE|PROCESSIONAL|RECESSIONAL|POSTLUDE)/i;
+    if (eventSectionKeywords.test(line) && !line.includes(':')) {
+      if (currentSongs.length > 0) {
+        songSections.push({ title: currentSectionTitle || 'Songs', time: currentSectionTime, songs: currentSongs });
+        currentSongs = [];
+      }
+      // Extract section name (up to first paren or dash)
+      const sectionClean = line.match(/^([A-Z][A-Z\s/&]+)/i);
+      currentSectionTitle = sectionClean ? sectionClean[1].trim() : line;
+      currentSectionTime = '';
+      // Store the rest as a detail (e.g., personnel for that section)
+      const afterSection = line.replace(eventSectionKeywords, '').trim().replace(/^\([^)]*\)\s*/, '').trim();
+      if (afterSection) {
+        details[currentSectionTitle.toLowerCase()] = afterSection;
+      }
+      continue;
+    }
+
     // ── Role assignment lines: "FULL BAND – ..." or "CEREMONY – ..." or "Day-Of Planner – ..." ──
     // Check this BEFORE pipe-delimited details so FULL BAND isn't consumed as key-value
     const roleMatch = line.match(/^([A-Z][A-Z\s/&()-]+?)\s*[–]\s*(.+)$/) || line.match(/^([A-Z][A-Z\s/&()]+?)\s+-\s+(.+)$/) || line.match(/^([A-Za-z][A-Za-z\s/&()-]+?)\s*[–]\s*(.+)$/);
