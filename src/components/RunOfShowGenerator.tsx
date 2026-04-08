@@ -338,15 +338,91 @@ export default function RunOfShowGenerator() {
     }
   };
 
+  const buildWrappedHtml = (html: string, title: string, mode: "preview" | "print") => {
+    const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
+    const originalStyles = styleMatch ? styleMatch[1] : "";
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/);
+    const bodyContent = bodyMatch ? bodyMatch[1] : html;
+
+    return `<!DOCTYPE html><html lang="en"><head>
+      <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${title}</title>
+      <style>
+        ${originalStyles}
+        html, body { margin: 0; padding: 0; background: #1a1a1a; min-height: 100vh; }
+        .page-shell { max-width: 780px; margin: 40px auto; background: white; box-shadow: 0 4px 40px rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; padding: 0; }
+        @media print { html, body { background: white; } .page-shell { margin: 0; box-shadow: none; border-radius: 0; max-width: none; } }
+      </style>
+      ${mode === "print" ? `<script>
+        window.addEventListener("load", () => {
+          const runPrint = () => {
+            window.focus();
+            window.print();
+          };
+
+          if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => setTimeout(runPrint, 150));
+          } else {
+            setTimeout(runPrint, 300);
+          }
+        });
+      <\/script>` : ""}
+    </head><body><div class="page-shell">${bodyContent}</div></body></html>`;
+  };
+
+  const writePreviewWindow = (previewWindow: Window, html: string) => {
+    previewWindow.document.open();
+    previewWindow.document.write(html);
+    previewWindow.document.close();
+  };
+
+  const writeLoadingPreview = (previewWindow: Window, mode: "preview" | "print") => {
+    writePreviewWindow(
+      previewWindow,
+      `<!DOCTYPE html><html lang="en"><head>
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Preparing ${mode === "print" ? "print view" : "preview"}...</title>
+        <style>
+          html, body { margin: 0; min-height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #111827; color: white; }
+          body { display: grid; place-items: center; padding: 24px; }
+          .shell { text-align: center; max-width: 420px; }
+          .spinner { width: 32px; height: 32px; margin: 0 auto 16px; border: 3px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+          .copy { color: rgba(255,255,255,0.72); font-size: 14px; line-height: 1.5; }
+          @keyframes spin { to { transform: rotate(360deg); } }
+        </style>
+      </head><body>
+        <div class="shell">
+          <div class="spinner"></div>
+          <h1 style="margin: 0 0 10px; font-size: 20px; font-weight: 600;">Preparing ${mode === "print" ? "print view" : "preview"}…</h1>
+          <div class="copy">This tab was opened early so Safari allows the document to load correctly.</div>
+        </div>
+      </body></html>`,
+    );
+  };
+
   const generateDocument = async (mode: "download" | "preview" | "print" | "docx") => {
+    const needsPreviewWindow = mode === "preview" || mode === "print";
+    const previewWindow = needsPreviewWindow ? window.open("", "_blank") : null;
+
+    if (needsPreviewWindow && !previewWindow) {
+      toast({
+        title: "Popup blocked",
+        description: "Safari blocked the preview tab. Please allow pop-ups for this site and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (previewWindow && (mode === "preview" || mode === "print")) {
+      writeLoadingPreview(previewWindow, mode);
+    }
+
     setGenerating(true);
     try {
       const overrides = parseManualOverrides();
       const mergedSheetData = sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
 
-      // For DOCX, we need parsed data — fetch it if needed, then generate client-side
       if (mode === "docx") {
-        // Get parsed data from edge function
         const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
           body: {
             sheetData: mergedSheetData,
@@ -365,7 +441,6 @@ export default function RunOfShowGenerator() {
         const eventData = data?.parsedData || parsedData;
         if (!eventData) throw new Error("No parsed data available for DOCX export.");
 
-        // Apply overrides to eventData
         if (overrides && typeof overrides === "object") {
           for (const [key, value] of Object.entries(overrides)) {
             if (value.trim()) {
@@ -383,7 +458,6 @@ export default function RunOfShowGenerator() {
           currentLogoText,
         );
         toast({ title: "Downloaded!", description: "DOCX file saved — ready for Google Drive." });
-        setGenerating(false);
         return;
       }
 
@@ -416,46 +490,26 @@ export default function RunOfShowGenerator() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         toast({ title: "Downloaded!", description: "HTML file saved." });
-      } else {
-        // Build wrapped HTML for preview/print
-        const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
-        const originalStyles = styleMatch ? styleMatch[1] : '';
-        const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/);
-        const bodyContent = bodyMatch ? bodyMatch[1] : html;
-
-        const wrappedHtml = `<!DOCTYPE html><html lang="en"><head>
-          <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${data.filename || "Document"}</title>
-          <style>
-            ${originalStyles}
-            html, body { margin: 0; padding: 0; background: #1a1a1a; min-height: 100vh; }
-            .page-shell { max-width: 780px; margin: 40px auto; background: white; box-shadow: 0 4px 40px rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; padding: 0; }
-            @media print { html, body { background: white; } .page-shell { margin: 0; box-shadow: none; border-radius: 0; max-width: none; } }
-          </style>
-        </head><body><div class="page-shell">${bodyContent}</div></body></html>`;
-
-        // Use blob URL — works reliably in Safari unlike document.write
-        const blob = new Blob([wrappedHtml], { type: "text/html;charset=utf-8" });
-        const blobUrl = URL.createObjectURL(blob);
-        const newWindow = window.open(blobUrl, "_blank");
-
-        if (mode === "print" && newWindow) {
-          newWindow.addEventListener("load", () => {
-            newWindow.print();
-          });
-        }
-
-        if (!newWindow) {
-          // Fallback if popup blocked — download instead
-          const a = document.createElement("a");
-          a.href = blobUrl;
-          a.target = "_blank";
-          a.click();
-        }
-
-        toast({ title: mode === "print" ? "Print dialog opened" : "Preview opened", description: "Opened in a new tab." });
+        return;
       }
+
+      if (!previewWindow || (mode !== "preview" && mode !== "print")) {
+        throw new Error("Preview window was unavailable.");
+      }
+
+      const wrappedHtml = buildWrappedHtml(html, data.filename || "Document", mode);
+      writePreviewWindow(previewWindow, wrappedHtml);
+      previewWindow.focus();
+
+      toast({ title: mode === "print" ? "Print dialog opened" : "Preview opened", description: "Opened in a new tab." });
     } catch (err: any) {
+      if (previewWindow && !previewWindow.closed) {
+        writePreviewWindow(
+          previewWindow,
+          `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Preview failed</title></head><body style="font-family: system-ui, sans-serif; padding: 24px; line-height: 1.5;"><h1 style="margin-top: 0;">Preview failed</h1><p>${(err?.message || "Something went wrong generating the document.").replace(/[<>&]/g, "")}</p></body></html>`,
+        );
+      }
+
       toast({
         title: "Generation failed",
         description: err.message || "Something went wrong generating the document.",
