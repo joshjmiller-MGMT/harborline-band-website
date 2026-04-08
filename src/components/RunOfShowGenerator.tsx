@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer } from "lucide-react";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, FileDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { generateDocx } from "@/utils/docxGenerator";
 import logoCircle from "@/assets/logo-circle.png";
 import logoTextHarborline from "@/assets/logo-circle.png";
 import logoTextBSE from "@/assets/logo-bse-dark.png";
@@ -337,11 +338,54 @@ export default function RunOfShowGenerator() {
     }
   };
 
-  const generateDocument = async (mode: "download" | "preview" | "print") => {
+  const generateDocument = async (mode: "download" | "preview" | "print" | "docx") => {
     setGenerating(true);
     try {
       const overrides = parseManualOverrides();
       const mergedSheetData = sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
+
+      // For DOCX, we need parsed data — fetch it if needed, then generate client-side
+      if (mode === "docx") {
+        // Get parsed data from edge function
+        const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
+          body: {
+            sheetData: mergedSheetData,
+            template,
+            format: "html",
+            logos: logosBase64,
+            overrides,
+            organization,
+            requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
+          },
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        const eventData = data?.parsedData || parsedData;
+        if (!eventData) throw new Error("No parsed data available for DOCX export.");
+
+        // Apply overrides to eventData
+        if (overrides && typeof overrides === "object") {
+          for (const [key, value] of Object.entries(overrides)) {
+            if (value.trim()) {
+              eventData.details[key.toLowerCase()] = value.trim();
+              if (key.toLowerCase() === "event name") eventData.eventName = value.trim();
+            }
+          }
+        }
+
+        await generateDocx(
+          eventData,
+          template,
+          organization,
+          TEMPLATE_FIELDS[template],
+          currentLogoText,
+        );
+        toast({ title: "Downloaded!", description: "DOCX file saved — ready for Google Drive." });
+        setGenerating(false);
+        return;
+      }
 
       const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
         body: {
@@ -732,11 +776,11 @@ export default function RunOfShowGenerator() {
           )}
         </CardHeader>
         <CardContent>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <Button
               onClick={() => generateDocument("preview")}
               disabled={generating}
-              className="flex-1"
+              className="flex-1 min-w-[120px]"
               variant="hero"
             >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
@@ -745,16 +789,25 @@ export default function RunOfShowGenerator() {
             <Button
               onClick={() => generateDocument("print")}
               disabled={generating}
-              className="flex-1"
+              className="flex-1 min-w-[120px]"
               variant="heroOutline"
             >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
               Print / PDF
             </Button>
             <Button
+              onClick={() => generateDocument("docx")}
+              disabled={generating}
+              className="flex-1 min-w-[120px]"
+              variant="heroOutline"
+            >
+              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+              Download DOCX
+            </Button>
+            <Button
               onClick={() => generateDocument("download")}
               disabled={generating}
-              className="flex-1"
+              className="flex-1 min-w-[120px]"
               variant="outline"
             >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
