@@ -236,6 +236,7 @@ export default function RunOfShowGenerator() {
   const [manualOverrides, setManualOverrides] = useState("");
   const manualOverridesRef = useRef<HTMLTextAreaElement>(null);
 
+  const { uploadToDrive, uploading: driveUploading } = useGoogleDriveUpload();
   const currentLogoText = ORG_INFO[organization].logoText;
 
   useEffect(() => {
