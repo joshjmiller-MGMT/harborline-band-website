@@ -534,6 +534,55 @@ export default function RunOfShowGenerator() {
     }
   };
 
+  const handleDriveUpload = async () => {
+    setGenerating(true);
+    try {
+      const overrides = parseManualOverrides();
+      const mergedSheetData = sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
+
+      const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
+        body: {
+          sheetData: mergedSheetData,
+          template,
+          format: "html",
+          logos: logosBase64,
+          overrides,
+          organization,
+          requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const eventData = data?.parsedData || parsedData;
+      if (!eventData) throw new Error("No parsed data available for DOCX export.");
+
+      if (overrides && typeof overrides === "object") {
+        for (const [key, value] of Object.entries(overrides)) {
+          if (value.trim()) {
+            eventData.details[key.toLowerCase()] = value.trim();
+            if (key.toLowerCase() === "event name") eventData.eventName = value.trim();
+          }
+        }
+      }
+
+      const { blob, filename } = await generateDocxBlob(
+        eventData,
+        template,
+        organization,
+        TEMPLATE_FIELDS[template],
+        currentLogoText,
+      );
+
+      uploadToDrive({ fileName: filename, fileBlob: blob });
+    } catch (err: any) {
+      toast({ title: "Error preparing document", description: err.message, variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const totalSongs = parsedData?.songSections.reduce((sum, s) => sum + s.songs.length, 0) || 0;
   const fieldStatus = getFieldStatus();
   const missingFields = fieldStatus.filter(f => !f.found);
