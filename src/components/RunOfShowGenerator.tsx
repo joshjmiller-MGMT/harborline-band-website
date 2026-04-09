@@ -922,6 +922,15 @@ export default function RunOfShowGenerator() {
               Download DOCX
             </Button>
             <Button
+              onClick={handleDriveUpload}
+              disabled={generating || driveUploading}
+              className="flex-1 min-w-[120px]"
+              variant="heroOutline"
+            >
+              {driveUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              Upload to Drive
+            </Button>
+            <Button
               onClick={() => generateDocument("download")}
               disabled={generating}
               className="flex-1 min-w-[120px]"
