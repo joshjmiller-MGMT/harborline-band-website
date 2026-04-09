@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, FileDown } from "lucide-react";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, FileDown, Upload } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { generateDocx } from "@/utils/docxGenerator";
+import { generateDocx, generateDocxBlob } from "@/utils/docxGenerator";
+import { useGoogleDriveUpload } from "@/hooks/useGoogleDriveUpload";
 import logoCircle from "@/assets/logo-harborline-doc.png";
 import logoTextHarborline from "@/assets/logo-harborline-doc.png";
 import logoTextBSE from "@/assets/logo-bse-dark.png";
@@ -235,6 +236,7 @@ export default function RunOfShowGenerator() {
   const [manualOverrides, setManualOverrides] = useState("");
   const manualOverridesRef = useRef<HTMLTextAreaElement>(null);
 
+  const { uploadToDrive, uploading: driveUploading } = useGoogleDriveUpload();
   const currentLogoText = ORG_INFO[organization].logoText;
 
   useEffect(() => {
@@ -527,6 +529,55 @@ export default function RunOfShowGenerator() {
         description: err.message || "Something went wrong generating the document.",
         variant: "destructive",
       });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleDriveUpload = async () => {
+    setGenerating(true);
+    try {
+      const overrides = parseManualOverrides();
+      const mergedSheetData = sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
+
+      const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
+        body: {
+          sheetData: mergedSheetData,
+          template,
+          format: "html",
+          logos: logosBase64,
+          overrides,
+          organization,
+          requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const eventData = data?.parsedData || parsedData;
+      if (!eventData) throw new Error("No parsed data available for DOCX export.");
+
+      if (overrides && typeof overrides === "object") {
+        for (const [key, value] of Object.entries(overrides)) {
+          if (value.trim()) {
+            eventData.details[key.toLowerCase()] = value.trim();
+            if (key.toLowerCase() === "event name") eventData.eventName = value.trim();
+          }
+        }
+      }
+
+      const { blob, filename } = await generateDocxBlob(
+        eventData,
+        template,
+        organization,
+        TEMPLATE_FIELDS[template],
+        currentLogoText,
+      );
+
+      uploadToDrive({ fileName: filename, fileBlob: blob });
+    } catch (err: any) {
+      toast({ title: "Error preparing document", description: err.message, variant: "destructive" });
     } finally {
       setGenerating(false);
     }
@@ -869,6 +920,15 @@ export default function RunOfShowGenerator() {
             >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
               Download DOCX
+            </Button>
+            <Button
+              onClick={handleDriveUpload}
+              disabled={generating || driveUploading}
+              className="flex-1 min-w-[120px]"
+              variant="heroOutline"
+            >
+              {driveUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              Upload to Drive
             </Button>
             <Button
               onClick={() => generateDocument("download")}

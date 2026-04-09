@@ -699,14 +699,13 @@ function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], o
 // PUBLIC API
 // ═══════════════════════════════════════════════════════════════════════
 
-export async function generateDocx(
+export async function generateDocxBlob(
   event: EventData,
   template: TemplateType,
   organization: OrgKey,
   requiredFields: RequiredField[],
   logoSrc: string,
-): Promise<void> {
-  // Load logo
+): Promise<{ blob: Blob; filename: string }> {
   let logoData: { buf: Uint8Array; w: number; h: number } | undefined;
   try {
     logoData = await loadImageAsBuffer(logoSrc);
@@ -731,7 +730,18 @@ export async function generateDocx(
       break;
   }
 
-  const buffer = await Packer.toBlob(doc);
+  const blob = await Packer.toBlob(doc);
   const filename = `${(event.eventName || "document").replace(/[^a-zA-Z0-9-_ ]/g, "_")}.docx`;
-  saveAs(buffer, filename);
+  return { blob, filename };
+}
+
+export async function generateDocx(
+  event: EventData,
+  template: TemplateType,
+  organization: OrgKey,
+  requiredFields: RequiredField[],
+  logoSrc: string,
+): Promise<void> {
+  const { blob, filename } = await generateDocxBlob(event, template, organization, requiredFields, logoSrc);
+  saveAs(blob, filename);
 }
