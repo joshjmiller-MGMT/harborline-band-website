@@ -3,7 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, FileDown, Upload } from "lucide-react";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -893,52 +899,39 @@ export default function RunOfShowGenerator() {
           )}
         </CardHeader>
         <CardContent>
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-3 flex-wrap items-center">
             <Button
               onClick={() => generateDocument("preview")}
               disabled={generating}
-              className="flex-1 min-w-[120px]"
               variant="hero"
+              size="sm"
             >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
               Preview
             </Button>
-            <Button
-              onClick={() => generateDocument("print")}
-              disabled={generating}
-              className="flex-1 min-w-[120px]"
-              variant="heroOutline"
-            >
-              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-              Print / PDF
-            </Button>
-            <Button
-              onClick={() => generateDocument("docx")}
-              disabled={generating}
-              className="flex-1 min-w-[120px]"
-              variant="heroOutline"
-            >
-              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-              Download DOCX
-            </Button>
-            <Button
-              onClick={handleDriveUpload}
-              disabled={generating || driveUploading}
-              className="flex-1 min-w-[120px]"
-              variant="heroOutline"
-            >
-              {driveUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              Upload to Drive
-            </Button>
-            <Button
-              onClick={() => generateDocument("download")}
-              disabled={generating}
-              className="flex-1 min-w-[120px]"
-              variant="outline"
-            >
-              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              Download HTML
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="hero" size="sm" disabled={generating || driveUploading}>
+                  {(generating || driveUploading) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
+                  Export
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => generateDocument("print")}>
+                  <File className="w-4 h-4 mr-2" />
+                  Print / Save as PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => generateDocument("download")}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Download HTML
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDriveUpload}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload to Google Drive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardContent>
       </Card>
