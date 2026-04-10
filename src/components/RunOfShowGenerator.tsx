@@ -953,7 +953,7 @@ export default function RunOfShowGenerator() {
         <CardContent className="flex justify-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="hero" size="sm" disabled={generating || driveUploading}>
+                <Button variant="hero" size="sm">
                   {(generating || driveUploading) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
                   Export
                   <ChevronDown className="w-4 h-4 ml-2" />
