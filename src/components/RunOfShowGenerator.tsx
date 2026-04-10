@@ -898,17 +898,7 @@ export default function RunOfShowGenerator() {
             </CardDescription>
           )}
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-3 flex-wrap items-center">
-            <Button
-              onClick={() => generateDocument("preview")}
-              disabled={generating}
-              variant="hero"
-              size="sm"
-            >
-              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-              Preview
-            </Button>
+        <CardContent className="flex justify-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="hero" size="sm" disabled={generating || driveUploading}>
@@ -917,9 +907,13 @@ export default function RunOfShowGenerator() {
                   <ChevronDown className="w-4 h-4 ml-2" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="center" className="w-52">
+                <DropdownMenuItem onClick={() => generateDocument("preview")}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => generateDocument("print")}>
-                  <File className="w-4 h-4 mr-2" />
+                  <Printer className="w-4 h-4 mr-2" />
                   Print / Save as PDF
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => generateDocument("download")}>
@@ -932,7 +926,6 @@ export default function RunOfShowGenerator() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
         </CardContent>
       </Card>
     </div>
