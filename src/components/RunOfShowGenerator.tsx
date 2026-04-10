@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File } from "lucide-react";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -589,6 +589,58 @@ export default function RunOfShowGenerator() {
     }
   };
 
+  const getExportData = () => parsedData || null;
+
+  const exportAsPlainText = () => {
+    const data = getExportData();
+    if (!data) { toast({ title: "No data", description: "Import a sheet first.", variant: "destructive" }); return; }
+    let text = `${data.eventName || "Run of Show"}\n${"=".repeat(40)}\n\n`;
+    const details = data.details || {};
+    for (const [key, value] of Object.entries(details)) { if (value) text += `${key}: ${value}\n`; }
+    if (Object.keys(details).length > 0) text += "\n";
+    for (const section of data.songSections || []) {
+      text += `--- ${section.title} ---\n`;
+      for (const song of section.songs) {
+        text += `  ${song.time || ""} ${song.title}${song.artist ? ` - ${song.artist}` : ""}${song.notes ? ` (${song.notes})` : ""}\n`;
+      }
+      text += "\n";
+    }
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `${data.eventName || "run-of-show"}.txt`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast({ title: "Downloaded!", description: "TXT file saved." });
+  };
+
+  const exportAsCsv = () => {
+    const data = getExportData();
+    if (!data) { toast({ title: "No data", description: "Import a sheet first.", variant: "destructive" }); return; }
+    const rows: string[][] = [["Section", "Time", "Song", "Artist", "Notes"]];
+    for (const section of data.songSections || []) {
+      for (const song of section.songs) {
+        rows.push([section.title, song.time || "", song.title || "", song.artist || "", song.notes || ""]);
+      }
+    }
+    const csv = rows.map(r => r.map(c => `"${(c || "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `${data.eventName || "run-of-show"}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast({ title: "Downloaded!", description: "CSV file saved." });
+  };
+
+  const copyToClipboard = () => {
+    const data = getExportData();
+    if (!data) { toast({ title: "No data", description: "Import a sheet first.", variant: "destructive" }); return; }
+    let text = "";
+    for (const section of data.songSections || []) {
+      for (const song of section.songs) { text += `• ${song.title}${song.artist ? ` - ${song.artist}` : ""}\n`; }
+    }
+    navigator.clipboard.writeText(text.trim()).then(() => {
+      toast({ title: "Copied!", description: "Song list copied to clipboard." });
+    });
+  };
+
   const totalSongs = parsedData?.songSections.reduce((sum, s) => sum + s.songs.length, 0) || 0;
   const fieldStatus = getFieldStatus();
   const missingFields = fieldStatus.filter(f => !f.found);
@@ -916,9 +968,25 @@ export default function RunOfShowGenerator() {
                   <Printer className="w-4 h-4 mr-2" />
                   Print / Save as PDF
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => generateDocument("docx")}>
+                  <File className="w-4 h-4 mr-2" />
+                  Download DOCX
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => generateDocument("download")}>
                   <FileText className="w-4 h-4 mr-2" />
                   Download HTML
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportAsPlainText}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Download TXT
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportAsCsv}>
+                  <Table className="w-4 h-4 mr-2" />
+                  Download CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={copyToClipboard}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy to Clipboard
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDriveUpload}>
                   <Upload className="w-4 h-4 mr-2" />
