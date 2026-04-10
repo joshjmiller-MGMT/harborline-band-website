@@ -968,9 +968,25 @@ export default function RunOfShowGenerator() {
                   <Printer className="w-4 h-4 mr-2" />
                   Print / Save as PDF
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => generateDocument("docx")}>
+                  <File className="w-4 h-4 mr-2" />
+                  Download DOCX
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => generateDocument("download")}>
                   <FileText className="w-4 h-4 mr-2" />
                   Download HTML
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportAsPlainText}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Download TXT
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportAsCsv}>
+                  <Table className="w-4 h-4 mr-2" />
+                  Download CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={copyToClipboard}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy to Clipboard
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDriveUpload}>
                   <Upload className="w-4 h-4 mr-2" />
