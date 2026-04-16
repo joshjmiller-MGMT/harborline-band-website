@@ -1,16 +1,16 @@
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { useTeamAuth } from "@/hooks/useTeamAuth";
-import { Music, Image, Calendar, FolderOpen, LogOut, FileText, Home, Bot } from "lucide-react";
+import { Music, Image, Calendar, FolderOpen, LogOut, FileText, Home, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo-text.png";
 
 const teamNav = [
+  { name: "Dashboard", href: "/team/dashboard", icon: LayoutDashboard },
   { name: "Songs", href: "/team/songs", icon: Music },
   { name: "Gallery", href: "/team/gallery", icon: Image },
   { name: "Scheduler", href: "/team/scheduler", icon: Calendar },
   { name: "Resources", href: "/team/resources", icon: FolderOpen },
   { name: "Doc Generator", href: "/team/run-of-show", icon: FileText },
-  { name: "Claude Log", href: "/team/claude-log", icon: Bot },
 ];
 
 export default function TeamLayout({ children }: { children: React.ReactNode }) {
@@ -27,7 +27,7 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-6 flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
-            <Link to="/team/songs" className="block">
+            <Link to="/team/dashboard" className="block">
               <img src={logo} alt="Harborline" className="h-5 w-auto opacity-80" />
             </Link>
             <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors" title="Back to website">
