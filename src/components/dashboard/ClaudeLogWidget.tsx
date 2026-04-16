@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Bot, Plus, Trash2, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Bot, Plus, Trash2, ChevronDown, ChevronUp, Loader2, ClipboardPaste, Code2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
