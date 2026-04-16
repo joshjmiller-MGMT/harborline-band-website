@@ -16,7 +16,7 @@ export default function TeamLogin() {
   const [error, setError] = useState("");
 
   if (isAuthenticated) {
-    return <Navigate to="/team/songs" replace />;
+    return <Navigate to="/team/dashboard" replace />;
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -24,7 +24,7 @@ export default function TeamLogin() {
     setError("");
     const success = login(username, password);
     if (success) {
-      navigate("/team/songs");
+      navigate("/team/dashboard");
     } else {
       setError("Invalid credentials");
     }
