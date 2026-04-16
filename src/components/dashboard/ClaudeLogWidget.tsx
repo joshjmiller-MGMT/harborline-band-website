@@ -114,10 +114,71 @@ export default function ClaudeLogWidget() {
             </h2>
             <p className="text-xs text-muted-foreground mt-1">Synced across all machines via the cloud.</p>
           </div>
-          <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
-            <Plus className="w-4 h-4 mr-1" /> Add
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => { setShowApi(!showApi); setShowAdd(false); setShowPaste(false); }}>
+              <Code2 className="w-4 h-4 mr-1" /> API
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => { setShowPaste(!showPaste); setShowAdd(false); setShowApi(false); }}>
+              <ClipboardPaste className="w-4 h-4 mr-1" /> Paste JSON
+            </Button>
+            <Button size="sm" onClick={() => { setShowAdd(!showAdd); setShowPaste(false); setShowApi(false); }}>
+              <Plus className="w-4 h-4 mr-1" /> Add
+            </Button>
+          </div>
         </div>
+
+        {showApi && (
+          <Card className="mb-4 border-primary/40">
+            <CardContent className="pt-4">
+              <p className="text-xs uppercase tracking-widest text-primary mb-2">Auto-Update via API</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Claude (or any script) can POST entries directly to the log. No auth header needed — the table allows public inserts within the team portal pattern.
+              </p>
+              <pre className="text-xs bg-muted text-foreground p-3 rounded overflow-x-auto whitespace-pre">{`curl -X POST '${import.meta.env.VITE_SUPABASE_URL}/rest/v1/claude_log' \\
+  -H 'apikey: ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}' \\
+  -H 'Authorization: Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}' \\
+  -H 'Content-Type: application/json' \\
+  -H 'Prefer: return=minimal' \\
+  -d '{
+    "machine": "Claude Code CLI",
+    "context": "Harborline website",
+    "summary": "What was worked on...",
+    "next_steps": "Pick up here next...",
+    "tags": ["claude", "auto"]
+  }'`}</pre>
+              <p className="text-xs text-muted-foreground mt-3">
+                Tell Claude: "After each session, POST a summary entry to my Claude Log using the curl above." Realtime sync means it appears here instantly.
+              </p>
+              <div className="flex justify-end mt-3">
+                <Button variant="outline" size="sm" onClick={() => setShowApi(false)}>Close</Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {showPaste && (
+          <Card className="mb-4 border-primary/40">
+            <CardContent className="pt-4">
+              <p className="text-xs uppercase tracking-widest text-primary mb-2">Import JSON</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Paste a single entry or an array. Required: <code className="text-foreground">summary</code>. Optional: <code className="text-foreground">machine, context, next_steps, tags, timestamp</code>.
+              </p>
+              <Textarea
+                rows={10}
+                value={pasteJson}
+                onChange={e => setPasteJson(e.target.value)}
+                placeholder={`{\n  "machine": "Claude Code CLI",\n  "context": "Harborline website",\n  "summary": "Refactored Claude Log into dashboard widget",\n  "next_steps": "Add teammate view mode",\n  "tags": ["claude", "dashboard"]\n}`}
+                className="font-mono text-xs"
+              />
+              <div className="flex gap-2 justify-end mt-3">
+                <Button variant="outline" size="sm" onClick={() => { setShowPaste(false); setPasteJson(""); }}>Cancel</Button>
+                <Button size="sm" onClick={importJson} disabled={saving || !pasteJson.trim()}>
+                  {saving && <Loader2 className="w-3 h-3 mr-1 animate-spin" />} Import
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {showAdd && (
           <Card className="mb-4 border-primary/40">
