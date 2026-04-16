@@ -71,6 +71,33 @@ export default function ClaudeLogWidget() {
     }
   };
 
+  const importJson = async () => {
+    if (!pasteJson.trim()) return;
+    setSaving(true);
+    try {
+      const parsed = JSON.parse(pasteJson);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      const rows = items.map((it: any) => ({
+        machine: it.machine || "Unknown Machine",
+        context: it.context || "",
+        summary: it.summary || "",
+        next_steps: it.next_steps || it.nextSteps || "",
+        tags: Array.isArray(it.tags) ? it.tags : (typeof it.tags === "string" ? it.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : []),
+        ...(it.timestamp ? { timestamp: it.timestamp } : {}),
+      })).filter(r => r.summary);
+      if (rows.length === 0) throw new Error("No valid entries found (need at least 'summary')");
+      const { error } = await supabase.from("claude_log").insert(rows);
+      if (error) throw error;
+      toast.success(`Imported ${rows.length} entr${rows.length === 1 ? "y" : "ies"}`);
+      setPasteJson("");
+      setShowPaste(false);
+    } catch (e: any) {
+      toast.error(e.message || "Invalid JSON");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const deleteEntry = async (id: string) => {
     const { error } = await supabase.from("claude_log").delete().eq("id", id);
     if (error) toast.error("Failed to delete");
