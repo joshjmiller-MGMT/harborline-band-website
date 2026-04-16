@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      claude_log: {
+        Row: {
+          context: string
+          created_at: string
+          id: string
+          machine: string
+          next_steps: string
+          summary: string
+          tags: string[]
+          timestamp: string
+        }
+        Insert: {
+          context?: string
+          created_at?: string
+          id?: string
+          machine?: string
+          next_steps?: string
+          summary: string
+          tags?: string[]
+          timestamp?: string
+        }
+        Update: {
+          context?: string
+          created_at?: string
+          id?: string
+          machine?: string
+          next_steps?: string
+          summary?: string
+          tags?: string[]
+          timestamp?: string
+        }
+        Relationships: []
+      }
       rehearsal_responses: {
         Row: {
           created_at: string
