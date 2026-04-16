@@ -62,6 +62,7 @@ import TeamGallery from "./pages/team/TeamGallery";
 import TeamScheduler from "./pages/team/TeamScheduler";
 import TeamResources from "./pages/team/TeamResources";
 import TeamRunOfShow from "./pages/team/TeamRunOfShow";
+import TeamClaudeLogPage from "./pages/team/TeamClaudeLog";
 
 const queryClient = new QueryClient();
 
@@ -131,6 +132,7 @@ const App = () => (
               <Route path="/team/scheduler" element={<TeamScheduler />} />
               <Route path="/team/resources" element={<TeamResources />} />
               <Route path="/team/run-of-show" element={<TeamRunOfShow />} />
+              <Route path="/team/claude-log" element={<TeamClaudeLogPage />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
