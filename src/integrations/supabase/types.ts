@@ -47,6 +47,72 @@ export type Database = {
         }
         Relationships: []
       }
+      google_calendar_tokens: {
+        Row: {
+          access_token: string
+          account_email: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          refresh_token: string
+          scope: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          account_email?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          refresh_token: string
+          scope?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          account_email?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          refresh_token?: string
+          scope?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      monday_calendar_sources: {
+        Row: {
+          board_id: string
+          color: string
+          created_at: string
+          date_column_id: string
+          enabled: boolean
+          id: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          board_id: string
+          color?: string
+          created_at?: string
+          date_column_id: string
+          enabled?: boolean
+          id?: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          board_id?: string
+          color?: string
+          created_at?: string
+          date_column_id?: string
+          enabled?: boolean
+          id?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rehearsal_responses: {
         Row: {
           created_at: string
