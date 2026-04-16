@@ -27,7 +27,7 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-6 flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
-            <Link to="/team/songs" className="block">
+            <Link to="/team/dashboard" className="block">
               <img src={logo} alt="Harborline" className="h-5 w-auto opacity-80" />
             </Link>
             <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors" title="Back to website">
