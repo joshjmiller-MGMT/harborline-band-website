@@ -22,6 +22,9 @@ export default function ClaudeLogWidget() {
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [showPaste, setShowPaste] = useState(false);
+  const [showApi, setShowApi] = useState(false);
+  const [pasteJson, setPasteJson] = useState("");
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [form, setForm] = useState({ machine: "", context: "", summary: "", nextSteps: "", tags: "" });
