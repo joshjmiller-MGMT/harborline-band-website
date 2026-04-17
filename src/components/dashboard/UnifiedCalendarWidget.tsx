@@ -415,7 +415,21 @@ export default function UnifiedCalendarWidget() {
             </section>
 
             <section>
-              <h3 className="font-medium mb-2">Monday.com Boards</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Monday.com Boards</h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    toast.info(
+                      'In the Lovable chat, send: "add secret MONDAY_API_TOKEN"',
+                      { duration: 8000 },
+                    )
+                  }
+                >
+                  <KeyRound className="w-4 h-4 mr-1" /> Add Monday Token
+                </Button>
+              </div>
               <div className="space-y-2 mb-4">
                 {mondaySources.map((s) => (
                   <div
