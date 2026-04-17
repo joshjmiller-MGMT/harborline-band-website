@@ -94,6 +94,24 @@ const ACCOUNT_PALETTE = [
   "#e91e63", // pink
 ];
 
+// Google Calendar's standard per-event color palette (colorId "1".."11").
+// We adopt these so events colored inside Google appear consistent here.
+const GOOGLE_EVENT_COLORS: Record<string, string> = {
+  "1": "#7986cb", // Lavender
+  "2": "#33b679", // Sage
+  "3": "#8e24aa", // Grape
+  "4": "#e67c73", // Flamingo
+  "5": "#f6c026", // Banana
+  "6": "#f5511d", // Tangerine
+  "7": "#039be5", // Peacock
+  "8": "#616161", // Graphite
+  "9": "#3f51b5", // Blueberry
+  "10": "#0b8043", // Basil
+  "11": "#d60000", // Tomato
+};
+
+const PREFERRED_COLOR_ACCOUNT = "joshmillermanagement@gmail.com";
+
 function colorForAccount(email: string | undefined, accounts: string[]): string {
   if (!email) return ACCOUNT_PALETTE[0];
   const idx = accounts.indexOf(email);
@@ -417,16 +435,34 @@ export default function UnifiedCalendarWidget() {
     }
   };
 
-  const eventStyleGetter = (event: UnifiedEvent) => {
-    const accent =
+  // Returns { body, stripe } where:
+  //   body  = main fill (adopts Google per-event color when available, with
+  //           preference for the joshmillermanagement view of that event)
+  //   stripe = thin top stripe showing which calendar/source it belongs to
+  const colorsForEvent = (event: UnifiedEvent) => {
+    const stripe =
       event.source === "google"
         ? colorForAccount(event.accountEmail, googleAccounts)
         : event.color;
+
+    let body = stripe;
+    if (event.source === "google") {
+      const m = event.meta || {};
+      const colorId = m.preferredColorId || m.eventColorId;
+      if (colorId && GOOGLE_EVENT_COLORS[colorId]) {
+        body = GOOGLE_EVENT_COLORS[colorId];
+      }
+    }
+    return { body, stripe };
+  };
+
+  const eventStyleGetter = (event: UnifiedEvent) => {
+    const { body, stripe } = colorsForEvent(event);
     return {
       style: {
-        backgroundColor: `${accent}66`, // ~40% opacity for better contrast
-        borderLeft: `3px solid ${accent}`,
-        borderTop: "none",
+        backgroundColor: `${body}66`, // ~40% opacity for contrast
+        borderTop: `3px solid ${stripe}`,
+        borderLeft: "none",
         borderRight: "none",
         borderBottom: "none",
         color: "#ffffff",
@@ -618,7 +654,14 @@ export default function UnifiedCalendarWidget() {
           accounts.unshift(primary.accountEmail);
         }
       }
-      deduped.push({ ...primary, duplicateAccounts: accounts });
+      // Find the joshmillermanagement instance (if any) for color preference.
+      const preferred = arr.find((x) => x.accountEmail === PREFERRED_COLOR_ACCOUNT);
+      const preferredColorId = preferred?.meta?.eventColorId || null;
+      deduped.push({
+        ...primary,
+        duplicateAccounts: accounts,
+        meta: { ...(primary.meta || {}), preferredColorId },
+      });
     }
     return deduped;
   }, [events, hiddenAccounts, hiddenMondaySources, mondaySourceByLabel, hideDuplicates]);
