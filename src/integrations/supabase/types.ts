@@ -140,6 +140,161 @@ export type Database = {
         }
         Relationships: []
       }
+      social_brands: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          platforms: string[]
+          slug: string
+          sort_order: number
+          updated_at: string
+          voice_notes: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          platforms?: string[]
+          slug: string
+          sort_order?: number
+          updated_at?: string
+          voice_notes?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          platforms?: string[]
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+          voice_notes?: string
+        }
+        Relationships: []
+      }
+      social_posts: {
+        Row: {
+          asset_urls: string[]
+          brand_id: string
+          captions: Json
+          created_at: string
+          id: string
+          notes: string
+          platform_status: Json
+          posted_at: string | null
+          scheduled_for: string | null
+          sort_order: number
+          source_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          asset_urls?: string[]
+          brand_id: string
+          captions?: Json
+          created_at?: string
+          id?: string
+          notes?: string
+          platform_status?: Json
+          posted_at?: string | null
+          scheduled_for?: string | null
+          sort_order?: number
+          source_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          asset_urls?: string[]
+          brand_id?: string
+          captions?: Json
+          created_at?: string
+          id?: string
+          notes?: string
+          platform_status?: Json
+          posted_at?: string | null
+          scheduled_for?: string | null
+          sort_order?: number
+          source_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_posts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "social_brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_posts_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "social_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_sources: {
+        Row: {
+          active: boolean
+          brand_id: string
+          cadence: string | null
+          created_at: string
+          day_of_week: number | null
+          description: string
+          event_date: string | null
+          id: string
+          kind: string
+          last_generated_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          brand_id: string
+          cadence?: string | null
+          created_at?: string
+          day_of_week?: number | null
+          description?: string
+          event_date?: string | null
+          id?: string
+          kind: string
+          last_generated_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          brand_id?: string
+          cadence?: string | null
+          created_at?: string
+          day_of_week?: number | null
+          description?: string
+          event_date?: string | null
+          id?: string
+          kind?: string
+          last_generated_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_sources_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "social_brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
