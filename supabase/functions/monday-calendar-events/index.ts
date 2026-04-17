@@ -14,6 +14,11 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  const url = new URL(req.url);
+  const inspectBoard = url.searchParams.get("inspect");
+  const peopleColParam = url.searchParams.get("peopleCol");
+  const usersSearch = url.searchParams.get("findUser");
+
   if (!MONDAY_API_TOKEN) {
     return new Response(
       JSON.stringify({ configured: false, events: [], error: "MONDAY_API_TOKEN not set" }),
@@ -44,6 +49,43 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    if (usersSearch) {
+      const q = `query { users(name: "${usersSearch}") { id name email } }`;
+      const r = await fetch("https://api.monday.com/v2", {
+        method: "POST",
+        headers: { Authorization: MONDAY_API_TOKEN, "Content-Type": "application/json", "API-Version": "2024-01" },
+        body: JSON.stringify({ query: q }),
+      });
+      return new Response(await r.text(), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (inspectBoard) {
+      const cols = peopleColParam ? `(ids: ["${peopleColParam}"])` : "";
+      const q = `query {
+        boards(ids: [${inspectBoard}]) {
+          name
+          columns { id title type }
+          groups { id title }
+          items_page(limit: 50) {
+            items { id name column_values${cols} { id text value } }
+          }
+        }
+      }`;
+      const r = await fetch("https://api.monday.com/v2", {
+        method: "POST",
+        headers: {
+          Authorization: MONDAY_API_TOKEN,
+          "Content-Type": "application/json",
+          "API-Version": "2024-01",
+        },
+        body: JSON.stringify({ query: q }),
+      });
+      const j = await r.json();
+      return new Response(JSON.stringify(j), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const { data: sources } = await supabase
       .from("monday_calendar_sources")
       .select("*")
