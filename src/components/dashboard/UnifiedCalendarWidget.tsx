@@ -101,6 +101,9 @@ export default function UnifiedCalendarWidget() {
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState<string | null>(null);
   const [googleAccounts, setGoogleAccounts] = useState<string[]>([]);
+  const [googleAccountInfo, setGoogleAccountInfo] = useState<
+    { email: string; calendars: number; error?: string; needsReconnect?: boolean }[]
+  >([]);
   const [hiddenAccounts, setHiddenAccounts] = useState<Set<string>>(() => {
     try {
       const raw = localStorage.getItem(ACCOUNT_FILTER_KEY);
