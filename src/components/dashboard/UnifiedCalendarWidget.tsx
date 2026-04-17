@@ -56,10 +56,11 @@ type UnifiedEvent = {
   start: Date;
   end: Date;
   allDay?: boolean;
-  source: "google" | "monday";
+  source: "google" | "monday" | "social";
   color: string;
   accountEmail?: string;
   duplicateAccounts?: string[]; // all accounts (incl primary) sharing this event
+  brandId?: string; // for social posts
   meta?: any;
 };
 
@@ -79,6 +80,7 @@ function parseEventDate(value: string, allDay?: boolean, isEnd = false): Date {
 
 const ACCOUNT_FILTER_KEY = "unifiedCalendar.hiddenAccounts";
 const MONDAY_FILTER_KEY = "unifiedCalendar.hiddenMondaySources";
+const SOCIAL_FILTER_KEY = "unifiedCalendar.hiddenSocialBrands";
 const PANELS_OPEN_KEY = "unifiedCalendar.panelsOpen";
 const HIDE_DUPLICATES_KEY = "unifiedCalendar.hideDuplicates";
 
@@ -141,6 +143,13 @@ type MondaySource = {
   person_id?: string | null;
 };
 
+type SocialBrand = {
+  id: string;
+  slug: string;
+  name: string;
+  color: string;
+};
+
 const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 export default function UnifiedCalendarWidget() {
@@ -170,12 +179,23 @@ export default function UnifiedCalendarWidget() {
       return new Set<string>();
     }
   });
-  const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean }>(() => {
+  const [hiddenSocialBrands, setHiddenSocialBrands] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(SOCIAL_FILTER_KEY);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
+  const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean; social: boolean }>(() => {
     try {
       const raw = localStorage.getItem(PANELS_OPEN_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return { google: !!parsed.google, monday: !!parsed.monday, social: !!parsed.social };
+      }
     } catch {}
-    return { google: false, monday: false };
+    return { google: false, monday: false, social: false };
   });
   const [hideDuplicates, setHideDuplicates] = useState<boolean>(() => {
     try {
@@ -191,6 +211,7 @@ export default function UnifiedCalendarWidget() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [mondaySources, setMondaySources] = useState<MondaySource[]>([]);
+  const [socialBrands, setSocialBrands] = useState<SocialBrand[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<MondaySource>>({});
   const [showHelp, setShowHelp] = useState(false);
@@ -278,6 +299,35 @@ export default function UnifiedCalendarWidget() {
       } else {
         setMondayConfigured(false);
         setMondayError(mRes?.error || null);
+      }
+
+      // Social posts (scheduled) — load brands + posts and inject as events
+      const [brandsRes, postsRes] = await Promise.all([
+        supabase.from("social_brands").select("id,slug,name,color").order("sort_order"),
+        supabase
+          .from("social_posts")
+          .select("id,brand_id,title,scheduled_for,status,captions,asset_urls,notes")
+          .not("scheduled_for", "is", null),
+      ]);
+      const brands = (brandsRes.data || []) as SocialBrand[];
+      setSocialBrands(brands);
+      const brandById = new Map(brands.map((b) => [b.id, b]));
+      for (const p of postsRes.data || []) {
+        const brand = brandById.get(p.brand_id as string);
+        if (!brand) continue;
+        const start = new Date(p.scheduled_for as string);
+        const end = new Date(start.getTime() + 30 * 60 * 1000);
+        merged.push({
+          id: `social-${p.id}`,
+          title: `${brand.name} · ${p.title}`,
+          start,
+          end,
+          allDay: false,
+          source: "social",
+          color: brand.color || "#8b5cf6",
+          brandId: brand.id,
+          meta: { ...p, brandName: brand.name, brandSlug: brand.slug },
+        });
       }
 
       setEvents(merged);
@@ -575,7 +625,29 @@ export default function UnifiedCalendarWidget() {
     } catch {}
   };
 
-  const togglePanel = (key: "google" | "monday") => {
+  const toggleSocialBrand = (id: string) => {
+    setHiddenSocialBrands((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try {
+        localStorage.setItem(SOCIAL_FILTER_KEY, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
+
+  const setAllSocialBrands = (visible: boolean) => {
+    const next = visible
+      ? new Set<string>()
+      : new Set<string>(socialBrands.map((b) => b.id));
+    setHiddenSocialBrands(next);
+    try {
+      localStorage.setItem(SOCIAL_FILTER_KEY, JSON.stringify([...next]));
+    } catch {}
+  };
+
+  const togglePanel = (key: "google" | "monday" | "social") => {
     setOpenPanels((prev) => {
       const next = { ...prev, [key]: !prev[key] };
       try {
@@ -601,6 +673,9 @@ export default function UnifiedCalendarWidget() {
       if (e.source === "monday") {
         const srcId = mondaySourceByLabel.get(e.meta?.sourceLabel);
         return !srcId || !hiddenMondaySources.has(srcId);
+      }
+      if (e.source === "social") {
+        return !e.brandId || !hiddenSocialBrands.has(e.brandId);
       }
       return true;
     });
@@ -664,7 +739,7 @@ export default function UnifiedCalendarWidget() {
       });
     }
     return deduped;
-  }, [events, hiddenAccounts, hiddenMondaySources, mondaySourceByLabel, hideDuplicates]);
+  }, [events, hiddenAccounts, hiddenMondaySources, hiddenSocialBrands, mondaySourceByLabel, hideDuplicates]);
 
   const totalGoogleCount = useMemo(
     () =>
@@ -930,6 +1005,76 @@ export default function UnifiedCalendarWidget() {
                           {!s.enabled && (
                             <span className="text-[10px] text-muted-foreground shrink-0">(disabled)</span>
                           )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Social Brands dropdown */}
+          {socialBrands.length > 0 && (
+            <div className="rounded-md border border-border bg-card/40">
+              <button
+                type="button"
+                onClick={() => togglePanel("social")}
+                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
+              >
+                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Social Brands
+                  <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
+                    ({socialBrands.length - hiddenSocialBrands.size}/{socialBrands.length} visible)
+                  </span>
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-muted-foreground transition-transform ${
+                    openPanels.social ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {openPanels.social && (
+                <div className="px-3 pb-3 pt-1 border-t border-border">
+                  <div className="flex justify-end gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setAllSocialBrands(true)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Show all
+                    </button>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <button
+                      type="button"
+                      onClick={() => setAllSocialBrands(false)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Hide all
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {socialBrands.map((b) => {
+                      const checked = !hiddenSocialBrands.has(b.id);
+                      return (
+                        <label
+                          key={b.id}
+                          className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleSocialBrand(b.id)}
+                            className="w-4 h-4 rounded accent-primary"
+                          />
+                          <span
+                            className="inline-block w-5 h-5 rounded shrink-0"
+                            style={{ backgroundColor: b.color, opacity: checked ? 1 : 0.4 }}
+                            title={b.name}
+                          />
+                          <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
+                            {b.name}
+                          </span>
                         </label>
                       );
                     })}
