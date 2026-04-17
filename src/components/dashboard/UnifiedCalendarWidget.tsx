@@ -609,7 +609,7 @@ export default function UnifiedCalendarWidget() {
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={connectGoogle} size="sm">
+                  <Button onClick={() => connectGoogle()} size="sm">
                     <LinkIcon className="w-4 h-4 mr-1" /> Connect Google Calendar
                   </Button>
                   <Button
