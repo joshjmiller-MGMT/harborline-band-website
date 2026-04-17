@@ -11,12 +11,24 @@ const MONDAY_API_TOKEN = Deno.env.get("MONDAY_API_TOKEN");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+async function mondayFetch(query: string) {
+  const r = await fetch("https://api.monday.com/v2", {
+    method: "POST",
+    headers: {
+      Authorization: MONDAY_API_TOKEN!,
+      "Content-Type": "application/json",
+      "API-Version": "2024-01",
+    },
+    body: JSON.stringify({ query }),
+  });
+  return r.json();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const url = new URL(req.url);
   const inspectBoard = url.searchParams.get("inspect");
-  const peopleColParam = url.searchParams.get("peopleCol");
   const usersSearch = url.searchParams.get("findUser");
 
   if (!MONDAY_API_TOKEN) {
@@ -27,44 +39,27 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
     if (usersSearch) {
-      const q = `query { users(name: "${usersSearch}") { id name email } }`;
-      const r = await fetch("https://api.monday.com/v2", {
-        method: "POST",
-        headers: { Authorization: MONDAY_API_TOKEN, "Content-Type": "application/json", "API-Version": "2024-01" },
-        body: JSON.stringify({ query: q }),
-      });
-      return new Response(await r.text(), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    if (inspectBoard) {
-      const cols = peopleColParam ? `(ids: ["${peopleColParam}"])` : "";
-      const q = `query {
-        boards(ids: [${inspectBoard}]) {
-          name
-          columns { id title type }
-          groups { id title }
-          items_page(limit: 50) {
-            items { id name column_values${cols} { id text value } }
-          }
-        }
-      }`;
-      const r = await fetch("https://api.monday.com/v2", {
-        method: "POST",
-        headers: {
-          Authorization: MONDAY_API_TOKEN,
-          "Content-Type": "application/json",
-          "API-Version": "2024-01",
-        },
-        body: JSON.stringify({ query: q }),
-      });
-      const j = await r.json();
+      const j = await mondayFetch(`query { users(name: "${usersSearch}") { id name email } }`);
       return new Response(JSON.stringify(j), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    if (inspectBoard) {
+      const j = await mondayFetch(`query {
+        boards(ids: [${inspectBoard}]) {
+          name
+          columns { id title type }
+          groups { id title }
+        }
+      }`);
+      return new Response(JSON.stringify(j), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: sources } = await supabase
       .from("monday_calendar_sources")
       .select("*")
@@ -78,66 +73,89 @@ Deno.serve(async (req) => {
     }
 
     const allEvents: any[] = [];
+    const debugInfo: any[] = [];
 
     for (const src of sources) {
-      // Fetch ALL column values so the calendar card can show full item context
-      const query = `query {
-        boards(ids: [${src.board_id}]) {
-          name
-          items_page(limit: 200) {
-            items {
-              id
+      // Use items_page_by_column_values for server-side person filtering when configured.
+      // This handles boards with thousands of items (no 200 cap) and is much more accurate.
+      const usePersonFilter = src.person_column_id && src.person_id;
+
+      let boardName = "";
+      const items: any[] = [];
+      let cursor: string | null = null;
+
+      const itemFields = `id name updated_at url group { title } column_values { id text value column { title } }`;
+
+      do {
+        let query: string;
+        if (cursor) {
+          query = `query {
+            next_items_page(limit: 500, cursor: "${cursor}") {
+              cursor
+              items { ${itemFields} }
+            }
+          }`;
+        } else if (usePersonFilter) {
+          // Filter to items where the person column contains the configured user ID.
+          // Monday people columns expect the value as "person-<id>".
+          query = `query {
+            boards(ids: [${src.board_id}]) {
               name
-              updated_at
-              url
-              group { title }
-              column_values {
-                id
-                text
-                value
-                column { title }
+              items_page(
+                limit: 500,
+                query_params: {
+                  rules: [{ column_id: "${src.person_column_id}", compare_value: ["person-${src.person_id}"], operator: any_of }]
+                }
+              ) {
+                cursor
+                items { ${itemFields} }
               }
             }
-          }
+          }`;
+        } else {
+          query = `query {
+            boards(ids: [${src.board_id}]) {
+              name
+              items_page(limit: 500) {
+                cursor
+                items { ${itemFields} }
+              }
+            }
+          }`;
         }
-      }`;
 
-      const res = await fetch("https://api.monday.com/v2", {
-        method: "POST",
-        headers: {
-          Authorization: MONDAY_API_TOKEN,
-          "Content-Type": "application/json",
-          "API-Version": "2024-01",
-        },
-        body: JSON.stringify({ query }),
+        const data = await mondayFetch(query);
+        if (data.errors) {
+          console.error(`Monday board ${src.board_id} error:`, JSON.stringify(data.errors));
+          debugInfo.push({ board: src.board_id, label: src.label, errors: data.errors });
+          break;
+        }
+
+        let page: any;
+        if (cursor) {
+          page = data.data?.next_items_page;
+        } else {
+          const board = data.data?.boards?.[0];
+          boardName = board?.name || "";
+          page = board?.items_page;
+        }
+
+        if (!page) break;
+        items.push(...(page.items || []));
+        cursor = page.cursor || null;
+      } while (cursor);
+
+      debugInfo.push({
+        board: src.board_id,
+        label: src.label,
+        itemsFetched: items.length,
+        usePersonFilter,
       });
-      const data = await res.json();
-      if (!res.ok || data.errors) {
-        console.error(`Monday board ${src.board_id} error:`, JSON.stringify(data));
-        continue;
-      }
 
-      const board = data.data?.boards?.[0];
-      const items = board?.items_page?.items || [];
-
+      let withDates = 0;
       for (const item of items) {
         const dateCol = item.column_values?.find((c: any) => c.id === src.date_column_id);
         if (!dateCol) continue;
-
-        // Person filter
-        if (src.person_column_id && src.person_id) {
-          const personCol = item.column_values?.find((c: any) => c.id === src.person_column_id);
-          if (!personCol?.value) continue;
-          let matched = false;
-          try {
-            const parsed = JSON.parse(personCol.value);
-            const people = parsed?.personsAndTeams || [];
-            matched = people.some((p: any) => String(p.id) === String(src.person_id));
-          } catch {
-            // ignore
-          }
-          if (!matched) continue;
-        }
 
         let dateStr: string | null = null;
         let timeStr: string | null = null;
@@ -147,13 +165,12 @@ Deno.serve(async (req) => {
             dateStr = parsed.date;
             timeStr = parsed.time || null;
           }
-        } catch {
-          // ignore parse errors
-        }
+        } catch { /* ignore */ }
         if (!dateStr && dateCol.text) {
           dateStr = dateCol.text.split(" ")[0];
         }
         if (!dateStr) continue;
+        withDates++;
 
         const startISO = timeStr
           ? new Date(`${dateStr}T${timeStr}`).toISOString()
@@ -162,8 +179,6 @@ Deno.serve(async (req) => {
           ? new Date(new Date(startISO).getTime() + 60 * 60 * 1000).toISOString()
           : startISO;
 
-        // Build a clean field map for the UI: { "Lead Status": "Contacted", ... }
-        // Skip empty + the date column itself (already shown as the event date).
         const fields: { label: string; value: string; columnId: string }[] = [];
         for (const c of item.column_values || []) {
           if (!c.text || !c.text.trim()) continue;
@@ -184,17 +199,20 @@ Deno.serve(async (req) => {
           source: "monday",
           sourceLabel: src.label,
           color: src.color,
-          boardName: board.name,
+          boardName,
           groupTitle: item.group?.title || null,
           fields,
           updatedAt: item.updated_at || null,
           itemUrl: item.url || `https://view.monday.com/boards/${src.board_id}/pulses/${item.id}`,
         });
       }
+
+      const last = debugInfo[debugInfo.length - 1];
+      if (last) last.itemsWithDates = withDates;
     }
 
     return new Response(
-      JSON.stringify({ configured: true, events: allEvents }),
+      JSON.stringify({ configured: true, events: allEvents, debug: debugInfo }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
