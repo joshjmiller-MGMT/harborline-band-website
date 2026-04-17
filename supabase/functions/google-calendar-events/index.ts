@@ -56,8 +56,8 @@ Deno.serve(async (req) => {
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     return new Response(
-      JSON.stringify({ error: "Google OAuth not configured" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ connected: false, configured: false, events: [], error: "Google OAuth not configured" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
