@@ -94,6 +94,8 @@ type MondaySource = {
   label: string;
   color: string;
   enabled: boolean;
+  person_column_id?: string | null;
+  person_id?: string | null;
 };
 
 const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
@@ -131,6 +133,8 @@ export default function UnifiedCalendarWidget() {
     date_column_id: "",
     label: "",
     color: "#8b5cf6",
+    person_column_id: "",
+    person_id: "",
   });
 
   const [newEvent, setNewEvent] = useState({
@@ -287,12 +291,17 @@ export default function UnifiedCalendarWidget() {
       toast.error("Board ID, date column ID, and label are required");
       return;
     }
-    const { error } = await supabase.from("monday_calendar_sources").insert(newSource);
+    const payload = {
+      ...newSource,
+      person_column_id: newSource.person_column_id || null,
+      person_id: newSource.person_id || null,
+    };
+    const { error } = await supabase.from("monday_calendar_sources").insert(payload);
     if (error) {
       toast.error(error.message);
       return;
     }
-    setNewSource({ board_id: "", date_column_id: "", label: "", color: "#8b5cf6" });
+    setNewSource({ board_id: "", date_column_id: "", label: "", color: "#8b5cf6", person_column_id: "", person_id: "" });
     await loadSources();
     await loadAll();
     toast.success("Monday source added");
