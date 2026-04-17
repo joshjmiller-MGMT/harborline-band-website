@@ -156,6 +156,7 @@ export default function UnifiedCalendarWidget() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<MondaySource>>({});
   const [showHelp, setShowHelp] = useState(false);
+  const [selectedMondayEvent, setSelectedMondayEvent] = useState<UnifiedEvent | null>(null);
   const [newSource, setNewSource] = useState({
     board_id: "",
     date_column_id: "",
@@ -219,9 +220,15 @@ export default function UnifiedCalendarWidget() {
         setMondayConfigured(true);
         setMondayError(null);
         for (const e of mRes.events || []) {
+          // Surface the most useful field in the title (e.g. "Next Action Step")
+          // Falls back to plain item name when no extra context is available.
+          const actionField = (e.fields || []).find((f: any) =>
+            /next action step|action step|status/i.test(f.label),
+          );
+          const titlePrefix = actionField ? `${actionField.value} · ` : "";
           merged.push({
             id: e.id,
-            title: `[${e.sourceLabel}] ${e.title}`,
+            title: `${titlePrefix}${e.title}`,
             start: new Date(e.start),
             end: new Date(e.end),
             allDay: e.allDay,
@@ -847,8 +854,8 @@ export default function UnifiedCalendarWidget() {
                   key={e.id}
                   className="flex items-start gap-3 p-3 rounded-lg border border-border/60 bg-card/50 hover:bg-card/80 hover:border-border transition-colors cursor-pointer"
                   onClick={() => {
-                    if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
-                    else if (e.meta?.itemUrl) window.open(e.meta.itemUrl, "_blank");
+                    if (e.source === "monday") setSelectedMondayEvent(e);
+                    else if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
                   }}
                 >
                   <div
@@ -924,8 +931,11 @@ export default function UnifiedCalendarWidget() {
               style={{ height: "100%" }}
               popup
               onSelectEvent={(e: UnifiedEvent) => {
-                if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
-                else if (e.meta?.itemUrl) window.open(e.meta.itemUrl, "_blank");
+                if (e.source === "monday") {
+                  setSelectedMondayEvent(e);
+                } else if (e.meta?.htmlLink) {
+                  window.open(e.meta.htmlLink, "_blank");
+                }
               }}
             />
           </div>
