@@ -216,6 +216,17 @@ export default function UnifiedCalendarWidget() {
   }, []);
 
   const connectGoogle = async () => {
+    const popup = window.open("", "_blank");
+
+    if (popup) {
+      popup.document.title = "Connecting Google Calendar";
+      popup.document.body.innerHTML = `
+        <div style="font-family: system-ui, sans-serif; padding: 24px; color: #111827;">
+          <p style="margin: 0; font-size: 14px;">Opening Google sign-in…</p>
+        </div>
+      `;
+    }
+
     try {
       const res = await fetch(
         `${FUNCTIONS_BASE}/google-calendar-oauth?action=start&return_to=${encodeURIComponent(
@@ -227,11 +238,30 @@ export default function UnifiedCalendarWidget() {
       );
       const data = await res.json();
       if (data.error) {
+        popup?.close();
         toast.error(data.error);
         return;
       }
+
+      if (!data.auth_url) {
+        popup?.close();
+        toast.error("Missing Google OAuth URL");
+        return;
+      }
+
+      if (popup) {
+        popup.location.href = data.auth_url;
+        return;
+      }
+
+      if (window.top && window.top !== window) {
+        window.top.location.href = data.auth_url;
+        return;
+      }
+
       window.location.href = data.auth_url;
     } catch (err) {
+      popup?.close();
       toast.error("Failed to start Google OAuth");
     }
   };
