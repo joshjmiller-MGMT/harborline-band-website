@@ -139,6 +139,14 @@ export default function UnifiedCalendarWidget() {
     } catch {}
     return { google: false, monday: false };
   });
+  const [hideDuplicates, setHideDuplicates] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem(HIDE_DUPLICATES_KEY);
+      return raw === null ? true : raw === "true";
+    } catch {
+      return true;
+    }
+  });
   const [mondayConfigured, setMondayConfigured] = useState(false);
   const [mondayError, setMondayError] = useState<string | null>(null);
 
