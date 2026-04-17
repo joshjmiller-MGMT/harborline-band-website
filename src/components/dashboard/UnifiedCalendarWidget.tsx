@@ -220,7 +220,7 @@ export default function UnifiedCalendarWidget() {
     }
   }, []);
 
-  const connectGoogle = async () => {
+  const connectGoogle = async (loginHint?: string) => {
     const popup = window.open("", "_blank");
 
     if (popup) {
