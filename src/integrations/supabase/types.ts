@@ -89,6 +89,8 @@ export type Database = {
           enabled: boolean
           id: string
           label: string
+          person_column_id: string | null
+          person_id: string | null
           updated_at: string
         }
         Insert: {
@@ -99,6 +101,8 @@ export type Database = {
           enabled?: boolean
           id?: string
           label: string
+          person_column_id?: string | null
+          person_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -109,6 +113,8 @@ export type Database = {
           enabled?: boolean
           id?: string
           label?: string
+          person_column_id?: string | null
+          person_id?: string | null
           updated_at?: string
         }
         Relationships: []
