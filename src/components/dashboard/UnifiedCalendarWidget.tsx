@@ -440,6 +440,7 @@ export default function UnifiedCalendarWidget() {
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               {googleAccounts.map((email) => {
                 const checked = !hiddenAccounts.has(email);
+                const color = colorForAccount(email, googleAccounts);
                 return (
                   <label
                     key={email}
@@ -451,6 +452,13 @@ export default function UnifiedCalendarWidget() {
                       onChange={() => toggleAccount(email)}
                       className="w-4 h-4 rounded accent-primary"
                     />
+                    <span
+                      className="inline-flex items-center justify-center text-[10px] font-bold w-5 h-5 rounded text-white shrink-0"
+                      style={{ backgroundColor: color, opacity: checked ? 1 : 0.4 }}
+                      title={email}
+                    >
+                      {initialsForEmail(email)}
+                    </span>
                     <span className={checked ? "" : "text-muted-foreground line-through"}>
                       {email}
                     </span>
