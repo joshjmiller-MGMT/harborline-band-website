@@ -117,6 +117,10 @@ export default function UnifiedCalendarWidget() {
       if (gRes?.connected) {
         setGoogleConnected(true);
         setGoogleEmail(gRes.email || null);
+        const accounts: string[] = (gRes.accounts || [])
+          .map((a: any) => a.email)
+          .filter(Boolean);
+        setGoogleAccounts(accounts);
         for (const e of gRes.events || []) {
           merged.push({
             id: e.id,
@@ -126,11 +130,13 @@ export default function UnifiedCalendarWidget() {
             allDay: e.allDay,
             source: "google",
             color: e.calendarColor || "#4285f4",
+            accountEmail: e.accountEmail,
             meta: e,
           });
         }
       } else {
         setGoogleConnected(false);
+        setGoogleAccounts([]);
       }
 
       if (mRes?.configured) {
