@@ -17,6 +17,7 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const inspectBoard = url.searchParams.get("inspect");
   const peopleColParam = url.searchParams.get("peopleCol");
+  const usersSearch = url.searchParams.get("findUser");
 
   if (!MONDAY_API_TOKEN) {
     return new Response(
