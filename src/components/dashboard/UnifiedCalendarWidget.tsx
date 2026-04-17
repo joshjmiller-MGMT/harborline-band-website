@@ -432,12 +432,58 @@ export default function UnifiedCalendarWidget() {
     } catch {}
   };
 
+  const toggleMondaySource = (id: string) => {
+    setHiddenMondaySources((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try {
+        localStorage.setItem(MONDAY_FILTER_KEY, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
+
+  const setAllMondaySources = (visible: boolean) => {
+    const next = visible
+      ? new Set<string>()
+      : new Set<string>(mondaySources.map((s) => s.id));
+    setHiddenMondaySources(next);
+    try {
+      localStorage.setItem(MONDAY_FILTER_KEY, JSON.stringify([...next]));
+    } catch {}
+  };
+
+  const togglePanel = (key: "google" | "monday") => {
+    setOpenPanels((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem(PANELS_OPEN_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Map Monday event id -> source id (events carry sourceLabel; we match by label)
+  const mondaySourceByLabel = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of mondaySources) m.set(s.label, s.id);
+    return m;
+  }, [mondaySources]);
+
   const visibleEvents = useMemo(
     () =>
-      events.filter(
-        (e) => e.source !== "google" || !e.accountEmail || !hiddenAccounts.has(e.accountEmail),
-      ),
-    [events, hiddenAccounts],
+      events.filter((e) => {
+        if (e.source === "google") {
+          return !e.accountEmail || !hiddenAccounts.has(e.accountEmail);
+        }
+        if (e.source === "monday") {
+          const srcId = mondaySourceByLabel.get(e.meta?.sourceLabel);
+          return !srcId || !hiddenMondaySources.has(srcId);
+        }
+        return true;
+      }),
+    [events, hiddenAccounts, hiddenMondaySources, mondaySourceByLabel],
   );
 
   const upcoming = useMemo(
