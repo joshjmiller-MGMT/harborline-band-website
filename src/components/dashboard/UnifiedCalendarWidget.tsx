@@ -452,24 +452,6 @@ export default function UnifiedCalendarWidget() {
       <Tooltip delayDuration={150}>
         <TooltipTrigger asChild>
           <div className="flex items-center gap-1 overflow-hidden cursor-pointer">
-            {event.source === "google" && shown.length > 0 && (
-              <span className="flex items-center -space-x-1 shrink-0">
-                {shown.map((email) => (
-                  <span
-                    key={email}
-                    className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full text-white ring-1 ring-background"
-                    style={{ backgroundColor: colorForAccount(email, googleAccounts) }}
-                  >
-                    {initialsForEmail(email)}
-                  </span>
-                ))}
-                {extra > 0 && (
-                  <span className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full bg-muted text-muted-foreground ring-1 ring-background">
-                    +{extra}
-                  </span>
-                )}
-              </span>
-            )}
             <span className="truncate font-medium">{event.title}</span>
           </div>
         </TooltipTrigger>
