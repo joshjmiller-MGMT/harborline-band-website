@@ -322,23 +322,28 @@ export default function UnifiedCalendarWidget() {
   const loadSocial = async () => {
     const [brandsRes, postsRes] = await Promise.all([
       supabase.from("social_brands").select("id,slug,name,color").order("sort_order"),
+      // Pull every post — we'll show any with a date (scheduled OR posted)
       supabase
         .from("social_posts")
-        .select("id,brand_id,title,scheduled_for,status,captions,asset_urls,notes")
-        .not("scheduled_for", "is", null),
+        .select("id,brand_id,title,scheduled_for,posted_at,status,captions,asset_urls,notes"),
     ]);
     const brands = (brandsRes.data || []) as SocialBrand[];
     setSocialBrands(brands);
     const brandById = new Map(brands.map((b) => [b.id, b]));
     const socialEvents: UnifiedEvent[] = [];
-    for (const p of postsRes.data || []) {
+    for (const p of (postsRes.data || []) as any[]) {
       const brand = brandById.get(p.brand_id as string);
       if (!brand) continue;
-      const start = new Date(p.scheduled_for as string);
+      // Use scheduled_for if present, else posted_at — any date on the card
+      const dateStr: string | null = p.scheduled_for || p.posted_at || null;
+      if (!dateStr) continue;
+      const start = new Date(dateStr);
+      if (isNaN(start.getTime())) continue;
       const end = new Date(start.getTime() + 30 * 60 * 1000);
+      const statusEmoji = p.status === "posted" ? "✅ " : p.status === "scheduled" ? "📅 " : "✏️ ";
       socialEvents.push({
         id: `social-${p.id}`,
-        title: `${brand.name} · ${p.title}`,
+        title: `${statusEmoji}${brand.name} · ${p.title}`,
         start,
         end,
         allDay: false,
@@ -348,6 +353,7 @@ export default function UnifiedCalendarWidget() {
         meta: { ...p, brandName: brand.name, brandSlug: brand.slug },
       });
     }
+    console.log("[UnifiedCalendar] social events loaded:", socialEvents.length, socialEvents);
     // Merge: replace any existing social events
     setEvents((prev) => [...prev.filter((e) => e.source !== "social"), ...socialEvents]);
   };
