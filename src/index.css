@@ -165,6 +165,10 @@
   overflow: hidden;
   background: hsl(var(--card) / 0.3);
 }
+/* Taller month rows so up to ~5 events fit before "+x more" */
+.unified-cal .rbc-month-row {
+  min-height: 140px;
+}
 .unified-cal .rbc-header {
   padding: 6px 4px;
   font-weight: 500;
