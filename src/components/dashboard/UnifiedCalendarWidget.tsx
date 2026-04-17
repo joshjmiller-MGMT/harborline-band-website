@@ -179,12 +179,23 @@ export default function UnifiedCalendarWidget() {
       return new Set<string>();
     }
   });
-  const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean }>(() => {
+  const [hiddenSocialBrands, setHiddenSocialBrands] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(SOCIAL_FILTER_KEY);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
+  const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean; social: boolean }>(() => {
     try {
       const raw = localStorage.getItem(PANELS_OPEN_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return { google: !!parsed.google, monday: !!parsed.monday, social: !!parsed.social };
+      }
     } catch {}
-    return { google: false, monday: false };
+    return { google: false, monday: false, social: false };
   });
   const [hideDuplicates, setHideDuplicates] = useState<boolean>(() => {
     try {
