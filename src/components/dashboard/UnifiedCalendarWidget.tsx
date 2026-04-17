@@ -26,6 +26,7 @@ import {
   Settings as SettingsIcon,
   Link as LinkIcon,
   Trash2,
+  KeyRound,
 } from "lucide-react";
 
 const locales = { "en-US": enUS };
@@ -390,14 +391,45 @@ export default function UnifiedCalendarWidget() {
                   Connected as <span className="text-foreground">{googleEmail}</span>
                 </p>
               ) : (
-                <Button onClick={connectGoogle} size="sm">
-                  <LinkIcon className="w-4 h-4 mr-1" /> Connect Google Calendar
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={connectGoogle} size="sm">
+                    <LinkIcon className="w-4 h-4 mr-1" /> Connect Google Calendar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      toast.info(
+                        'In the Lovable chat, send: "add secrets GOOGLE_CALENDAR_CLIENT_ID and GOOGLE_CALENDAR_CLIENT_SECRET"',
+                        { duration: 8000 },
+                      )
+                    }
+                  >
+                    <KeyRound className="w-4 h-4 mr-1" /> Add Google Secrets
+                  </Button>
+                </div>
               )}
+              <p className="text-xs text-muted-foreground mt-2">
+                Need GOOGLE_CALENDAR_CLIENT_ID and GOOGLE_CALENDAR_CLIENT_SECRET configured before connecting.
+              </p>
             </section>
 
             <section>
-              <h3 className="font-medium mb-2">Monday.com Boards</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Monday.com Boards</h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    toast.info(
+                      'In the Lovable chat, send: "add secret MONDAY_API_TOKEN"',
+                      { duration: 8000 },
+                    )
+                  }
+                >
+                  <KeyRound className="w-4 h-4 mr-1" /> Add Monday Token
+                </Button>
+              </div>
               <div className="space-y-2 mb-4">
                 {mondaySources.map((s) => (
                   <div
