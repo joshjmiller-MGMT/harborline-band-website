@@ -123,6 +123,9 @@ export default function UnifiedCalendarWidget() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [mondaySources, setMondaySources] = useState<MondaySource[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<Partial<MondaySource>>({});
+  const [showHelp, setShowHelp] = useState(false);
   const [newSource, setNewSource] = useState({
     board_id: "",
     date_column_id: "",
