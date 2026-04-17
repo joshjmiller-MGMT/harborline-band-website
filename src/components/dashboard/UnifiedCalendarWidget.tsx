@@ -588,8 +588,13 @@ export default function UnifiedCalendarWidget() {
     });
 
     // 2. Dedup Google events sharing identity across accounts.
-    //    Fingerprint = title|start|end|allDay (case-insensitive title).
+    //    Fingerprint = title|YYYY-MM-DD(start day) — looser than exact times so
+    //    that the same event mirrored across calendars with slightly different
+    //    timing or all-day vs timed still collapses into a single chip.
     if (!hideDuplicates) return filtered;
+
+    const dayKey = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
     const groups = new Map<string, UnifiedEvent[]>();
     const passthrough: UnifiedEvent[] = [];
@@ -598,7 +603,7 @@ export default function UnifiedCalendarWidget() {
         passthrough.push(e);
         continue;
       }
-      const fp = `${(e.title || "").toLowerCase().trim()}|${e.start.getTime()}|${e.end.getTime()}|${e.allDay ? 1 : 0}`;
+      const fp = `${(e.title || "").toLowerCase().trim()}|${dayKey(e.start)}`;
       const arr = groups.get(fp) || [];
       arr.push(e);
       groups.set(fp, arr);
