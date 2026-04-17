@@ -296,9 +296,26 @@ export default function UnifiedCalendarWidget() {
   };
 
   const deleteSource = async (id: string) => {
+    if (!confirm("Delete this Monday source? Events from this board will disappear from the calendar.")) return;
     await supabase.from("monday_calendar_sources").delete().eq("id", id);
     await loadSources();
     await loadAll();
+    toast.success("Source removed");
+  };
+
+  const updateSource = async (id: string, patch: Partial<MondaySource>) => {
+    const { error } = await supabase.from("monday_calendar_sources").update(patch).eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return false;
+    }
+    await loadSources();
+    await loadAll();
+    return true;
+  };
+
+  const toggleEnabled = async (s: MondaySource) => {
+    await updateSource(s.id, { enabled: !s.enabled });
   };
 
   const createGoogleEvent = async () => {
