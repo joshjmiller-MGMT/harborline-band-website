@@ -985,7 +985,7 @@ export default function UnifiedCalendarWidget() {
             })}
           </div>
         ) : (
-          <div className="unified-cal bg-background rounded-lg border border-border/60 p-2" style={{ height: 600 }}>
+          <div className="unified-cal bg-background rounded-lg border border-border/60 p-2" style={{ height: 900 }}>
             <TooltipProvider delayDuration={150}>
               <Calendar
                 localizer={localizer}
