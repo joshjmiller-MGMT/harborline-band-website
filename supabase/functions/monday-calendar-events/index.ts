@@ -27,6 +27,33 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    if (inspectBoard) {
+      const cols = peopleColParam ? `(ids: ["${peopleColParam}"])` : "";
+      const q = `query {
+        boards(ids: [${inspectBoard}]) {
+          name
+          columns { id title type }
+          groups { id title }
+          items_page(limit: 50) {
+            items { id name column_values${cols} { id text value } }
+          }
+        }
+      }`;
+      const r = await fetch("https://api.monday.com/v2", {
+        method: "POST",
+        headers: {
+          Authorization: MONDAY_API_TOKEN,
+          "Content-Type": "application/json",
+          "API-Version": "2024-01",
+        },
+        body: JSON.stringify({ query: q }),
+      });
+      const j = await r.json();
+      return new Response(JSON.stringify(j), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const { data: sources } = await supabase
       .from("monday_calendar_sources")
       .select("*")
