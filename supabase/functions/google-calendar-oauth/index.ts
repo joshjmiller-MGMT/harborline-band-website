@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
   // 1) Start OAuth flow — return the URL (frontend opens it)
   if (action === "start") {
     const returnTo = url.searchParams.get("return_to") || "";
+    const loginHint = url.searchParams.get("login_hint");
     const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
     authUrl.searchParams.set("redirect_uri", redirectUri);
@@ -54,6 +55,7 @@ Deno.serve(async (req) => {
     authUrl.searchParams.set("access_type", "offline");
     authUrl.searchParams.set("prompt", "consent");
     authUrl.searchParams.set("state", returnTo);
+    if (loginHint) authUrl.searchParams.set("login_hint", loginHint);
 
     return new Response(
       JSON.stringify({ auth_url: authUrl.toString(), redirect_uri: redirectUri }),
