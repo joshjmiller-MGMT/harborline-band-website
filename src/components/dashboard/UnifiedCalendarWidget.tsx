@@ -901,10 +901,7 @@ export default function UnifiedCalendarWidget() {
                 <div
                   key={e.id}
                   className="flex items-start gap-3 p-3 rounded-lg border border-border/60 bg-card/50 hover:bg-card/80 hover:border-border transition-colors cursor-pointer"
-                  onClick={() => {
-                    if (e.source === "monday") setSelectedMondayEvent(e);
-                    else if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
-                  }}
+                  onClick={() => setSelectedEvent(e)}
                 >
                   <div
                     className="w-1 self-stretch rounded"
@@ -964,28 +961,24 @@ export default function UnifiedCalendarWidget() {
           </div>
         ) : (
           <div className="unified-cal bg-background rounded-lg border border-border/60 p-2" style={{ height: 600 }}>
-            <Calendar
-              localizer={localizer}
-              events={visibleEvents}
-              startAccessor="start"
-              endAccessor="end"
-              view={view}
-              onView={setView}
-              date={date}
-              onNavigate={setDate}
-              views={["month", "week", "day"]}
-              eventPropGetter={eventStyleGetter}
-              components={{ event: EventBlock }}
-              style={{ height: "100%" }}
-              popup
-              onSelectEvent={(e: UnifiedEvent) => {
-                if (e.source === "monday") {
-                  setSelectedMondayEvent(e);
-                } else if (e.meta?.htmlLink) {
-                  window.open(e.meta.htmlLink, "_blank");
-                }
-              }}
-            />
+            <TooltipProvider delayDuration={150}>
+              <Calendar
+                localizer={localizer}
+                events={visibleEvents}
+                startAccessor="start"
+                endAccessor="end"
+                view={view}
+                onView={setView}
+                date={date}
+                onNavigate={setDate}
+                views={["month", "week", "day"]}
+                eventPropGetter={eventStyleGetter}
+                components={{ event: EventBlock }}
+                style={{ height: "100%" }}
+                popup
+                onSelectEvent={(e: UnifiedEvent) => setSelectedEvent(e)}
+              />
+            </TooltipProvider>
           </div>
         )}
       </CardContent>
