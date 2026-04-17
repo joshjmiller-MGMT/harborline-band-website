@@ -122,6 +122,21 @@ export default function UnifiedCalendarWidget() {
       return new Set<string>();
     }
   });
+  const [hiddenMondaySources, setHiddenMondaySources] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(MONDAY_FILTER_KEY);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
+  const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean }>(() => {
+    try {
+      const raw = localStorage.getItem(PANELS_OPEN_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return { google: false, monday: false };
+  });
   const [mondayConfigured, setMondayConfigured] = useState(false);
   const [mondayError, setMondayError] = useState<string | null>(null);
 
