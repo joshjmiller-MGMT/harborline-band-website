@@ -457,7 +457,7 @@ export default function UnifiedCalendarWidget() {
           <div className="bg-background rounded-md p-2" style={{ height: 600 }}>
             <Calendar
               localizer={localizer}
-              events={events}
+              events={visibleEvents}
               startAccessor="start"
               endAccessor="end"
               view={view}
