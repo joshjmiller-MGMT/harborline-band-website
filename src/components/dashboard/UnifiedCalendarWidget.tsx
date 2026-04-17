@@ -113,6 +113,7 @@ export default function UnifiedCalendarWidget() {
     }
   });
   const [mondayConfigured, setMondayConfigured] = useState(false);
+  const [mondayError, setMondayError] = useState<string | null>(null);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -176,6 +177,7 @@ export default function UnifiedCalendarWidget() {
 
       if (mRes?.configured) {
         setMondayConfigured(true);
+        setMondayError(null);
         for (const e of mRes.events || []) {
           merged.push({
             id: e.id,
@@ -190,6 +192,7 @@ export default function UnifiedCalendarWidget() {
         }
       } else {
         setMondayConfigured(false);
+        setMondayError(mRes?.error || null);
       }
 
       setEvents(merged);
@@ -428,12 +431,15 @@ export default function UnifiedCalendarWidget() {
           </span>
           <span
             className={`px-2 py-1 rounded ${
-              mondayConfigured && mondaySources.length > 0
+              mondayError
+                ? "bg-destructive/20 text-destructive"
+                : mondayConfigured && mondaySources.length > 0
                 ? "bg-green-500/20 text-green-400"
                 : "bg-muted text-muted-foreground"
             }`}
+            title={mondayError || ""}
           >
-            Monday: {mondaySources.length > 0 ? `${mondaySources.length} board(s)` : "no sources"}
+            Monday: {mondayError ? "token missing" : mondaySources.length > 0 ? `${mondaySources.length} board(s)` : "no sources"}
           </span>
           {!googleConnected && (
             <Button size="sm" variant="outline" onClick={() => connectGoogle()}>
