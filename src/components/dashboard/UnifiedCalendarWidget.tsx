@@ -233,14 +233,14 @@ export default function UnifiedCalendarWidget() {
     }
 
     try {
-      const res = await fetch(
-        `${FUNCTIONS_BASE}/google-calendar-oauth?action=start&return_to=${encodeURIComponent(
-          window.location.pathname,
-        )}`,
-        {
-          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        },
-      );
+      const params = new URLSearchParams({
+        action: "start",
+        return_to: window.location.pathname,
+      });
+      if (loginHint) params.set("login_hint", loginHint);
+      const res = await fetch(`${FUNCTIONS_BASE}/google-calendar-oauth?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+      });
       const data = await res.json();
       if (data.error) {
         popup?.close();
