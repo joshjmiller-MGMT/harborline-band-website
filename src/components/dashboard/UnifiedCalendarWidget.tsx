@@ -636,7 +636,14 @@ export default function UnifiedCalendarWidget() {
           accounts.unshift(primary.accountEmail);
         }
       }
-      deduped.push({ ...primary, duplicateAccounts: accounts });
+      // Find the joshmillermanagement instance (if any) for color preference.
+      const preferred = arr.find((x) => x.accountEmail === PREFERRED_COLOR_ACCOUNT);
+      const preferredColorId = preferred?.meta?.eventColorId || null;
+      deduped.push({
+        ...primary,
+        duplicateAccounts: accounts,
+        meta: { ...(primary.meta || {}), preferredColorId },
+      });
     }
     return deduped;
   }, [events, hiddenAccounts, hiddenMondaySources, mondaySourceByLabel, hideDuplicates]);
