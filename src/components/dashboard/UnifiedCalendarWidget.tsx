@@ -674,6 +674,9 @@ export default function UnifiedCalendarWidget() {
         const srcId = mondaySourceByLabel.get(e.meta?.sourceLabel);
         return !srcId || !hiddenMondaySources.has(srcId);
       }
+      if (e.source === "social") {
+        return !e.brandId || !hiddenSocialBrands.has(e.brandId);
+      }
       return true;
     });
 
