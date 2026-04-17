@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, dateFnsLocalizer, View } from "react-big-calendar";
+import { Calendar, dateFnsLocalizer, View, EventProps } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -51,6 +51,36 @@ type UnifiedEvent = {
 };
 
 const ACCOUNT_FILTER_KEY = "unifiedCalendar.hiddenAccounts";
+
+// Distinct, accessible palette for per-account coloring
+const ACCOUNT_PALETTE = [
+  "#4285f4", // google blue
+  "#ea4335", // red
+  "#34a853", // green
+  "#fbbc04", // amber
+  "#a142f4", // purple
+  "#ff6d01", // orange
+  "#24c1e0", // cyan
+  "#e91e63", // pink
+];
+
+function colorForAccount(email: string | undefined, accounts: string[]): string {
+  if (!email) return ACCOUNT_PALETTE[0];
+  const idx = accounts.indexOf(email);
+  if (idx >= 0) return ACCOUNT_PALETTE[idx % ACCOUNT_PALETTE.length];
+  // Fallback: stable hash
+  let h = 0;
+  for (let i = 0; i < email.length; i++) h = (h * 31 + email.charCodeAt(i)) | 0;
+  return ACCOUNT_PALETTE[Math.abs(h) % ACCOUNT_PALETTE.length];
+}
+
+function initialsForEmail(email: string | undefined): string {
+  if (!email) return "?";
+  const name = email.split("@")[0];
+  const parts = name.split(/[._-]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
 
 type MondaySource = {
   id: string;
@@ -260,16 +290,37 @@ export default function UnifiedCalendarWidget() {
     }
   };
 
-  const eventStyleGetter = (event: UnifiedEvent) => ({
-    style: {
-      backgroundColor: event.color,
-      borderColor: event.color,
-      color: "#fff",
-      borderRadius: 4,
-      fontSize: "0.75rem",
-      padding: "1px 4px",
-    },
-  });
+  const eventStyleGetter = (event: UnifiedEvent) => {
+    const bg =
+      event.source === "google"
+        ? colorForAccount(event.accountEmail, googleAccounts)
+        : event.color;
+    return {
+      style: {
+        backgroundColor: bg,
+        borderColor: bg,
+        color: "#fff",
+        borderRadius: 4,
+        fontSize: "0.75rem",
+        padding: "1px 4px",
+      },
+    };
+  };
+
+  const EventBlock = ({ event }: EventProps<UnifiedEvent>) => {
+    const initials =
+      event.source === "google" ? initialsForEmail(event.accountEmail) : null;
+    return (
+      <div className="flex items-center gap-1 overflow-hidden">
+        {initials && (
+          <span className="inline-flex items-center justify-center text-[9px] font-bold leading-none w-4 h-4 rounded-sm bg-black/30 shrink-0">
+            {initials}
+          </span>
+        )}
+        <span className="truncate">{event.title}</span>
+      </div>
+    );
+  };
 
   const toggleAccount = (email: string) => {
     setHiddenAccounts((prev) => {
@@ -389,6 +440,7 @@ export default function UnifiedCalendarWidget() {
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               {googleAccounts.map((email) => {
                 const checked = !hiddenAccounts.has(email);
+                const color = colorForAccount(email, googleAccounts);
                 return (
                   <label
                     key={email}
@@ -400,6 +452,13 @@ export default function UnifiedCalendarWidget() {
                       onChange={() => toggleAccount(email)}
                       className="w-4 h-4 rounded accent-primary"
                     />
+                    <span
+                      className="inline-flex items-center justify-center text-[10px] font-bold w-5 h-5 rounded text-white shrink-0"
+                      style={{ backgroundColor: color, opacity: checked ? 1 : 0.4 }}
+                      title={email}
+                    >
+                      {initialsForEmail(email)}
+                    </span>
                     <span className={checked ? "" : "text-muted-foreground line-through"}>
                       {email}
                     </span>
@@ -426,32 +485,54 @@ export default function UnifiedCalendarWidget() {
                 No upcoming events.
               </p>
             )}
-            {upcoming.map((e) => (
-              <div
-                key={e.id}
-                className="flex items-start gap-3 p-3 rounded-md border border-border bg-card/50"
-              >
+            {upcoming.map((e) => {
+              const accentColor =
+                e.source === "google"
+                  ? colorForAccount(e.accountEmail, googleAccounts)
+                  : e.color;
+              return (
                 <div
-                  className="w-1 self-stretch rounded"
-                  style={{ backgroundColor: e.color }}
-                />
-                <div className="flex-1">
-                  <div className="font-medium text-sm">{e.title}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {format(e.start, "EEE MMM d, h:mm a")}
-                    {!e.allDay && ` – ${format(e.end, "h:mm a")}`}
-                  </div>
-                  {e.meta?.location && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      📍 {e.meta.location}
+                  key={e.id}
+                  className="flex items-start gap-3 p-3 rounded-md border border-border bg-card/50"
+                >
+                  <div
+                    className="w-1 self-stretch rounded"
+                    style={{ backgroundColor: accentColor }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      {e.source === "google" && e.accountEmail && (
+                        <span
+                          className="inline-flex items-center justify-center text-[9px] font-bold w-5 h-5 rounded text-white shrink-0"
+                          style={{ backgroundColor: accentColor }}
+                          title={e.accountEmail}
+                        >
+                          {initialsForEmail(e.accountEmail)}
+                        </span>
+                      )}
+                      <div className="font-medium text-sm truncate">{e.title}</div>
                     </div>
-                  )}
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {format(e.start, "EEE MMM d, h:mm a")}
+                      {!e.allDay && ` – ${format(e.end, "h:mm a")}`}
+                    </div>
+                    {e.accountEmail && (
+                      <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                        {e.accountEmail}
+                      </div>
+                    )}
+                    {e.meta?.location && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        📍 {e.meta.location}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[10px] uppercase text-muted-foreground">
+                    {e.source}
+                  </span>
                 </div>
-                <span className="text-[10px] uppercase text-muted-foreground">
-                  {e.source}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="bg-background rounded-md p-2" style={{ height: 600 }}>
@@ -466,6 +547,7 @@ export default function UnifiedCalendarWidget() {
               onNavigate={setDate}
               views={["month", "week", "day"]}
               eventPropGetter={eventStyleGetter}
+              components={{ event: EventBlock }}
               style={{ height: "100%" }}
               onSelectEvent={(e: UnifiedEvent) => {
                 if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
