@@ -1002,6 +1002,7 @@ export default function UnifiedCalendarWidget() {
                 style={{ height: "100%" }}
                 popup
                 onSelectEvent={(e: UnifiedEvent) => setSelectedEvent(e)}
+                selected={selectedEvent}
               />
             </TooltipProvider>
           </div>
