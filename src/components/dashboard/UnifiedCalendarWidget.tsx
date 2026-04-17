@@ -391,10 +391,28 @@ export default function UnifiedCalendarWidget() {
                   Connected as <span className="text-foreground">{googleEmail}</span>
                 </p>
               ) : (
-                <Button onClick={connectGoogle} size="sm">
-                  <LinkIcon className="w-4 h-4 mr-1" /> Connect Google Calendar
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={connectGoogle} size="sm">
+                    <LinkIcon className="w-4 h-4 mr-1" /> Connect Google Calendar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      window.dispatchEvent(
+                        new CustomEvent("lov-add-secrets", {
+                          detail: { names: ["GOOGLE_CALENDAR_CLIENT_ID", "GOOGLE_CALENDAR_CLIENT_SECRET"] },
+                        }),
+                      )
+                    }
+                  >
+                    <KeyRound className="w-4 h-4 mr-1" /> Add Google Secrets
+                  </Button>
+                </div>
               )}
+              <p className="text-xs text-muted-foreground mt-2">
+                Need GOOGLE_CALENDAR_CLIENT_ID and GOOGLE_CALENDAR_CLIENT_SECRET configured before connecting.
+              </p>
             </section>
 
             <section>
