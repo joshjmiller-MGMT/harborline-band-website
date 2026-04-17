@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Bot, Plus, Trash2, ChevronDown, ChevronUp, Loader2, ClipboardPaste, Code2 } from "lucide-react";
+import { Bot, Plus, Trash2, ChevronDown, ChevronUp, Loader2, ClipboardPaste, Code2, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -98,6 +98,46 @@ export default function ClaudeLogWidget() {
     }
   };
 
+  const exportLog = (format: "json" | "md") => {
+    if (entries.length === 0) {
+      toast.error("No entries to export");
+      return;
+    }
+    const stamp = new Date().toISOString().slice(0, 10);
+    let blob: Blob;
+    let filename: string;
+    if (format === "json") {
+      blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
+      filename = `claude-log-${stamp}.json`;
+    } else {
+      const md = [
+        `# Claude Log Export`,
+        `_Exported ${new Date().toLocaleString()} — ${entries.length} entries_`,
+        `\nUse this file to update Claude's memory of prior work on the Harborline website.\n`,
+        ...entries.map(e => {
+          const dt = new Date(e.timestamp);
+          return [
+            `## ${dt.toLocaleString()} — ${e.machine}${e.context ? ` (${e.context})` : ""}`,
+            `**Summary:** ${e.summary}`,
+            e.next_steps ? `\n**Next Steps:** ${e.next_steps}` : "",
+            e.tags?.length ? `\n**Tags:** ${e.tags.join(", ")}` : "",
+          ].filter(Boolean).join("\n");
+        }),
+      ].join("\n\n");
+      blob = new Blob([md], { type: "text/markdown" });
+      filename = `claude-log-${stamp}.md`;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${entries.length} entries as ${format.toUpperCase()}`);
+  };
+
   const deleteEntry = async (id: string) => {
     const { error } = await supabase.from("claude_log").delete().eq("id", id);
     if (error) toast.error("Failed to delete");
@@ -114,7 +154,13 @@ export default function ClaudeLogWidget() {
             </h2>
             <p className="text-xs text-muted-foreground mt-1">Synced across all machines via the cloud.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={() => exportLog("md")} disabled={entries.length === 0} title="Download as Markdown (best for feeding to Claude)">
+              <Download className="w-4 h-4 mr-1" /> Export .md
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => exportLog("json")} disabled={entries.length === 0} title="Download as JSON (re-importable)">
+              <Download className="w-4 h-4 mr-1" /> Export .json
+            </Button>
             <Button size="sm" variant="outline" onClick={() => { setShowApi(!showApi); setShowAdd(false); setShowPaste(false); }}>
               <Code2 className="w-4 h-4 mr-1" /> API
             </Button>
