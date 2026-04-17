@@ -154,6 +154,7 @@ export default function UnifiedCalendarWidget() {
           .map((a: any) => a.email)
           .filter(Boolean);
         setGoogleAccounts(accounts);
+        setGoogleAccountInfo(gRes.accounts || []);
         for (const e of gRes.events || []) {
           merged.push({
             id: e.id,
