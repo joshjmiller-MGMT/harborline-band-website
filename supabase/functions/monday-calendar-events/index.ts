@@ -96,14 +96,15 @@ Deno.serve(async (req) => {
             }
           }`;
         } else if (usePersonFilter) {
-          // Filter to items where the person column contains Josh's user ID.
+          // Filter to items where the person column contains the configured user ID.
+          // Monday people columns expect the value as "person-<id>".
           query = `query {
             boards(ids: [${src.board_id}]) {
               name
               items_page(
                 limit: 500,
                 query_params: {
-                  rules: [{ column_id: "${src.person_column_id}", compare_value: [${src.person_id}], operator: any_of }]
+                  rules: [{ column_id: "${src.person_column_id}", compare_value: ["person-${src.person_id}"], operator: any_of }]
                 }
               ) {
                 cursor
