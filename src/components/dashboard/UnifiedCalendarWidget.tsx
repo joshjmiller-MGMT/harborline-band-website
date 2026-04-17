@@ -101,6 +101,9 @@ export default function UnifiedCalendarWidget() {
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState<string | null>(null);
   const [googleAccounts, setGoogleAccounts] = useState<string[]>([]);
+  const [googleAccountInfo, setGoogleAccountInfo] = useState<
+    { email: string; calendars: number; error?: string; needsReconnect?: boolean }[]
+  >([]);
   const [hiddenAccounts, setHiddenAccounts] = useState<Set<string>>(() => {
     try {
       const raw = localStorage.getItem(ACCOUNT_FILTER_KEY);
@@ -151,6 +154,7 @@ export default function UnifiedCalendarWidget() {
           .map((a: any) => a.email)
           .filter(Boolean);
         setGoogleAccounts(accounts);
+        setGoogleAccountInfo(gRes.accounts || []);
         for (const e of gRes.events || []) {
           merged.push({
             id: e.id,
@@ -167,6 +171,7 @@ export default function UnifiedCalendarWidget() {
       } else {
         setGoogleConnected(false);
         setGoogleAccounts([]);
+        setGoogleAccountInfo([]);
       }
 
       if (mRes?.configured) {
@@ -215,7 +220,7 @@ export default function UnifiedCalendarWidget() {
     }
   }, []);
 
-  const connectGoogle = async () => {
+  const connectGoogle = async (loginHint?: string) => {
     const popup = window.open("", "_blank");
 
     if (popup) {
@@ -228,14 +233,14 @@ export default function UnifiedCalendarWidget() {
     }
 
     try {
-      const res = await fetch(
-        `${FUNCTIONS_BASE}/google-calendar-oauth?action=start&return_to=${encodeURIComponent(
-          window.location.pathname,
-        )}`,
-        {
-          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        },
-      );
+      const params = new URLSearchParams({
+        action: "start",
+        return_to: window.location.pathname,
+      });
+      if (loginHint) params.set("login_hint", loginHint);
+      const res = await fetch(`${FUNCTIONS_BASE}/google-calendar-oauth?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+      });
       const data = await res.json();
       if (data.error) {
         popup?.close();
@@ -431,12 +436,12 @@ export default function UnifiedCalendarWidget() {
             Monday: {mondaySources.length > 0 ? `${mondaySources.length} board(s)` : "no sources"}
           </span>
           {!googleConnected && (
-            <Button size="sm" variant="outline" onClick={connectGoogle}>
+            <Button size="sm" variant="outline" onClick={() => connectGoogle()}>
               <LinkIcon className="w-3 h-3 mr-1" /> Connect Google
             </Button>
           )}
           {googleConnected && (
-            <Button size="sm" variant="outline" onClick={connectGoogle}>
+            <Button size="sm" variant="outline" onClick={() => connectGoogle()}>
               <LinkIcon className="w-3 h-3 mr-1" /> Add Account
             </Button>
           )}
@@ -467,32 +472,51 @@ export default function UnifiedCalendarWidget() {
                 </button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <div className="flex flex-col gap-2">
               {googleAccounts.map((email) => {
                 const checked = !hiddenAccounts.has(email);
                 const color = colorForAccount(email, googleAccounts);
+                const info = googleAccountInfo.find((a) => a.email === email);
+                const broken = !!info?.needsReconnect || (info?.calendars ?? 0) === 0;
                 return (
-                  <label
-                    key={email}
-                    className="flex items-center gap-2 text-sm cursor-pointer select-none"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleAccount(email)}
-                      className="w-4 h-4 rounded accent-primary"
-                    />
-                    <span
-                      className="inline-flex items-center justify-center text-[10px] font-bold w-5 h-5 rounded text-white shrink-0"
-                      style={{ backgroundColor: color, opacity: checked ? 1 : 0.4 }}
-                      title={email}
-                    >
-                      {initialsForEmail(email)}
-                    </span>
-                    <span className={checked ? "" : "text-muted-foreground line-through"}>
-                      {email}
-                    </span>
-                  </label>
+                  <div key={email} className="flex items-center justify-between gap-2">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleAccount(email)}
+                        className="w-4 h-4 rounded accent-primary"
+                      />
+                      <span
+                        className="inline-flex items-center justify-center text-[10px] font-bold w-5 h-5 rounded text-white shrink-0"
+                        style={{ backgroundColor: color, opacity: checked ? 1 : 0.4 }}
+                        title={email}
+                      >
+                        {initialsForEmail(email)}
+                      </span>
+                      <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
+                        {email}
+                      </span>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        · {info?.calendars ?? 0} cal{(info?.calendars ?? 0) === 1 ? "" : "s"}
+                      </span>
+                      {broken && (
+                        <span className="text-xs text-destructive shrink-0" title={info?.error || ""}>
+                          ⚠ {info?.error ? "error" : "no calendars"}
+                        </span>
+                      )}
+                    </label>
+                    {broken && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs shrink-0"
+                        onClick={() => connectGoogle(email)}
+                      >
+                        <LinkIcon className="w-3 h-3 mr-1" /> Reconnect
+                      </Button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -604,7 +628,7 @@ export default function UnifiedCalendarWidget() {
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={connectGoogle} size="sm">
+                  <Button onClick={() => connectGoogle()} size="sm">
                     <LinkIcon className="w-4 h-4 mr-1" /> Connect Google Calendar
                   </Button>
                   <Button
