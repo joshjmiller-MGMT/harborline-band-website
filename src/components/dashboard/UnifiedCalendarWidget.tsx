@@ -94,6 +94,24 @@ const ACCOUNT_PALETTE = [
   "#e91e63", // pink
 ];
 
+// Google Calendar's standard per-event color palette (colorId "1".."11").
+// We adopt these so events colored inside Google appear consistent here.
+const GOOGLE_EVENT_COLORS: Record<string, string> = {
+  "1": "#7986cb", // Lavender
+  "2": "#33b679", // Sage
+  "3": "#8e24aa", // Grape
+  "4": "#e67c73", // Flamingo
+  "5": "#f6c026", // Banana
+  "6": "#f5511d", // Tangerine
+  "7": "#039be5", // Peacock
+  "8": "#616161", // Graphite
+  "9": "#3f51b5", // Blueberry
+  "10": "#0b8043", // Basil
+  "11": "#d60000", // Tomato
+};
+
+const PREFERRED_COLOR_ACCOUNT = "joshmillermanagement@gmail.com";
+
 function colorForAccount(email: string | undefined, accounts: string[]): string {
   if (!email) return ACCOUNT_PALETTE[0];
   const idx = accounts.indexOf(email);
