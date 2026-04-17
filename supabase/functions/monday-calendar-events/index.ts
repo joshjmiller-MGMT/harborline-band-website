@@ -26,27 +26,6 @@ Deno.serve(async (req) => {
     );
   }
 
-  // Debug helper: ?inspect=<board_id> returns the board's column metadata so
-  // we can see which date columns exist before configuring a new source.
-  const url = new URL(req.url);
-  const inspectBoard = url.searchParams.get("inspect");
-  if (inspectBoard) {
-    const q = `query { boards(ids: [${inspectBoard}]) { name columns { id title type } groups { id title } } }`;
-    const r = await fetch("https://api.monday.com/v2", {
-      method: "POST",
-      headers: {
-        Authorization: MONDAY_API_TOKEN,
-        "Content-Type": "application/json",
-        "API-Version": "2024-01",
-      },
-      body: JSON.stringify({ query: q }),
-    });
-    const d = await r.json();
-    return new Response(JSON.stringify(d), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
