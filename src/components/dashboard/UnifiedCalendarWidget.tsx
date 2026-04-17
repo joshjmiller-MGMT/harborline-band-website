@@ -399,10 +399,9 @@ export default function UnifiedCalendarWidget() {
                     size="sm"
                     variant="outline"
                     onClick={() =>
-                      window.dispatchEvent(
-                        new CustomEvent("lov-add-secrets", {
-                          detail: { names: ["GOOGLE_CALENDAR_CLIENT_ID", "GOOGLE_CALENDAR_CLIENT_SECRET"] },
-                        }),
+                      toast.info(
+                        'In the Lovable chat, send: "add secrets GOOGLE_CALENDAR_CLIENT_ID and GOOGLE_CALENDAR_CLIENT_SECRET"',
+                        { duration: 8000 },
                       )
                     }
                   >
