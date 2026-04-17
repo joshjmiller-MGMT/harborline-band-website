@@ -17,6 +17,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -156,7 +162,7 @@ export default function UnifiedCalendarWidget() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<MondaySource>>({});
   const [showHelp, setShowHelp] = useState(false);
-  const [selectedMondayEvent, setSelectedMondayEvent] = useState<UnifiedEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<UnifiedEvent | null>(null);
   const [newSource, setNewSource] = useState({
     board_id: "",
     date_column_id: "",
@@ -422,32 +428,74 @@ export default function UnifiedCalendarWidget() {
     const dupes = event.duplicateAccounts || (event.accountEmail ? [event.accountEmail] : []);
     const shown = dupes.slice(0, 3);
     const extra = dupes.length - shown.length;
+    const timeLabel = event.allDay
+      ? "All day"
+      : `${format(event.start, "h:mm a")} – ${format(event.end, "h:mm a")}`;
+    const dateLabel = format(event.start, "EEE, MMM d");
     return (
-      <div className="flex items-center gap-1 overflow-hidden">
-        {event.source === "google" && shown.length > 0 && (
-          <span className="flex items-center -space-x-1 shrink-0">
-            {shown.map((email) => (
-              <span
-                key={email}
-                className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full text-white ring-1 ring-background"
-                style={{ backgroundColor: colorForAccount(email, googleAccounts) }}
-                title={email}
-              >
-                {initialsForEmail(email)}
-              </span>
-            ))}
-            {extra > 0 && (
-              <span
-                className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full bg-muted text-muted-foreground ring-1 ring-background"
-                title={`+${extra} more accounts`}
-              >
-                +{extra}
+      <Tooltip delayDuration={150}>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1 overflow-hidden cursor-pointer">
+            {event.source === "google" && shown.length > 0 && (
+              <span className="flex items-center -space-x-1 shrink-0">
+                {shown.map((email) => (
+                  <span
+                    key={email}
+                    className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full text-white ring-1 ring-background"
+                    style={{ backgroundColor: colorForAccount(email, googleAccounts) }}
+                  >
+                    {initialsForEmail(email)}
+                  </span>
+                ))}
+                {extra > 0 && (
+                  <span className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full bg-muted text-muted-foreground ring-1 ring-background">
+                    +{extra}
+                  </span>
+                )}
               </span>
             )}
-          </span>
-        )}
-        <span className="truncate font-medium">{event.title}</span>
-      </div>
+            <span className="truncate font-medium">{event.title}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          <div className="space-y-1.5">
+            <div className="font-semibold text-sm leading-tight">
+              {event.meta?.title || event.title}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {dateLabel} · {timeLabel}
+            </div>
+            {event.meta?.location && (
+              <div className="text-xs">📍 {event.meta.location}</div>
+            )}
+            {event.source === "google" && dupes.length > 0 && (
+              <div className="text-xs pt-1 border-t border-border/40">
+                <div className="text-muted-foreground mb-0.5">
+                  Shared on {dupes.length} account{dupes.length === 1 ? "" : "s"}:
+                </div>
+                {dupes.map((email) => (
+                  <div key={email} className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block w-2 h-2 rounded-full"
+                      style={{ backgroundColor: colorForAccount(email, googleAccounts) }}
+                    />
+                    <span className="truncate">{email}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {event.source === "monday" && event.meta?.sourceLabel && (
+              <div className="text-xs pt-1 border-t border-border/40 text-muted-foreground">
+                {event.meta.sourceLabel}
+                {event.meta?.boardName && ` · ${event.meta.boardName}`}
+              </div>
+            )}
+            <div className="text-[10px] text-muted-foreground/70 pt-1 italic">
+              Click to expand
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
     );
   };
 
@@ -853,10 +901,7 @@ export default function UnifiedCalendarWidget() {
                 <div
                   key={e.id}
                   className="flex items-start gap-3 p-3 rounded-lg border border-border/60 bg-card/50 hover:bg-card/80 hover:border-border transition-colors cursor-pointer"
-                  onClick={() => {
-                    if (e.source === "monday") setSelectedMondayEvent(e);
-                    else if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
-                  }}
+                  onClick={() => setSelectedEvent(e)}
                 >
                   <div
                     className="w-1 self-stretch rounded"
@@ -916,28 +961,24 @@ export default function UnifiedCalendarWidget() {
           </div>
         ) : (
           <div className="unified-cal bg-background rounded-lg border border-border/60 p-2" style={{ height: 600 }}>
-            <Calendar
-              localizer={localizer}
-              events={visibleEvents}
-              startAccessor="start"
-              endAccessor="end"
-              view={view}
-              onView={setView}
-              date={date}
-              onNavigate={setDate}
-              views={["month", "week", "day"]}
-              eventPropGetter={eventStyleGetter}
-              components={{ event: EventBlock }}
-              style={{ height: "100%" }}
-              popup
-              onSelectEvent={(e: UnifiedEvent) => {
-                if (e.source === "monday") {
-                  setSelectedMondayEvent(e);
-                } else if (e.meta?.htmlLink) {
-                  window.open(e.meta.htmlLink, "_blank");
-                }
-              }}
-            />
+            <TooltipProvider delayDuration={150}>
+              <Calendar
+                localizer={localizer}
+                events={visibleEvents}
+                startAccessor="start"
+                endAccessor="end"
+                view={view}
+                onView={setView}
+                date={date}
+                onNavigate={setDate}
+                views={["month", "week", "day"]}
+                eventPropGetter={eventStyleGetter}
+                components={{ event: EventBlock }}
+                style={{ height: "100%" }}
+                popup
+                onSelectEvent={(e: UnifiedEvent) => setSelectedEvent(e)}
+              />
+            </TooltipProvider>
           </div>
         )}
       </CardContent>
@@ -1269,74 +1310,123 @@ export default function UnifiedCalendarWidget() {
         </DialogContent>
       </Dialog>
 
-      {/* Monday item detail dialog */}
-      <Dialog open={!!selectedMondayEvent} onOpenChange={(o) => !o && setSelectedMondayEvent(null)}>
+      {/* Unified event detail dialog (Google + Monday) */}
+      <Dialog open={!!selectedEvent} onOpenChange={(o) => !o && setSelectedEvent(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-start gap-2 pr-6">
-              <span
-                className="w-1 self-stretch rounded shrink-0 mt-1"
-                style={{ backgroundColor: selectedMondayEvent?.color }}
-              />
-              <span>{selectedMondayEvent?.meta?.title || selectedMondayEvent?.title}</span>
-            </DialogTitle>
-          </DialogHeader>
-          {selectedMondayEvent && (
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2 text-xs">
-                <span
-                  className="px-2 py-0.5 rounded text-white"
-                  style={{ backgroundColor: selectedMondayEvent.color }}
-                >
-                  {selectedMondayEvent.meta?.sourceLabel}
-                </span>
-                {selectedMondayEvent.meta?.boardName && (
-                  <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                    {selectedMondayEvent.meta.boardName}
-                  </span>
-                )}
-                {selectedMondayEvent.meta?.groupTitle && (
-                  <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                    {selectedMondayEvent.meta.groupTitle}
-                  </span>
-                )}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                📅 {format(selectedMondayEvent.start, "EEEE, MMMM d, yyyy")}
-                {!selectedMondayEvent.allDay &&
-                  ` at ${format(selectedMondayEvent.start, "h:mm a")}`}
-              </div>
-              {selectedMondayEvent.meta?.fields?.length > 0 && (
-                <div className="border-t border-border pt-3">
-                  <div className="grid grid-cols-1 gap-2">
-                    {selectedMondayEvent.meta.fields.map((f: any) => (
-                      <div
-                        key={f.columnId}
-                        className="flex items-start justify-between gap-3 text-sm py-1 border-b border-border/40 last:border-0"
-                      >
-                        <span className="text-xs text-muted-foreground uppercase tracking-wide shrink-0 w-1/3">
-                          {f.label}
-                        </span>
-                        <span className="text-foreground text-right break-words flex-1">
-                          {f.value}
-                        </span>
-                      </div>
-                    ))}
+          {selectedEvent && (() => {
+            const ev = selectedEvent;
+            const accent =
+              ev.source === "google"
+                ? colorForAccount(ev.accountEmail, googleAccounts)
+                : ev.color;
+            const dupes =
+              ev.duplicateAccounts || (ev.accountEmail ? [ev.accountEmail] : []);
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-start gap-2 pr-6">
+                    <span
+                      className="w-1 self-stretch rounded shrink-0 mt-1"
+                      style={{ backgroundColor: accent }}
+                    />
+                    <span className="leading-tight">
+                      {ev.meta?.title || ev.title}
+                    </span>
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span
+                      className="px-2 py-0.5 rounded text-white"
+                      style={{ backgroundColor: accent }}
+                    >
+                      {ev.source === "monday"
+                        ? ev.meta?.sourceLabel || "Monday"
+                        : "Google Calendar"}
+                    </span>
+                    {ev.meta?.boardName && (
+                      <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                        {ev.meta.boardName}
+                      </span>
+                    )}
+                    {ev.meta?.groupTitle && (
+                      <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                        {ev.meta.groupTitle}
+                      </span>
+                    )}
                   </div>
+                  <div className="text-sm text-muted-foreground">
+                    📅 {format(ev.start, "EEEE, MMMM d, yyyy")}
+                    {!ev.allDay && (
+                      <> · {format(ev.start, "h:mm a")} – {format(ev.end, "h:mm a")}</>
+                    )}
+                  </div>
+                  {ev.meta?.location && (
+                    <div className="text-sm">📍 {ev.meta.location}</div>
+                  )}
+                  {ev.meta?.description && (
+                    <div className="text-sm whitespace-pre-wrap text-foreground/90 border-t border-border pt-3">
+                      {ev.meta.description}
+                    </div>
+                  )}
+                  {ev.source === "google" && dupes.length > 0 && (
+                    <div className="border-t border-border pt-3">
+                      <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                        Shared on {dupes.length} account{dupes.length === 1 ? "" : "s"}
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        {dupes.map((email) => (
+                          <div key={email} className="flex items-center gap-2 text-sm">
+                            <span
+                              className="inline-flex items-center justify-center text-[10px] font-bold w-5 h-5 rounded-full text-white shrink-0"
+                              style={{ backgroundColor: colorForAccount(email, googleAccounts) }}
+                            >
+                              {initialsForEmail(email)}
+                            </span>
+                            <span className="truncate">{email}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {ev.source === "monday" && ev.meta?.fields?.length > 0 && (
+                    <div className="border-t border-border pt-3">
+                      <div className="grid grid-cols-1 gap-2">
+                        {ev.meta.fields.map((f: any) => (
+                          <div
+                            key={f.columnId}
+                            className="flex items-start justify-between gap-3 text-sm py-1 border-b border-border/40 last:border-0"
+                          >
+                            <span className="text-xs text-muted-foreground uppercase tracking-wide shrink-0 w-1/3">
+                              {f.label}
+                            </span>
+                            <span className="text-foreground text-right break-words flex-1">
+                              {f.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedMondayEvent(null)}>
-              Close
-            </Button>
-            {selectedMondayEvent?.meta?.itemUrl && (
-              <Button onClick={() => window.open(selectedMondayEvent.meta.itemUrl, "_blank")}>
-                <LinkIcon className="w-4 h-4 mr-1" /> Open in Monday
-              </Button>
-            )}
-          </DialogFooter>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setSelectedEvent(null)}>
+                    Close
+                  </Button>
+                  {ev.source === "monday" && ev.meta?.itemUrl && (
+                    <Button onClick={() => window.open(ev.meta.itemUrl, "_blank")}>
+                      <LinkIcon className="w-4 h-4 mr-1" /> Open in Monday
+                    </Button>
+                  )}
+                  {ev.source === "google" && ev.meta?.htmlLink && (
+                    <Button onClick={() => window.open(ev.meta.htmlLink, "_blank")}>
+                      <LinkIcon className="w-4 h-4 mr-1" /> Open in Google
+                    </Button>
+                  )}
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </Card>
