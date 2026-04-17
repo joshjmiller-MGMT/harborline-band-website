@@ -452,10 +452,50 @@ export default function UnifiedCalendarWidget() {
                     +{extra}
                   </span>
                 )}
-          </span>
-        )}
-        <span className="truncate font-medium">{event.title}</span>
-      </div>
+              </span>
+            )}
+            <span className="truncate font-medium">{event.title}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          <div className="space-y-1.5">
+            <div className="font-semibold text-sm leading-tight">
+              {event.meta?.title || event.title}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {dateLabel} · {timeLabel}
+            </div>
+            {event.meta?.location && (
+              <div className="text-xs">📍 {event.meta.location}</div>
+            )}
+            {event.source === "google" && dupes.length > 0 && (
+              <div className="text-xs pt-1 border-t border-border/40">
+                <div className="text-muted-foreground mb-0.5">
+                  Shared on {dupes.length} account{dupes.length === 1 ? "" : "s"}:
+                </div>
+                {dupes.map((email) => (
+                  <div key={email} className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block w-2 h-2 rounded-full"
+                      style={{ backgroundColor: colorForAccount(email, googleAccounts) }}
+                    />
+                    <span className="truncate">{email}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {event.source === "monday" && event.meta?.sourceLabel && (
+              <div className="text-xs pt-1 border-t border-border/40 text-muted-foreground">
+                {event.meta.sourceLabel}
+                {event.meta?.boardName && ` · ${event.meta.boardName}`}
+              </div>
+            )}
+            <div className="text-[10px] text-muted-foreground/70 pt-1 italic">
+              Click to expand
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
     );
   };
 
