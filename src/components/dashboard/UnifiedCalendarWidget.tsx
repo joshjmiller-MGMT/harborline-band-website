@@ -143,6 +143,13 @@ type MondaySource = {
   person_id?: string | null;
 };
 
+type SocialBrand = {
+  id: string;
+  slug: string;
+  name: string;
+  color: string;
+};
+
 const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 export default function UnifiedCalendarWidget() {
