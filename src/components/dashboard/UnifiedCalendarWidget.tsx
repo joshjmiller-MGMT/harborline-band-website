@@ -592,10 +592,32 @@ export default function UnifiedCalendarWidget() {
     }
     const deduped: UnifiedEvent[] = [...passthrough];
     for (const arr of groups.values()) {
-      const primary = arr[0];
+      // Pick the OWNER as primary so chip color/account reflects who created
+      // the event, not whichever calendar happened to load first.
+      // Priority:
+      //   1. Account where this user is the organizer of the event
+      //   2. Account where this user is the creator
+      //   3. Account whose primary calendar holds the event
+      //   4. First event (stable fallback)
+      const score = (e: UnifiedEvent) => {
+        const m = e.meta || {};
+        if (m.organizerSelf || m.organizerEmail === e.accountEmail) return 4;
+        if (m.creatorSelf || m.creatorEmail === e.accountEmail) return 3;
+        if (m.isPrimaryCalendar) return 2;
+        return 1;
+      };
+      const primary = [...arr].sort((a, b) => score(b) - score(a))[0];
       const accounts = Array.from(
         new Set(arr.map((x) => x.accountEmail).filter(Boolean) as string[]),
       );
+      // Move primary's account to the front of the shared list
+      if (primary.accountEmail) {
+        const i = accounts.indexOf(primary.accountEmail);
+        if (i > 0) {
+          accounts.splice(i, 1);
+          accounts.unshift(primary.accountEmail);
+        }
+      }
       deduped.push({ ...primary, duplicateAccounts: accounts });
     }
     return deduped;
