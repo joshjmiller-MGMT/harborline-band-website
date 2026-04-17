@@ -436,12 +436,12 @@ export default function UnifiedCalendarWidget() {
             Monday: {mondaySources.length > 0 ? `${mondaySources.length} board(s)` : "no sources"}
           </span>
           {!googleConnected && (
-            <Button size="sm" variant="outline" onClick={connectGoogle}>
+            <Button size="sm" variant="outline" onClick={() => connectGoogle()}>
               <LinkIcon className="w-3 h-3 mr-1" /> Connect Google
             </Button>
           )}
           {googleConnected && (
-            <Button size="sm" variant="outline" onClick={connectGoogle}>
+            <Button size="sm" variant="outline" onClick={() => connectGoogle()}>
               <LinkIcon className="w-3 h-3 mr-1" /> Add Account
             </Button>
           )}
