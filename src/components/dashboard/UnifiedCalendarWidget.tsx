@@ -76,6 +76,8 @@ function parseEventDate(value: string, allDay?: boolean, isEnd = false): Date {
   }
   return new Date(value);
 }
+
+const ACCOUNT_FILTER_KEY = "unifiedCalendar.hiddenAccounts";
 const MONDAY_FILTER_KEY = "unifiedCalendar.hiddenMondaySources";
 const PANELS_OPEN_KEY = "unifiedCalendar.panelsOpen";
 const HIDE_DUPLICATES_KEY = "unifiedCalendar.hideDuplicates";
