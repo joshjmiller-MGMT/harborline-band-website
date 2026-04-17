@@ -481,20 +481,68 @@ export default function UnifiedCalendarWidget() {
     return m;
   }, [mondaySources]);
 
-  const visibleEvents = useMemo(
+  const visibleEvents = useMemo(() => {
+    // 1. Filter by account/source toggles
+    const filtered = events.filter((e) => {
+      if (e.source === "google") {
+        return !e.accountEmail || !hiddenAccounts.has(e.accountEmail);
+      }
+      if (e.source === "monday") {
+        const srcId = mondaySourceByLabel.get(e.meta?.sourceLabel);
+        return !srcId || !hiddenMondaySources.has(srcId);
+      }
+      return true;
+    });
+
+    // 2. Dedup Google events sharing identity across accounts.
+    //    Fingerprint = title|start|end|allDay (case-insensitive title).
+    if (!hideDuplicates) return filtered;
+
+    const groups = new Map<string, UnifiedEvent[]>();
+    const passthrough: UnifiedEvent[] = [];
+    for (const e of filtered) {
+      if (e.source !== "google") {
+        passthrough.push(e);
+        continue;
+      }
+      const fp = `${(e.title || "").toLowerCase().trim()}|${e.start.getTime()}|${e.end.getTime()}|${e.allDay ? 1 : 0}`;
+      const arr = groups.get(fp) || [];
+      arr.push(e);
+      groups.set(fp, arr);
+    }
+    const deduped: UnifiedEvent[] = [...passthrough];
+    for (const arr of groups.values()) {
+      const primary = arr[0];
+      const accounts = Array.from(
+        new Set(arr.map((x) => x.accountEmail).filter(Boolean) as string[]),
+      );
+      deduped.push({ ...primary, duplicateAccounts: accounts });
+    }
+    return deduped;
+  }, [events, hiddenAccounts, hiddenMondaySources, mondaySourceByLabel, hideDuplicates]);
+
+  const totalGoogleCount = useMemo(
     () =>
-      events.filter((e) => {
-        if (e.source === "google") {
-          return !e.accountEmail || !hiddenAccounts.has(e.accountEmail);
-        }
-        if (e.source === "monday") {
-          const srcId = mondaySourceByLabel.get(e.meta?.sourceLabel);
-          return !srcId || !hiddenMondaySources.has(srcId);
-        }
-        return true;
-      }),
-    [events, hiddenAccounts, hiddenMondaySources, mondaySourceByLabel],
+      events.filter(
+        (e) => e.source === "google" && (!e.accountEmail || !hiddenAccounts.has(e.accountEmail)),
+      ).length,
+    [events, hiddenAccounts],
   );
+  const visibleGoogleCount = useMemo(
+    () => visibleEvents.filter((e) => e.source === "google").length,
+    [visibleEvents],
+  );
+  const duplicatesHiddenCount = Math.max(0, totalGoogleCount - visibleGoogleCount);
+
+  const toggleHideDuplicates = () => {
+    setHideDuplicates((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(HIDE_DUPLICATES_KEY, String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   const upcoming = useMemo(
     () =>
