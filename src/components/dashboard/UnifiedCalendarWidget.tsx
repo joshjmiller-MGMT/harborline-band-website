@@ -171,6 +171,7 @@ export default function UnifiedCalendarWidget() {
       } else {
         setGoogleConnected(false);
         setGoogleAccounts([]);
+        setGoogleAccountInfo([]);
       }
 
       if (mRes?.configured) {
