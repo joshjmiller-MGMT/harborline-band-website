@@ -908,7 +908,7 @@ export default function UnifiedCalendarWidget() {
             })}
           </div>
         ) : (
-          <div className="bg-background rounded-md p-2" style={{ height: 600 }}>
+          <div className="unified-cal bg-background rounded-lg border border-border/60 p-2" style={{ height: 600 }}>
             <Calendar
               localizer={localizer}
               events={visibleEvents}
@@ -922,6 +922,7 @@ export default function UnifiedCalendarWidget() {
               eventPropGetter={eventStyleGetter}
               components={{ event: EventBlock }}
               style={{ height: "100%" }}
+              popup
               onSelectEvent={(e: UnifiedEvent) => {
                 if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
                 else if (e.meta?.itemUrl) window.open(e.meta.itemUrl, "_blank");
