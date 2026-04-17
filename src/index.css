@@ -181,6 +181,19 @@
 .unified-cal .rbc-timeslot-group {
   border-color: hsl(var(--border) / 0.4);
 }
+.unified-cal .rbc-time-view .rbc-time-content,
+.unified-cal .rbc-time-view .rbc-time-header-content,
+.unified-cal .rbc-time-view .rbc-time-content > * + * > *,
+.unified-cal .rbc-time-view .rbc-timeslot-group,
+.unified-cal .rbc-time-view .rbc-time-slot,
+.unified-cal .rbc-time-view .rbc-day-slot .rbc-time-slot,
+.unified-cal .rbc-time-view .rbc-time-header.rbc-overflowing,
+.unified-cal .rbc-time-view .rbc-time-header-cell .rbc-header,
+.unified-cal .rbc-time-view .rbc-day-bg + .rbc-day-bg,
+.unified-cal .rbc-time-view .rbc-time-gutter,
+.unified-cal .rbc-time-view .rbc-allday-cell {
+  border-color: hsl(var(--border) / 0.1) !important;
+}
 .unified-cal .rbc-off-range-bg {
   background: hsl(var(--muted) / 0.15);
 }
