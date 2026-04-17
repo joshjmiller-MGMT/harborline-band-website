@@ -633,6 +633,24 @@ export default function UnifiedCalendarWidget() {
 
         {/* Source filter dropdowns */}
         <div className="mb-4 space-y-2">
+          {/* Dedup toggle */}
+          {googleAccounts.length > 1 && (
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-card/40 px-3 py-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Hide duplicates
+                </span>
+                <span className="text-[11px] text-muted-foreground/80 truncate">
+                  Same event on multiple Google calendars
+                  {hideDuplicates && duplicatesHiddenCount > 0 && (
+                    <> · <span className="text-primary">{duplicatesHiddenCount} hidden</span></>
+                  )}
+                </span>
+              </div>
+              <Switch checked={hideDuplicates} onCheckedChange={toggleHideDuplicates} />
+            </div>
+          )}
+
           {/* Google Accounts dropdown */}
           {googleAccounts.length > 0 && (
             <div className="rounded-md border border-border bg-card/40">
