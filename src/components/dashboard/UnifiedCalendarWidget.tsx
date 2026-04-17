@@ -1013,6 +1013,76 @@ export default function UnifiedCalendarWidget() {
               )}
             </div>
           )}
+
+          {/* Social Brands dropdown */}
+          {socialBrands.length > 0 && (
+            <div className="rounded-md border border-border bg-card/40">
+              <button
+                type="button"
+                onClick={() => togglePanel("social")}
+                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
+              >
+                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Social Brands
+                  <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
+                    ({socialBrands.length - hiddenSocialBrands.size}/{socialBrands.length} visible)
+                  </span>
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-muted-foreground transition-transform ${
+                    openPanels.social ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {openPanels.social && (
+                <div className="px-3 pb-3 pt-1 border-t border-border">
+                  <div className="flex justify-end gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setAllSocialBrands(true)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Show all
+                    </button>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <button
+                      type="button"
+                      onClick={() => setAllSocialBrands(false)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Hide all
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {socialBrands.map((b) => {
+                      const checked = !hiddenSocialBrands.has(b.id);
+                      return (
+                        <label
+                          key={b.id}
+                          className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleSocialBrand(b.id)}
+                            className="w-4 h-4 rounded accent-primary"
+                          />
+                          <span
+                            className="inline-block w-5 h-5 rounded shrink-0"
+                            style={{ backgroundColor: b.color, opacity: checked ? 1 : 0.4 }}
+                            title={b.name}
+                          />
+                          <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
+                            {b.name}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
 
