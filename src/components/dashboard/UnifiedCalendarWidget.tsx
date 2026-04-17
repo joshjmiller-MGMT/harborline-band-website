@@ -435,16 +435,34 @@ export default function UnifiedCalendarWidget() {
     }
   };
 
-  const eventStyleGetter = (event: UnifiedEvent) => {
-    const accent =
+  // Returns { body, stripe } where:
+  //   body  = main fill (adopts Google per-event color when available, with
+  //           preference for the joshmillermanagement view of that event)
+  //   stripe = thin top stripe showing which calendar/source it belongs to
+  const colorsForEvent = (event: UnifiedEvent) => {
+    const stripe =
       event.source === "google"
         ? colorForAccount(event.accountEmail, googleAccounts)
         : event.color;
+
+    let body = stripe;
+    if (event.source === "google") {
+      const m = event.meta || {};
+      const colorId = m.preferredColorId || m.eventColorId;
+      if (colorId && GOOGLE_EVENT_COLORS[colorId]) {
+        body = GOOGLE_EVENT_COLORS[colorId];
+      }
+    }
+    return { body, stripe };
+  };
+
+  const eventStyleGetter = (event: UnifiedEvent) => {
+    const { body, stripe } = colorsForEvent(event);
     return {
       style: {
-        backgroundColor: `${accent}66`, // ~40% opacity for better contrast
-        borderLeft: `3px solid ${accent}`,
-        borderTop: "none",
+        backgroundColor: `${body}66`, // ~40% opacity for contrast
+        borderTop: `3px solid ${stripe}`,
+        borderLeft: "none",
         borderRight: "none",
         borderBottom: "none",
         color: "#ffffff",
