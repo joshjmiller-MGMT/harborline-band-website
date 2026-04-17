@@ -53,12 +53,14 @@ type UnifiedEvent = {
   source: "google" | "monday";
   color: string;
   accountEmail?: string;
+  duplicateAccounts?: string[]; // all accounts (incl primary) sharing this event
   meta?: any;
 };
 
 const ACCOUNT_FILTER_KEY = "unifiedCalendar.hiddenAccounts";
 const MONDAY_FILTER_KEY = "unifiedCalendar.hiddenMondaySources";
 const PANELS_OPEN_KEY = "unifiedCalendar.panelsOpen";
+const HIDE_DUPLICATES_KEY = "unifiedCalendar.hideDuplicates";
 
 // Distinct, accessible palette for per-account coloring
 const ACCOUNT_PALETTE = [
@@ -136,6 +138,14 @@ export default function UnifiedCalendarWidget() {
       if (raw) return JSON.parse(raw);
     } catch {}
     return { google: false, monday: false };
+  });
+  const [hideDuplicates, setHideDuplicates] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem(HIDE_DUPLICATES_KEY);
+      return raw === null ? true : raw === "true";
+    } catch {
+      return true;
+    }
   });
   const [mondayConfigured, setMondayConfigured] = useState(false);
   const [mondayError, setMondayError] = useState<string | null>(null);
@@ -381,33 +391,55 @@ export default function UnifiedCalendarWidget() {
   };
 
   const eventStyleGetter = (event: UnifiedEvent) => {
-    const bg =
+    const accent =
       event.source === "google"
         ? colorForAccount(event.accountEmail, googleAccounts)
         : event.color;
     return {
       style: {
-        backgroundColor: bg,
-        borderColor: bg,
-        color: "#fff",
+        backgroundColor: `${accent}26`, // ~15% opacity tint
+        borderLeft: `3px solid ${accent}`,
+        borderTop: "none",
+        borderRight: "none",
+        borderBottom: "none",
+        color: "hsl(var(--foreground))",
         borderRadius: 4,
-        fontSize: "0.75rem",
-        padding: "1px 4px",
+        fontSize: "0.72rem",
+        padding: "1px 6px",
+        boxShadow: "none",
       },
     };
   };
 
   const EventBlock = ({ event }: EventProps<UnifiedEvent>) => {
-    const initials =
-      event.source === "google" ? initialsForEmail(event.accountEmail) : null;
+    const dupes = event.duplicateAccounts || (event.accountEmail ? [event.accountEmail] : []);
+    const shown = dupes.slice(0, 3);
+    const extra = dupes.length - shown.length;
     return (
       <div className="flex items-center gap-1 overflow-hidden">
-        {initials && (
-          <span className="inline-flex items-center justify-center text-[9px] font-bold leading-none w-4 h-4 rounded-sm bg-black/30 shrink-0">
-            {initials}
+        {event.source === "google" && shown.length > 0 && (
+          <span className="flex items-center -space-x-1 shrink-0">
+            {shown.map((email) => (
+              <span
+                key={email}
+                className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full text-white ring-1 ring-background"
+                style={{ backgroundColor: colorForAccount(email, googleAccounts) }}
+                title={email}
+              >
+                {initialsForEmail(email)}
+              </span>
+            ))}
+            {extra > 0 && (
+              <span
+                className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full bg-muted text-muted-foreground ring-1 ring-background"
+                title={`+${extra} more accounts`}
+              >
+                +{extra}
+              </span>
+            )}
           </span>
         )}
-        <span className="truncate">{event.title}</span>
+        <span className="truncate font-medium">{event.title}</span>
       </div>
     );
   };
@@ -471,20 +503,68 @@ export default function UnifiedCalendarWidget() {
     return m;
   }, [mondaySources]);
 
-  const visibleEvents = useMemo(
+  const visibleEvents = useMemo(() => {
+    // 1. Filter by account/source toggles
+    const filtered = events.filter((e) => {
+      if (e.source === "google") {
+        return !e.accountEmail || !hiddenAccounts.has(e.accountEmail);
+      }
+      if (e.source === "monday") {
+        const srcId = mondaySourceByLabel.get(e.meta?.sourceLabel);
+        return !srcId || !hiddenMondaySources.has(srcId);
+      }
+      return true;
+    });
+
+    // 2. Dedup Google events sharing identity across accounts.
+    //    Fingerprint = title|start|end|allDay (case-insensitive title).
+    if (!hideDuplicates) return filtered;
+
+    const groups = new Map<string, UnifiedEvent[]>();
+    const passthrough: UnifiedEvent[] = [];
+    for (const e of filtered) {
+      if (e.source !== "google") {
+        passthrough.push(e);
+        continue;
+      }
+      const fp = `${(e.title || "").toLowerCase().trim()}|${e.start.getTime()}|${e.end.getTime()}|${e.allDay ? 1 : 0}`;
+      const arr = groups.get(fp) || [];
+      arr.push(e);
+      groups.set(fp, arr);
+    }
+    const deduped: UnifiedEvent[] = [...passthrough];
+    for (const arr of groups.values()) {
+      const primary = arr[0];
+      const accounts = Array.from(
+        new Set(arr.map((x) => x.accountEmail).filter(Boolean) as string[]),
+      );
+      deduped.push({ ...primary, duplicateAccounts: accounts });
+    }
+    return deduped;
+  }, [events, hiddenAccounts, hiddenMondaySources, mondaySourceByLabel, hideDuplicates]);
+
+  const totalGoogleCount = useMemo(
     () =>
-      events.filter((e) => {
-        if (e.source === "google") {
-          return !e.accountEmail || !hiddenAccounts.has(e.accountEmail);
-        }
-        if (e.source === "monday") {
-          const srcId = mondaySourceByLabel.get(e.meta?.sourceLabel);
-          return !srcId || !hiddenMondaySources.has(srcId);
-        }
-        return true;
-      }),
-    [events, hiddenAccounts, hiddenMondaySources, mondaySourceByLabel],
+      events.filter(
+        (e) => e.source === "google" && (!e.accountEmail || !hiddenAccounts.has(e.accountEmail)),
+      ).length,
+    [events, hiddenAccounts],
   );
+  const visibleGoogleCount = useMemo(
+    () => visibleEvents.filter((e) => e.source === "google").length,
+    [visibleEvents],
+  );
+  const duplicatesHiddenCount = Math.max(0, totalGoogleCount - visibleGoogleCount);
+
+  const toggleHideDuplicates = () => {
+    setHideDuplicates((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(HIDE_DUPLICATES_KEY, String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   const upcoming = useMemo(
     () =>
@@ -553,6 +633,24 @@ export default function UnifiedCalendarWidget() {
 
         {/* Source filter dropdowns */}
         <div className="mb-4 space-y-2">
+          {/* Dedup toggle */}
+          {googleAccounts.length > 1 && (
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-card/40 px-3 py-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Hide duplicates
+                </span>
+                <span className="text-[11px] text-muted-foreground/80 truncate">
+                  Same event on multiple Google calendars
+                  {hideDuplicates && duplicatesHiddenCount > 0 && (
+                    <> · <span className="text-primary">{duplicatesHiddenCount} hidden</span></>
+                  )}
+                </span>
+              </div>
+              <Switch checked={hideDuplicates} onCheckedChange={toggleHideDuplicates} />
+            </div>
+          )}
+
           {/* Google Accounts dropdown */}
           {googleAccounts.length > 0 && (
             <div className="rounded-md border border-border bg-card/40">
@@ -741,10 +839,17 @@ export default function UnifiedCalendarWidget() {
                 e.source === "google"
                   ? colorForAccount(e.accountEmail, googleAccounts)
                   : e.color;
+              const dupes = e.duplicateAccounts || (e.accountEmail ? [e.accountEmail] : []);
+              const shown = dupes.slice(0, 4);
+              const extra = dupes.length - shown.length;
               return (
                 <div
                   key={e.id}
-                  className="flex items-start gap-3 p-3 rounded-md border border-border bg-card/50"
+                  className="flex items-start gap-3 p-3 rounded-lg border border-border/60 bg-card/50 hover:bg-card/80 hover:border-border transition-colors cursor-pointer"
+                  onClick={() => {
+                    if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
+                    else if (e.meta?.itemUrl) window.open(e.meta.itemUrl, "_blank");
+                  }}
                 >
                   <div
                     className="w-1 self-stretch rounded"
@@ -752,13 +857,26 @@ export default function UnifiedCalendarWidget() {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      {e.source === "google" && e.accountEmail && (
-                        <span
-                          className="inline-flex items-center justify-center text-[9px] font-bold w-5 h-5 rounded text-white shrink-0"
-                          style={{ backgroundColor: accentColor }}
-                          title={e.accountEmail}
-                        >
-                          {initialsForEmail(e.accountEmail)}
+                      {e.source === "google" && shown.length > 0 && (
+                        <span className="flex items-center -space-x-1 shrink-0">
+                          {shown.map((email) => (
+                            <span
+                              key={email}
+                              className="inline-flex items-center justify-center text-[9px] font-bold w-5 h-5 rounded-full text-white ring-2 ring-card"
+                              style={{ backgroundColor: colorForAccount(email, googleAccounts) }}
+                              title={email}
+                            >
+                              {initialsForEmail(email)}
+                            </span>
+                          ))}
+                          {extra > 0 && (
+                            <span
+                              className="inline-flex items-center justify-center text-[9px] font-bold w-5 h-5 rounded-full bg-muted text-muted-foreground ring-2 ring-card"
+                              title={`+${extra} more accounts`}
+                            >
+                              +{extra}
+                            </span>
+                          )}
                         </span>
                       )}
                       <div className="font-medium text-sm truncate">{e.title}</div>
@@ -767,18 +885,22 @@ export default function UnifiedCalendarWidget() {
                       {format(e.start, "EEE MMM d, h:mm a")}
                       {!e.allDay && ` – ${format(e.end, "h:mm a")}`}
                     </div>
-                    {e.accountEmail && (
+                    {dupes.length > 1 ? (
+                      <div className="text-[11px] text-muted-foreground/80 mt-0.5 truncate">
+                        Shared across {dupes.length} accounts
+                      </div>
+                    ) : e.accountEmail ? (
                       <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
                         {e.accountEmail}
                       </div>
-                    )}
+                    ) : null}
                     {e.meta?.location && (
                       <div className="text-xs text-muted-foreground mt-1">
                         📍 {e.meta.location}
                       </div>
                     )}
                   </div>
-                  <span className="text-[10px] uppercase text-muted-foreground">
+                  <span className="text-[10px] uppercase text-muted-foreground shrink-0">
                     {e.source}
                   </span>
                 </div>
@@ -786,7 +908,7 @@ export default function UnifiedCalendarWidget() {
             })}
           </div>
         ) : (
-          <div className="bg-background rounded-md p-2" style={{ height: 600 }}>
+          <div className="unified-cal bg-background rounded-lg border border-border/60 p-2" style={{ height: 600 }}>
             <Calendar
               localizer={localizer}
               events={visibleEvents}
@@ -800,6 +922,7 @@ export default function UnifiedCalendarWidget() {
               eventPropGetter={eventStyleGetter}
               components={{ event: EventBlock }}
               style={{ height: "100%" }}
+              popup
               onSelectEvent={(e: UnifiedEvent) => {
                 if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
                 else if (e.meta?.itemUrl) window.open(e.meta.itemUrl, "_blank");
