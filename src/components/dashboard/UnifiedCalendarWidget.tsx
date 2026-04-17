@@ -742,6 +742,22 @@ export default function UnifiedCalendarWidget() {
                               onChange={(e) => setEditDraft({ ...editDraft, date_column_id: e.target.value })}
                             />
                           </div>
+                          <div>
+                            <Label className="text-xs">Person Column ID <span className="text-muted-foreground">(optional filter)</span></Label>
+                            <Input
+                              value={editDraft.person_column_id ?? ""}
+                              onChange={(e) => setEditDraft({ ...editDraft, person_column_id: e.target.value })}
+                              placeholder="e.g. lead_owner"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Person ID <span className="text-muted-foreground">(Monday user ID)</span></Label>
+                            <Input
+                              value={editDraft.person_id ?? ""}
+                              onChange={(e) => setEditDraft({ ...editDraft, person_id: e.target.value })}
+                              placeholder="e.g. 54492562"
+                            />
+                          </div>
                         </div>
                         <div className="flex gap-2 justify-end">
                           <Button size="sm" variant="outline" onClick={() => { setEditingId(null); setEditDraft({}); }}>
@@ -798,6 +814,8 @@ export default function UnifiedCalendarWidget() {
                             color: s.color,
                             board_id: s.board_id,
                             date_column_id: s.date_column_id,
+                            person_column_id: s.person_column_id ?? "",
+                            person_id: s.person_id ?? "",
                           });
                         }}
                       >
@@ -876,6 +894,22 @@ export default function UnifiedCalendarWidget() {
                       setNewSource({ ...newSource, date_column_id: e.target.value })
                     }
                     placeholder="date4"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Person Column ID <span className="text-muted-foreground">(optional)</span></Label>
+                  <Input
+                    value={newSource.person_column_id}
+                    onChange={(e) => setNewSource({ ...newSource, person_column_id: e.target.value })}
+                    placeholder="e.g. lead_owner"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Person ID <span className="text-muted-foreground">(Monday user ID)</span></Label>
+                  <Input
+                    value={newSource.person_id}
+                    onChange={(e) => setNewSource({ ...newSource, person_id: e.target.value })}
+                    placeholder="e.g. 54492562"
                   />
                 </div>
                 <Button onClick={addMondaySource} className="col-span-2" size="sm">
