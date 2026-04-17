@@ -172,7 +172,12 @@ Deno.serve(async (req) => {
           );
         } catch (err) {
           console.error(`Failed for ${row.account_email}:`, err);
-          accounts.push({ email: row.account_email, calendars: 0 });
+          accounts.push({
+            email: row.account_email,
+            calendars: 0,
+            error: err instanceof Error ? err.message : String(err),
+            needsReconnect: true,
+          });
         }
       }),
     );
