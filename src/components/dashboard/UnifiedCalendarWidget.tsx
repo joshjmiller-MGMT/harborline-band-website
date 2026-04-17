@@ -354,7 +354,61 @@ export default function UnifiedCalendarWidget() {
               <LinkIcon className="w-3 h-3 mr-1" /> Connect Google
             </Button>
           )}
+          {googleConnected && (
+            <Button size="sm" variant="outline" onClick={connectGoogle}>
+              <LinkIcon className="w-3 h-3 mr-1" /> Add Account
+            </Button>
+          )}
         </div>
+
+        {/* Account filters */}
+        {googleAccounts.length > 0 && (
+          <div className="mb-4 p-3 rounded-md border border-border bg-card/40">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Google Accounts
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAllAccounts(true)}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Show all
+                </button>
+                <span className="text-xs text-muted-foreground">·</span>
+                <button
+                  type="button"
+                  onClick={() => setAllAccounts(false)}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Hide all
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {googleAccounts.map((email) => {
+                const checked = !hiddenAccounts.has(email);
+                return (
+                  <label
+                    key={email}
+                    className="flex items-center gap-2 text-sm cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleAccount(email)}
+                      className="w-4 h-4 rounded accent-primary"
+                    />
+                    <span className={checked ? "" : "text-muted-foreground line-through"}>
+                      {email}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* View toggle */}
         <Tabs value={view} onValueChange={(v) => setView(v as View)} className="mb-3">
