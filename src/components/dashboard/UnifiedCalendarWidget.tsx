@@ -625,7 +625,29 @@ export default function UnifiedCalendarWidget() {
     } catch {}
   };
 
-  const togglePanel = (key: "google" | "monday") => {
+  const toggleSocialBrand = (id: string) => {
+    setHiddenSocialBrands((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try {
+        localStorage.setItem(SOCIAL_FILTER_KEY, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
+
+  const setAllSocialBrands = (visible: boolean) => {
+    const next = visible
+      ? new Set<string>()
+      : new Set<string>(socialBrands.map((b) => b.id));
+    setHiddenSocialBrands(next);
+    try {
+      localStorage.setItem(SOCIAL_FILTER_KEY, JSON.stringify([...next]));
+    } catch {}
+  };
+
+  const togglePanel = (key: "google" | "monday" | "social") => {
     setOpenPanels((prev) => {
       const next = { ...prev, [key]: !prev[key] };
       try {
