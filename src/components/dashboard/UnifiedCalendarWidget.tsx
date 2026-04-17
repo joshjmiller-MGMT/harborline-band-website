@@ -839,10 +839,17 @@ export default function UnifiedCalendarWidget() {
                 e.source === "google"
                   ? colorForAccount(e.accountEmail, googleAccounts)
                   : e.color;
+              const dupes = e.duplicateAccounts || (e.accountEmail ? [e.accountEmail] : []);
+              const shown = dupes.slice(0, 4);
+              const extra = dupes.length - shown.length;
               return (
                 <div
                   key={e.id}
-                  className="flex items-start gap-3 p-3 rounded-md border border-border bg-card/50"
+                  className="flex items-start gap-3 p-3 rounded-lg border border-border/60 bg-card/50 hover:bg-card/80 hover:border-border transition-colors cursor-pointer"
+                  onClick={() => {
+                    if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
+                    else if (e.meta?.itemUrl) window.open(e.meta.itemUrl, "_blank");
+                  }}
                 >
                   <div
                     className="w-1 self-stretch rounded"
@@ -850,13 +857,26 @@ export default function UnifiedCalendarWidget() {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      {e.source === "google" && e.accountEmail && (
-                        <span
-                          className="inline-flex items-center justify-center text-[9px] font-bold w-5 h-5 rounded text-white shrink-0"
-                          style={{ backgroundColor: accentColor }}
-                          title={e.accountEmail}
-                        >
-                          {initialsForEmail(e.accountEmail)}
+                      {e.source === "google" && shown.length > 0 && (
+                        <span className="flex items-center -space-x-1 shrink-0">
+                          {shown.map((email) => (
+                            <span
+                              key={email}
+                              className="inline-flex items-center justify-center text-[9px] font-bold w-5 h-5 rounded-full text-white ring-2 ring-card"
+                              style={{ backgroundColor: colorForAccount(email, googleAccounts) }}
+                              title={email}
+                            >
+                              {initialsForEmail(email)}
+                            </span>
+                          ))}
+                          {extra > 0 && (
+                            <span
+                              className="inline-flex items-center justify-center text-[9px] font-bold w-5 h-5 rounded-full bg-muted text-muted-foreground ring-2 ring-card"
+                              title={`+${extra} more accounts`}
+                            >
+                              +{extra}
+                            </span>
+                          )}
                         </span>
                       )}
                       <div className="font-medium text-sm truncate">{e.title}</div>
@@ -865,18 +885,22 @@ export default function UnifiedCalendarWidget() {
                       {format(e.start, "EEE MMM d, h:mm a")}
                       {!e.allDay && ` – ${format(e.end, "h:mm a")}`}
                     </div>
-                    {e.accountEmail && (
+                    {dupes.length > 1 ? (
+                      <div className="text-[11px] text-muted-foreground/80 mt-0.5 truncate">
+                        Shared across {dupes.length} accounts
+                      </div>
+                    ) : e.accountEmail ? (
                       <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
                         {e.accountEmail}
                       </div>
-                    )}
+                    ) : null}
                     {e.meta?.location && (
                       <div className="text-xs text-muted-foreground mt-1">
                         📍 {e.meta.location}
                       </div>
                     )}
                   </div>
-                  <span className="text-[10px] uppercase text-muted-foreground">
+                  <span className="text-[10px] uppercase text-muted-foreground shrink-0">
                     {e.source}
                   </span>
                 </div>
