@@ -410,14 +410,16 @@ export default function UnifiedCalendarWidget() {
         : event.color;
     return {
       style: {
-        backgroundColor: `${accent}26`, // ~15% opacity tint
+        backgroundColor: `${accent}66`, // ~40% opacity for better contrast
         borderLeft: `3px solid ${accent}`,
         borderTop: "none",
         borderRight: "none",
         borderBottom: "none",
-        color: "hsl(var(--foreground))",
+        color: "#ffffff",
+        textShadow: "0 1px 2px rgba(0,0,0,0.6)",
         borderRadius: 4,
         fontSize: "0.72rem",
+        fontWeight: 500,
         padding: "1px 6px",
         boxShadow: "none",
       },
