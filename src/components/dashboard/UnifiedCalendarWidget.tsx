@@ -551,81 +551,174 @@ export default function UnifiedCalendarWidget() {
           )}
         </div>
 
-        {/* Account filters */}
-        {googleAccounts.length > 0 && (
-          <div className="mb-4 p-3 rounded-md border border-border bg-card/40">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Google Accounts
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAllAccounts(true)}
-                  className="text-xs text-primary hover:underline"
-                >
-                  Show all
-                </button>
-                <span className="text-xs text-muted-foreground">·</span>
-                <button
-                  type="button"
-                  onClick={() => setAllAccounts(false)}
-                  className="text-xs text-primary hover:underline"
-                >
-                  Hide all
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              {googleAccounts.map((email) => {
-                const checked = !hiddenAccounts.has(email);
-                const color = colorForAccount(email, googleAccounts);
-                const info = googleAccountInfo.find((a) => a.email === email);
-                const broken = !!info?.needsReconnect || (info?.calendars ?? 0) === 0;
-                return (
-                  <div key={email} className="flex items-center justify-between gap-2">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleAccount(email)}
-                        className="w-4 h-4 rounded accent-primary"
-                      />
-                      <span
-                        className="inline-flex items-center justify-center text-[10px] font-bold w-5 h-5 rounded text-white shrink-0"
-                        style={{ backgroundColor: color, opacity: checked ? 1 : 0.4 }}
-                        title={email}
-                      >
-                        {initialsForEmail(email)}
-                      </span>
-                      <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
-                        {email}
-                      </span>
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        · {info?.calendars ?? 0} cal{(info?.calendars ?? 0) === 1 ? "" : "s"}
-                      </span>
-                      {broken && (
-                        <span className="text-xs text-destructive shrink-0" title={info?.error || ""}>
-                          ⚠ {info?.error ? "error" : "no calendars"}
-                        </span>
-                      )}
-                    </label>
-                    {broken && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-xs shrink-0"
-                        onClick={() => connectGoogle(email)}
-                      >
-                        <LinkIcon className="w-3 h-3 mr-1" /> Reconnect
-                      </Button>
-                    )}
+        {/* Source filter dropdowns */}
+        <div className="mb-4 space-y-2">
+          {/* Google Accounts dropdown */}
+          {googleAccounts.length > 0 && (
+            <div className="rounded-md border border-border bg-card/40">
+              <button
+                type="button"
+                onClick={() => togglePanel("google")}
+                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
+              >
+                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Google Accounts
+                  <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
+                    ({googleAccounts.length - hiddenAccounts.size}/{googleAccounts.length} visible)
+                  </span>
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-muted-foreground transition-transform ${
+                    openPanels.google ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {openPanels.google && (
+                <div className="px-3 pb-3 pt-1 border-t border-border">
+                  <div className="flex justify-end gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setAllAccounts(true)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Show all
+                    </button>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <button
+                      type="button"
+                      onClick={() => setAllAccounts(false)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Hide all
+                    </button>
                   </div>
-                );
-              })}
+                  <div className="flex flex-col gap-2">
+                    {googleAccounts.map((email) => {
+                      const checked = !hiddenAccounts.has(email);
+                      const color = colorForAccount(email, googleAccounts);
+                      const info = googleAccountInfo.find((a) => a.email === email);
+                      const broken = !!info?.needsReconnect || (info?.calendars ?? 0) === 0;
+                      return (
+                        <div key={email} className="flex items-center justify-between gap-2">
+                          <label className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleAccount(email)}
+                              className="w-4 h-4 rounded accent-primary"
+                            />
+                            <span
+                              className="inline-flex items-center justify-center text-[10px] font-bold w-5 h-5 rounded text-white shrink-0"
+                              style={{ backgroundColor: color, opacity: checked ? 1 : 0.4 }}
+                              title={email}
+                            >
+                              {initialsForEmail(email)}
+                            </span>
+                            <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
+                              {email}
+                            </span>
+                            <span className="text-xs text-muted-foreground shrink-0">
+                              · {info?.calendars ?? 0} cal{(info?.calendars ?? 0) === 1 ? "" : "s"}
+                            </span>
+                            {broken && (
+                              <span className="text-xs text-destructive shrink-0" title={info?.error || ""}>
+                                ⚠ {info?.error ? "error" : "no calendars"}
+                              </span>
+                            )}
+                          </label>
+                          {broken && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs shrink-0"
+                              onClick={() => connectGoogle(email)}
+                            >
+                              <LinkIcon className="w-3 h-3 mr-1" /> Reconnect
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Monday Sources dropdown */}
+          {mondaySources.length > 0 && (
+            <div className="rounded-md border border-border bg-card/40">
+              <button
+                type="button"
+                onClick={() => togglePanel("monday")}
+                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
+              >
+                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Monday Views
+                  <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
+                    ({mondaySources.length - hiddenMondaySources.size}/{mondaySources.length} visible)
+                  </span>
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-muted-foreground transition-transform ${
+                    openPanels.monday ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {openPanels.monday && (
+                <div className="px-3 pb-3 pt-1 border-t border-border">
+                  <div className="flex justify-end gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setAllMondaySources(true)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Show all
+                    </button>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <button
+                      type="button"
+                      onClick={() => setAllMondaySources(false)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Hide all
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {mondaySources.map((s) => {
+                      const checked = !hiddenMondaySources.has(s.id);
+                      return (
+                        <label
+                          key={s.id}
+                          className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleMondaySource(s.id)}
+                            className="w-4 h-4 rounded accent-primary"
+                          />
+                          <span
+                            className="inline-block w-5 h-5 rounded shrink-0"
+                            style={{ backgroundColor: s.color, opacity: checked ? 1 : 0.4 }}
+                            title={s.label}
+                          />
+                          <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
+                            {s.label}
+                          </span>
+                          {!s.enabled && (
+                            <span className="text-[10px] text-muted-foreground shrink-0">(disabled)</span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
 
         {/* View toggle */}
         <Tabs value={view} onValueChange={(v) => setView(v as View)} className="mb-3">
