@@ -472,32 +472,51 @@ export default function UnifiedCalendarWidget() {
                 </button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <div className="flex flex-col gap-2">
               {googleAccounts.map((email) => {
                 const checked = !hiddenAccounts.has(email);
                 const color = colorForAccount(email, googleAccounts);
+                const info = googleAccountInfo.find((a) => a.email === email);
+                const broken = !!info?.needsReconnect || (info?.calendars ?? 0) === 0;
                 return (
-                  <label
-                    key={email}
-                    className="flex items-center gap-2 text-sm cursor-pointer select-none"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleAccount(email)}
-                      className="w-4 h-4 rounded accent-primary"
-                    />
-                    <span
-                      className="inline-flex items-center justify-center text-[10px] font-bold w-5 h-5 rounded text-white shrink-0"
-                      style={{ backgroundColor: color, opacity: checked ? 1 : 0.4 }}
-                      title={email}
-                    >
-                      {initialsForEmail(email)}
-                    </span>
-                    <span className={checked ? "" : "text-muted-foreground line-through"}>
-                      {email}
-                    </span>
-                  </label>
+                  <div key={email} className="flex items-center justify-between gap-2">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleAccount(email)}
+                        className="w-4 h-4 rounded accent-primary"
+                      />
+                      <span
+                        className="inline-flex items-center justify-center text-[10px] font-bold w-5 h-5 rounded text-white shrink-0"
+                        style={{ backgroundColor: color, opacity: checked ? 1 : 0.4 }}
+                        title={email}
+                      >
+                        {initialsForEmail(email)}
+                      </span>
+                      <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
+                        {email}
+                      </span>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        · {info?.calendars ?? 0} cal{(info?.calendars ?? 0) === 1 ? "" : "s"}
+                      </span>
+                      {broken && (
+                        <span className="text-xs text-destructive shrink-0" title={info?.error || ""}>
+                          ⚠ {info?.error ? "error" : "no calendars"}
+                        </span>
+                      )}
+                    </label>
+                    {broken && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs shrink-0"
+                        onClick={() => connectGoogle(email)}
+                      >
+                        <LinkIcon className="w-3 h-3 mr-1" /> Reconnect
+                      </Button>
+                    )}
+                  </div>
                 );
               })}
             </div>
