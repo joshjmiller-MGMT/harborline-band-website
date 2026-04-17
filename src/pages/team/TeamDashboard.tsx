@@ -1,6 +1,7 @@
 import TeamLayout from "@/components/TeamLayout";
 import ClaudeLogWidget from "@/components/dashboard/ClaudeLogWidget";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
+import SocialManagerWidget from "@/components/dashboard/SocialManagerWidget";
 import { LayoutDashboard } from "lucide-react";
 
 export default function TeamDashboard() {
@@ -17,6 +18,7 @@ export default function TeamDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <UnifiedCalendarWidget />
           <ClaudeLogWidget />
+          <SocialManagerWidget />
         </div>
       </div>
     </TeamLayout>
