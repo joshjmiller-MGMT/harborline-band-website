@@ -1,4 +1,4 @@
-// Fetch & create Google Calendar events using stored tokens
+// Fetch & create Google Calendar events using stored tokens (multi-account)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -12,23 +12,10 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CALENDAR_CLIENT_SECRET");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-async function getValidAccessToken(supabase: any): Promise<{ token: string; email: string } | null> {
-  const { data: rows } = await supabase
-    .from("google_calendar_tokens")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  if (!rows || rows.length === 0) return null;
-  const row = rows[0];
-
+async function ensureFreshToken(supabase: any, row: any): Promise<string> {
   const expiresAt = new Date(row.expires_at).getTime();
-  // Refresh if expiring within 60s
-  if (Date.now() < expiresAt - 60_000) {
-    return { token: row.access_token, email: row.account_email };
-  }
+  if (Date.now() < expiresAt - 60_000) return row.access_token;
 
-  // Refresh
   const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -48,7 +35,7 @@ async function getValidAccessToken(supabase: any): Promise<{ token: string; emai
     .update({ access_token: refreshed.access_token, expires_at: newExpires })
     .eq("id", row.id);
 
-  return { token: refreshed.access_token, email: row.account_email };
+  return refreshed.access_token;
 }
 
 Deno.serve(async (req) => {
@@ -56,17 +43,22 @@ Deno.serve(async (req) => {
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     return new Response(
-      JSON.stringify({ connected: false, configured: false, events: [], error: "Google OAuth not configured" }),
+      JSON.stringify({ connected: false, configured: false, accounts: [], events: [], error: "Google OAuth not configured" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const auth = await getValidAccessToken(supabase);
-    if (!auth) {
+
+    const { data: tokenRows } = await supabase
+      .from("google_calendar_tokens")
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    if (!tokenRows || tokenRows.length === 0) {
       return new Response(
-        JSON.stringify({ connected: false, events: [] }),
+        JSON.stringify({ connected: false, accounts: [], events: [] }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -74,14 +66,21 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action") || "list";
 
+    // POST create — uses first account by default, or ?account=<email>
     if (req.method === "POST" && action === "create") {
       const body = await req.json();
+      const targetEmail = url.searchParams.get("account") || body.account;
+      const row = targetEmail
+        ? tokenRows.find((r: any) => r.account_email === targetEmail) || tokenRows[0]
+        : tokenRows[0];
+      const token = await ensureFreshToken(supabase, row);
+
       const createRes = await fetch(
         "https://www.googleapis.com/calendar/v3/calendars/primary/events",
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${auth.token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -99,7 +98,7 @@ Deno.serve(async (req) => {
       );
       const created = await createRes.json();
       if (!createRes.ok) throw new Error(`Create failed: ${JSON.stringify(created)}`);
-      return new Response(JSON.stringify({ event: created }), {
+      return new Response(JSON.stringify({ event: created, account: row.account_email }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -112,47 +111,78 @@ Deno.serve(async (req) => {
       url.searchParams.get("timeMax") ||
       new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Fetch list of all calendars
-    const calListRes = await fetch(
-      "https://www.googleapis.com/calendar/v3/users/me/calendarList",
-      { headers: { Authorization: `Bearer ${auth.token}` } },
-    );
-    const calList = await calListRes.json();
-    const calendars = (calList.items || []).filter((c: any) => c.selected !== false);
-
     const allEvents: any[] = [];
-    for (const cal of calendars) {
-      const evRes = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?` +
-          new URLSearchParams({
-            timeMin,
-            timeMax,
-            singleEvents: "true",
-            orderBy: "startTime",
-            maxResults: "250",
-          }),
-        { headers: { Authorization: `Bearer ${auth.token}` } },
-      );
-      const ev = await evRes.json();
-      for (const e of ev.items || []) {
-        allEvents.push({
-          id: e.id,
-          calendarId: cal.id,
-          calendarName: cal.summary,
-          calendarColor: cal.backgroundColor || "#4285f4",
-          title: e.summary || "(no title)",
-          description: e.description || "",
-          location: e.location || "",
-          start: e.start?.dateTime || e.start?.date,
-          end: e.end?.dateTime || e.end?.date,
-          allDay: !!e.start?.date,
-          htmlLink: e.htmlLink,
-        });
-      }
-    }
+    const accounts: { email: string; calendars: number }[] = [];
+
+    // Fetch in parallel across accounts
+    await Promise.all(
+      tokenRows.map(async (row: any) => {
+        try {
+          const token = await ensureFreshToken(supabase, row);
+
+          const calListRes = await fetch(
+            "https://www.googleapis.com/calendar/v3/users/me/calendarList",
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          const calList = await calListRes.json();
+          const calendars = (calList.items || []).filter((c: any) => c.selected !== false);
+          accounts.push({ email: row.account_email, calendars: calendars.length });
+
+          await Promise.all(
+            calendars.map(async (cal: any) => {
+              const evRes = await fetch(
+                `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?` +
+                  new URLSearchParams({
+                    timeMin,
+                    timeMax,
+                    singleEvents: "true",
+                    orderBy: "startTime",
+                    maxResults: "250",
+                  }),
+                { headers: { Authorization: `Bearer ${token}` } },
+              );
+              const ev = await evRes.json();
+              for (const e of ev.items || []) {
+                allEvents.push({
+                  id: `${row.account_email}:${e.id}`,
+                  accountEmail: row.account_email,
+                  calendarId: cal.id,
+                  calendarName: cal.summary,
+                  calendarColor: cal.backgroundColor || "#4285f4",
+                  title: e.summary || "(no title)",
+                  description: e.description || "",
+                  location: e.location || "",
+                  start: e.start?.dateTime || e.start?.date,
+                  end: e.end?.dateTime || e.end?.date,
+                  allDay: !!e.start?.date,
+                  htmlLink: e.htmlLink,
+                });
+              }
+            }),
+          );
+        } catch (err) {
+          console.error(`Failed for ${row.account_email}:`, err);
+          accounts.push({ email: row.account_email, calendars: 0 });
+        }
+      }),
+    );
+
+    // Deduplicate (same event id can appear in multiple calendars)
+    const seen = new Set<string>();
+    const deduped = allEvents.filter((e) => {
+      if (seen.has(e.id)) return false;
+      seen.add(e.id);
+      return true;
+    });
 
     return new Response(
-      JSON.stringify({ connected: true, email: auth.email, events: allEvents }),
+      JSON.stringify({
+        connected: true,
+        accounts,
+        // Back-compat: first account email
+        email: accounts[0]?.email,
+        events: deduped,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {

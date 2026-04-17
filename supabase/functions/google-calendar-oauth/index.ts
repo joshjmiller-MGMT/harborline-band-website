@@ -89,8 +89,13 @@ Deno.serve(async (req) => {
 
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-      // Upsert: clear all existing tokens (single-user) and insert fresh
-      await supabase.from("google_calendar_tokens").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      // Multi-account: remove only existing token rows for THIS email, then insert fresh.
+      if (userInfo.email) {
+        await supabase
+          .from("google_calendar_tokens")
+          .delete()
+          .eq("account_email", userInfo.email);
+      }
       const { error: insErr } = await supabase.from("google_calendar_tokens").insert({
         account_email: userInfo.email,
         access_token: tokens.access_token,
