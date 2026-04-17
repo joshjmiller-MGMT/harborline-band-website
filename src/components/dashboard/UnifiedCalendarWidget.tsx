@@ -301,6 +301,35 @@ export default function UnifiedCalendarWidget() {
         setMondayError(mRes?.error || null);
       }
 
+      // Social posts (scheduled) — load brands + posts and inject as events
+      const [brandsRes, postsRes] = await Promise.all([
+        supabase.from("social_brands").select("id,slug,name,color").order("sort_order"),
+        supabase
+          .from("social_posts")
+          .select("id,brand_id,title,scheduled_for,status,captions,asset_urls,notes")
+          .not("scheduled_for", "is", null),
+      ]);
+      const brands = (brandsRes.data || []) as SocialBrand[];
+      setSocialBrands(brands);
+      const brandById = new Map(brands.map((b) => [b.id, b]));
+      for (const p of postsRes.data || []) {
+        const brand = brandById.get(p.brand_id as string);
+        if (!brand) continue;
+        const start = new Date(p.scheduled_for as string);
+        const end = new Date(start.getTime() + 30 * 60 * 1000);
+        merged.push({
+          id: `social-${p.id}`,
+          title: `${brand.name} · ${p.title}`,
+          start,
+          end,
+          allDay: false,
+          source: "social",
+          color: brand.color || "#8b5cf6",
+          brandId: brand.id,
+          meta: { ...p, brandName: brand.name, brandSlug: brand.slug },
+        });
+      }
+
       setEvents(merged);
     } catch (err) {
       console.error("Calendar load error", err);
