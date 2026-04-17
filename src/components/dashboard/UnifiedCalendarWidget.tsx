@@ -485,32 +485,54 @@ export default function UnifiedCalendarWidget() {
                 No upcoming events.
               </p>
             )}
-            {upcoming.map((e) => (
-              <div
-                key={e.id}
-                className="flex items-start gap-3 p-3 rounded-md border border-border bg-card/50"
-              >
+            {upcoming.map((e) => {
+              const accentColor =
+                e.source === "google"
+                  ? colorForAccount(e.accountEmail, googleAccounts)
+                  : e.color;
+              return (
                 <div
-                  className="w-1 self-stretch rounded"
-                  style={{ backgroundColor: e.color }}
-                />
-                <div className="flex-1">
-                  <div className="font-medium text-sm">{e.title}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {format(e.start, "EEE MMM d, h:mm a")}
-                    {!e.allDay && ` – ${format(e.end, "h:mm a")}`}
-                  </div>
-                  {e.meta?.location && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      📍 {e.meta.location}
+                  key={e.id}
+                  className="flex items-start gap-3 p-3 rounded-md border border-border bg-card/50"
+                >
+                  <div
+                    className="w-1 self-stretch rounded"
+                    style={{ backgroundColor: accentColor }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      {e.source === "google" && e.accountEmail && (
+                        <span
+                          className="inline-flex items-center justify-center text-[9px] font-bold w-5 h-5 rounded text-white shrink-0"
+                          style={{ backgroundColor: accentColor }}
+                          title={e.accountEmail}
+                        >
+                          {initialsForEmail(e.accountEmail)}
+                        </span>
+                      )}
+                      <div className="font-medium text-sm truncate">{e.title}</div>
                     </div>
-                  )}
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {format(e.start, "EEE MMM d, h:mm a")}
+                      {!e.allDay && ` – ${format(e.end, "h:mm a")}`}
+                    </div>
+                    {e.accountEmail && (
+                      <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                        {e.accountEmail}
+                      </div>
+                    )}
+                    {e.meta?.location && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        📍 {e.meta.location}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[10px] uppercase text-muted-foreground">
+                    {e.source}
+                  </span>
                 </div>
-                <span className="text-[10px] uppercase text-muted-foreground">
-                  {e.source}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="bg-background rounded-md p-2" style={{ height: 600 }}>
@@ -525,6 +547,7 @@ export default function UnifiedCalendarWidget() {
               onNavigate={setDate}
               views={["month", "week", "day"]}
               eventPropGetter={eventStyleGetter}
+              components={{ event: EventBlock }}
               style={{ height: "100%" }}
               onSelectEvent={(e: UnifiedEvent) => {
                 if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
