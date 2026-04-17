@@ -32,6 +32,7 @@ import {
   Check,
   X,
   HelpCircle,
+  ChevronDown,
 } from "lucide-react";
 
 const locales = { "en-US": enUS };
@@ -56,6 +57,8 @@ type UnifiedEvent = {
 };
 
 const ACCOUNT_FILTER_KEY = "unifiedCalendar.hiddenAccounts";
+const MONDAY_FILTER_KEY = "unifiedCalendar.hiddenMondaySources";
+const PANELS_OPEN_KEY = "unifiedCalendar.panelsOpen";
 
 // Distinct, accessible palette for per-account coloring
 const ACCOUNT_PALETTE = [
