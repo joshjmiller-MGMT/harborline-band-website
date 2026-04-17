@@ -159,6 +159,8 @@ Deno.serve(async (req) => {
                   calendarId: cal.id,
                   calendarName: cal.summary,
                   calendarColor: cal.backgroundColor || "#4285f4",
+                  // Google per-event color id ("1".."11"), if user set one
+                  eventColorId: e.colorId || null,
                   title: e.summary || "(no title)",
                   description: e.description || "",
                   location: e.location || "",
@@ -166,15 +168,10 @@ Deno.serve(async (req) => {
                   end: e.end?.dateTime || e.end?.date,
                   allDay: !!e.start?.date,
                   htmlLink: e.htmlLink,
-                  // Ownership signals — used by the client to pick the
-                  // "owner" account when the same event is mirrored across
-                  // multiple connected calendars.
                   organizerEmail: e.organizer?.email || null,
                   organizerSelf: !!e.organizer?.self,
                   creatorEmail: e.creator?.email || null,
                   creatorSelf: !!e.creator?.self,
-                  // Whether this calendar is the user's primary calendar
-                  // (best fallback signal that they own/created the event).
                   isPrimaryCalendar: cal.id === row.account_email || !!cal.primary,
                 });
               }
