@@ -125,6 +125,16 @@ Deno.serve(async (req) => {
             { headers: { Authorization: `Bearer ${token}` } },
           );
           const calList = await calListRes.json();
+          if (!calListRes.ok) {
+            console.error(`calendarList failed for ${row.account_email}:`, calList);
+            accounts.push({
+              email: row.account_email,
+              calendars: 0,
+              error: calList?.error?.message || `HTTP ${calListRes.status}`,
+              needsReconnect: calListRes.status === 401 || calListRes.status === 403,
+            });
+            return;
+          }
           const calendars = (calList.items || []).filter((c: any) => c.selected !== false);
           accounts.push({ email: row.account_email, calendars: calendars.length });
 
