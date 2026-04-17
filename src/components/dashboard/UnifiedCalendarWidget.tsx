@@ -271,13 +271,41 @@ export default function UnifiedCalendarWidget() {
     },
   });
 
+  const toggleAccount = (email: string) => {
+    setHiddenAccounts((prev) => {
+      const next = new Set(prev);
+      if (next.has(email)) next.delete(email);
+      else next.add(email);
+      try {
+        localStorage.setItem(ACCOUNT_FILTER_KEY, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
+
+  const setAllAccounts = (visible: boolean) => {
+    const next = visible ? new Set<string>() : new Set<string>(googleAccounts);
+    setHiddenAccounts(next);
+    try {
+      localStorage.setItem(ACCOUNT_FILTER_KEY, JSON.stringify([...next]));
+    } catch {}
+  };
+
+  const visibleEvents = useMemo(
+    () =>
+      events.filter(
+        (e) => e.source !== "google" || !e.accountEmail || !hiddenAccounts.has(e.accountEmail),
+      ),
+    [events, hiddenAccounts],
+  );
+
   const upcoming = useMemo(
     () =>
-      [...events]
+      [...visibleEvents]
         .filter((e) => e.start >= new Date(Date.now() - 24 * 60 * 60 * 1000))
         .sort((a, b) => a.start.getTime() - b.start.getTime())
         .slice(0, 30),
-    [events],
+    [visibleEvents],
   );
 
   return (
