@@ -70,6 +70,15 @@ export default function UnifiedCalendarWidget() {
   const [loading, setLoading] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState<string | null>(null);
+  const [googleAccounts, setGoogleAccounts] = useState<string[]>([]);
+  const [hiddenAccounts, setHiddenAccounts] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(ACCOUNT_FILTER_KEY);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
   const [mondayConfigured, setMondayConfigured] = useState(false);
 
   const [showSettings, setShowSettings] = useState(false);
