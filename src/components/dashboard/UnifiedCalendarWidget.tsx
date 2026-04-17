@@ -56,10 +56,11 @@ type UnifiedEvent = {
   start: Date;
   end: Date;
   allDay?: boolean;
-  source: "google" | "monday";
+  source: "google" | "monday" | "social";
   color: string;
   accountEmail?: string;
   duplicateAccounts?: string[]; // all accounts (incl primary) sharing this event
+  brandId?: string; // for social posts
   meta?: any;
 };
 
