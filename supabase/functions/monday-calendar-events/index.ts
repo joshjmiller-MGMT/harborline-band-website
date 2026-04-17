@@ -29,6 +29,16 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    if (usersSearch) {
+      const q = `query { users(name: "${usersSearch}") { id name email } }`;
+      const r = await fetch("https://api.monday.com/v2", {
+        method: "POST",
+        headers: { Authorization: MONDAY_API_TOKEN, "Content-Type": "application/json", "API-Version": "2024-01" },
+        body: JSON.stringify({ query: q }),
+      });
+      return new Response(await r.text(), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (inspectBoard) {
       const cols = peopleColParam ? `(ids: ["${peopleColParam}"])` : "";
       const q = `query {
