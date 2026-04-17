@@ -17,6 +17,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -156,7 +162,7 @@ export default function UnifiedCalendarWidget() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<MondaySource>>({});
   const [showHelp, setShowHelp] = useState(false);
-  const [selectedMondayEvent, setSelectedMondayEvent] = useState<UnifiedEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<UnifiedEvent | null>(null);
   const [newSource, setNewSource] = useState({
     board_id: "",
     date_column_id: "",
@@ -422,28 +428,30 @@ export default function UnifiedCalendarWidget() {
     const dupes = event.duplicateAccounts || (event.accountEmail ? [event.accountEmail] : []);
     const shown = dupes.slice(0, 3);
     const extra = dupes.length - shown.length;
+    const timeLabel = event.allDay
+      ? "All day"
+      : `${format(event.start, "h:mm a")} – ${format(event.end, "h:mm a")}`;
+    const dateLabel = format(event.start, "EEE, MMM d");
     return (
-      <div className="flex items-center gap-1 overflow-hidden">
-        {event.source === "google" && shown.length > 0 && (
-          <span className="flex items-center -space-x-1 shrink-0">
-            {shown.map((email) => (
-              <span
-                key={email}
-                className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full text-white ring-1 ring-background"
-                style={{ backgroundColor: colorForAccount(email, googleAccounts) }}
-                title={email}
-              >
-                {initialsForEmail(email)}
-              </span>
-            ))}
-            {extra > 0 && (
-              <span
-                className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full bg-muted text-muted-foreground ring-1 ring-background"
-                title={`+${extra} more accounts`}
-              >
-                +{extra}
-              </span>
-            )}
+      <Tooltip delayDuration={150}>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1 overflow-hidden cursor-pointer">
+            {event.source === "google" && shown.length > 0 && (
+              <span className="flex items-center -space-x-1 shrink-0">
+                {shown.map((email) => (
+                  <span
+                    key={email}
+                    className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full text-white ring-1 ring-background"
+                    style={{ backgroundColor: colorForAccount(email, googleAccounts) }}
+                  >
+                    {initialsForEmail(email)}
+                  </span>
+                ))}
+                {extra > 0 && (
+                  <span className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full bg-muted text-muted-foreground ring-1 ring-background">
+                    +{extra}
+                  </span>
+                )}
           </span>
         )}
         <span className="truncate font-medium">{event.title}</span>
