@@ -207,8 +207,8 @@ export default function UnifiedCalendarWidget() {
           merged.push({
             id: e.id,
             title: e.title,
-            start: new Date(e.start),
-            end: new Date(e.end),
+            start: parseEventDate(e.start, e.allDay),
+            end: parseEventDate(e.end, e.allDay, true),
             allDay: e.allDay,
             source: "google",
             color: e.calendarColor || "#4285f4",
@@ -235,8 +235,8 @@ export default function UnifiedCalendarWidget() {
           merged.push({
             id: e.id,
             title: `${titlePrefix}${e.title}`,
-            start: new Date(e.start),
-            end: new Date(e.end),
+            start: parseEventDate(e.start, e.allDay),
+            end: parseEventDate(e.end, e.allDay, true),
             allDay: e.allDay,
             source: "monday",
             color: e.color || "#8b5cf6",
