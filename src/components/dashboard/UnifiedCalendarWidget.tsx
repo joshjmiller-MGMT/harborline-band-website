@@ -46,8 +46,11 @@ type UnifiedEvent = {
   allDay?: boolean;
   source: "google" | "monday";
   color: string;
+  accountEmail?: string;
   meta?: any;
 };
+
+const ACCOUNT_FILTER_KEY = "unifiedCalendar.hiddenAccounts";
 
 type MondaySource = {
   id: string;
