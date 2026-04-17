@@ -52,6 +52,36 @@ type UnifiedEvent = {
 
 const ACCOUNT_FILTER_KEY = "unifiedCalendar.hiddenAccounts";
 
+// Distinct, accessible palette for per-account coloring
+const ACCOUNT_PALETTE = [
+  "#4285f4", // google blue
+  "#ea4335", // red
+  "#34a853", // green
+  "#fbbc04", // amber
+  "#a142f4", // purple
+  "#ff6d01", // orange
+  "#24c1e0", // cyan
+  "#e91e63", // pink
+];
+
+function colorForAccount(email: string | undefined, accounts: string[]): string {
+  if (!email) return ACCOUNT_PALETTE[0];
+  const idx = accounts.indexOf(email);
+  if (idx >= 0) return ACCOUNT_PALETTE[idx % ACCOUNT_PALETTE.length];
+  // Fallback: stable hash
+  let h = 0;
+  for (let i = 0; i < email.length; i++) h = (h * 31 + email.charCodeAt(i)) | 0;
+  return ACCOUNT_PALETTE[Math.abs(h) % ACCOUNT_PALETTE.length];
+}
+
+function initialsForEmail(email: string | undefined): string {
+  if (!email) return "?";
+  const name = email.split("@")[0];
+  const parts = name.split(/[._-]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
 type MondaySource = {
   id: string;
   board_id: string;
