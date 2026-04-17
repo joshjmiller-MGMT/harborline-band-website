@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   CalendarDays,
@@ -27,6 +28,10 @@ import {
   Link as LinkIcon,
   Trash2,
   KeyRound,
+  Pencil,
+  Check,
+  X,
+  HelpCircle,
 } from "lucide-react";
 
 const locales = { "en-US": enUS };
@@ -118,6 +123,9 @@ export default function UnifiedCalendarWidget() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [mondaySources, setMondaySources] = useState<MondaySource[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<Partial<MondaySource>>({});
+  const [showHelp, setShowHelp] = useState(false);
   const [newSource, setNewSource] = useState({
     board_id: "",
     date_column_id: "",
@@ -291,9 +299,26 @@ export default function UnifiedCalendarWidget() {
   };
 
   const deleteSource = async (id: string) => {
+    if (!confirm("Delete this Monday source? Events from this board will disappear from the calendar.")) return;
     await supabase.from("monday_calendar_sources").delete().eq("id", id);
     await loadSources();
     await loadAll();
+    toast.success("Source removed");
+  };
+
+  const updateSource = async (id: string, patch: Partial<MondaySource>) => {
+    const { error } = await supabase.from("monday_calendar_sources").update(patch).eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return false;
+    }
+    await loadSources();
+    await loadAll();
+    return true;
+  };
+
+  const toggleEnabled = async (s: MondaySource) => {
+    await updateSource(s.id, { enabled: !s.enabled });
   };
 
   const createGoogleEvent = async () => {
@@ -673,38 +698,137 @@ export default function UnifiedCalendarWidget() {
                 </Button>
               </div>
               <div className="space-y-2 mb-4">
-                {mondaySources.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex items-center gap-2 p-2 border rounded"
-                  >
-                    <div
-                      className="w-3 h-3 rounded"
-                      style={{ backgroundColor: s.color }}
-                    />
-                    <div className="flex-1 text-sm">
-                      <div className="font-medium">{s.label}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Board {s.board_id} · col {s.date_column_id}
+                {mondaySources.map((s) => {
+                  const isEditing = editingId === s.id;
+                  if (isEditing) {
+                    return (
+                      <div key={s.id} className="p-3 border rounded space-y-2 bg-muted/30">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs">Label</Label>
+                            <Input
+                              value={editDraft.label ?? ""}
+                              onChange={(e) => setEditDraft({ ...editDraft, label: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Color</Label>
+                            <Input
+                              type="color"
+                              value={editDraft.color ?? "#8b5cf6"}
+                              onChange={(e) => setEditDraft({ ...editDraft, color: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Board ID</Label>
+                            <Input
+                              value={editDraft.board_id ?? ""}
+                              onChange={(e) => setEditDraft({ ...editDraft, board_id: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Date Column ID</Label>
+                            <Input
+                              value={editDraft.date_column_id ?? ""}
+                              onChange={(e) => setEditDraft({ ...editDraft, date_column_id: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button size="sm" variant="outline" onClick={() => { setEditingId(null); setEditDraft({}); }}>
+                            <X className="w-4 h-4 mr-1" /> Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={async () => {
+                              if (!editDraft.label || !editDraft.board_id || !editDraft.date_column_id) {
+                                toast.error("Label, board ID, and date column ID are required");
+                                return;
+                              }
+                              const ok = await updateSource(s.id, editDraft);
+                              if (ok) {
+                                setEditingId(null);
+                                setEditDraft({});
+                                toast.success("Source updated");
+                              }
+                            }}
+                          >
+                            <Check className="w-4 h-4 mr-1" /> Save
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => deleteSource(s.id)}
+                    );
+                  }
+                  return (
+                    <div
+                      key={s.id}
+                      className={`flex items-center gap-2 p-2 border rounded ${s.enabled ? "" : "opacity-50"}`}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
+                      <div
+                        className="w-3 h-3 rounded shrink-0"
+                        style={{ backgroundColor: s.color }}
+                      />
+                      <div className="flex-1 text-sm min-w-0">
+                        <div className="font-medium truncate">{s.label}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          Board {s.board_id} · col {s.date_column_id}
+                        </div>
+                      </div>
+                      <Switch
+                        checked={s.enabled}
+                        onCheckedChange={() => toggleEnabled(s)}
+                        title={s.enabled ? "Enabled — click to hide" : "Disabled — click to show"}
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingId(s.id);
+                          setEditDraft({
+                            label: s.label,
+                            color: s.color,
+                            board_id: s.board_id,
+                            date_column_id: s.date_column_id,
+                          });
+                        }}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => deleteSource(s.id)}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  );
+                })}
                 {mondaySources.length === 0 && (
                   <p className="text-xs text-muted-foreground">
-                    No Monday boards configured yet.
+                    No Monday boards configured yet. Add one below.
                   </p>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-2 p-3 border rounded">
+                <div className="col-span-2 flex items-center justify-between">
+                  <span className="text-sm font-medium">Add a new board</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowHelp((v) => !v)}
+                    className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <HelpCircle className="w-3 h-3" /> {showHelp ? "Hide" : "How do I find these?"}
+                  </button>
+                </div>
+                {showHelp && (
+                  <div className="col-span-2 text-xs text-muted-foreground bg-muted/40 p-2 rounded space-y-1">
+                    <p><strong>Board ID:</strong> open the board in Monday → look at the URL: <code>monday.com/boards/<b>123456789</b></code> — the number is the board ID.</p>
+                    <p><strong>Date Column ID:</strong> on the board, click the <strong>⋯</strong> menu next to the date column → <strong>Customize column</strong> → the ID appears (e.g. <code>date4</code>, <code>date_1</code>). Or board menu → <strong>Developers → Column IDs</strong>.</p>
+                    <p><strong>Label:</strong> a friendly name shown next to events on the calendar (e.g. "Gigs", "Holds", "Inquiries").</p>
+                  </div>
+                )}
                 <div>
                   <Label className="text-xs">Label</Label>
                   <Input
@@ -749,10 +873,6 @@ export default function UnifiedCalendarWidget() {
                   <Plus className="w-4 h-4 mr-1" /> Add Source
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Find Board ID in the Monday URL (boards/<b>123456789</b>). Find the
-                date Column ID via Monday board → ⋯ → Developers → Column IDs.
-              </p>
             </section>
           </div>
         </DialogContent>
