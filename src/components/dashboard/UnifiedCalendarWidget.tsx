@@ -290,16 +290,37 @@ export default function UnifiedCalendarWidget() {
     }
   };
 
-  const eventStyleGetter = (event: UnifiedEvent) => ({
-    style: {
-      backgroundColor: event.color,
-      borderColor: event.color,
-      color: "#fff",
-      borderRadius: 4,
-      fontSize: "0.75rem",
-      padding: "1px 4px",
-    },
-  });
+  const eventStyleGetter = (event: UnifiedEvent) => {
+    const bg =
+      event.source === "google"
+        ? colorForAccount(event.accountEmail, googleAccounts)
+        : event.color;
+    return {
+      style: {
+        backgroundColor: bg,
+        borderColor: bg,
+        color: "#fff",
+        borderRadius: 4,
+        fontSize: "0.75rem",
+        padding: "1px 4px",
+      },
+    };
+  };
+
+  const EventBlock = ({ event }: EventProps<UnifiedEvent>) => {
+    const initials =
+      event.source === "google" ? initialsForEmail(event.accountEmail) : null;
+    return (
+      <div className="flex items-center gap-1 overflow-hidden">
+        {initials && (
+          <span className="inline-flex items-center justify-center text-[9px] font-bold leading-none w-4 h-4 rounded-sm bg-black/30 shrink-0">
+            {initials}
+          </span>
+        )}
+        <span className="truncate">{event.title}</span>
+      </div>
+    );
+  };
 
   const toggleAccount = (email: string) => {
     setHiddenAccounts((prev) => {
