@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   CalendarDays,
@@ -27,6 +28,10 @@ import {
   Link as LinkIcon,
   Trash2,
   KeyRound,
+  Pencil,
+  Check,
+  X,
+  HelpCircle,
 } from "lucide-react";
 
 const locales = { "en-US": enUS };
