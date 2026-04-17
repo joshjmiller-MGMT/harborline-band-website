@@ -14,6 +14,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  const url = new URL(req.url);
+  const inspectBoard = url.searchParams.get("inspect");
+  const peopleColParam = url.searchParams.get("peopleCol");
+
   if (!MONDAY_API_TOKEN) {
     return new Response(
       JSON.stringify({ configured: false, events: [], error: "MONDAY_API_TOKEN not set" }),
