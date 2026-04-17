@@ -38,10 +38,7 @@ Deno.serve(async (req) => {
     const allEvents: any[] = [];
 
     for (const src of sources) {
-      const columnIds = [src.date_column_id];
-      if (src.person_column_id) columnIds.push(src.person_column_id);
-      const columnIdsStr = columnIds.map((id) => `"${id}"`).join(", ");
-
+      // Fetch ALL column values so the calendar card can show full item context
       const query = `query {
         boards(ids: [${src.board_id}]) {
           name
@@ -49,10 +46,14 @@ Deno.serve(async (req) => {
             items {
               id
               name
-              column_values(ids: [${columnIdsStr}]) {
+              updated_at
+              url
+              group { title }
+              column_values {
                 id
                 text
                 value
+                column { title }
               }
             }
           }
@@ -119,6 +120,19 @@ Deno.serve(async (req) => {
           ? new Date(new Date(startISO).getTime() + 60 * 60 * 1000).toISOString()
           : startISO;
 
+        // Build a clean field map for the UI: { "Lead Status": "Contacted", ... }
+        // Skip empty + the date column itself (already shown as the event date).
+        const fields: { label: string; value: string; columnId: string }[] = [];
+        for (const c of item.column_values || []) {
+          if (!c.text || !c.text.trim()) continue;
+          if (c.id === src.date_column_id) continue;
+          fields.push({
+            label: c.column?.title || c.id,
+            value: c.text,
+            columnId: c.id,
+          });
+        }
+
         allEvents.push({
           id: `monday-${src.board_id}-${item.id}`,
           title: item.name,
@@ -129,7 +143,10 @@ Deno.serve(async (req) => {
           sourceLabel: src.label,
           color: src.color,
           boardName: board.name,
-          itemUrl: `https://view.monday.com/boards/${src.board_id}/pulses/${item.id}`,
+          groupTitle: item.group?.title || null,
+          fields,
+          updatedAt: item.updated_at || null,
+          itemUrl: item.url || `https://view.monday.com/boards/${src.board_id}/pulses/${item.id}`,
         });
       }
     }
