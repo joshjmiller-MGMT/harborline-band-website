@@ -53,12 +53,14 @@ type UnifiedEvent = {
   source: "google" | "monday";
   color: string;
   accountEmail?: string;
+  duplicateAccounts?: string[]; // all accounts (incl primary) sharing this event
   meta?: any;
 };
 
 const ACCOUNT_FILTER_KEY = "unifiedCalendar.hiddenAccounts";
 const MONDAY_FILTER_KEY = "unifiedCalendar.hiddenMondaySources";
 const PANELS_OPEN_KEY = "unifiedCalendar.panelsOpen";
+const HIDE_DUPLICATES_KEY = "unifiedCalendar.hideDuplicates";
 
 // Distinct, accessible palette for per-account coloring
 const ACCOUNT_PALETTE = [
