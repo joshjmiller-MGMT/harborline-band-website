@@ -63,6 +63,20 @@ type UnifiedEvent = {
   meta?: any;
 };
 
+// Parse event dates safely. Google all-day events use "YYYY-MM-DD" with an
+// EXCLUSIVE end date — naive `new Date()` parses these as UTC midnight which
+// shifts to the prior/next day in local time, making 1-day events span 2 days.
+function parseEventDate(value: string, allDay?: boolean, isEnd = false): Date {
+  if (allDay && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    const [y, m, d] = value.slice(0, 10).split("-").map(Number);
+    // Google's end date is exclusive; subtract one day so the event renders
+    // on its actual final day rather than spilling into the next.
+    const day = isEnd ? d - 1 : d;
+    return new Date(y, m - 1, day);
+  }
+  return new Date(value);
+}
+
 const ACCOUNT_FILTER_KEY = "unifiedCalendar.hiddenAccounts";
 const MONDAY_FILTER_KEY = "unifiedCalendar.hiddenMondaySources";
 const PANELS_OPEN_KEY = "unifiedCalendar.panelsOpen";
@@ -207,8 +221,8 @@ export default function UnifiedCalendarWidget() {
           merged.push({
             id: e.id,
             title: e.title,
-            start: new Date(e.start),
-            end: new Date(e.end),
+            start: parseEventDate(e.start, e.allDay),
+            end: parseEventDate(e.end, e.allDay, true),
             allDay: e.allDay,
             source: "google",
             color: e.calendarColor || "#4285f4",
@@ -235,8 +249,8 @@ export default function UnifiedCalendarWidget() {
           merged.push({
             id: e.id,
             title: `${titlePrefix}${e.title}`,
-            start: new Date(e.start),
-            end: new Date(e.end),
+            start: parseEventDate(e.start, e.allDay),
+            end: parseEventDate(e.end, e.allDay, true),
             allDay: e.allDay,
             source: "monday",
             color: e.color || "#8b5cf6",
