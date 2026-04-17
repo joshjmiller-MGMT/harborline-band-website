@@ -38,6 +38,10 @@ Deno.serve(async (req) => {
     const allEvents: any[] = [];
 
     for (const src of sources) {
+      const columnIds = [src.date_column_id];
+      if (src.person_column_id) columnIds.push(src.person_column_id);
+      const columnIdsStr = columnIds.map((id) => `"${id}"`).join(", ");
+
       const query = `query {
         boards(ids: [${src.board_id}]) {
           name
@@ -45,7 +49,7 @@ Deno.serve(async (req) => {
             items {
               id
               name
-              column_values(ids: ["${src.date_column_id}"]) {
+              column_values(ids: [${columnIdsStr}]) {
                 id
                 text
                 value
@@ -74,8 +78,24 @@ Deno.serve(async (req) => {
       const items = board?.items_page?.items || [];
 
       for (const item of items) {
-        const dateCol = item.column_values?.[0];
+        const dateCol = item.column_values?.find((c: any) => c.id === src.date_column_id);
         if (!dateCol) continue;
+
+        // Person filter
+        if (src.person_column_id && src.person_id) {
+          const personCol = item.column_values?.find((c: any) => c.id === src.person_column_id);
+          if (!personCol?.value) continue;
+          let matched = false;
+          try {
+            const parsed = JSON.parse(personCol.value);
+            const people = parsed?.personsAndTeams || [];
+            matched = people.some((p: any) => String(p.id) === String(src.person_id));
+          } catch {
+            // ignore
+          }
+          if (!matched) continue;
+        }
+
         let dateStr: string | null = null;
         let timeStr: string | null = null;
         try {
