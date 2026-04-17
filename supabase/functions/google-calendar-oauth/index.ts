@@ -18,10 +18,9 @@ const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
 ].join(" ");
 
-function getRedirectUri(req: Request): string {
-  const url = new URL(req.url);
-  // Callback comes back to this same function with ?code=...
-  return `${url.origin}${url.pathname}`;
+function getRedirectUri(_req: Request): string {
+  // Must match the URI registered in Google Cloud Console exactly
+  return `${SUPABASE_URL}/functions/v1/google-calendar-oauth`;
 }
 
 Deno.serve(async (req) => {
