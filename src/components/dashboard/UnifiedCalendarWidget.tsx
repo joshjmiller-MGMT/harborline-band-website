@@ -46,8 +46,11 @@ type UnifiedEvent = {
   allDay?: boolean;
   source: "google" | "monday";
   color: string;
+  accountEmail?: string;
   meta?: any;
 };
+
+const ACCOUNT_FILTER_KEY = "unifiedCalendar.hiddenAccounts";
 
 type MondaySource = {
   id: string;
@@ -67,6 +70,15 @@ export default function UnifiedCalendarWidget() {
   const [loading, setLoading] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState<string | null>(null);
+  const [googleAccounts, setGoogleAccounts] = useState<string[]>([]);
+  const [hiddenAccounts, setHiddenAccounts] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(ACCOUNT_FILTER_KEY);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
   const [mondayConfigured, setMondayConfigured] = useState(false);
 
   const [showSettings, setShowSettings] = useState(false);
@@ -105,6 +117,10 @@ export default function UnifiedCalendarWidget() {
       if (gRes?.connected) {
         setGoogleConnected(true);
         setGoogleEmail(gRes.email || null);
+        const accounts: string[] = (gRes.accounts || [])
+          .map((a: any) => a.email)
+          .filter(Boolean);
+        setGoogleAccounts(accounts);
         for (const e of gRes.events || []) {
           merged.push({
             id: e.id,
@@ -114,11 +130,13 @@ export default function UnifiedCalendarWidget() {
             allDay: e.allDay,
             source: "google",
             color: e.calendarColor || "#4285f4",
+            accountEmail: e.accountEmail,
             meta: e,
           });
         }
       } else {
         setGoogleConnected(false);
+        setGoogleAccounts([]);
       }
 
       if (mRes?.configured) {
@@ -253,13 +271,41 @@ export default function UnifiedCalendarWidget() {
     },
   });
 
+  const toggleAccount = (email: string) => {
+    setHiddenAccounts((prev) => {
+      const next = new Set(prev);
+      if (next.has(email)) next.delete(email);
+      else next.add(email);
+      try {
+        localStorage.setItem(ACCOUNT_FILTER_KEY, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
+
+  const setAllAccounts = (visible: boolean) => {
+    const next = visible ? new Set<string>() : new Set<string>(googleAccounts);
+    setHiddenAccounts(next);
+    try {
+      localStorage.setItem(ACCOUNT_FILTER_KEY, JSON.stringify([...next]));
+    } catch {}
+  };
+
+  const visibleEvents = useMemo(
+    () =>
+      events.filter(
+        (e) => e.source !== "google" || !e.accountEmail || !hiddenAccounts.has(e.accountEmail),
+      ),
+    [events, hiddenAccounts],
+  );
+
   const upcoming = useMemo(
     () =>
-      [...events]
+      [...visibleEvents]
         .filter((e) => e.start >= new Date(Date.now() - 24 * 60 * 60 * 1000))
         .sort((a, b) => a.start.getTime() - b.start.getTime())
         .slice(0, 30),
-    [events],
+    [visibleEvents],
   );
 
   return (
@@ -308,7 +354,61 @@ export default function UnifiedCalendarWidget() {
               <LinkIcon className="w-3 h-3 mr-1" /> Connect Google
             </Button>
           )}
+          {googleConnected && (
+            <Button size="sm" variant="outline" onClick={connectGoogle}>
+              <LinkIcon className="w-3 h-3 mr-1" /> Add Account
+            </Button>
+          )}
         </div>
+
+        {/* Account filters */}
+        {googleAccounts.length > 0 && (
+          <div className="mb-4 p-3 rounded-md border border-border bg-card/40">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Google Accounts
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAllAccounts(true)}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Show all
+                </button>
+                <span className="text-xs text-muted-foreground">·</span>
+                <button
+                  type="button"
+                  onClick={() => setAllAccounts(false)}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Hide all
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {googleAccounts.map((email) => {
+                const checked = !hiddenAccounts.has(email);
+                return (
+                  <label
+                    key={email}
+                    className="flex items-center gap-2 text-sm cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleAccount(email)}
+                      className="w-4 h-4 rounded accent-primary"
+                    />
+                    <span className={checked ? "" : "text-muted-foreground line-through"}>
+                      {email}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* View toggle */}
         <Tabs value={view} onValueChange={(v) => setView(v as View)} className="mb-3">
@@ -357,7 +457,7 @@ export default function UnifiedCalendarWidget() {
           <div className="bg-background rounded-md p-2" style={{ height: 600 }}>
             <Calendar
               localizer={localizer}
-              events={events}
+              events={visibleEvents}
               startAccessor="start"
               endAccessor="end"
               view={view}
