@@ -113,6 +113,42 @@ export type Database = {
         }
         Relationships: []
       }
+      posting_times_cache: {
+        Row: {
+          change_note: string
+          created_at: string
+          heatmap: Json
+          id: string
+          platform: string
+          refreshed_at: string
+          sources: string[]
+          top_windows: Json
+          updated_at: string
+        }
+        Insert: {
+          change_note?: string
+          created_at?: string
+          heatmap?: Json
+          id?: string
+          platform: string
+          refreshed_at?: string
+          sources?: string[]
+          top_windows?: Json
+          updated_at?: string
+        }
+        Update: {
+          change_note?: string
+          created_at?: string
+          heatmap?: Json
+          id?: string
+          platform?: string
+          refreshed_at?: string
+          sources?: string[]
+          top_windows?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rehearsal_responses: {
         Row: {
           created_at: string
