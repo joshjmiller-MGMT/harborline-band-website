@@ -26,6 +26,7 @@ import {
   Settings as SettingsIcon,
   Link as LinkIcon,
   Trash2,
+  KeyRound,
 } from "lucide-react";
 
 const locales = { "en-US": enUS };
