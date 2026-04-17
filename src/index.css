@@ -121,3 +121,132 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+/* ===== Unified Calendar (react-big-calendar) polish ===== */
+.unified-cal .rbc-calendar {
+  font-family: inherit;
+  color: hsl(var(--foreground));
+}
+.unified-cal .rbc-toolbar {
+  margin-bottom: 12px;
+  font-size: 0.875rem;
+  gap: 8px;
+}
+.unified-cal .rbc-toolbar button {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  transition: all 150ms ease;
+}
+.unified-cal .rbc-toolbar button:hover,
+.unified-cal .rbc-toolbar button:focus {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  border-color: hsl(var(--border));
+}
+.unified-cal .rbc-toolbar button.rbc-active,
+.unified-cal .rbc-toolbar button.rbc-active:hover {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+  box-shadow: none;
+}
+.unified-cal .rbc-toolbar-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.unified-cal .rbc-month-view,
+.unified-cal .rbc-time-view {
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-radius: 8px;
+  overflow: hidden;
+  background: hsl(var(--card) / 0.3);
+}
+.unified-cal .rbc-header {
+  padding: 6px 4px;
+  font-weight: 500;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
+  background: hsl(var(--muted) / 0.3);
+}
+.unified-cal .rbc-month-row,
+.unified-cal .rbc-day-bg + .rbc-day-bg,
+.unified-cal .rbc-time-content > * + * > *,
+.unified-cal .rbc-timeslot-group {
+  border-color: hsl(var(--border) / 0.4);
+}
+.unified-cal .rbc-off-range-bg {
+  background: hsl(var(--muted) / 0.15);
+}
+.unified-cal .rbc-off-range {
+  color: hsl(var(--muted-foreground) / 0.5);
+}
+.unified-cal .rbc-today {
+  background: hsl(var(--primary) / 0.08);
+}
+.unified-cal .rbc-date-cell {
+  padding: 4px 6px;
+  font-size: 0.75rem;
+  text-align: right;
+}
+.unified-cal .rbc-date-cell > a {
+  color: hsl(var(--foreground));
+  font-weight: 500;
+}
+.unified-cal .rbc-now > a {
+  color: hsl(var(--primary));
+  font-weight: 700;
+}
+.unified-cal .rbc-event {
+  cursor: pointer;
+  transition: opacity 150ms ease, transform 150ms ease;
+  outline: none !important;
+}
+.unified-cal .rbc-event:hover {
+  opacity: 0.85;
+  transform: translateX(1px);
+}
+.unified-cal .rbc-event.rbc-selected {
+  background: inherit !important;
+}
+.unified-cal .rbc-show-more {
+  color: hsl(var(--primary));
+  font-weight: 500;
+  font-size: 0.7rem;
+  background: transparent;
+}
+.unified-cal .rbc-show-more:hover {
+  text-decoration: underline;
+}
+.unified-cal .rbc-time-header-content,
+.unified-cal .rbc-time-content {
+  border-color: hsl(var(--border) / 0.4);
+}
+.unified-cal .rbc-time-slot {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.7rem;
+}
+.unified-cal .rbc-current-time-indicator {
+  background-color: hsl(var(--primary));
+  height: 2px;
+}
+.unified-cal .rbc-overlay {
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  box-shadow: 0 10px 30px -10px hsl(0 0% 0% / 0.5);
+  padding: 8px;
+}
+.unified-cal .rbc-overlay-header {
+  border-bottom: 1px solid hsl(var(--border));
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
