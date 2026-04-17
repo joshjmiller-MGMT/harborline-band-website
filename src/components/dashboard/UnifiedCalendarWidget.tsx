@@ -391,33 +391,55 @@ export default function UnifiedCalendarWidget() {
   };
 
   const eventStyleGetter = (event: UnifiedEvent) => {
-    const bg =
+    const accent =
       event.source === "google"
         ? colorForAccount(event.accountEmail, googleAccounts)
         : event.color;
     return {
       style: {
-        backgroundColor: bg,
-        borderColor: bg,
-        color: "#fff",
+        backgroundColor: `${accent}26`, // ~15% opacity tint
+        borderLeft: `3px solid ${accent}`,
+        borderTop: "none",
+        borderRight: "none",
+        borderBottom: "none",
+        color: "hsl(var(--foreground))",
         borderRadius: 4,
-        fontSize: "0.75rem",
-        padding: "1px 4px",
+        fontSize: "0.72rem",
+        padding: "1px 6px",
+        boxShadow: "none",
       },
     };
   };
 
   const EventBlock = ({ event }: EventProps<UnifiedEvent>) => {
-    const initials =
-      event.source === "google" ? initialsForEmail(event.accountEmail) : null;
+    const dupes = event.duplicateAccounts || (event.accountEmail ? [event.accountEmail] : []);
+    const shown = dupes.slice(0, 3);
+    const extra = dupes.length - shown.length;
     return (
       <div className="flex items-center gap-1 overflow-hidden">
-        {initials && (
-          <span className="inline-flex items-center justify-center text-[9px] font-bold leading-none w-4 h-4 rounded-sm bg-black/30 shrink-0">
-            {initials}
+        {event.source === "google" && shown.length > 0 && (
+          <span className="flex items-center -space-x-1 shrink-0">
+            {shown.map((email) => (
+              <span
+                key={email}
+                className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full text-white ring-1 ring-background"
+                style={{ backgroundColor: colorForAccount(email, googleAccounts) }}
+                title={email}
+              >
+                {initialsForEmail(email)}
+              </span>
+            ))}
+            {extra > 0 && (
+              <span
+                className="inline-flex items-center justify-center text-[8px] font-bold leading-none w-3.5 h-3.5 rounded-full bg-muted text-muted-foreground ring-1 ring-background"
+                title={`+${extra} more accounts`}
+              >
+                +{extra}
+              </span>
+            )}
           </span>
         )}
-        <span className="truncate">{event.title}</span>
+        <span className="truncate font-medium">{event.title}</span>
       </div>
     );
   };
