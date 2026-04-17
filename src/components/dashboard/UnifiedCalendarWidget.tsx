@@ -156,6 +156,7 @@ export default function UnifiedCalendarWidget() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<MondaySource>>({});
   const [showHelp, setShowHelp] = useState(false);
+  const [selectedMondayEvent, setSelectedMondayEvent] = useState<UnifiedEvent | null>(null);
   const [newSource, setNewSource] = useState({
     board_id: "",
     date_column_id: "",
@@ -219,9 +220,15 @@ export default function UnifiedCalendarWidget() {
         setMondayConfigured(true);
         setMondayError(null);
         for (const e of mRes.events || []) {
+          // Surface the most useful field in the title (e.g. "Next Action Step")
+          // Falls back to plain item name when no extra context is available.
+          const actionField = (e.fields || []).find((f: any) =>
+            /next action step|action step|status/i.test(f.label),
+          );
+          const titlePrefix = actionField ? `${actionField.value} · ` : "";
           merged.push({
             id: e.id,
-            title: `[${e.sourceLabel}] ${e.title}`,
+            title: `${titlePrefix}${e.title}`,
             start: new Date(e.start),
             end: new Date(e.end),
             allDay: e.allDay,
@@ -847,8 +854,8 @@ export default function UnifiedCalendarWidget() {
                   key={e.id}
                   className="flex items-start gap-3 p-3 rounded-lg border border-border/60 bg-card/50 hover:bg-card/80 hover:border-border transition-colors cursor-pointer"
                   onClick={() => {
-                    if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
-                    else if (e.meta?.itemUrl) window.open(e.meta.itemUrl, "_blank");
+                    if (e.source === "monday") setSelectedMondayEvent(e);
+                    else if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
                   }}
                 >
                   <div
@@ -924,8 +931,11 @@ export default function UnifiedCalendarWidget() {
               style={{ height: "100%" }}
               popup
               onSelectEvent={(e: UnifiedEvent) => {
-                if (e.meta?.htmlLink) window.open(e.meta.htmlLink, "_blank");
-                else if (e.meta?.itemUrl) window.open(e.meta.itemUrl, "_blank");
+                if (e.source === "monday") {
+                  setSelectedMondayEvent(e);
+                } else if (e.meta?.htmlLink) {
+                  window.open(e.meta.htmlLink, "_blank");
+                }
               }}
             />
           </div>
@@ -1255,6 +1265,77 @@ export default function UnifiedCalendarWidget() {
               Cancel
             </Button>
             <Button onClick={createGoogleEvent}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Monday item detail dialog */}
+      <Dialog open={!!selectedMondayEvent} onOpenChange={(o) => !o && setSelectedMondayEvent(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-start gap-2 pr-6">
+              <span
+                className="w-1 self-stretch rounded shrink-0 mt-1"
+                style={{ backgroundColor: selectedMondayEvent?.color }}
+              />
+              <span>{selectedMondayEvent?.meta?.title || selectedMondayEvent?.title}</span>
+            </DialogTitle>
+          </DialogHeader>
+          {selectedMondayEvent && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span
+                  className="px-2 py-0.5 rounded text-white"
+                  style={{ backgroundColor: selectedMondayEvent.color }}
+                >
+                  {selectedMondayEvent.meta?.sourceLabel}
+                </span>
+                {selectedMondayEvent.meta?.boardName && (
+                  <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                    {selectedMondayEvent.meta.boardName}
+                  </span>
+                )}
+                {selectedMondayEvent.meta?.groupTitle && (
+                  <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                    {selectedMondayEvent.meta.groupTitle}
+                  </span>
+                )}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                📅 {format(selectedMondayEvent.start, "EEEE, MMMM d, yyyy")}
+                {!selectedMondayEvent.allDay &&
+                  ` at ${format(selectedMondayEvent.start, "h:mm a")}`}
+              </div>
+              {selectedMondayEvent.meta?.fields?.length > 0 && (
+                <div className="border-t border-border pt-3">
+                  <div className="grid grid-cols-1 gap-2">
+                    {selectedMondayEvent.meta.fields.map((f: any) => (
+                      <div
+                        key={f.columnId}
+                        className="flex items-start justify-between gap-3 text-sm py-1 border-b border-border/40 last:border-0"
+                      >
+                        <span className="text-xs text-muted-foreground uppercase tracking-wide shrink-0 w-1/3">
+                          {f.label}
+                        </span>
+                        <span className="text-foreground text-right break-words flex-1">
+                          {f.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedMondayEvent(null)}>
+              Close
+            </Button>
+            {selectedMondayEvent?.meta?.itemUrl && (
+              <Button onClick={() => window.open(selectedMondayEvent.meta.itemUrl, "_blank")}>
+                <LinkIcon className="w-4 h-4 mr-1" /> Open in Monday
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
