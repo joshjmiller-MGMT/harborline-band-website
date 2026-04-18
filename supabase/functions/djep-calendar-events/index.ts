@@ -270,9 +270,10 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
 
     const nextActionDateRaw = get(idx.nextActionDate);
     const eventDateRaw = get(idx.eventDate);
-    const dateRaw = nextActionDateRaw || eventDateRaw;
-    const parsed = parseDate(dateRaw);
+    // Calendar position is ALWAYS the Next Action Date — never fall back to Event Date.
+    const parsed = parseDate(nextActionDateRaw);
     if (!parsed) continue;
+    const dateRaw = nextActionDateRaw;
 
     const client = get(idx.client) || "Lead";
     const status = get(idx.status);
