@@ -521,6 +521,18 @@ export default function UnifiedCalendarWidget() {
     }
   };
 
+  const refreshSocial = async () => {
+    setSocialLoading(true);
+    try {
+      await loadSocial();
+      toast.success("Social posts refreshed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Social refresh failed");
+    } finally {
+      setSocialLoading(false);
+    }
+  };
+
   const createGoogleEvent = async () => {
     if (!newEvent.summary || !newEvent.start || !newEvent.end) {
       toast.error("Title, start, and end are required");
