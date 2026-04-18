@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { events, raw } = await firecrawlExtract();
+    const { events, raw } = await firecrawlScrape();
     const meta = await writeCache(events, raw);
     return jsonResponse({
       configured: true,
