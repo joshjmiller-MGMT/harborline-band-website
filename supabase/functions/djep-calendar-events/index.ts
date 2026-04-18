@@ -92,56 +92,34 @@ async function writeCache(events: DjepEvent[], raw: unknown) {
   return { refreshed_at: now.toISOString(), expires_at: expires.toISOString() };
 }
 
-// Firecrawl /v2/extract — uses an LLM agent to navigate the site and return
-// structured data per the supplied JSON schema. Much more reliable than
-// trying to script the ASP UI step-by-step with click actions.
-async function firecrawlExtract(): Promise<{ events: DjepEvent[]; raw: any }> {
-  const schema = {
-    type: "object",
-    properties: {
-      events: {
-        type: "array",
-        description:
-          "Every row from the Sales - Miller events list grid. Include all rows visible.",
-        items: {
-          type: "object",
-          properties: {
-            client: { type: "string", description: "Client / lead name" },
-            status: { type: "string", description: "Lead status (e.g. Inquiry, Booked)" },
-            next_action: { type: "string", description: "Next Action description" },
-            next_action_date: {
-              type: "string",
-              description:
-                "Next Action Date in MM/DD/YYYY format (this is what we use as the calendar date)",
-            },
-            event_date: { type: "string", description: "Event Date (MM/DD/YYYY) if shown" },
-            event_type: { type: "string" },
-            venue: { type: "string" },
-            salesperson: { type: "string" },
-            event_id: { type: "string", description: "DJEP Event ID number" },
-          },
-          required: ["client", "next_action_date"],
-        },
-      },
-    },
-    required: ["events"],
-  };
-
-  const prompt = `Log in to the DJ Event Planner site using username "${DJEP_USERNAME}" and password "${DJEP_PASSWORD}".
-After logging in, click the "Web Links" item in the left navigation to expand it, then click the "SALES - MILLER" link.
-Wait for the events grid to load. The grid has columns including: Event Date, Client, Status, Next Action, Next Action Date, Event Type, Venue, Salesperson, Event ID, plus others.
-Extract every row in that grid where the salesperson is Josh Miller. For each row return the fields defined in the schema. The "Next Action Date" column is the most important field — it is the date we will display on the calendar.`;
-
+// Firecrawl /v2/scrape with actions array — multi-step interactive navigation.
+// Logs in, clicks "Web Links", clicks "SALES - MILLER", waits for the grid,
+// then returns the rendered HTML which we parse for events.
+async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
   const body = {
-    urls: [DJEP_URL],
-    prompt,
-    schema,
-    enableWebSearch: false,
-    // Allow long-running navigation; extract jobs are async on Firecrawl
+    url: DJEP_URL,
+    formats: ["html"],
+    onlyMainContent: false,
+    waitFor: 2000,
+    timeout: 90000,
+    actions: [
+      { type: "wait", milliseconds: 1500 },
+      // Login form
+      { type: "write", selector: "input[name='username'], input[name='UserName'], input[type='text']:not([type='hidden'])", text: DJEP_USERNAME ?? "" },
+      { type: "write", selector: "input[name='password'], input[name='Password'], input[type='password']", text: DJEP_PASSWORD ?? "" },
+      { type: "click", selector: "input[type='submit'], button[type='submit'], input[value*='Login' i], button:has-text('Login')" },
+      { type: "wait", milliseconds: 3000 },
+      // Click "Web Links" to expand the menu
+      { type: "click", selector: "a:has-text('Web Links'), *:has-text('Web Links')" },
+      { type: "wait", milliseconds: 1500 },
+      // Click "SALES - MILLER" link
+      { type: "click", selector: "a:has-text('SALES - MILLER'), a:has-text('Sales - Miller')" },
+      { type: "wait", milliseconds: 4000 },
+      { type: "scrape" },
+    ],
   };
 
-  // Kick off the extract job
-  const startRes = await fetch("https://api.firecrawl.dev/v2/extract", {
+  const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
@@ -149,80 +127,102 @@ Extract every row in that grid where the salesperson is Josh Miller. For each ro
     },
     body: JSON.stringify(body),
   });
-  const startJson = await startRes.json();
-  if (!startRes.ok) {
-    throw new Error(
-      `Firecrawl extract start ${startRes.status}: ${JSON.stringify(startJson).slice(0, 600)}`
-    );
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(`Firecrawl scrape ${res.status}: ${JSON.stringify(json).slice(0, 600)}`);
   }
 
-  const jobId = startJson?.id ?? startJson?.data?.id;
-  // If the API returned data inline (sync), use it directly
-  if (!jobId && (startJson?.data || startJson?.success)) {
-    return parseExtractPayload(startJson);
-  }
-  if (!jobId) {
-    throw new Error(`Firecrawl extract: no job id in response ${JSON.stringify(startJson).slice(0, 400)}`);
+  // HTML may live on the top level or under data, and action results may carry the
+  // post-navigation HTML separately under data.actions.scrapes[*].html
+  const data = json?.data ?? json;
+  const actionScrapes = data?.actions?.scrapes ?? data?.actions?.scrape ?? [];
+  const lastActionHtml = Array.isArray(actionScrapes) && actionScrapes.length
+    ? (actionScrapes[actionScrapes.length - 1]?.html ?? actionScrapes[actionScrapes.length - 1]?.content)
+    : null;
+  const html: string = lastActionHtml ?? data?.html ?? data?.rawHtml ?? "";
+  if (!html) {
+    throw new Error(`Firecrawl scrape returned no HTML. Keys: ${Object.keys(data || {}).join(",")}`);
   }
 
-  // Poll for completion (extract is async — typically 30-60s)
-  const deadline = Date.now() + 90_000; // 90s budget
-  let lastJson: any = null;
-  while (Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, 3000));
-    const statusRes = await fetch(
-      `https://api.firecrawl.dev/v2/extract/${jobId}`,
-      {
-        headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}` },
-      }
-    );
-    const statusJson = await statusRes.json();
-    lastJson = statusJson;
-    const status = statusJson?.status ?? statusJson?.data?.status;
-    if (status === "completed" || statusJson?.data?.events || statusJson?.data?.data?.events) {
-      return parseExtractPayload(statusJson);
-    }
-    if (status === "failed" || status === "cancelled") {
-      throw new Error(`Firecrawl extract ${status}: ${JSON.stringify(statusJson).slice(0, 400)}`);
-    }
-  }
-  throw new Error(
-    `Firecrawl extract timed out after 90s. Last status: ${JSON.stringify(lastJson).slice(0, 400)}`
-  );
+  const events = parseEventsFromHtml(html);
+  return { events, raw: { keys: Object.keys(data || {}), htmlLength: html.length, sample: html.slice(0, 1500) } };
 }
 
-function parseExtractPayload(payload: any): { events: DjepEvent[]; raw: any } {
-  // Firecrawl extract returns the structured data under a few possible shapes.
-  const extracted =
-    payload?.data?.events ??
-    payload?.data?.data?.events ??
-    payload?.events ??
-    payload?.data?.json?.events ??
-    [];
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+}
+
+function stripTags(s: string): string {
+  return decodeHtmlEntities(s.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+}
+
+function parseEventsFromHtml(html: string): DjepEvent[] {
+  // Find the largest table — DJEP renders the events grid as an HTML table.
+  const tableMatches = [...html.matchAll(/<table[\s\S]*?<\/table>/gi)].map((m) => m[0]);
+  if (!tableMatches.length) return [];
+  const table = tableMatches.sort((a, b) => b.length - a.length)[0];
+
+  const rows = [...table.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map((m) => m[0]);
+  if (rows.length < 2) return [];
+
+  // Header row → column index map
+  const headerCells = [...rows[0].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) =>
+    stripTags(m[1]).toLowerCase()
+  );
+  const colIdx = (...names: string[]): number => {
+    for (const n of names) {
+      const i = headerCells.findIndex((h) => h.includes(n));
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+  const idx = {
+    eventDate: colIdx("event date"),
+    client: colIdx("client", "name"),
+    status: colIdx("status"),
+    nextAction: colIdx("next action") >= 0 ? headerCells.findIndex((h) => h === "next action" || (h.includes("next action") && !h.includes("date"))) : -1,
+    nextActionDate: colIdx("next action date", "next date"),
+    eventType: colIdx("event type", "type"),
+    venue: colIdx("venue", "location"),
+    salesperson: colIdx("salesperson", "sales"),
+    eventId: colIdx("event id", "id"),
+  };
 
   const events: DjepEvent[] = [];
-  for (const row of Array.isArray(extracted) ? extracted : []) {
-    const dateRaw = String(row?.next_action_date ?? "");
+  for (let i = 1; i < rows.length; i++) {
+    const cells = [...rows[i].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) => stripTags(m[1]));
+    if (cells.length === 0) continue;
+
+    const get = (j: number) => (j >= 0 && j < cells.length ? cells[j] : "");
+    const nextActionDateRaw = get(idx.nextActionDate);
+    const eventDateRaw = get(idx.eventDate);
+    const dateRaw = nextActionDateRaw || eventDateRaw;
     const parsed = parseDate(dateRaw);
     if (!parsed) continue;
 
-    const salesperson = String(row?.salesperson ?? "");
-    if (salesperson && !salesperson.toLowerCase().includes("miller")) continue;
+    const client = get(idx.client) || "Lead";
+    const status = get(idx.status);
+    const action = get(idx.nextAction);
+    const eventType = get(idx.eventType);
+    const venue = get(idx.venue);
+    const salesperson = get(idx.salesperson);
+    const eventId = get(idx.eventId);
 
-    const client = String(row?.client ?? "Lead");
-    const action = String(row?.next_action ?? "");
-    const status = String(row?.status ?? "");
-    const eventDate = String(row?.event_date ?? "");
-    const eventType = String(row?.event_type ?? "");
-    const venue = String(row?.venue ?? "");
-    const eventId = String(row?.event_id ?? "");
+    if (salesperson && !salesperson.toLowerCase().includes("miller")) continue;
 
     const title = action ? `${action} · ${client}` : client;
     const startISO = parsed.toISOString();
     const fields: { label: string; value: string }[] = [];
     if (status) fields.push({ label: "Status", value: status });
     if (action) fields.push({ label: "Next Action", value: action });
-    if (eventDate) fields.push({ label: "Event Date", value: eventDate });
+    if (eventDateRaw) fields.push({ label: "Event Date", value: eventDateRaw });
     if (eventType) fields.push({ label: "Event Type", value: eventType });
     if (venue) fields.push({ label: "Venue", value: venue });
     if (salesperson) fields.push({ label: "Salesperson", value: salesperson });
@@ -241,8 +241,7 @@ function parseExtractPayload(payload: any): { events: DjepEvent[]; raw: any } {
       itemUrl: DJEP_URL,
     });
   }
-
-  return { events, raw: payload };
+  return events;
 }
 
 function parseDate(raw: string): Date | null {
