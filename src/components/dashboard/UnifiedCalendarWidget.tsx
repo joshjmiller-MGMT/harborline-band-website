@@ -1057,7 +1057,9 @@ export default function UnifiedCalendarWidget() {
                   <div className="flex flex-col gap-2">
                     {googleAccounts.map((email) => {
                       const checked = !hiddenAccounts.has(email);
-                      const color = colorForAccount(email, googleAccounts);
+                      const overrideKey = `google:${email}`;
+                      const naturalColor = colorForAccount(email, googleAccounts);
+                      const color = colorOverrides[overrideKey] || naturalColor;
                       const info = googleAccountInfo.find((a) => a.email === email);
                       const broken = !!info?.needsReconnect || (info?.calendars ?? 0) === 0;
                       return (
@@ -1069,13 +1071,16 @@ export default function UnifiedCalendarWidget() {
                               onChange={() => toggleAccount(email)}
                               className="w-4 h-4 rounded accent-primary"
                             />
-                            <span
-                              className="inline-flex items-center justify-center text-[10px] font-bold w-5 h-5 rounded text-white shrink-0"
-                              style={{ backgroundColor: color, opacity: checked ? 1 : 0.4 }}
+                            <ColorSwatchPicker
+                              color={color}
+                              hasOverride={!!colorOverrides[overrideKey]}
+                              onChange={(c) => setColorOverride(overrideKey, c)}
+                              onReset={() => resetColorOverride(overrideKey)}
+                              dimmed={!checked}
                               title={email}
                             >
                               {initialsForEmail(email)}
-                            </span>
+                            </ColorSwatchPicker>
                             <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
                               {email}
                             </span>
