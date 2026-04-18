@@ -165,6 +165,7 @@ export default function UnifiedCalendarWidget() {
   const [events, setEvents] = useState<UnifiedEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [djepLoading, setDjepLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState<string | null>(null);
   const [googleAccounts, setGoogleAccounts] = useState<string[]>([]);
@@ -517,6 +518,18 @@ export default function UnifiedCalendarWidget() {
       toast.error(err instanceof Error ? err.message : "DJEP refresh failed");
     } finally {
       setDjepLoading(false);
+    }
+  };
+
+  const refreshSocial = async () => {
+    setSocialLoading(true);
+    try {
+      await loadSocial();
+      toast.success("Social posts refreshed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Social refresh failed");
+    } finally {
+      setSocialLoading(false);
     }
   };
 
@@ -947,23 +960,40 @@ export default function UnifiedCalendarWidget() {
           {/* Google Accounts dropdown */}
           {googleAccounts.length > 0 && (
             <div className="rounded-md border border-border bg-card/40">
-              <button
-                type="button"
-                onClick={() => togglePanel("google")}
-                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
-              >
-                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Google Accounts
-                  <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
-                    ({googleAccounts.length - hiddenAccounts.size}/{googleAccounts.length} visible)
+              <div className="w-full flex items-center justify-between pl-3 pr-2 py-1.5 hover:bg-card/60 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => togglePanel("google")}
+                  className="flex-1 flex items-center justify-between text-left"
+                >
+                  <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Google Accounts
+                    <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
+                      ({googleAccounts.length - hiddenAccounts.size}/{googleAccounts.length} visible)
+                    </span>
                   </span>
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-muted-foreground transition-transform ${
-                    openPanels.google ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+                </button>
+                <div className="flex items-center gap-1 ml-2">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); loadAll(); }}
+                    disabled={loading}
+                    title="Refresh Google Calendar"
+                    className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => togglePanel("google")}
+                    className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground"
+                  >
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${openPanels.google ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                </div>
+              </div>
               {openPanels.google && (
                 <div className="px-3 pb-3 pt-1 border-t border-border">
                   <div className="flex justify-end gap-2 mb-2">
@@ -1039,23 +1069,40 @@ export default function UnifiedCalendarWidget() {
           {/* Monday Sources dropdown */}
           {mondaySources.length > 0 && (
             <div className="rounded-md border border-border bg-card/40">
-              <button
-                type="button"
-                onClick={() => togglePanel("monday")}
-                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
-              >
-                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Monday Views
-                  <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
-                    ({mondaySources.length - hiddenMondaySources.size}/{mondaySources.length} visible)
+              <div className="w-full flex items-center justify-between pl-3 pr-2 py-1.5 hover:bg-card/60 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => togglePanel("monday")}
+                  className="flex-1 flex items-center justify-between text-left"
+                >
+                  <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Monday Views
+                    <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
+                      ({mondaySources.length - hiddenMondaySources.size}/{mondaySources.length} visible)
+                    </span>
                   </span>
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-muted-foreground transition-transform ${
-                    openPanels.monday ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+                </button>
+                <div className="flex items-center gap-1 ml-2">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); loadAll(); }}
+                    disabled={loading}
+                    title="Refresh Monday views"
+                    className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => togglePanel("monday")}
+                    className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground"
+                  >
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${openPanels.monday ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                </div>
+              </div>
               {openPanels.monday && (
                 <div className="px-3 pb-3 pt-1 border-t border-border">
                   <div className="flex justify-end gap-2 mb-2">
@@ -1112,23 +1159,40 @@ export default function UnifiedCalendarWidget() {
           {/* Social Brands dropdown */}
           {socialBrands.length > 0 && (
             <div className="rounded-md border border-border bg-card/40">
-              <button
-                type="button"
-                onClick={() => togglePanel("social")}
-                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
-              >
-                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Social Brands
-                  <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
-                    ({socialBrands.length - hiddenSocialBrands.size}/{socialBrands.length} visible)
+              <div className="w-full flex items-center justify-between pl-3 pr-2 py-1.5 hover:bg-card/60 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => togglePanel("social")}
+                  className="flex-1 flex items-center justify-between text-left"
+                >
+                  <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Social Brands
+                    <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
+                      ({socialBrands.length - hiddenSocialBrands.size}/{socialBrands.length} visible)
+                    </span>
                   </span>
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-muted-foreground transition-transform ${
-                    openPanels.social ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+                </button>
+                <div className="flex items-center gap-1 ml-2">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); refreshSocial(); }}
+                    disabled={socialLoading}
+                    title="Refresh social posts"
+                    className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${socialLoading ? "animate-spin" : ""}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => togglePanel("social")}
+                    className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground"
+                  >
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${openPanels.social ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                </div>
+              </div>
               {openPanels.social && (
                 <div className="px-3 pb-3 pt-1 border-t border-border">
                   <div className="flex justify-end gap-2 mb-2">
@@ -1181,23 +1245,40 @@ export default function UnifiedCalendarWidget() {
 
           {/* DJEP Leads — single-source toggle plus refresh button */}
           <div className="rounded-md border border-border bg-card/40">
-            <button
-              type="button"
-              onClick={() => togglePanel("djep")}
-              className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
-            >
-              <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                DJEP Leads
-                <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
-                  ({hiddenDjepSources.has(DJEP_SOURCE_ID) ? 0 : 1}/1 visible)
+            <div className="w-full flex items-center justify-between pl-3 pr-2 py-1.5 hover:bg-card/60 transition-colors">
+              <button
+                type="button"
+                onClick={() => togglePanel("djep")}
+                className="flex-1 flex items-center justify-between text-left"
+              >
+                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  DJEP Leads
+                  <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
+                    ({hiddenDjepSources.has(DJEP_SOURCE_ID) ? 0 : 1}/1 visible)
+                  </span>
                 </span>
-              </span>
-              <ChevronDown
-                className={`w-4 h-4 text-muted-foreground transition-transform ${
-                  openPanels.djep ? "rotate-180" : ""
-                }`}
-              />
-            </button>
+              </button>
+              <div className="flex items-center gap-1 ml-2">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); refreshDjep(); }}
+                  disabled={djepLoading}
+                  title="Re-scrape DJEP (30–60s)"
+                  className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${djepLoading ? "animate-spin" : ""}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => togglePanel("djep")}
+                  className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground"
+                >
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${openPanels.djep ? "rotate-180" : ""}`}
+                  />
+                </button>
+              </div>
+            </div>
             {openPanels.djep && (
               <div className="px-3 pb-3 pt-1 border-t border-border space-y-2">
                 {(() => {
@@ -1225,16 +1306,6 @@ export default function UnifiedCalendarWidget() {
                     </label>
                   );
                 })()}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={refreshDjep}
-                  disabled={djepLoading}
-                  className="w-full"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${djepLoading ? "animate-spin" : ""}`} />
-                  {djepLoading ? "Refreshing DJEP…" : "Refresh DJEP from server"}
-                </Button>
               </div>
             )}
           </div>
