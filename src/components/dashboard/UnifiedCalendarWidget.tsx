@@ -42,6 +42,9 @@ import {
   ChevronDown,
   SlidersHorizontal,
 } from "lucide-react";
+import ColorSwatchPicker from "./ColorSwatchPicker";
+
+const COLOR_OVERRIDES_KEY = "unifiedCalendar.colorOverrides";
 
 const locales = { "en-US": enUS };
 const localizer = dateFnsLocalizer({
@@ -205,6 +208,32 @@ export default function UnifiedCalendarWidget() {
     }
   });
   const [djepRefreshedAt, setDjepRefreshedAt] = useState<string | null>(null);
+
+  // Color overrides keyed by `${kind}:${id}` — e.g. "google:foo@bar.com",
+  // "monday:<sourceId>", "social:<brandId>", "djep:default".
+  const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(() => {
+    try {
+      const raw = localStorage.getItem(COLOR_OVERRIDES_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+  const setColorOverride = (key: string, color: string) => {
+    setColorOverrides((prev) => {
+      const next = { ...prev, [key]: color };
+      try { localStorage.setItem(COLOR_OVERRIDES_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  const resetColorOverride = (key: string) => {
+    setColorOverrides((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      try { localStorage.setItem(COLOR_OVERRIDES_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
   const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean; social: boolean; djep: boolean }>(() => {
     try {
       const raw = localStorage.getItem(PANELS_OPEN_KEY);
@@ -572,10 +601,20 @@ export default function UnifiedCalendarWidget() {
   //           preference for the joshmillermanagement view of that event)
   //   stripe = thin top stripe showing which calendar/source it belongs to
   const colorsForEvent = (event: UnifiedEvent) => {
-    const stripe =
+    // Resolve override key per source so users can recolor calendar stripes.
+    let overrideKey: string | null = null;
+    if (event.source === "google" && event.accountEmail) overrideKey = `google:${event.accountEmail}`;
+    else if (event.source === "monday") {
+      const src = mondaySources.find((s) => s.label === event.meta?.sourceLabel);
+      if (src) overrideKey = `monday:${src.id}`;
+    } else if (event.source === "social" && event.brandId) overrideKey = `social:${event.brandId}`;
+    else if (event.source === "djep") overrideKey = `djep:default`;
+
+    const naturalStripe =
       event.source === "google"
         ? colorForAccount(event.accountEmail, googleAccounts)
         : event.color;
+    const stripe = (overrideKey && colorOverrides[overrideKey]) || naturalStripe;
 
     let body = stripe;
     if (event.source === "google") {
@@ -1018,7 +1057,9 @@ export default function UnifiedCalendarWidget() {
                   <div className="flex flex-col gap-2">
                     {googleAccounts.map((email) => {
                       const checked = !hiddenAccounts.has(email);
-                      const color = colorForAccount(email, googleAccounts);
+                      const overrideKey = `google:${email}`;
+                      const naturalColor = colorForAccount(email, googleAccounts);
+                      const color = colorOverrides[overrideKey] || naturalColor;
                       const info = googleAccountInfo.find((a) => a.email === email);
                       const broken = !!info?.needsReconnect || (info?.calendars ?? 0) === 0;
                       return (
@@ -1030,13 +1071,16 @@ export default function UnifiedCalendarWidget() {
                               onChange={() => toggleAccount(email)}
                               className="w-4 h-4 rounded accent-primary"
                             />
-                            <span
-                              className="inline-flex items-center justify-center text-[10px] font-bold w-5 h-5 rounded text-white shrink-0"
-                              style={{ backgroundColor: color, opacity: checked ? 1 : 0.4 }}
+                            <ColorSwatchPicker
+                              color={color}
+                              hasOverride={!!colorOverrides[overrideKey]}
+                              onChange={(c) => setColorOverride(overrideKey, c)}
+                              onReset={() => resetColorOverride(overrideKey)}
+                              dimmed={!checked}
                               title={email}
                             >
                               {initialsForEmail(email)}
-                            </span>
+                            </ColorSwatchPicker>
                             <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
                               {email}
                             </span>
@@ -1127,6 +1171,8 @@ export default function UnifiedCalendarWidget() {
                   <div className="flex flex-col gap-2">
                     {mondaySources.map((s) => {
                       const checked = !hiddenMondaySources.has(s.id);
+                      const overrideKey = `monday:${s.id}`;
+                      const color = colorOverrides[overrideKey] || s.color;
                       return (
                         <label
                           key={s.id}
@@ -1138,9 +1184,12 @@ export default function UnifiedCalendarWidget() {
                             onChange={() => toggleMondaySource(s.id)}
                             className="w-4 h-4 rounded accent-primary"
                           />
-                          <span
-                            className="inline-block w-5 h-5 rounded shrink-0"
-                            style={{ backgroundColor: s.color, opacity: checked ? 1 : 0.4 }}
+                          <ColorSwatchPicker
+                            color={color}
+                            hasOverride={!!colorOverrides[overrideKey]}
+                            onChange={(c) => setColorOverride(overrideKey, c)}
+                            onReset={() => resetColorOverride(overrideKey)}
+                            dimmed={!checked}
                             title={s.label}
                           />
                           <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
@@ -1217,6 +1266,8 @@ export default function UnifiedCalendarWidget() {
                   <div className="flex flex-col gap-2">
                     {socialBrands.map((b) => {
                       const checked = !hiddenSocialBrands.has(b.id);
+                      const overrideKey = `social:${b.id}`;
+                      const color = colorOverrides[overrideKey] || b.color;
                       return (
                         <label
                           key={b.id}
@@ -1228,9 +1279,12 @@ export default function UnifiedCalendarWidget() {
                             onChange={() => toggleSocialBrand(b.id)}
                             className="w-4 h-4 rounded accent-primary"
                           />
-                          <span
-                            className="inline-block w-5 h-5 rounded shrink-0"
-                            style={{ backgroundColor: b.color, opacity: checked ? 1 : 0.4 }}
+                          <ColorSwatchPicker
+                            color={color}
+                            hasOverride={!!colorOverrides[overrideKey]}
+                            onChange={(c) => setColorOverride(overrideKey, c)}
+                            onReset={() => resetColorOverride(overrideKey)}
+                            dimmed={!checked}
                             title={b.name}
                           />
                           <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
@@ -1286,6 +1340,8 @@ export default function UnifiedCalendarWidget() {
                 {(() => {
                   const checked = !hiddenDjepSources.has(DJEP_SOURCE_ID);
                   const count = events.filter((e) => e.source === "djep").length;
+                  const overrideKey = `djep:default`;
+                  const color = colorOverrides[overrideKey] || "#10b981";
                   return (
                     <label className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0">
                       <input
@@ -1294,9 +1350,12 @@ export default function UnifiedCalendarWidget() {
                         onChange={toggleDjepSource}
                         className="w-4 h-4 rounded accent-primary"
                       />
-                      <span
-                        className="inline-block w-5 h-5 rounded shrink-0"
-                        style={{ backgroundColor: "#10b981", opacity: checked ? 1 : 0.4 }}
+                      <ColorSwatchPicker
+                        color={color}
+                        hasOverride={!!colorOverrides[overrideKey]}
+                        onChange={(c) => setColorOverride(overrideKey, c)}
+                        onReset={() => resetColorOverride(overrideKey)}
+                        dimmed={!checked}
                         title="DJEP Leads"
                       />
                       <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
