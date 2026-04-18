@@ -1159,23 +1159,40 @@ export default function UnifiedCalendarWidget() {
           {/* Social Brands dropdown */}
           {socialBrands.length > 0 && (
             <div className="rounded-md border border-border bg-card/40">
-              <button
-                type="button"
-                onClick={() => togglePanel("social")}
-                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
-              >
-                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Social Brands
-                  <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
-                    ({socialBrands.length - hiddenSocialBrands.size}/{socialBrands.length} visible)
+              <div className="w-full flex items-center justify-between pl-3 pr-2 py-1.5 hover:bg-card/60 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => togglePanel("social")}
+                  className="flex-1 flex items-center justify-between text-left"
+                >
+                  <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Social Brands
+                    <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
+                      ({socialBrands.length - hiddenSocialBrands.size}/{socialBrands.length} visible)
+                    </span>
                   </span>
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-muted-foreground transition-transform ${
-                    openPanels.social ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+                </button>
+                <div className="flex items-center gap-1 ml-2">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); refreshSocial(); }}
+                    disabled={socialLoading}
+                    title="Refresh social posts"
+                    className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${socialLoading ? "animate-spin" : ""}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => togglePanel("social")}
+                    className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground"
+                  >
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${openPanels.social ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                </div>
+              </div>
               {openPanels.social && (
                 <div className="px-3 pb-3 pt-1 border-t border-border">
                   <div className="flex justify-end gap-2 mb-2">
