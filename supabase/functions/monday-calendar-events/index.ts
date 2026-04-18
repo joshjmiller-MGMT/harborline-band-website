@@ -195,9 +195,11 @@ Deno.serve(async (req) => {
         // Skip "Lost Sale" groups entirely — they shouldn't appear in events
         // OR the missing-dates log. Booked/Completed items DO get flagged
         // because they may still need a Next Action Date assigned.
+        // Additional per-source skip keywords come from `skip_groups`.
         const groupTitleRaw = (item.group?.title || "").toLowerCase().replace(/[-_]/g, " ").trim();
         const isLostSale = groupTitleRaw.includes("lost sale");
-        if (isLostSale) continue;
+        const matchesSkipKeyword = skipGroupKeywords.some((kw) => groupTitleRaw.includes(kw));
+        if (isLostSale || matchesSkipKeyword) continue;
 
         // Primary date column (e.g. "Next Action Date"). This is the one we
         // care about for the missing-dates report.
