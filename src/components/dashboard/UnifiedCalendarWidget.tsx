@@ -157,6 +157,7 @@ export default function UnifiedCalendarWidget() {
   const [date, setDate] = useState(new Date());
   const [events, setEvents] = useState<UnifiedEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [djepLoading, setDjepLoading] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState<string | null>(null);
   const [googleAccounts, setGoogleAccounts] = useState<string[]>([]);
@@ -463,6 +464,27 @@ export default function UnifiedCalendarWidget() {
 
   const toggleEnabled = async (s: MondaySource) => {
     await updateSource(s.id, { enabled: !s.enabled });
+  };
+
+  const refreshDjep = async () => {
+    setDjepLoading(true);
+    try {
+      const res = await fetch(`${FUNCTIONS_BASE}/djep-calendar-events?refresh=1`, {
+        headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(`DJEP refresh failed: ${data.error}`);
+        return;
+      }
+      const count = Array.isArray(data.events) ? data.events.length : 0;
+      toast.success(`DJEP refreshed — ${count} event${count === 1 ? "" : "s"}`);
+      await loadAll();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "DJEP refresh failed");
+    } finally {
+      setDjepLoading(false);
+    }
   };
 
   const createGoogleEvent = async () => {
@@ -794,6 +816,16 @@ export default function UnifiedCalendarWidget() {
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={loadAll} disabled={loading}>
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={refreshDjep}
+            disabled={djepLoading}
+            title="Re-scrape DJ Event Planner (Sales – Miller). Takes 30–60s."
+          >
+            <RefreshCw className={`w-4 h-4 mr-1 ${djepLoading ? "animate-spin" : ""}`} />
+            {djepLoading ? "Refreshing DJEP…" : "Refresh DJEP"}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setShowSettings(true)}>
             <SettingsIcon className="w-4 h-4" />
