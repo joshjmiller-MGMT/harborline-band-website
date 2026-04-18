@@ -292,12 +292,20 @@ function SortableRow({
                 ))}
               </SelectContent>
             </Select>
-            <Input
-              value={seg.label}
-              onChange={(e) => onChange({ label: e.target.value })}
-              placeholder="What are you working on?"
-              className="h-7 text-xs flex-1 min-w-[140px]"
-            />
+            <div className="relative flex-1 min-w-[140px]">
+              <Input
+                list={`songs-${seg.key}`}
+                value={seg.label}
+                onChange={(e) => onChange({ label: e.target.value })}
+                placeholder="What are you working on? (type to search songs)"
+                className="h-7 text-xs"
+              />
+              <datalist id={`songs-${seg.key}`}>
+                {songs.map((s) => (
+                  <option key={s.id} value={s.artist ? `${s.title} — ${s.artist}` : s.title} />
+                ))}
+              </datalist>
+            </div>
             {active && (
               <Badge variant="default" className="text-xs">
                 <Timer className="w-3 h-3 mr-1" /> Active
