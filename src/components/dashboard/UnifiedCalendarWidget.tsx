@@ -1188,6 +1188,66 @@ export default function UnifiedCalendarWidget() {
               )}
             </div>
           )}
+
+          {/* DJEP Leads — single-source toggle plus refresh button */}
+          <div className="rounded-md border border-border bg-card/40">
+            <button
+              type="button"
+              onClick={() => togglePanel("djep")}
+              className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
+            >
+              <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                DJEP Leads
+                <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
+                  ({hiddenDjepSources.has(DJEP_SOURCE_ID) ? 0 : 1}/1 visible)
+                </span>
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 text-muted-foreground transition-transform ${
+                  openPanels.djep ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            {openPanels.djep && (
+              <div className="px-3 pb-3 pt-1 border-t border-border space-y-2">
+                {(() => {
+                  const checked = !hiddenDjepSources.has(DJEP_SOURCE_ID);
+                  const count = events.filter((e) => e.source === "djep").length;
+                  return (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={toggleDjepSource}
+                        className="w-4 h-4 rounded accent-primary"
+                      />
+                      <span
+                        className="inline-block w-5 h-5 rounded shrink-0"
+                        style={{ backgroundColor: "#10b981", opacity: checked ? 1 : 0.4 }}
+                        title="DJEP Leads"
+                      />
+                      <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
+                        SALES - MILLER
+                      </span>
+                      <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
+                        {count} event{count === 1 ? "" : "s"}
+                      </span>
+                    </label>
+                  );
+                })()}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshDjep}
+                  disabled={djepLoading}
+                  className="w-full"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${djepLoading ? "animate-spin" : ""}`} />
+                  {djepLoading ? "Refreshing DJEP…" : "Refresh DJEP from server"}
+                </Button>
+              </div>
+            )}
+          </div>
           </PopoverContent>
         </Popover>
 
