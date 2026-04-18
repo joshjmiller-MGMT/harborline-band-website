@@ -450,6 +450,20 @@ export default function PracticeTimerWidget() {
     };
   }, [running]);
 
+  // Sync metronome BPM to active segment when changed
+  useEffect(() => {
+    if (activeIdx == null) return;
+    const segBpm = segments[activeIdx]?.bpm;
+    if (segBpm && segBpm > 0) metro.setBpm(segBpm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIdx, segments[activeIdx ?? 0]?.bpm]);
+
+  // Auto-stop metronome when timer is not running
+  useEffect(() => {
+    if (!running && metro.running) metro.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
+
   // Auto-stop at target (chime + pause)
   useEffect(() => {
     if (activeIdx == null || !running) return;
