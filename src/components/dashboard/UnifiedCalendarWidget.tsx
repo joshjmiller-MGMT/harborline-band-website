@@ -817,6 +817,16 @@ export default function UnifiedCalendarWidget() {
           <Button size="sm" variant="ghost" onClick={loadAll} disabled={loading}>
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={refreshDjep}
+            disabled={djepLoading}
+            title="Re-scrape DJ Event Planner (Sales – Miller). Takes 30–60s."
+          >
+            <RefreshCw className={`w-4 h-4 mr-1 ${djepLoading ? "animate-spin" : ""}`} />
+            {djepLoading ? "Refreshing DJEP…" : "Refresh DJEP"}
+          </Button>
           <Button size="sm" variant="ghost" onClick={() => setShowSettings(true)}>
             <SettingsIcon className="w-4 h-4" />
           </Button>
