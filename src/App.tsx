@@ -63,6 +63,7 @@ import TeamScheduler from "./pages/team/TeamScheduler";
 import TeamResources from "./pages/team/TeamResources";
 import TeamRunOfShow from "./pages/team/TeamRunOfShow";
 import TeamDashboard from "./pages/team/TeamDashboard";
+import TeamPractice from "./pages/team/TeamPractice";
 
 const queryClient = new QueryClient();
 
