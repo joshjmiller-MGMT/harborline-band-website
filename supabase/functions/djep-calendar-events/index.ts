@@ -318,7 +318,7 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     const salesperson = get(idx.salesperson);
     const eventId = get(idx.eventId);
 
-    if (salesperson && !salesperson.toLowerCase().includes("miller")) continue;
+    // Salesperson filter is already applied server-side via the SALES-MILLER URL.
 
     const title = action ? `${action} · ${client}` : client;
     const startISO = parsed.toISOString();
