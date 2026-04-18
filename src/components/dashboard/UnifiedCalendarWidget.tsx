@@ -204,6 +204,7 @@ export default function UnifiedCalendarWidget() {
       return new Set<string>();
     }
   });
+  const [djepRefreshedAt, setDjepRefreshedAt] = useState<string | null>(null);
   const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean; social: boolean; djep: boolean }>(() => {
     try {
       const raw = localStorage.getItem(PANELS_OPEN_KEY);
@@ -323,6 +324,7 @@ export default function UnifiedCalendarWidget() {
 
       // DJEP leads — cached server-side; failures are silent so the rest
       // of the calendar still loads.
+      if (dRes?.refreshed_at) setDjepRefreshedAt(dRes.refreshed_at);
       for (const e of dRes?.events || []) {
         merged.push({
           id: e.id,
@@ -1306,6 +1308,17 @@ export default function UnifiedCalendarWidget() {
                     </label>
                   );
                 })()}
+                {djepRefreshedAt && (
+                  <p className="text-[10px] text-muted-foreground/70 pl-6">
+                    Last refreshed{" "}
+                    {new Date(djepRefreshedAt).toLocaleString([], {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                )}
               </div>
             )}
           </div>
