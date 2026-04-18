@@ -504,7 +504,7 @@ export default function UnifiedCalendarWidget() {
       toast.error(error.message);
       return;
     }
-    setNewSource({ board_id: "", date_column_id: "", label: "", color: "#8b5cf6", person_column_id: "", person_id: "" });
+    setNewSource({ board_id: "", date_column_id: "", label: "", color: "#8b5cf6", person_column_id: "", person_id: "", skip_groups: "" });
     await loadSources();
     await loadAll();
     toast.success("Monday source added");
