@@ -238,7 +238,7 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
   const table = best.html;
 
   const rows = [...table.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map((m) => m[0]);
-  if (rows.length < 2) return [];
+  if (rows.length < 2) return { events: [], debug: { ...debug, reason: "no-rows" } };
 
   const headerCells = [...rows[0].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) =>
     stripTags(m[1]).toLowerCase()
