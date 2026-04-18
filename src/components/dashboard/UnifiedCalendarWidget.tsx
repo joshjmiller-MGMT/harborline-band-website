@@ -324,6 +324,7 @@ export default function UnifiedCalendarWidget() {
 
       // DJEP leads — cached server-side; failures are silent so the rest
       // of the calendar still loads.
+      if (dRes?.refreshed_at) setDjepRefreshedAt(dRes.refreshed_at);
       for (const e of dRes?.events || []) {
         merged.push({
           id: e.id,
