@@ -372,6 +372,22 @@ export default function UnifiedCalendarWidget() {
         });
       }
 
+      // Booking Agent (Google Sheet rows with a Next Followup date).
+      // We surface them under the existing Monday source so all current
+      // filter, color, and grouping logic continues to work without changes.
+      for (const e of bRes?.events || []) {
+        merged.push({
+          id: e.id,
+          title: e.title,
+          start: parseEventDate(e.start, e.allDay),
+          end: parseEventDate(e.end, e.allDay, true),
+          allDay: e.allDay,
+          source: "monday",
+          color: e.color || "#f59e0b",
+          meta: { ...e, sourceLabel: e.sourceLabel },
+        });
+      }
+
       // Preserve any social events already loaded by loadSocial
       setEvents((prev) => [...merged, ...prev.filter((e) => e.source === "social")]);
     } catch (err) {
