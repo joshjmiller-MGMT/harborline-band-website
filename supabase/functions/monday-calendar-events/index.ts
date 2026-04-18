@@ -278,6 +278,7 @@ Deno.serve(async (req) => {
       if (last) {
         last.itemsWithDates = withDates;
         last.itemsViaFallback = withFallbackDates;
+        last.itemsMissingPrimary = missingPrimary;
       }
     }
 
