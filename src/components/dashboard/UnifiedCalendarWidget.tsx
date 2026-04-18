@@ -925,6 +925,18 @@ export default function UnifiedCalendarWidget() {
           >
             Monday: {mondayError ? "token missing" : mondaySources.length > 0 ? `${mondaySources.length} board(s)` : "no sources"}
           </span>
+          <span
+            className={`px-2 py-1 rounded ${
+              djepError
+                ? "bg-destructive/20 text-destructive"
+                : djepConfigured && djepCount > 0
+                ? "bg-green-500/20 text-green-400"
+                : "bg-muted text-muted-foreground"
+            }`}
+            title={djepError || (djepRefreshedAt ? `Refreshed ${new Date(djepRefreshedAt).toLocaleString()}` : "")}
+          >
+            DJEP: {djepError ? "error" : djepConfigured ? `${djepCount} lead${djepCount === 1 ? "" : "s"}` : "not configured"}
+          </span>
           {!googleConnected && (
             <Button size="sm" variant="outline" onClick={() => connectGoogle()}>
               <LinkIcon className="w-3 h-3 mr-1" /> Connect Google
