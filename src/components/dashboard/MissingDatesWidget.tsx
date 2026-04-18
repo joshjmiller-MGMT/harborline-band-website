@@ -155,7 +155,7 @@ export default function MissingDatesWidget() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             {TABS.map((tab) => (
               <TabsTrigger key={tab.key} value={tab.key} className="text-xs">
                 {tab.label}
