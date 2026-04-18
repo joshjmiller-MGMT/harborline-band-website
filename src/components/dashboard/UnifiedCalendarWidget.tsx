@@ -1306,16 +1306,6 @@ export default function UnifiedCalendarWidget() {
                     </label>
                   );
                 })()}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={refreshDjep}
-                  disabled={djepLoading}
-                  className="w-full"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${djepLoading ? "animate-spin" : ""}`} />
-                  {djepLoading ? "Refreshing DJEP…" : "Refresh DJEP from server"}
-                </Button>
               </div>
             )}
           </div>
