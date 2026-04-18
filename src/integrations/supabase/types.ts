@@ -254,6 +254,192 @@ export type Database = {
         }
         Relationships: []
       }
+      practice_preset_segments: {
+        Row: {
+          bpm: number | null
+          category: string
+          created_at: string
+          id: string
+          label: string
+          notes: string
+          preset_id: string
+          sort_order: number
+          target_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          bpm?: number | null
+          category: string
+          created_at?: string
+          id?: string
+          label?: string
+          notes?: string
+          preset_id: string
+          sort_order?: number
+          target_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          bpm?: number | null
+          category?: string
+          created_at?: string
+          id?: string
+          label?: string
+          notes?: string
+          preset_id?: string
+          sort_order?: number
+          target_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_preset_segments_preset_id_fkey"
+            columns: ["preset_id"]
+            isOneToOne: false
+            referencedRelation: "practice_presets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_presets: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          is_default: boolean
+          name: string
+          sort_order: number
+          target_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          sort_order?: number
+          target_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          sort_order?: number
+          target_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      practice_session_segments: {
+        Row: {
+          actual_seconds: number
+          bpm: number | null
+          category: string
+          completed: boolean
+          created_at: string
+          id: string
+          label: string
+          notes: string
+          session_id: string
+          skipped: boolean
+          sort_order: number
+          target_minutes: number
+          what_practiced: string
+        }
+        Insert: {
+          actual_seconds?: number
+          bpm?: number | null
+          category: string
+          completed?: boolean
+          created_at?: string
+          id?: string
+          label?: string
+          notes?: string
+          session_id: string
+          skipped?: boolean
+          sort_order?: number
+          target_minutes?: number
+          what_practiced?: string
+        }
+        Update: {
+          actual_seconds?: number
+          bpm?: number | null
+          category?: string
+          completed?: boolean
+          created_at?: string
+          id?: string
+          label?: string
+          notes?: string
+          session_id?: string
+          skipped?: boolean
+          sort_order?: number
+          target_minutes?: number
+          what_practiced?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_session_segments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "practice_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_sessions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          notes: string
+          preset_id: string | null
+          preset_name: string
+          song_of_the_day: string
+          started_at: string
+          status: string
+          total_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          notes?: string
+          preset_id?: string | null
+          preset_name?: string
+          song_of_the_day?: string
+          started_at?: string
+          status?: string
+          total_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          notes?: string
+          preset_id?: string | null
+          preset_name?: string
+          song_of_the_day?: string
+          started_at?: string
+          status?: string
+          total_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_sessions_preset_id_fkey"
+            columns: ["preset_id"]
+            isOneToOne: false
+            referencedRelation: "practice_presets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rehearsal_responses: {
         Row: {
           created_at: string

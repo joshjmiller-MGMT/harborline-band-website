@@ -5,6 +5,7 @@ import SocialManagerWidget from "@/components/dashboard/SocialManagerWidget";
 import PostingTimesWidget from "@/components/dashboard/PostingTimesWidget";
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
 import BookingAgentWidget from "@/components/dashboard/BookingAgentWidget";
+import PracticeTimerWidget from "@/components/dashboard/PracticeTimerWidget";
 import { LayoutDashboard } from "lucide-react";
 
 export default function TeamDashboard() {
@@ -22,6 +23,7 @@ export default function TeamDashboard() {
           <NeedsActionWidget />
           <UnifiedCalendarWidget />
           <BookingAgentWidget />
+          <PracticeTimerWidget />
           <PostingTimesWidget />
           <SocialManagerWidget />
           <ClaudeLogWidget />
