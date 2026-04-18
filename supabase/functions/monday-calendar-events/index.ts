@@ -95,6 +95,13 @@ Deno.serve(async (req) => {
         .map((s: string) => s.trim())
         .filter(Boolean);
 
+      // Per-source skip list. Comma-separated, case-insensitive substring
+      // match against the Monday group title. "lost sale" is always implied.
+      const skipGroupKeywords: string[] = ((src as any).skip_groups || "")
+        .split(",")
+        .map((s: string) => s.trim().toLowerCase())
+        .filter(Boolean);
+
       let boardName = "";
       const items: any[] = [];
       let cursor: string | null = null;
