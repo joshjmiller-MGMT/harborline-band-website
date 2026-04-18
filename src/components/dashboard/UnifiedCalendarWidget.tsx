@@ -875,8 +875,21 @@ export default function UnifiedCalendarWidget() {
           )}
         </div>
 
-        {/* Source filter dropdowns */}
-        <div className="mb-4 space-y-2">
+        {/* Source filter dropdowns — collapsed into a popover to save space */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="mb-4 gap-2">
+              <SlidersHorizontal className="w-4 h-4" />
+              Sources & Filters
+              <span className="text-[10px] text-muted-foreground normal-case">
+                ({googleAccounts.length + mondaySources.length + socialBrands.length + (djepConfigured ? 1 : 0)} configured)
+              </span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="w-[min(95vw,520px)] max-h-[70vh] overflow-y-auto p-3 space-y-2"
+          >
           {/* Dedup toggle */}
           {googleAccounts.length > 1 && (
             <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-card/40 px-3 py-2">
