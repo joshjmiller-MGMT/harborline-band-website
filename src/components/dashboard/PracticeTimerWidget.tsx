@@ -25,6 +25,9 @@ import {
   Music,
   Bell,
   BellOff,
+  Volume2,
+  VolumeX,
+  Hand,
 } from "lucide-react";
 import {
   DndContext,
