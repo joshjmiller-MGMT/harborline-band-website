@@ -6,6 +6,7 @@ import PostingTimesWidget from "@/components/dashboard/PostingTimesWidget";
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
 import BookingAgentWidget from "@/components/dashboard/BookingAgentWidget";
 import PracticeTimerWidget from "@/components/dashboard/PracticeTimerWidget";
+import SongsTrackerWidget from "@/components/dashboard/SongsTrackerWidget";
 import { LayoutDashboard } from "lucide-react";
 
 export default function TeamDashboard() {
