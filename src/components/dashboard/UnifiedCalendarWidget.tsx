@@ -1604,6 +1604,15 @@ export default function UnifiedCalendarWidget() {
                               placeholder="e.g. 54492562"
                             />
                           </div>
+                          <div className="col-span-2">
+                            <Label className="text-xs">Skip Groups <span className="text-muted-foreground">(comma-separated, case-insensitive)</span></Label>
+                            <Input
+                              value={editDraft.skip_groups ?? ""}
+                              onChange={(e) => setEditDraft({ ...editDraft, skip_groups: e.target.value })}
+                              placeholder="e.g. completed, archived"
+                            />
+                            <p className="text-[10px] text-muted-foreground mt-1">Items in groups whose title contains any of these keywords will be hidden. "Lost Sale" is always skipped.</p>
+                          </div>
                         </div>
                         <div className="flex gap-2 justify-end">
                           <Button size="sm" variant="outline" onClick={() => { setEditingId(null); setEditDraft({}); }}>
