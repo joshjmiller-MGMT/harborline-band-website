@@ -389,6 +389,7 @@ export default function PracticeTimerWidget() {
 
   const [history, setHistory] = useState<SessionRow[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [focusOpen, setFocusOpen] = useState(false);
 
   const tickRef = useRef<number | null>(null);
   const metro = useMetronome();
