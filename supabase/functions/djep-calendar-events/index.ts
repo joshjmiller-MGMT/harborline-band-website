@@ -303,9 +303,15 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
   for (const cells of dataRows) {
     const get = (j: number) => (j >= 0 && j < cells.length ? cells[j] : "");
 
-    const nextActionDateRaw = get(idx.nextActionDate);
-    const eventDateRaw = get(idx.eventDate);
-    // Calendar position is ALWAYS the Next Action Date — never fall back to Event Date.
+    const nextActionDateRaw = get(idx.nextActionDate).trim();
+    const eventDateRaw = get(idx.eventDate).trim();
+    // Calendar position is ALWAYS the Next Action Date.
+    // STRICT: skip any row where the NAD cell is empty, a placeholder, or
+    // identical to the Event Date (defensive — DJEP sometimes leaves NAD blank
+    // and we must NOT fall back to the event date).
+    if (!nextActionDateRaw) continue;
+    if (/^(n\/?a|none|tbd|-+|—)$/i.test(nextActionDateRaw)) continue;
+    if (nextActionDateRaw === eventDateRaw) continue;
     const parsed = parseDate(nextActionDateRaw);
     if (!parsed) continue;
     const dateRaw = nextActionDateRaw;
@@ -325,6 +331,7 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     const fields: { label: string; value: string }[] = [];
     if (status) fields.push({ label: "Status", value: status });
     if (action) fields.push({ label: "Next Action", value: action });
+    fields.push({ label: "Next Action Date", value: nextActionDateRaw });
     if (eventDateRaw) fields.push({ label: "Event Date", value: eventDateRaw });
     if (eventType) fields.push({ label: "Event Type", value: eventType });
     if (venue) fields.push({ label: "Venue", value: venue });
