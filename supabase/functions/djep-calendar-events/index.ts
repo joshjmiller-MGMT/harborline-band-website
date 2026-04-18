@@ -334,11 +334,7 @@ Deno.serve(async (req) => {
       refreshed_at: meta.refreshed_at,
       expires_at: meta.expires_at,
       debug: debug
-        ? {
-            count: events.length,
-            sampleEvents: events.slice(0, 5),
-            rawKeys: Object.keys(raw || {}),
-          }
+        ? { count: events.length, sampleEvents: events.slice(0, 5), raw }
         : { count: events.length },
     });
   } catch (err) {
