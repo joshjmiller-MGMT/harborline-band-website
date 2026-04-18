@@ -770,6 +770,9 @@ export default function PracticeTimerWidget() {
             <Timer className="w-4 h-4 text-primary" /> Practice Timer
           </CardTitle>
           <div className="flex items-center gap-1">
+            <Button size="sm" variant="ghost" onClick={() => setFocusOpen(true)} title="Focus mode">
+              <Maximize2 className="w-4 h-4" />
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => setChime((c) => !c)} title={chime ? "Mute chime" : "Enable chime"}>
               {chime ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
             </Button>
