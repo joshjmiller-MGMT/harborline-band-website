@@ -156,7 +156,16 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
   }
 
   const events = parseEventsFromHtml(html);
-  return { events, raw: { keys: Object.keys(data || {}), htmlLength: html.length, sample: html.slice(0, 6000), tableCount: (html.match(/<table/gi) || []).length } };
+  return {
+    events,
+    raw: {
+      keys: Object.keys(data || {}),
+      htmlLength: html.length,
+      tableCount: (html.match(/<table/gi) || []).length,
+      actionResults: data?.actions?.javascriptReturns ?? data?.actions?.scripts ?? data?.actions ?? null,
+      htmlSample: html.slice(0, 4000),
+    },
+  };
 }
 
 function decodeHtmlEntities(s: string): string {
