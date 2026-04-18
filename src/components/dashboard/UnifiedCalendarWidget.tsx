@@ -165,6 +165,7 @@ export default function UnifiedCalendarWidget() {
   const [events, setEvents] = useState<UnifiedEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [djepLoading, setDjepLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState<string | null>(null);
   const [googleAccounts, setGoogleAccounts] = useState<string[]>([]);
