@@ -280,9 +280,6 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
   };
   if (!dataRows.length) return { events: [], debug: { ...debug, reason: "no-data-rows" } };
 
-  const headerCells = [...rows[0].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) =>
-    stripTags(m[1]).toLowerCase()
-  );
   const colIdx = (...names: string[]): number => {
     for (const n of names) {
       const i = headerCells.findIndex((h) => h.includes(n));
@@ -291,11 +288,11 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     return -1;
   };
   const idx = {
-    eventDate: colIdx("event date"),
-    client: colIdx("client", "name"),
-    status: colIdx("status"),
-    nextAction: headerCells.findIndex((h) => h === "next action" || (h.includes("next action") && !h.includes("date"))),
-    nextActionDate: colIdx("next action date", "next date"),
+    eventDate: headerCells.findIndex((h) => h === "event date"),
+    client: headerCells.findIndex((h) => h === "client") >= 0 ? headerCells.findIndex((h) => h === "client") : colIdx("client", "name"),
+    status: headerCells.findIndex((h) => h === "status"),
+    nextAction: headerCells.findIndex((h) => h === "next action"),
+    nextActionDate: headerCells.findIndex((h) => h === "next action date"),
     eventType: colIdx("event type", "type"),
     venue: colIdx("venue", "location"),
     salesperson: colIdx("salesperson", "sales"),
@@ -303,9 +300,7 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
   };
 
   const events: DjepEvent[] = [];
-  for (let i = 1; i < rows.length; i++) {
-    const cells = [...rows[i].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) => stripTags(m[1]));
-    if (cells.length === 0) continue;
+  for (const cells of dataRows) {
     const get = (j: number) => (j >= 0 && j < cells.length ? cells[j] : "");
 
     const nextActionDateRaw = get(idx.nextActionDate);
