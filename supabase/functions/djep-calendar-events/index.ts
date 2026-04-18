@@ -111,22 +111,23 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
   // (write actions can miss input events on legacy ASP forms).
   const submitLoginJs = `
     (() => {
-      const u = document.querySelector("input[name='username']");
-      const p = document.querySelector("input[name='password']");
-      if (!u || !p) return { ok: false, reason: 'no-fields' };
-      const setNative = (el, value) => {
-        const proto = Object.getPrototypeOf(el);
-        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-        setter ? setter.call(el, value) : (el.value = value);
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-      };
-      setNative(u, ${JSON.stringify(DJEP_USERNAME ?? "")});
-      setNative(p, ${JSON.stringify(DJEP_PASSWORD ?? "")});
-      const form = u.form || document.querySelector("form[name='logonform']") || document.forms[0];
-      if (!form) return { ok: false, reason: 'no-form' };
-      form.submit();
-      return { ok: true, action: form.action, userLen: u.value.length, passLen: p.value.length };
+      try {
+        var u = document.querySelector("input[name='username']");
+        var p = document.querySelector("input[name='password']");
+        if (!u || !p) return { ok: false, reason: 'no-fields' };
+        u.focus(); u.value = ${JSON.stringify(DJEP_USERNAME ?? "")};
+        u.dispatchEvent(new Event('input', { bubbles: true }));
+        u.dispatchEvent(new Event('change', { bubbles: true }));
+        p.focus(); p.value = ${JSON.stringify(DJEP_PASSWORD ?? "")};
+        p.dispatchEvent(new Event('input', { bubbles: true }));
+        p.dispatchEvent(new Event('change', { bubbles: true }));
+        var form = u.form || document.querySelector("form[name='logonform']") || document.forms[0];
+        if (!form) return { ok: false, reason: 'no-form' };
+        form.submit();
+        return { ok: true, action: form.action, userLen: u.value.length, passLen: p.value.length };
+      } catch (e) {
+        return { ok: false, error: String(e && e.message || e) };
+      }
     })();
   `;
 
