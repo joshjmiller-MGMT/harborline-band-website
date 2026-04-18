@@ -107,8 +107,34 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
     })();
   `;
 
-  // Submit the login form via JavaScript so values are guaranteed to be set
-  // (write actions can miss input events on legacy ASP forms).
+  // Find the SALES - MILLER link and navigate the top window directly to its href.
+  // This bypasses iframe/popup quirks that prevented the previous click from loading content.
+  const navigateSalesMillerJs = `
+    (() => {
+      const docs = [document];
+      try {
+        for (const f of Array.from(document.querySelectorAll('iframe, frame'))) {
+          try { if (f.contentDocument) docs.push(f.contentDocument); } catch(e) {}
+        }
+      } catch(e) {}
+      const allLinks = [];
+      for (const d of docs) {
+        try { allLinks.push(...Array.from(d.querySelectorAll('a[href]'))); } catch(e) {}
+      }
+      const matches = allLinks.filter(a => {
+        const t = (a.textContent || '').toLowerCase();
+        return t.includes('sales - miller') || t.includes('sales-miller') || t.includes('sales miller');
+      });
+      const link = matches[0];
+      if (!link) return { ok: false, reason: 'no-link', candidates: allLinks.map(a => (a.textContent||'').trim()).filter(Boolean).slice(0, 50) };
+      const href = link.getAttribute('href') || link.href;
+      if (!href) return { ok: false, reason: 'no-href' };
+      const absolute = new URL(href, location.href).href;
+      window.location.href = absolute;
+      return { ok: true, href: absolute, linkText: (link.textContent || '').trim() };
+    })();
+  `;
+
   const submitLoginJs = `
     (() => {
       try {
@@ -123,8 +149,6 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
         p.dispatchEvent(new Event('change', { bubbles: true }));
         var form = u.form || document.querySelector("form[name='logonform']") || document.forms[0];
         if (!form) return { ok: false, reason: 'no-form' };
-        // The form has <input name="submit"> which shadows form.submit().
-        // Click the submit button instead, or invoke the prototype submit directly.
         var btn = form.querySelector("input[type='submit'], button[type='submit']");
         if (btn && typeof btn.click === 'function') {
           btn.click();
@@ -146,15 +170,14 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
     timeout: 120000,
     actions: [
       { type: "wait", milliseconds: 1500 },
-      { type: "executeJavascript", script: `(() => ({ stage: 'logon-page', title: document.title, url: location.href, hasUser: !!document.querySelector("input[name='username']"), hasPass: !!document.querySelector("input[name='password']") }))()` },
       { type: "executeJavascript", script: submitLoginJs },
       { type: "wait", milliseconds: 5000 },
-      { type: "executeJavascript", script: `(() => ({ stage: 'post-login', title: document.title, url: location.href, bodyStart: (document.body.innerText || '').slice(0, 400) }))()` },
+      { type: "executeJavascript", script: `(() => ({ stage: 'post-login', title: document.title, url: location.href }))()` },
       { type: "executeJavascript", script: clickByTextJs("Web Links") },
-      { type: "wait", milliseconds: 1500 },
-      { type: "executeJavascript", script: clickByTextJs("SALES - MILLER") },
-      { type: "wait", milliseconds: 4500 },
-      { type: "executeJavascript", script: `(() => ({ stage: 'post-nav', title: document.title, url: location.href, tableCount: document.querySelectorAll('table').length }))()` },
+      { type: "wait", milliseconds: 2000 },
+      { type: "executeJavascript", script: navigateSalesMillerJs },
+      { type: "wait", milliseconds: 6000 },
+      { type: "executeJavascript", script: `(() => ({ stage: 'post-nav', title: document.title, url: location.href, tableCount: document.querySelectorAll('table').length, headers: Array.from(document.querySelectorAll('th')).slice(0, 30).map(e => (e.textContent||'').trim()) }))()` },
       { type: "scrape" },
     ],
   };
@@ -211,38 +234,52 @@ function stripTags(s: string): string {
 }
 
 function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } {
-  const tableMatches = [...html.matchAll(/<table[\s\S]*?<\/table>/gi)].map((m) => m[0]);
-  if (!tableMatches.length) return { events: [], debug: { reason: "no-tables" } };
+  // DJEP nests tables, so extracting <table>...</table> blocks is unreliable.
+  // Scan ALL <tr> rows, find the one whose cells match the events-list header,
+  // then collect subsequent rows with the same shape.
+  const allRows = [...html.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map((m) => m[0]);
+  if (!allRows.length) return { events: [], debug: { reason: "no-rows" } };
 
-  // Look for the table that contains DJEP-specific event columns.
-  const candidates = tableMatches.map((tbl, i) => {
-    const firstRow = tbl.match(/<tr[\s\S]*?<\/tr>/i)?.[0] ?? "";
-    const headers = [...firstRow.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) =>
-      stripTags(m[1]).toLowerCase()
-    );
-    const rowCount = (tbl.match(/<tr/gi) || []).length;
-    let score = 0;
-    if (headers.some((h) => h.includes("client"))) score += 3;
-    if (headers.some((h) => h.includes("next action"))) score += 5;
-    if (headers.some((h) => h.includes("event date"))) score += 3;
-    if (headers.some((h) => h.includes("salesperson"))) score += 2;
-    return { i, headers, rowCount, score, length: tbl.length, html: tbl };
-  });
-  candidates.sort((a, b) => b.score - a.score || b.length - a.length);
-  const best = candidates[0];
-  const debug = {
-    tableCount: tableMatches.length,
-    topCandidates: candidates.slice(0, 5).map(({ i, headers, rowCount, score, length }) => ({ i, headers: headers.slice(0, 12), rowCount, score, length })),
-  };
-  if (!best || best.score === 0) return { events: [], debug: { ...debug, reason: "no-matching-table" } };
-  const table = best.html;
-
-  const rows = [...table.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map((m) => m[0]);
-  if (rows.length < 2) return { events: [], debug: { ...debug, reason: "no-rows" } };
-
-  const headerCells = [...rows[0].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) =>
-    stripTags(m[1]).toLowerCase()
+  const rowCells = allRows.map((r) =>
+    [...r.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) => stripTags(m[1]))
   );
+
+  // Find header row: cells include "Event Date", "Client", "Next Action Date".
+  let headerIdx = -1;
+  for (let i = 0; i < rowCells.length; i++) {
+    const lower = rowCells[i].map((c) => c.toLowerCase());
+    if (
+      lower.some((c) => c === "event date") &&
+      lower.some((c) => c === "client") &&
+      lower.some((c) => c.includes("next action date"))
+    ) {
+      headerIdx = i;
+      break;
+    }
+  }
+  if (headerIdx < 0) {
+    return {
+      events: [],
+      debug: {
+        reason: "no-header-row",
+        rowCount: allRows.length,
+        sampleHeaders: rowCells.slice(0, 10).map((cs) => cs.slice(0, 8)),
+      },
+    };
+  }
+
+  const headerCells = rowCells[headerIdx].map((c) => c.toLowerCase());
+  const expectedLen = headerCells.length;
+  const dataRows = rowCells.slice(headerIdx + 1).filter((cs) => cs.length === expectedLen);
+  const debug = {
+    headerIdx,
+    expectedLen,
+    totalRows: allRows.length,
+    dataRowCount: dataRows.length,
+    headers: headerCells,
+  };
+  if (!dataRows.length) return { events: [], debug: { ...debug, reason: "no-data-rows" } };
+
   const colIdx = (...names: string[]): number => {
     for (const n of names) {
       const i = headerCells.findIndex((h) => h.includes(n));
@@ -251,11 +288,11 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     return -1;
   };
   const idx = {
-    eventDate: colIdx("event date"),
-    client: colIdx("client", "name"),
-    status: colIdx("status"),
-    nextAction: headerCells.findIndex((h) => h === "next action" || (h.includes("next action") && !h.includes("date"))),
-    nextActionDate: colIdx("next action date", "next date"),
+    eventDate: headerCells.findIndex((h) => h === "event date"),
+    client: headerCells.findIndex((h) => h === "client") >= 0 ? headerCells.findIndex((h) => h === "client") : colIdx("client", "name"),
+    status: headerCells.findIndex((h) => h === "status"),
+    nextAction: headerCells.findIndex((h) => h === "next action"),
+    nextActionDate: headerCells.findIndex((h) => h === "next action date"),
     eventType: colIdx("event type", "type"),
     venue: colIdx("venue", "location"),
     salesperson: colIdx("salesperson", "sales"),
@@ -263,16 +300,15 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
   };
 
   const events: DjepEvent[] = [];
-  for (let i = 1; i < rows.length; i++) {
-    const cells = [...rows[i].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) => stripTags(m[1]));
-    if (cells.length === 0) continue;
+  for (const cells of dataRows) {
     const get = (j: number) => (j >= 0 && j < cells.length ? cells[j] : "");
 
     const nextActionDateRaw = get(idx.nextActionDate);
     const eventDateRaw = get(idx.eventDate);
-    const dateRaw = nextActionDateRaw || eventDateRaw;
-    const parsed = parseDate(dateRaw);
+    // Calendar position is ALWAYS the Next Action Date — never fall back to Event Date.
+    const parsed = parseDate(nextActionDateRaw);
     if (!parsed) continue;
+    const dateRaw = nextActionDateRaw;
 
     const client = get(idx.client) || "Lead";
     const status = get(idx.status);
@@ -282,7 +318,7 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     const salesperson = get(idx.salesperson);
     const eventId = get(idx.eventId);
 
-    if (salesperson && !salesperson.toLowerCase().includes("miller")) continue;
+    // Salesperson filter is already applied server-side via the SALES-MILLER URL.
 
     const title = action ? `${action} · ${client}` : client;
     const startISO = parsed.toISOString();
@@ -308,7 +344,7 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
       itemUrl: DJEP_URL,
     });
   }
-  return { events, debug: { ...debug, headers: headerCells, idx, parsedRows: events.length, totalRows: rows.length - 1 } };
+  return { events, debug: { ...debug, idx, parsedRows: events.length } };
 }
 
 function parseDate(raw: string): Date | null {
