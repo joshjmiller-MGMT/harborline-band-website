@@ -373,6 +373,8 @@ export default function PracticeTimerWidget() {
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const tickRef = useRef<number | null>(null);
+  const metro = useMetronome();
+  const tap = useTapTempo((b) => metro.setBpm(b));
 
   // Load presets
   const loadPresets = async () => {
