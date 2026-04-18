@@ -151,6 +151,7 @@ type MondaySource = {
   enabled: boolean;
   person_column_id?: string | null;
   person_id?: string | null;
+  skip_groups?: string;
 };
 
 type SocialBrand = {
