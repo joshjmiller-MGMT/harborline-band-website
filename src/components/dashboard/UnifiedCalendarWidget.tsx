@@ -601,10 +601,20 @@ export default function UnifiedCalendarWidget() {
   //           preference for the joshmillermanagement view of that event)
   //   stripe = thin top stripe showing which calendar/source it belongs to
   const colorsForEvent = (event: UnifiedEvent) => {
-    const stripe =
+    // Resolve override key per source so users can recolor calendar stripes.
+    let overrideKey: string | null = null;
+    if (event.source === "google" && event.accountEmail) overrideKey = `google:${event.accountEmail}`;
+    else if (event.source === "monday") {
+      const src = mondaySources.find((s) => s.label === event.sourceLabel);
+      if (src) overrideKey = `monday:${src.id}`;
+    } else if (event.source === "social" && (event as any).brandId) overrideKey = `social:${(event as any).brandId}`;
+    else if (event.source === "djep") overrideKey = `djep:default`;
+
+    const naturalStripe =
       event.source === "google"
         ? colorForAccount(event.accountEmail, googleAccounts)
         : event.color;
+    const stripe = (overrideKey && colorOverrides[overrideKey]) || naturalStripe;
 
     let body = stripe;
     if (event.source === "google") {
