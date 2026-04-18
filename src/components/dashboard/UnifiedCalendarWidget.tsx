@@ -1171,6 +1171,8 @@ export default function UnifiedCalendarWidget() {
                   <div className="flex flex-col gap-2">
                     {mondaySources.map((s) => {
                       const checked = !hiddenMondaySources.has(s.id);
+                      const overrideKey = `monday:${s.id}`;
+                      const color = colorOverrides[overrideKey] || s.color;
                       return (
                         <label
                           key={s.id}
@@ -1182,9 +1184,12 @@ export default function UnifiedCalendarWidget() {
                             onChange={() => toggleMondaySource(s.id)}
                             className="w-4 h-4 rounded accent-primary"
                           />
-                          <span
-                            className="inline-block w-5 h-5 rounded shrink-0"
-                            style={{ backgroundColor: s.color, opacity: checked ? 1 : 0.4 }}
+                          <ColorSwatchPicker
+                            color={color}
+                            hasOverride={!!colorOverrides[overrideKey]}
+                            onChange={(c) => setColorOverride(overrideKey, c)}
+                            onReset={() => resetColorOverride(overrideKey)}
+                            dimmed={!checked}
                             title={s.label}
                           />
                           <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
@@ -1261,6 +1266,8 @@ export default function UnifiedCalendarWidget() {
                   <div className="flex flex-col gap-2">
                     {socialBrands.map((b) => {
                       const checked = !hiddenSocialBrands.has(b.id);
+                      const overrideKey = `social:${b.id}`;
+                      const color = colorOverrides[overrideKey] || b.color;
                       return (
                         <label
                           key={b.id}
@@ -1272,9 +1279,12 @@ export default function UnifiedCalendarWidget() {
                             onChange={() => toggleSocialBrand(b.id)}
                             className="w-4 h-4 rounded accent-primary"
                           />
-                          <span
-                            className="inline-block w-5 h-5 rounded shrink-0"
-                            style={{ backgroundColor: b.color, opacity: checked ? 1 : 0.4 }}
+                          <ColorSwatchPicker
+                            color={color}
+                            hasOverride={!!colorOverrides[overrideKey]}
+                            onChange={(c) => setColorOverride(overrideKey, c)}
+                            onReset={() => resetColorOverride(overrideKey)}
+                            dimmed={!checked}
                             title={b.name}
                           />
                           <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
@@ -1330,6 +1340,8 @@ export default function UnifiedCalendarWidget() {
                 {(() => {
                   const checked = !hiddenDjepSources.has(DJEP_SOURCE_ID);
                   const count = events.filter((e) => e.source === "djep").length;
+                  const overrideKey = `djep:default`;
+                  const color = colorOverrides[overrideKey] || "#10b981";
                   return (
                     <label className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0">
                       <input
@@ -1338,9 +1350,12 @@ export default function UnifiedCalendarWidget() {
                         onChange={toggleDjepSource}
                         className="w-4 h-4 rounded accent-primary"
                       />
-                      <span
-                        className="inline-block w-5 h-5 rounded shrink-0"
-                        style={{ backgroundColor: "#10b981", opacity: checked ? 1 : 0.4 }}
+                      <ColorSwatchPicker
+                        color={color}
+                        hasOverride={!!colorOverrides[overrideKey]}
+                        onChange={(c) => setColorOverride(overrideKey, c)}
+                        onReset={() => resetColorOverride(overrideKey)}
+                        dimmed={!checked}
                         title="DJEP Leads"
                       />
                       <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
