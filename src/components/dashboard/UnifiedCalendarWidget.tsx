@@ -1203,6 +1203,64 @@ export default function UnifiedCalendarWidget() {
               )}
             </div>
           )}
+
+          {/* DJEP (DJ Event Planner) toggle */}
+          {djepConfigured && (
+            <div className="rounded-md border border-border bg-card/40">
+              <button
+                type="button"
+                onClick={() => togglePanel("djep")}
+                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
+              >
+                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  DJEP Leads
+                  <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
+                    ({djepHidden ? "0" : "1"}/1 visible · {djepCount} event{djepCount === 1 ? "" : "s"})
+                  </span>
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-muted-foreground transition-transform ${
+                    openPanels.djep ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {openPanels.djep && (
+                <div className="px-3 pb-3 pt-1 border-t border-border">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={!djepHidden}
+                      onChange={toggleDjep}
+                      className="w-4 h-4 rounded accent-primary"
+                    />
+                    <span
+                      className="inline-block w-5 h-5 rounded shrink-0"
+                      style={{ backgroundColor: DJEP_COLOR, opacity: !djepHidden ? 1 : 0.4 }}
+                      title="DJ Event Planner — Sales / Miller"
+                    />
+                    <span className={`truncate ${!djepHidden ? "" : "text-muted-foreground line-through"}`}>
+                      Sales – Miller
+                    </span>
+                    {djepRefreshedAt && (
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        · refreshed {new Date(djepRefreshedAt).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    )}
+                    {djepError && (
+                      <span className="text-xs text-destructive shrink-0" title={djepError}>
+                        ⚠ error
+                      </span>
+                    )}
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
 
