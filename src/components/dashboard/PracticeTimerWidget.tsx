@@ -138,6 +138,97 @@ function playChime() {
   }
 }
 
+// ---------- Metronome (WebAudio scheduled clicks) ----------
+function useMetronome() {
+  const ctxRef = useRef<AudioContext | null>(null);
+  const nextNoteRef = useRef(0);
+  const beatRef = useRef(0);
+  const timerRef = useRef<number | null>(null);
+  const bpmRef = useRef(100);
+  const mutedRef = useRef(false);
+  const [running, setRunning] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [bpm, setBpm] = useState(100);
+
+  useEffect(() => { bpmRef.current = bpm; }, [bpm]);
+  useEffect(() => { mutedRef.current = muted; }, [muted]);
+
+  const ensureCtx = () => {
+    if (!ctxRef.current) {
+      const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+      ctxRef.current = new Ctx();
+    }
+    if (ctxRef.current.state === "suspended") ctxRef.current.resume();
+    return ctxRef.current;
+  };
+
+  const click = (time: number, accent: boolean) => {
+    if (mutedRef.current) return;
+    const ctx = ctxRef.current!;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "square";
+    o.frequency.value = accent ? 1500 : 1000;
+    o.connect(g);
+    g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.exponentialRampToValueAtTime(accent ? 0.4 : 0.25, time + 0.001);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+    o.start(time);
+    o.stop(time + 0.06);
+  };
+
+  const scheduler = () => {
+    const ctx = ctxRef.current!;
+    while (nextNoteRef.current < ctx.currentTime + 0.1) {
+      click(nextNoteRef.current, beatRef.current % 4 === 0);
+      nextNoteRef.current += 60.0 / Math.max(20, bpmRef.current);
+      beatRef.current += 1;
+    }
+  };
+
+  const start = () => {
+    const ctx = ensureCtx();
+    beatRef.current = 0;
+    nextNoteRef.current = ctx.currentTime + 0.05;
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    timerRef.current = window.setInterval(scheduler, 25);
+    setRunning(true);
+  };
+  const stop = () => {
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    timerRef.current = null;
+    setRunning(false);
+  };
+
+  useEffect(() => () => { if (timerRef.current) window.clearInterval(timerRef.current); }, []);
+
+  return { running, start, stop, bpm, setBpm, muted, setMuted };
+}
+
+// ---------- Tap tempo ----------
+function useTapTempo(onTempo: (bpm: number) => void) {
+  const taps = useRef<number[]>([]);
+  return () => {
+    const now = performance.now();
+    taps.current.push(now);
+    // keep last 5, reset if >2s gap
+    if (taps.current.length > 1 && now - taps.current[taps.current.length - 2] > 2000) {
+      taps.current = [now];
+    }
+    if (taps.current.length > 5) taps.current.shift();
+    if (taps.current.length >= 2) {
+      const intervals: number[] = [];
+      for (let i = 1; i < taps.current.length; i++) {
+        intervals.push(taps.current[i] - taps.current[i - 1]);
+      }
+      const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const bpm = Math.round(60000 / avg);
+      if (bpm >= 30 && bpm <= 300) onTempo(bpm);
+    }
+  };
+}
+
 // ---------- Sortable row ----------
 function SortableRow({
   seg,
