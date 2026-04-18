@@ -73,6 +73,7 @@ Deno.serve(async (req) => {
     }
 
     const allEvents: any[] = [];
+    const missingDateItems: any[] = [];
     const debugInfo: any[] = [];
 
     for (const src of sources) {
