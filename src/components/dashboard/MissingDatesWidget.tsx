@@ -31,18 +31,27 @@ type TabDef = {
   comingSoon?: boolean;
 };
 
+const isCompletedGroup = (it: MissingItem) =>
+  /complete/i.test(it.groupTitle || "");
+
 const TABS: TabDef[] = [
   {
     key: "monday-leads",
-    label: "Monday Leads",
-    matches: (it) => /lead/i.test(it.sourceLabel),
+    label: "Leads",
+    matches: (it) => /lead/i.test(it.sourceLabel) && !isCompletedGroup(it),
     emptyText: "🎉 No Monday leads missing a date.",
   },
   {
     key: "monday-events",
-    label: "Monday Events",
-    matches: (it) => /event/i.test(it.sourceLabel),
+    label: "Events",
+    matches: (it) => /event/i.test(it.sourceLabel) && !isCompletedGroup(it),
     emptyText: "🎉 No Monday events missing a date.",
+  },
+  {
+    key: "monday-completed",
+    label: "Completed",
+    matches: isCompletedGroup,
+    emptyText: "🎉 No completed gigs missing a Next Action Date.",
   },
   {
     key: "trello",
