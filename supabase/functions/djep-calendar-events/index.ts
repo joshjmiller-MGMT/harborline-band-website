@@ -96,25 +96,33 @@ async function writeCache(events: DjepEvent[], raw: unknown) {
 // Logs in, clicks "Web Links", clicks "SALES - MILLER", waits for the grid,
 // then returns the rendered HTML which we parse for events.
 async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
+  const clickByTextJs = (text: string) => `
+    (() => {
+      const target = ${JSON.stringify(text)}.toLowerCase().trim();
+      const all = Array.from(document.querySelectorAll('a, button, span, div, td, li'));
+      const el = all.find(e => (e.textContent || '').toLowerCase().trim() === target)
+              || all.find(e => (e.textContent || '').toLowerCase().includes(target));
+      if (el) { el.click(); return true; }
+      return false;
+    })();
+  `;
+
   const body = {
     url: DJEP_URL,
     formats: ["html"],
     onlyMainContent: false,
     waitFor: 2000,
-    timeout: 90000,
+    timeout: 120000,
     actions: [
       { type: "wait", milliseconds: 1500 },
-      // Login form
       { type: "write", selector: "input[name='username'], input[name='UserName'], input[type='text']:not([type='hidden'])", text: DJEP_USERNAME ?? "" },
       { type: "write", selector: "input[name='password'], input[name='Password'], input[type='password']", text: DJEP_PASSWORD ?? "" },
-      { type: "click", selector: "input[type='submit'], button[type='submit'], input[value*='Login' i], button:has-text('Login')" },
-      { type: "wait", milliseconds: 3000 },
-      // Click "Web Links" to expand the menu
-      { type: "click", selector: "a:has-text('Web Links'), *:has-text('Web Links')" },
+      { type: "click", selector: "input[type='submit'], button[type='submit']" },
+      { type: "wait", milliseconds: 3500 },
+      { type: "executeJavascript", script: clickByTextJs("Web Links") },
       { type: "wait", milliseconds: 1500 },
-      // Click "SALES - MILLER" link
-      { type: "click", selector: "a:has-text('SALES - MILLER'), a:has-text('Sales - Miller')" },
-      { type: "wait", milliseconds: 4000 },
+      { type: "executeJavascript", script: clickByTextJs("SALES - MILLER") },
+      { type: "wait", milliseconds: 4500 },
       { type: "scrape" },
     ],
   };
