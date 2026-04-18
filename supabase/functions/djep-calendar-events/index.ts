@@ -153,7 +153,7 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
   }
 
   const events = parseEventsFromHtml(html);
-  return { events, raw: { keys: Object.keys(data || {}), htmlLength: html.length, sample: html.slice(0, 1500) } };
+  return { events, raw: { keys: Object.keys(data || {}), htmlLength: html.length, sample: html.slice(0, 6000), tableCount: (html.match(/<table/gi) || []).length } };
 }
 
 function decodeHtmlEntities(s: string): string {
