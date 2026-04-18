@@ -1649,7 +1649,22 @@ export default function UnifiedCalendarWidget() {
                         style={{ backgroundColor: s.color }}
                       />
                       <div className="flex-1 text-sm min-w-0">
-                        <div className="font-medium truncate">{s.label}</div>
+                        <div className="font-medium truncate flex items-center gap-1.5 flex-wrap">
+                          <span className="truncate">{s.label}</span>
+                          {(s.skip_groups || "")
+                            .split(",")
+                            .map((kw) => kw.trim())
+                            .filter(Boolean)
+                            .map((kw) => (
+                              <span
+                                key={kw}
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-normal bg-muted text-muted-foreground border border-border"
+                                title={`Skipping groups containing "${kw}"`}
+                              >
+                                skip: {kw}
+                              </span>
+                            ))}
+                        </div>
                         <div className="text-xs text-muted-foreground truncate">
                           Board {s.board_id} · col {s.date_column_id}
                         </div>
