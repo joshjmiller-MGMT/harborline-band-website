@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import {
   CalendarDays,
@@ -39,6 +40,7 @@ import {
   X,
   HelpCircle,
   ChevronDown,
+  SlidersHorizontal,
 } from "lucide-react";
 
 const locales = { "en-US": enUS };
@@ -56,7 +58,7 @@ type UnifiedEvent = {
   start: Date;
   end: Date;
   allDay?: boolean;
-  source: "google" | "monday" | "social" | "djep";
+  source: "google" | "monday" | "social";
   color: string;
   accountEmail?: string;
   duplicateAccounts?: string[]; // all accounts (incl primary) sharing this event
@@ -81,11 +83,8 @@ function parseEventDate(value: string, allDay?: boolean, isEnd = false): Date {
 const ACCOUNT_FILTER_KEY = "unifiedCalendar.hiddenAccounts";
 const MONDAY_FILTER_KEY = "unifiedCalendar.hiddenMondaySources";
 const SOCIAL_FILTER_KEY = "unifiedCalendar.hiddenSocialBrands";
-const DJEP_HIDDEN_KEY = "unifiedCalendar.djepHidden";
 const PANELS_OPEN_KEY = "unifiedCalendar.panelsOpen";
 const HIDE_DUPLICATES_KEY = "unifiedCalendar.hideDuplicates";
-
-const DJEP_COLOR = "#10b981";
 
 // Distinct, accessible palette for per-account coloring
 const ACCOUNT_PALETTE = [
@@ -191,32 +190,15 @@ export default function UnifiedCalendarWidget() {
       return new Set<string>();
     }
   });
-  const [djepHidden, setDjepHidden] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(DJEP_HIDDEN_KEY) === "true";
-    } catch {
-      return false;
-    }
-  });
-  const [openPanels, setOpenPanels] = useState<{
-    google: boolean;
-    monday: boolean;
-    social: boolean;
-    djep: boolean;
-  }>(() => {
+  const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean; social: boolean }>(() => {
     try {
       const raw = localStorage.getItem(PANELS_OPEN_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        return {
-          google: !!parsed.google,
-          monday: !!parsed.monday,
-          social: !!parsed.social,
-          djep: !!parsed.djep,
-        };
+        return { google: !!parsed.google, monday: !!parsed.monday, social: !!parsed.social };
       }
     } catch {}
-    return { google: false, monday: false, social: false, djep: false };
+    return { google: false, monday: false, social: false };
   });
   const [hideDuplicates, setHideDuplicates] = useState<boolean>(() => {
     try {
@@ -228,10 +210,6 @@ export default function UnifiedCalendarWidget() {
   });
   const [mondayConfigured, setMondayConfigured] = useState(false);
   const [mondayError, setMondayError] = useState<string | null>(null);
-  const [djepConfigured, setDjepConfigured] = useState(false);
-  const [djepError, setDjepError] = useState<string | null>(null);
-  const [djepCount, setDjepCount] = useState(0);
-  const [djepRefreshedAt, setDjepRefreshedAt] = useState<string | null>(null);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -262,16 +240,13 @@ export default function UnifiedCalendarWidget() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [gRes, mRes, dRes] = await Promise.all([
+      const [gRes, mRes] = await Promise.all([
         fetch(`${FUNCTIONS_BASE}/google-calendar-events`, {
           headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         }).then((r) => r.json()),
         fetch(`${FUNCTIONS_BASE}/monday-calendar-events`, {
           headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         }).then((r) => r.json()),
-        fetch(`${FUNCTIONS_BASE}/djep-calendar-events`, {
-          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        }).then((r) => r.json()).catch(() => null),
       ]);
 
       const merged: UnifiedEvent[] = [];
@@ -327,30 +302,6 @@ export default function UnifiedCalendarWidget() {
       } else {
         setMondayConfigured(false);
         setMondayError(mRes?.error || null);
-      }
-
-      if (dRes?.configured) {
-        setDjepConfigured(true);
-        setDjepError(dRes.error || null);
-        setDjepRefreshedAt(dRes.refreshed_at || null);
-        const djepEvents = Array.isArray(dRes.events) ? dRes.events : [];
-        setDjepCount(djepEvents.length);
-        for (const e of djepEvents) {
-          merged.push({
-            id: e.id,
-            title: e.title,
-            start: parseEventDate(e.start, e.allDay),
-            end: parseEventDate(e.end, e.allDay, true),
-            allDay: e.allDay,
-            source: "djep",
-            color: e.color || DJEP_COLOR,
-            meta: e,
-          });
-        }
-      } else {
-        setDjepConfigured(false);
-        setDjepError(dRes?.error || null);
-        setDjepCount(0);
       }
 
       // Preserve any social events already loaded by loadSocial
@@ -732,21 +683,11 @@ export default function UnifiedCalendarWidget() {
     } catch {}
   };
 
-  const togglePanel = (key: "google" | "monday" | "social" | "djep") => {
+  const togglePanel = (key: "google" | "monday" | "social") => {
     setOpenPanels((prev) => {
       const next = { ...prev, [key]: !prev[key] };
       try {
         localStorage.setItem(PANELS_OPEN_KEY, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  };
-
-  const toggleDjep = () => {
-    setDjepHidden((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(DJEP_HIDDEN_KEY, String(next));
       } catch {}
       return next;
     });
@@ -771,9 +712,6 @@ export default function UnifiedCalendarWidget() {
       }
       if (e.source === "social") {
         return !e.brandId || !hiddenSocialBrands.has(e.brandId);
-      }
-      if (e.source === "djep") {
-        return !djepHidden;
       }
       return true;
     });
@@ -837,7 +775,7 @@ export default function UnifiedCalendarWidget() {
       });
     }
     return deduped;
-  }, [events, hiddenAccounts, hiddenMondaySources, hiddenSocialBrands, djepHidden, mondaySourceByLabel, hideDuplicates]);
+  }, [events, hiddenAccounts, hiddenMondaySources, hiddenSocialBrands, mondaySourceByLabel, hideDuplicates]);
 
   const totalGoogleCount = useMemo(
     () =>
@@ -925,18 +863,6 @@ export default function UnifiedCalendarWidget() {
           >
             Monday: {mondayError ? "token missing" : mondaySources.length > 0 ? `${mondaySources.length} board(s)` : "no sources"}
           </span>
-          <span
-            className={`px-2 py-1 rounded ${
-              djepError
-                ? "bg-destructive/20 text-destructive"
-                : djepConfigured && djepCount > 0
-                ? "bg-green-500/20 text-green-400"
-                : "bg-muted text-muted-foreground"
-            }`}
-            title={djepError || (djepRefreshedAt ? `Refreshed ${new Date(djepRefreshedAt).toLocaleString()}` : "")}
-          >
-            DJEP: {djepError ? "error" : djepConfigured ? `${djepCount} lead${djepCount === 1 ? "" : "s"}` : "not configured"}
-          </span>
           {!googleConnected && (
             <Button size="sm" variant="outline" onClick={() => connectGoogle()}>
               <LinkIcon className="w-3 h-3 mr-1" /> Connect Google
@@ -949,8 +875,21 @@ export default function UnifiedCalendarWidget() {
           )}
         </div>
 
-        {/* Source filter dropdowns */}
-        <div className="mb-4 space-y-2">
+        {/* Source filter dropdowns — collapsed into a popover to save space */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="mb-4 gap-2">
+              <SlidersHorizontal className="w-4 h-4" />
+              Sources & Filters
+              <span className="text-[10px] text-muted-foreground normal-case">
+                ({googleAccounts.length + mondaySources.length + socialBrands.length} configured)
+              </span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="w-[min(95vw,520px)] max-h-[70vh] overflow-y-auto p-3 space-y-2"
+          >
           {/* Dedup toggle */}
           {googleAccounts.length > 1 && (
             <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-card/40 px-3 py-2">
@@ -1203,65 +1142,8 @@ export default function UnifiedCalendarWidget() {
               )}
             </div>
           )}
-
-          {/* DJEP (DJ Event Planner) toggle */}
-          {djepConfigured && (
-            <div className="rounded-md border border-border bg-card/40">
-              <button
-                type="button"
-                onClick={() => togglePanel("djep")}
-                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
-              >
-                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  DJEP Leads
-                  <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
-                    ({djepHidden ? "0" : "1"}/1 visible · {djepCount} event{djepCount === 1 ? "" : "s"})
-                  </span>
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-muted-foreground transition-transform ${
-                    openPanels.djep ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-              {openPanels.djep && (
-                <div className="px-3 pb-3 pt-1 border-t border-border">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0">
-                    <input
-                      type="checkbox"
-                      checked={!djepHidden}
-                      onChange={toggleDjep}
-                      className="w-4 h-4 rounded accent-primary"
-                    />
-                    <span
-                      className="inline-block w-5 h-5 rounded shrink-0"
-                      style={{ backgroundColor: DJEP_COLOR, opacity: !djepHidden ? 1 : 0.4 }}
-                      title="DJ Event Planner — Sales / Miller"
-                    />
-                    <span className={`truncate ${!djepHidden ? "" : "text-muted-foreground line-through"}`}>
-                      Sales – Miller
-                    </span>
-                    {djepRefreshedAt && (
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        · refreshed {new Date(djepRefreshedAt).toLocaleString([], {
-                          month: "short",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    )}
-                    {djepError && (
-                      <span className="text-xs text-destructive shrink-0" title={djepError}>
-                        ⚠ error
-                      </span>
-                    )}
-                  </label>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+          </PopoverContent>
+        </Popover>
 
 
         {/* View toggle */}
