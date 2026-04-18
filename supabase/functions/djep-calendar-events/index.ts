@@ -331,11 +331,22 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     if (salesperson) fields.push({ label: "Salesperson", value: salesperson });
     if (eventId) fields.push({ label: "Event ID", value: eventId });
 
+    // Use plain YYYY-MM-DD (no time/Z) so the client parses these in local
+    // time without UTC midnight drift. End is exclusive (next day) to match
+    // Google's all-day convention, which the client widget already handles.
+    const y = parsed.getFullYear();
+    const mo = String(parsed.getMonth() + 1).padStart(2, "0");
+    const da = String(parsed.getDate()).padStart(2, "0");
+    const startDateOnly = `${y}-${mo}-${da}`;
+    const endDate = new Date(parsed);
+    endDate.setDate(endDate.getDate() + 1);
+    const endDateOnly = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-${String(endDate.getDate()).padStart(2, "0")}`;
+
     events.push({
       id: `djep-${eventId || `${client}-${dateRaw}`}`.replace(/\s+/g, "-"),
       title,
-      start: startISO,
-      end: startISO,
+      start: startDateOnly,
+      end: endDateOnly,
       allDay: true,
       source: "djep",
       sourceLabel: "DJEP Leads",
