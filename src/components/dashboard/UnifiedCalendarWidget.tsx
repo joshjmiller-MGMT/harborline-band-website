@@ -1768,6 +1768,14 @@ export default function UnifiedCalendarWidget() {
                     placeholder="e.g. 54492562"
                   />
                 </div>
+                <div className="col-span-2">
+                  <Label className="text-xs">Skip Groups <span className="text-muted-foreground">(comma-separated)</span></Label>
+                  <Input
+                    value={newSource.skip_groups}
+                    onChange={(e) => setNewSource({ ...newSource, skip_groups: e.target.value })}
+                    placeholder="e.g. completed, archived"
+                  />
+                </div>
                 <Button onClick={addMondaySource} className="col-span-2" size="sm">
                   <Plus className="w-4 h-4 mr-1" /> Add Source
                 </Button>
