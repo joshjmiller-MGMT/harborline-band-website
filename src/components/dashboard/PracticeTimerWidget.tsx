@@ -238,6 +238,7 @@ function SortableRow({
   onChange,
   onRemove,
   running,
+  songs,
 }: {
   seg: RuntimeSegment;
   index: number;
@@ -246,6 +247,7 @@ function SortableRow({
   onChange: (patch: Partial<RuntimeSegment>) => void;
   onRemove: () => void;
   running: boolean;
+  songs: { id: string; title: string; artist: string }[];
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: seg.key });
   const style = {
@@ -290,12 +292,20 @@ function SortableRow({
                 ))}
               </SelectContent>
             </Select>
-            <Input
-              value={seg.label}
-              onChange={(e) => onChange({ label: e.target.value })}
-              placeholder="What are you working on?"
-              className="h-7 text-xs flex-1 min-w-[140px]"
-            />
+            <div className="relative flex-1 min-w-[140px]">
+              <Input
+                list={`songs-${seg.key}`}
+                value={seg.label}
+                onChange={(e) => onChange({ label: e.target.value })}
+                placeholder="What are you working on? (type to search songs)"
+                className="h-7 text-xs"
+              />
+              <datalist id={`songs-${seg.key}`}>
+                {songs.map((s) => (
+                  <option key={s.id} value={s.artist ? `${s.title} — ${s.artist}` : s.title} />
+                ))}
+              </datalist>
+            </div>
             {active && (
               <Badge variant="default" className="text-xs">
                 <Timer className="w-3 h-3 mr-1" /> Active
@@ -375,6 +385,16 @@ export default function PracticeTimerWidget() {
   const tickRef = useRef<number | null>(null);
   const metro = useMetronome();
   const tap = useTapTempo((b) => metro.setBpm(b));
+  const [songs, setSongs] = useState<{ id: string; title: string; artist: string }[]>([]);
+
+  const loadSongs = async () => {
+    const { data } = await supabase
+      .from("practice_songs")
+      .select("id, title, artist, status")
+      .order("status")
+      .order("title");
+    setSongs((data as { id: string; title: string; artist: string }[]) || []);
+  };
 
   // Load presets
   const loadPresets = async () => {
@@ -412,6 +432,14 @@ export default function PracticeTimerWidget() {
   useEffect(() => {
     loadPresets();
     loadHistory();
+    loadSongs();
+    const ch = supabase
+      .channel("songs_in_timer")
+      .on("postgres_changes", { event: "*", schema: "public", table: "practice_songs" }, loadSongs)
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   // When preset changes, populate working segments (only when no session running)
@@ -603,6 +631,31 @@ export default function PracticeTimerWidget() {
         skipped: s.skipped,
       }))
     );
+
+    // Bump times_practiced for any segment label matching a tracked song
+    const labels = finalSegs
+      .filter((s) => s.actual_seconds > 0 && !s.skipped && s.label?.trim())
+      .map((s) => s.label.split("—")[0].trim().toLowerCase());
+    const matched = songs.filter((sg) => labels.includes(sg.title.toLowerCase()));
+    if (matched.length) {
+      const { data: current } = await supabase
+        .from("practice_songs")
+        .select("id, times_practiced")
+        .in("id", matched.map((m) => m.id));
+      await Promise.all(
+        (current || []).map((c) =>
+          supabase
+            .from("practice_songs")
+            .update({
+              times_practiced: (c.times_practiced || 0) + 1,
+              last_practiced_at: new Date().toISOString(),
+            })
+            .eq("id", c.id)
+        )
+      );
+      loadSongs();
+    }
+
     toast({ title: "Session logged", description: `${Math.round(totalSec / 60)} minutes practiced.` });
     setSessionId(null);
     setSessionStart(null);
@@ -898,6 +951,7 @@ export default function PracticeTimerWidget() {
                       running={running && activeIdx === i}
                       onChange={(patch) => updateSeg(i, patch)}
                       onRemove={() => removeSeg(i)}
+                      songs={songs}
                     />
                   </div>
                 ))}

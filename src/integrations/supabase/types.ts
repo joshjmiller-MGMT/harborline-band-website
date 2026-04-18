@@ -440,6 +440,48 @@ export type Database = {
           },
         ]
       }
+      practice_songs: {
+        Row: {
+          artist: string
+          created_at: string
+          id: string
+          key: string
+          last_practiced_at: string | null
+          learned_at: string | null
+          notes: string
+          status: string
+          times_practiced: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          artist?: string
+          created_at?: string
+          id?: string
+          key?: string
+          last_practiced_at?: string | null
+          learned_at?: string | null
+          notes?: string
+          status?: string
+          times_practiced?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          artist?: string
+          created_at?: string
+          id?: string
+          key?: string
+          last_practiced_at?: string | null
+          learned_at?: string | null
+          notes?: string
+          status?: string
+          times_practiced?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rehearsal_responses: {
         Row: {
           created_at: string
