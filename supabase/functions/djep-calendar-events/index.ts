@@ -344,7 +344,7 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
       itemUrl: DJEP_URL,
     });
   }
-  return { events, debug: { ...debug, headers: headerCells, idx, parsedRows: events.length, totalRows: rows.length - 1 } };
+  return { events, debug: { ...debug, idx, parsedRows: events.length } };
 }
 
 function parseDate(raw: string): Date | null {
