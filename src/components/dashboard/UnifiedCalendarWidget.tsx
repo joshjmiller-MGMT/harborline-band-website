@@ -772,6 +772,9 @@ export default function UnifiedCalendarWidget() {
       if (e.source === "social") {
         return !e.brandId || !hiddenSocialBrands.has(e.brandId);
       }
+      if (e.source === "djep") {
+        return !djepHidden;
+      }
       return true;
     });
 
