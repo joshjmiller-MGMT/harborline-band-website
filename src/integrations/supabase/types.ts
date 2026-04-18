@@ -120,6 +120,7 @@ export type Database = {
           created_at: string
           date_column_id: string
           enabled: boolean
+          fallback_date_column_ids: string
           id: string
           label: string
           person_column_id: string | null
@@ -132,6 +133,7 @@ export type Database = {
           created_at?: string
           date_column_id: string
           enabled?: boolean
+          fallback_date_column_ids?: string
           id?: string
           label: string
           person_column_id?: string | null
@@ -144,6 +146,7 @@ export type Database = {
           created_at?: string
           date_column_id?: string
           enabled?: boolean
+          fallback_date_column_ids?: string
           id?: string
           label?: string
           person_column_id?: string | null
