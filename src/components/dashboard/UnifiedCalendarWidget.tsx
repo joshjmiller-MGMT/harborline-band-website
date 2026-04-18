@@ -253,13 +253,16 @@ export default function UnifiedCalendarWidget() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [gRes, mRes] = await Promise.all([
+      const [gRes, mRes, dRes] = await Promise.all([
         fetch(`${FUNCTIONS_BASE}/google-calendar-events`, {
           headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         }).then((r) => r.json()),
         fetch(`${FUNCTIONS_BASE}/monday-calendar-events`, {
           headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         }).then((r) => r.json()),
+        fetch(`${FUNCTIONS_BASE}/djep-calendar-events`, {
+          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        }).then((r) => r.json()).catch(() => ({ events: [] })),
       ]);
 
       const merged: UnifiedEvent[] = [];
@@ -315,6 +318,21 @@ export default function UnifiedCalendarWidget() {
       } else {
         setMondayConfigured(false);
         setMondayError(mRes?.error || null);
+      }
+
+      // DJEP leads — cached server-side; failures are silent so the rest
+      // of the calendar still loads.
+      for (const e of dRes?.events || []) {
+        merged.push({
+          id: e.id,
+          title: e.title,
+          start: parseEventDate(e.start, e.allDay),
+          end: parseEventDate(e.end, e.allDay, true),
+          allDay: e.allDay,
+          source: "djep",
+          color: e.color || "#10b981",
+          meta: e,
+        });
       }
 
       // Preserve any social events already loaded by loadSocial
