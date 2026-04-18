@@ -202,11 +202,29 @@ Deno.serve(async (req) => {
             }
           }
         }
-        if (!dateStr) continue;
-        // Skip any item in a "Lost Sale" group (case-insensitive, handles
-        // variants like "Lost Sales", "LOST SALE", "lost-sale").
+        // Skip "Lost Sale" groups entirely — they shouldn't appear in events
+        // OR the missing-dates log.
         const groupTitleRaw = (item.group?.title || "").toLowerCase().replace(/[-_]/g, " ").trim();
-        if (groupTitleRaw.includes("lost sale")) continue;
+        const isLostSale = groupTitleRaw.includes("lost sale");
+        if (isLostSale) continue;
+
+        if (!dateStr) {
+          // Track items that need a date assigned. Used by the dashboard
+          // "Items Missing Dates" widget so the team can act on them.
+          missingDateItems.push({
+            id: `monday-missing-${src.board_id}-${item.id}`,
+            itemId: item.id,
+            name: item.name,
+            boardId: src.board_id,
+            boardName,
+            sourceLabel: src.label,
+            color: src.color,
+            groupTitle: item.group?.title || null,
+            itemUrl: item.url || `https://view.monday.com/boards/${src.board_id}/pulses/${item.id}`,
+            updatedAt: item.updated_at || null,
+          });
+          continue;
+        }
         withDates++;
 
         const startISO = timeStr
