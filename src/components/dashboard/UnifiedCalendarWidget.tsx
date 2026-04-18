@@ -58,13 +58,18 @@ type UnifiedEvent = {
   start: Date;
   end: Date;
   allDay?: boolean;
-  source: "google" | "monday" | "social";
+  source: "google" | "monday" | "social" | "djep";
   color: string;
   accountEmail?: string;
   duplicateAccounts?: string[]; // all accounts (incl primary) sharing this event
   brandId?: string; // for social posts
   meta?: any;
 };
+
+// DJEP is a single logical source; we treat it like a one-item group in the
+// Sources & Filters panel so it matches the visual pattern of other sources.
+const DJEP_SOURCE_ID = "djep-leads";
+const DJEP_FILTER_KEY = "unifiedCalendar.hiddenDjepSources";
 
 // Parse event dates safely. Google all-day events use "YYYY-MM-DD" with an
 // EXCLUSIVE end date — naive `new Date()` parses these as UTC midnight which
