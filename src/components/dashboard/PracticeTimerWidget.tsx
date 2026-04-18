@@ -238,6 +238,7 @@ function SortableRow({
   onChange,
   onRemove,
   running,
+  songs,
 }: {
   seg: RuntimeSegment;
   index: number;
@@ -246,6 +247,7 @@ function SortableRow({
   onChange: (patch: Partial<RuntimeSegment>) => void;
   onRemove: () => void;
   running: boolean;
+  songs: { id: string; title: string; artist: string }[];
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: seg.key });
   const style = {
