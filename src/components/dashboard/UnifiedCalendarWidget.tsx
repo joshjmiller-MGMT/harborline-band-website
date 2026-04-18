@@ -204,6 +204,7 @@ export default function UnifiedCalendarWidget() {
       return new Set<string>();
     }
   });
+  const [djepRefreshedAt, setDjepRefreshedAt] = useState<string | null>(null);
   const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean; social: boolean; djep: boolean }>(() => {
     try {
       const raw = localStorage.getItem(PANELS_OPEN_KEY);
