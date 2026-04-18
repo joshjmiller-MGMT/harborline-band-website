@@ -47,6 +47,39 @@ export type Database = {
         }
         Relationships: []
       }
+      djep_events_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          events: Json
+          expires_at: string
+          id: string
+          raw: Json | null
+          refreshed_at: string
+          updated_at: string
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          events?: Json
+          expires_at: string
+          id?: string
+          raw?: Json | null
+          refreshed_at?: string
+          updated_at?: string
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          events?: Json
+          expires_at?: string
+          id?: string
+          raw?: Json | null
+          refreshed_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       google_calendar_tokens: {
         Row: {
           access_token: string
