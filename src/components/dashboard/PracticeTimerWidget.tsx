@@ -28,6 +28,7 @@ import {
   Volume2,
   VolumeX,
   Hand,
+  Maximize2,
 } from "lucide-react";
 import {
   DndContext,
