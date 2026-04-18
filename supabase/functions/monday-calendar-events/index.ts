@@ -77,8 +77,22 @@ Deno.serve(async (req) => {
 
     for (const src of sources) {
       // Use items_page_by_column_values for server-side person filtering when configured.
-      // This handles boards with thousands of items (no 200 cap) and is much more accurate.
-      const usePersonFilter = src.person_column_id && src.person_id;
+      // Supports comma-separated IDs in person_id (e.g. "54492562,97563930") so a
+      // single source can match items owned by any of several Monday users.
+      const personIds: string[] = (src.person_id || "")
+        .split(",")
+        .map((s: string) => s.trim())
+        .filter(Boolean);
+      const usePersonFilter = src.person_column_id && personIds.length > 0;
+
+      // Optional comma-separated list of *fallback* date column IDs. When the
+      // primary date column on an item is empty, the function tries each
+      // fallback in order. Stored on the source row as a magic key in label,
+      // OR (recommended) configured via the dashboard UI.
+      const fallbackDateColumns: string[] = ((src as any).fallback_date_column_ids || "")
+        .split(",")
+        .map((s: string) => s.trim())
+        .filter(Boolean);
 
       let boardName = "";
       const items: any[] = [];
@@ -96,15 +110,16 @@ Deno.serve(async (req) => {
             }
           }`;
         } else if (usePersonFilter) {
-          // Filter to items where the person column contains the configured user ID.
-          // Monday people columns expect the value as "person-<id>".
+          // Filter to items where the person column contains ANY of the configured user IDs.
+          // Monday people columns expect each value as "person-<id>".
+          const compareValues = personIds.map((id) => `"person-${id}"`).join(",");
           query = `query {
             boards(ids: [${src.board_id}]) {
               name
               items_page(
                 limit: 500,
                 query_params: {
-                  rules: [{ column_id: "${src.person_column_id}", compare_value: ["person-${src.person_id}"], operator: any_of }]
+                  rules: [{ column_id: "${src.person_column_id}", compare_value: [${compareValues}], operator: any_of }]
                 }
               ) {
                 cursor
@@ -150,24 +165,41 @@ Deno.serve(async (req) => {
         label: src.label,
         itemsFetched: items.length,
         usePersonFilter,
+        personIds,
+        fallbackDateColumns,
       });
 
-      let withDates = 0;
-      for (const item of items) {
-        const dateCol = item.column_values?.find((c: any) => c.id === src.date_column_id);
-        if (!dateCol) continue;
-
-        let dateStr: string | null = null;
-        let timeStr: string | null = null;
+      // Helper to extract { dateStr, timeStr } from a Monday date column value.
+      const extractDate = (col: any): { dateStr: string | null; timeStr: string | null } => {
+        if (!col) return { dateStr: null, timeStr: null };
         try {
-          const parsed = dateCol.value ? JSON.parse(dateCol.value) : null;
-          if (parsed?.date) {
-            dateStr = parsed.date;
-            timeStr = parsed.time || null;
-          }
+          const parsed = col.value ? JSON.parse(col.value) : null;
+          if (parsed?.date) return { dateStr: parsed.date, timeStr: parsed.time || null };
         } catch { /* ignore */ }
-        if (!dateStr && dateCol.text) {
-          dateStr = dateCol.text.split(" ")[0];
+        if (col.text) return { dateStr: col.text.split(" ")[0], timeStr: null };
+        return { dateStr: null, timeStr: null };
+      };
+
+      let withDates = 0;
+      let withFallbackDates = 0;
+      for (const item of items) {
+        // Try the primary date column first, then any configured fallbacks.
+        const primaryCol = item.column_values?.find((c: any) => c.id === src.date_column_id);
+        let { dateStr, timeStr } = extractDate(primaryCol);
+        let usedColumnId: string | null = dateStr ? src.date_column_id : null;
+
+        if (!dateStr) {
+          for (const fallbackId of fallbackDateColumns) {
+            const fbCol = item.column_values?.find((c: any) => c.id === fallbackId);
+            const fb = extractDate(fbCol);
+            if (fb.dateStr) {
+              dateStr = fb.dateStr;
+              timeStr = fb.timeStr;
+              usedColumnId = fallbackId;
+              withFallbackDates++;
+              break;
+            }
+          }
         }
         if (!dateStr) continue;
         withDates++;
@@ -182,7 +214,7 @@ Deno.serve(async (req) => {
         const fields: { label: string; value: string; columnId: string }[] = [];
         for (const c of item.column_values || []) {
           if (!c.text || !c.text.trim()) continue;
-          if (c.id === src.date_column_id) continue;
+          if (c.id === usedColumnId) continue;
           fields.push({
             label: c.column?.title || c.id,
             value: c.text,
@@ -201,6 +233,7 @@ Deno.serve(async (req) => {
           color: src.color,
           boardName,
           groupTitle: item.group?.title || null,
+          dateColumnUsed: usedColumnId,
           fields,
           updatedAt: item.updated_at || null,
           itemUrl: item.url || `https://view.monday.com/boards/${src.board_id}/pulses/${item.id}`,
@@ -208,7 +241,10 @@ Deno.serve(async (req) => {
       }
 
       const last = debugInfo[debugInfo.length - 1];
-      if (last) last.itemsWithDates = withDates;
+      if (last) {
+        last.itemsWithDates = withDates;
+        last.itemsViaFallback = withFallbackDates;
+      }
     }
 
     return new Response(
