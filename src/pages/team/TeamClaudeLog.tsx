@@ -1,4 +1,4 @@
-TEST_INJECTIONimport { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = "https://uqrpshzgonoopcwjglzl.supabase.co";
