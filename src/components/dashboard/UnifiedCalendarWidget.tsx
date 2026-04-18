@@ -42,6 +42,9 @@ import {
   ChevronDown,
   SlidersHorizontal,
 } from "lucide-react";
+import ColorSwatchPicker from "./ColorSwatchPicker";
+
+const COLOR_OVERRIDES_KEY = "unifiedCalendar.colorOverrides";
 
 const locales = { "en-US": enUS };
 const localizer = dateFnsLocalizer({
@@ -205,6 +208,32 @@ export default function UnifiedCalendarWidget() {
     }
   });
   const [djepRefreshedAt, setDjepRefreshedAt] = useState<string | null>(null);
+
+  // Color overrides keyed by `${kind}:${id}` — e.g. "google:foo@bar.com",
+  // "monday:<sourceId>", "social:<brandId>", "djep:default".
+  const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(() => {
+    try {
+      const raw = localStorage.getItem(COLOR_OVERRIDES_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+  const setColorOverride = (key: string, color: string) => {
+    setColorOverrides((prev) => {
+      const next = { ...prev, [key]: color };
+      try { localStorage.setItem(COLOR_OVERRIDES_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  const resetColorOverride = (key: string) => {
+    setColorOverrides((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      try { localStorage.setItem(COLOR_OVERRIDES_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
   const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean; social: boolean; djep: boolean }>(() => {
     try {
       const raw = localStorage.getItem(PANELS_OPEN_KEY);
