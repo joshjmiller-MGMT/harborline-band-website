@@ -134,6 +134,7 @@ const App = () => (
               <Route path="/team/resources" element={<TeamResources />} />
               <Route path="/team/run-of-show" element={<TeamRunOfShow />} />
               <Route path="/team/dashboard" element={<TeamDashboard />} />
+              <Route path="/team/practice" element={<TeamPractice />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
