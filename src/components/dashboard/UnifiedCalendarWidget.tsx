@@ -40,6 +40,7 @@ import {
   X,
   HelpCircle,
   ChevronDown,
+  SlidersHorizontal,
 } from "lucide-react";
 
 const locales = { "en-US": enUS };
