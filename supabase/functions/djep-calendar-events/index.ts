@@ -182,7 +182,7 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
     throw new Error(`Firecrawl scrape returned no HTML. Keys: ${Object.keys(data || {}).join(",")}`);
   }
 
-  const events = parseEventsFromHtml(html);
+  const { events, debug: parseDebug } = parseEventsFromHtml(html);
   return {
     events,
     raw: {
@@ -190,7 +190,7 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
       htmlLength: html.length,
       tableCount: (html.match(/<table/gi) || []).length,
       actionResults: data?.actions?.javascriptReturns ?? data?.actions?.scripts ?? data?.actions ?? null,
-      htmlSample: html.slice(0, 4000),
+      parse: parseDebug,
     },
   };
 }
