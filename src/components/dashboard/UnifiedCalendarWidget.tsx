@@ -821,7 +821,7 @@ export default function UnifiedCalendarWidget() {
       });
     }
     return deduped;
-  }, [events, hiddenAccounts, hiddenMondaySources, hiddenSocialBrands, mondaySourceByLabel, hideDuplicates]);
+  }, [events, hiddenAccounts, hiddenMondaySources, hiddenSocialBrands, hiddenDjepSources, mondaySourceByLabel, hideDuplicates]);
 
   const totalGoogleCount = useMemo(
     () =>
