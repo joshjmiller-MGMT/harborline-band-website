@@ -58,13 +58,18 @@ type UnifiedEvent = {
   start: Date;
   end: Date;
   allDay?: boolean;
-  source: "google" | "monday" | "social";
+  source: "google" | "monday" | "social" | "djep";
   color: string;
   accountEmail?: string;
   duplicateAccounts?: string[]; // all accounts (incl primary) sharing this event
   brandId?: string; // for social posts
   meta?: any;
 };
+
+// DJEP is a single logical source; we treat it like a one-item group in the
+// Sources & Filters panel so it matches the visual pattern of other sources.
+const DJEP_SOURCE_ID = "djep-leads";
+const DJEP_FILTER_KEY = "unifiedCalendar.hiddenDjepSources";
 
 // Parse event dates safely. Google all-day events use "YYYY-MM-DD" with an
 // EXCLUSIVE end date — naive `new Date()` parses these as UTC midnight which
@@ -190,15 +195,23 @@ export default function UnifiedCalendarWidget() {
       return new Set<string>();
     }
   });
-  const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean; social: boolean }>(() => {
+  const [hiddenDjepSources, setHiddenDjepSources] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(DJEP_FILTER_KEY);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
+  const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean; social: boolean; djep: boolean }>(() => {
     try {
       const raw = localStorage.getItem(PANELS_OPEN_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        return { google: !!parsed.google, monday: !!parsed.monday, social: !!parsed.social };
+        return { google: !!parsed.google, monday: !!parsed.monday, social: !!parsed.social, djep: !!parsed.djep };
       }
     } catch {}
-    return { google: false, monday: false, social: false };
+    return { google: false, monday: false, social: false, djep: false };
   });
   const [hideDuplicates, setHideDuplicates] = useState<boolean>(() => {
     try {
@@ -240,13 +253,16 @@ export default function UnifiedCalendarWidget() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [gRes, mRes] = await Promise.all([
+      const [gRes, mRes, dRes] = await Promise.all([
         fetch(`${FUNCTIONS_BASE}/google-calendar-events`, {
           headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         }).then((r) => r.json()),
         fetch(`${FUNCTIONS_BASE}/monday-calendar-events`, {
           headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         }).then((r) => r.json()),
+        fetch(`${FUNCTIONS_BASE}/djep-calendar-events`, {
+          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        }).then((r) => r.json()).catch(() => ({ events: [] })),
       ]);
 
       const merged: UnifiedEvent[] = [];
@@ -302,6 +318,21 @@ export default function UnifiedCalendarWidget() {
       } else {
         setMondayConfigured(false);
         setMondayError(mRes?.error || null);
+      }
+
+      // DJEP leads — cached server-side; failures are silent so the rest
+      // of the calendar still loads.
+      for (const e of dRes?.events || []) {
+        merged.push({
+          id: e.id,
+          title: e.title,
+          start: parseEventDate(e.start, e.allDay),
+          end: parseEventDate(e.end, e.allDay, true),
+          allDay: e.allDay,
+          source: "djep",
+          color: e.color || "#10b981",
+          meta: e,
+        });
       }
 
       // Preserve any social events already loaded by loadSocial
@@ -683,7 +714,19 @@ export default function UnifiedCalendarWidget() {
     } catch {}
   };
 
-  const togglePanel = (key: "google" | "monday" | "social") => {
+  const toggleDjepSource = () => {
+    setHiddenDjepSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(DJEP_SOURCE_ID)) next.delete(DJEP_SOURCE_ID);
+      else next.add(DJEP_SOURCE_ID);
+      try {
+        localStorage.setItem(DJEP_FILTER_KEY, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
+
+  const togglePanel = (key: "google" | "monday" | "social" | "djep") => {
     setOpenPanels((prev) => {
       const next = { ...prev, [key]: !prev[key] };
       try {
@@ -712,6 +755,9 @@ export default function UnifiedCalendarWidget() {
       }
       if (e.source === "social") {
         return !e.brandId || !hiddenSocialBrands.has(e.brandId);
+      }
+      if (e.source === "djep") {
+        return !hiddenDjepSources.has(DJEP_SOURCE_ID);
       }
       return true;
     });
@@ -775,7 +821,7 @@ export default function UnifiedCalendarWidget() {
       });
     }
     return deduped;
-  }, [events, hiddenAccounts, hiddenMondaySources, hiddenSocialBrands, mondaySourceByLabel, hideDuplicates]);
+  }, [events, hiddenAccounts, hiddenMondaySources, hiddenSocialBrands, hiddenDjepSources, mondaySourceByLabel, hideDuplicates]);
 
   const totalGoogleCount = useMemo(
     () =>
@@ -818,16 +864,6 @@ export default function UnifiedCalendarWidget() {
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={loadAll} disabled={loading}>
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={refreshDjep}
-            disabled={djepLoading}
-            title="Re-scrape DJ Event Planner (Sales – Miller). Takes 30–60s."
-          >
-            <RefreshCw className={`w-4 h-4 mr-1 ${djepLoading ? "animate-spin" : ""}`} />
-            {djepLoading ? "Refreshing DJEP…" : "Refresh DJEP"}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setShowSettings(true)}>
             <SettingsIcon className="w-4 h-4" />
@@ -1142,6 +1178,66 @@ export default function UnifiedCalendarWidget() {
               )}
             </div>
           )}
+
+          {/* DJEP Leads — single-source toggle plus refresh button */}
+          <div className="rounded-md border border-border bg-card/40">
+            <button
+              type="button"
+              onClick={() => togglePanel("djep")}
+              className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-card/60 transition-colors"
+            >
+              <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                DJEP Leads
+                <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">
+                  ({hiddenDjepSources.has(DJEP_SOURCE_ID) ? 0 : 1}/1 visible)
+                </span>
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 text-muted-foreground transition-transform ${
+                  openPanels.djep ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            {openPanels.djep && (
+              <div className="px-3 pb-3 pt-1 border-t border-border space-y-2">
+                {(() => {
+                  const checked = !hiddenDjepSources.has(DJEP_SOURCE_ID);
+                  const count = events.filter((e) => e.source === "djep").length;
+                  return (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer select-none min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={toggleDjepSource}
+                        className="w-4 h-4 rounded accent-primary"
+                      />
+                      <span
+                        className="inline-block w-5 h-5 rounded shrink-0"
+                        style={{ backgroundColor: "#10b981", opacity: checked ? 1 : 0.4 }}
+                        title="DJEP Leads"
+                      />
+                      <span className={`truncate ${checked ? "" : "text-muted-foreground line-through"}`}>
+                        SALES - MILLER
+                      </span>
+                      <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
+                        {count} event{count === 1 ? "" : "s"}
+                      </span>
+                    </label>
+                  );
+                })()}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshDjep}
+                  disabled={djepLoading}
+                  className="w-full"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${djepLoading ? "animate-spin" : ""}`} />
+                  {djepLoading ? "Refreshing DJEP…" : "Refresh DJEP from server"}
+                </Button>
+              </div>
+            )}
+          </div>
           </PopoverContent>
         </Popover>
 
