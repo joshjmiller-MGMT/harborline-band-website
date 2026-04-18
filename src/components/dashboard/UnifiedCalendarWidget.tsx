@@ -262,13 +262,16 @@ export default function UnifiedCalendarWidget() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [gRes, mRes] = await Promise.all([
+      const [gRes, mRes, dRes] = await Promise.all([
         fetch(`${FUNCTIONS_BASE}/google-calendar-events`, {
           headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         }).then((r) => r.json()),
         fetch(`${FUNCTIONS_BASE}/monday-calendar-events`, {
           headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         }).then((r) => r.json()),
+        fetch(`${FUNCTIONS_BASE}/djep-calendar-events`, {
+          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        }).then((r) => r.json()).catch(() => null),
       ]);
 
       const merged: UnifiedEvent[] = [];
