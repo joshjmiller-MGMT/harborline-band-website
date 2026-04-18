@@ -28,6 +28,7 @@ import {
   Volume2,
   VolumeX,
   Hand,
+  Maximize2,
 } from "lucide-react";
 import {
   DndContext,
@@ -149,6 +150,7 @@ function useMetronome() {
   const [running, setRunning] = useState(false);
   const [muted, setMuted] = useState(false);
   const [bpm, setBpm] = useState(100);
+  const [currentBeat, setCurrentBeat] = useState(-1); // -1 = idle, 0..3 = beat in bar
 
   useEffect(() => { bpmRef.current = bpm; }, [bpm]);
   useEffect(() => { mutedRef.current = muted; }, [muted]);
@@ -162,26 +164,31 @@ function useMetronome() {
     return ctxRef.current;
   };
 
-  const click = (time: number, accent: boolean) => {
-    if (mutedRef.current) return;
+  const click = (time: number, beatInBar: number) => {
     const ctx = ctxRef.current!;
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = "square";
-    o.frequency.value = accent ? 1500 : 1000;
-    o.connect(g);
-    g.connect(ctx.destination);
-    g.gain.setValueAtTime(0.0001, time);
-    g.gain.exponentialRampToValueAtTime(accent ? 0.4 : 0.25, time + 0.001);
-    g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
-    o.start(time);
-    o.stop(time + 0.06);
+    const accent = beatInBar === 0;
+    if (!mutedRef.current) {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "square";
+      o.frequency.value = accent ? 1500 : 1000;
+      o.connect(g);
+      g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, time);
+      g.gain.exponentialRampToValueAtTime(accent ? 0.4 : 0.25, time + 0.001);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+      o.start(time);
+      o.stop(time + 0.06);
+    }
+    // Schedule UI beat indicator update at audio time
+    const delayMs = Math.max(0, (time - ctx.currentTime) * 1000);
+    window.setTimeout(() => setCurrentBeat(beatInBar), delayMs);
   };
 
   const scheduler = () => {
     const ctx = ctxRef.current!;
     while (nextNoteRef.current < ctx.currentTime + 0.1) {
-      click(nextNoteRef.current, beatRef.current % 4 === 0);
+      click(nextNoteRef.current, beatRef.current % 4);
       nextNoteRef.current += 60.0 / Math.max(20, bpmRef.current);
       beatRef.current += 1;
     }
@@ -199,11 +206,12 @@ function useMetronome() {
     if (timerRef.current) window.clearInterval(timerRef.current);
     timerRef.current = null;
     setRunning(false);
+    setCurrentBeat(-1);
   };
 
   useEffect(() => () => { if (timerRef.current) window.clearInterval(timerRef.current); }, []);
 
-  return { running, start, stop, bpm, setBpm, muted, setMuted };
+  return { running, start, stop, bpm, setBpm, muted, setMuted, currentBeat };
 }
 
 // ---------- Tap tempo ----------
@@ -381,6 +389,7 @@ export default function PracticeTimerWidget() {
 
   const [history, setHistory] = useState<SessionRow[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [focusOpen, setFocusOpen] = useState(false);
 
   const tickRef = useRef<number | null>(null);
   const metro = useMetronome();
@@ -761,6 +770,9 @@ export default function PracticeTimerWidget() {
             <Timer className="w-4 h-4 text-primary" /> Practice Timer
           </CardTitle>
           <div className="flex items-center gap-1">
+            <Button size="sm" variant="ghost" onClick={() => setFocusOpen(true)} title="Focus mode">
+              <Maximize2 className="w-4 h-4" />
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => setChime((c) => !c)} title={chime ? "Mute chime" : "Enable chime"}>
               {chime ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
             </Button>
@@ -966,6 +978,120 @@ export default function PracticeTimerWidget() {
           )}
         </div>
       </CardContent>
+
+      {/* Focus mode modal — consolidated Timer + Metronome */}
+      <Dialog open={focusOpen} onOpenChange={setFocusOpen}>
+        <DialogContent className="max-w-5xl w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="text-base flex items-center gap-2">
+              <Maximize2 className="w-4 h-4 text-primary" /> Focus Mode
+              {activeIdx != null && segments[activeIdx] && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  {segments[activeIdx].category}
+                  {segments[activeIdx].label ? ` · ${segments[activeIdx].label}` : ""}
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+            {/* Left: Timer */}
+            <div className="rounded-xl border bg-gradient-to-br from-primary/10 to-transparent p-6 flex flex-col items-center justify-center min-h-[340px]">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                {activeIdx != null ? `Segment ${activeIdx + 1} of ${segments.length}` : "Ready"}
+              </p>
+              <p className="font-mono text-7xl md:text-8xl font-bold tabular-nums my-2">{fmt(elapsedSec)}</p>
+              {activeIdx != null && (
+                <p className="text-xs text-muted-foreground mb-3">
+                  Target {segments[activeIdx]?.target_minutes} min · Total {fmt(totalElapsed)} / {fmt(totalTarget)}
+                </p>
+              )}
+              <div className="flex items-center gap-2 flex-wrap justify-center mt-2">
+                {!sessionId ? (
+                  <Button onClick={startSession} className="gap-1">
+                    <Play className="w-4 h-4" /> Start
+                  </Button>
+                ) : (
+                  <>
+                    <Button onClick={togglePause} variant={running ? "secondary" : "default"} className="gap-1">
+                      {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      {running ? "Pause" : "Resume"}
+                    </Button>
+                    <Button onClick={() => nextSegment(true)} variant="outline" size="sm" className="gap-1">
+                      <SkipForward className="w-4 h-4" /> Next
+                    </Button>
+                    <Button onClick={addMinute} variant="ghost" size="sm">+1</Button>
+                    <Button onClick={finishSession} variant="destructive" size="sm" className="gap-1">
+                      <StopCircle className="w-4 h-4" /> Stop
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Metronome */}
+            <div className="rounded-xl border bg-gradient-to-br from-accent/10 to-transparent p-6 flex flex-col items-center justify-center min-h-[340px]">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Metronome</p>
+              <p className="font-mono text-7xl md:text-8xl font-bold tabular-nums my-2">{metro.bpm}</p>
+              <p className="text-xs text-muted-foreground mb-4">BPM</p>
+
+              {/* 4-light beat indicator */}
+              <div className="flex items-center gap-3 mb-5">
+                {[0, 1, 2, 3].map((i) => {
+                  const active = metro.running && metro.currentBeat === i;
+                  const accent = i === 0;
+                  return (
+                    <div
+                      key={i}
+                      className={`rounded-full transition-all duration-75 ${
+                        active
+                          ? accent
+                            ? "w-7 h-7 bg-primary shadow-[0_0_20px_hsl(var(--primary))]"
+                            : "w-6 h-6 bg-primary/80 shadow-[0_0_12px_hsl(var(--primary)/0.6)]"
+                          : "w-5 h-5 bg-muted"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                <Button
+                  onClick={() => (metro.running ? metro.stop() : metro.start())}
+                  variant={metro.running ? "default" : "outline"}
+                  className="gap-1"
+                >
+                  {metro.running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  {metro.running ? "Stop" : "Start"}
+                </Button>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => metro.setBpm(Math.max(30, metro.bpm - 5))}>−5</Button>
+                  <Input
+                    type="number"
+                    min={30}
+                    max={300}
+                    value={metro.bpm}
+                    onChange={(e) => metro.setBpm(parseInt(e.target.value || "0") || 0)}
+                    className="h-8 w-16 text-center text-sm"
+                  />
+                  <Button size="sm" variant="ghost" onClick={() => metro.setBpm(Math.min(300, metro.bpm + 5))}>+5</Button>
+                </div>
+                <Button size="sm" variant="ghost" onClick={tap} className="gap-1">
+                  <Hand className="w-3 h-3" /> Tap
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => metro.setMuted(!metro.muted)}>
+                  {metro.muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </Button>
+              </div>
+              {activeIdx != null && segments[activeIdx]?.bpm && (
+                <p className="text-[10px] text-muted-foreground mt-3">
+                  Synced to segment ({segments[activeIdx].bpm} BPM)
+                </p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
