@@ -1142,7 +1142,8 @@ export default function UnifiedCalendarWidget() {
               )}
             </div>
           )}
-        </div>
+          </PopoverContent>
+        </Popover>
 
 
         {/* View toggle */}
