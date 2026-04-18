@@ -210,10 +210,32 @@ function stripTags(s: string): string {
   return decodeHtmlEntities(s.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 }
 
-function parseEventsFromHtml(html: string): DjepEvent[] {
+function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } {
   const tableMatches = [...html.matchAll(/<table[\s\S]*?<\/table>/gi)].map((m) => m[0]);
-  if (!tableMatches.length) return [];
-  const table = tableMatches.sort((a, b) => b.length - a.length)[0];
+  if (!tableMatches.length) return { events: [], debug: { reason: "no-tables" } };
+
+  // Look for the table that contains DJEP-specific event columns.
+  const candidates = tableMatches.map((tbl, i) => {
+    const firstRow = tbl.match(/<tr[\s\S]*?<\/tr>/i)?.[0] ?? "";
+    const headers = [...firstRow.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) =>
+      stripTags(m[1]).toLowerCase()
+    );
+    const rowCount = (tbl.match(/<tr/gi) || []).length;
+    let score = 0;
+    if (headers.some((h) => h.includes("client"))) score += 3;
+    if (headers.some((h) => h.includes("next action"))) score += 5;
+    if (headers.some((h) => h.includes("event date"))) score += 3;
+    if (headers.some((h) => h.includes("salesperson"))) score += 2;
+    return { i, headers, rowCount, score, length: tbl.length, html: tbl };
+  });
+  candidates.sort((a, b) => b.score - a.score || b.length - a.length);
+  const best = candidates[0];
+  const debug = {
+    tableCount: tableMatches.length,
+    topCandidates: candidates.slice(0, 5).map(({ i, headers, rowCount, score, length }) => ({ i, headers: headers.slice(0, 12), rowCount, score, length })),
+  };
+  if (!best || best.score === 0) return { events: [], debug: { ...debug, reason: "no-matching-table" } };
+  const table = best.html;
 
   const rows = [...table.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map((m) => m[0]);
   if (rows.length < 2) return [];
