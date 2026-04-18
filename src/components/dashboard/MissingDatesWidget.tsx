@@ -56,11 +56,11 @@ export default function MissingDatesWidget() {
   return (
     <Card className="bg-card/50 border-border">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="font-display text-lg tracking-wide-custom flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-primary" />
+        <CardTitle className="font-display text-lg tracking-wide-custom flex items-center gap-2 text-destructive">
+          <AlertTriangle className="w-5 h-5 text-destructive" />
           Items Missing Dates
           {items.length > 0 && (
-            <Badge variant="secondary" className="ml-1">{items.length}</Badge>
+            <Badge variant="destructive" className="ml-1">{items.length}</Badge>
           )}
         </CardTitle>
         <Button
