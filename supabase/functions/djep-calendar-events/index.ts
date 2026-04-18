@@ -331,6 +331,7 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     const fields: { label: string; value: string }[] = [];
     if (status) fields.push({ label: "Status", value: status });
     if (action) fields.push({ label: "Next Action", value: action });
+    fields.push({ label: "Next Action Date", value: nextActionDateRaw });
     if (eventDateRaw) fields.push({ label: "Event Date", value: eventDateRaw });
     if (eventType) fields.push({ label: "Event Type", value: eventType });
     if (venue) fields.push({ label: "Venue", value: venue });
