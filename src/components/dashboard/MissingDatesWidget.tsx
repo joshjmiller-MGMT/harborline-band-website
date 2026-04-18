@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AlertTriangle, RefreshCw, ExternalLink } from "lucide-react";
 
 type MissingItem = {
@@ -18,12 +19,77 @@ type MissingItem = {
   updatedAt: string | null;
 };
 
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // mirror calendar refresh cadence
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+
+// Tab definitions. Each tab declares which `sourceLabel` substrings (matched
+// case-insensitively) belong to it. Add Trello here once that source exists.
+type TabDef = {
+  key: string;
+  label: string;
+  matches: (item: MissingItem) => boolean;
+  emptyText: string;
+  comingSoon?: boolean;
+};
+
+const TABS: TabDef[] = [
+  {
+    key: "monday-leads",
+    label: "Monday Leads",
+    matches: (it) => /lead/i.test(it.sourceLabel),
+    emptyText: "🎉 No Monday leads missing a date.",
+  },
+  {
+    key: "monday-events",
+    label: "Monday Events",
+    matches: (it) => /event/i.test(it.sourceLabel),
+    emptyText: "🎉 No Monday events missing a date.",
+  },
+  {
+    key: "trello",
+    label: "Trello",
+    matches: () => false,
+    emptyText: "Trello integration coming soon.",
+    comingSoon: true,
+  },
+];
+
+function ItemList({ items, emptyText }: { items: MissingItem[]; emptyText: string }) {
+  if (items.length === 0) {
+    return <p className="text-sm text-muted-foreground">{emptyText}</p>;
+  }
+  return (
+    <ul className="space-y-1 max-h-[360px] overflow-y-auto pr-1">
+      {items.map((it) => (
+        <li key={it.id}>
+          <a
+            href={it.itemUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="group flex items-start gap-2 px-2 py-1.5 rounded hover:bg-muted/50 transition-colors"
+          >
+            <span
+              className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+              style={{ backgroundColor: it.color || "#8b5cf6" }}
+            />
+            <ExternalLink className="w-3.5 h-3.5 mt-0.5 text-muted-foreground group-hover:text-foreground flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-foreground truncate">{it.name}</p>
+              {it.groupTitle && (
+                <p className="text-xs text-muted-foreground truncate">{it.groupTitle}</p>
+              )}
+            </div>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function MissingDatesWidget() {
   const [items, setItems] = useState<MissingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
+  const [activeTab, setActiveTab] = useState<string>(TABS[0].key);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,12 +112,11 @@ export default function MissingDatesWidget() {
     return () => clearInterval(t);
   }, [load]);
 
-  // Group by source label for readability.
-  const grouped = items.reduce<Record<string, MissingItem[]>>((acc, it) => {
-    const k = it.sourceLabel || it.boardName || "Other";
-    (acc[k] ||= []).push(it);
+  const countsByTab = TABS.reduce<Record<string, number>>((acc, tab) => {
+    acc[tab.key] = items.filter(tab.matches).length;
     return acc;
   }, {});
+  const totalCount = items.length;
 
   return (
     <Card className="bg-card/50 border-border">
@@ -59,8 +124,8 @@ export default function MissingDatesWidget() {
         <CardTitle className="font-display text-lg tracking-wide-custom flex items-center gap-2 text-destructive">
           <AlertTriangle className="w-5 h-5 text-destructive" />
           Items Missing Dates
-          {items.length > 0 && (
-            <Badge variant="destructive" className="ml-1">{items.length}</Badge>
+          {totalCount > 0 && (
+            <Badge variant="destructive" className="ml-1">{totalCount}</Badge>
           )}
         </CardTitle>
         <Button
@@ -80,52 +145,31 @@ export default function MissingDatesWidget() {
           </p>
         )}
 
-        {loading && items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            🎉 Every Monday item has a date. Nothing to action.
-          </p>
-        ) : (
-          <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1">
-            {Object.entries(grouped).map(([source, list]) => (
-              <div key={source}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: list[0]?.color || "#8b5cf6" }}
-                  />
-                  <h4 className="text-sm font-display tracking-wide-custom text-foreground">
-                    {source}
-                  </h4>
-                  <Badge variant="outline" className="text-xs">{list.length}</Badge>
-                </div>
-                <ul className="space-y-1">
-                  {list.map((it) => (
-                    <li key={it.id}>
-                      <a
-                        href={it.itemUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="group flex items-start gap-2 px-2 py-1.5 rounded hover:bg-muted/50 transition-colors"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 mt-0.5 text-muted-foreground group-hover:text-foreground flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm text-foreground truncate">{it.name}</p>
-                          {it.groupTitle && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {it.groupTitle}
-                            </p>
-                          )}
-                        </div>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-3">
+            {TABS.map((tab) => (
+              <TabsTrigger key={tab.key} value={tab.key} className="text-xs">
+                {tab.label}
+                {countsByTab[tab.key] > 0 && (
+                  <Badge variant="destructive" className="ml-1.5 h-4 px-1.5 text-[10px]">
+                    {countsByTab[tab.key]}
+                  </Badge>
+                )}
+              </TabsTrigger>
             ))}
-          </div>
-        )}
+          </TabsList>
+          {TABS.map((tab) => (
+            <TabsContent key={tab.key} value={tab.key} className="mt-4">
+              {tab.comingSoon ? (
+                <p className="text-sm text-muted-foreground">{tab.emptyText}</p>
+              ) : loading && items.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : (
+                <ItemList items={items.filter(tab.matches)} emptyText={tab.emptyText} />
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
       </CardContent>
     </Card>
   );
