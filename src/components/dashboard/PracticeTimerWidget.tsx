@@ -385,6 +385,16 @@ export default function PracticeTimerWidget() {
   const tickRef = useRef<number | null>(null);
   const metro = useMetronome();
   const tap = useTapTempo((b) => metro.setBpm(b));
+  const [songs, setSongs] = useState<{ id: string; title: string; artist: string }[]>([]);
+
+  const loadSongs = async () => {
+    const { data } = await supabase
+      .from("practice_songs")
+      .select("id, title, artist, status")
+      .order("status")
+      .order("title");
+    setSongs((data as { id: string; title: string; artist: string }[]) || []);
+  };
 
   // Load presets
   const loadPresets = async () => {
