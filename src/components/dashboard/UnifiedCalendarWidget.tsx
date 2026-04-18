@@ -191,15 +191,32 @@ export default function UnifiedCalendarWidget() {
       return new Set<string>();
     }
   });
-  const [openPanels, setOpenPanels] = useState<{ google: boolean; monday: boolean; social: boolean }>(() => {
+  const [djepHidden, setDjepHidden] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(DJEP_HIDDEN_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [openPanels, setOpenPanels] = useState<{
+    google: boolean;
+    monday: boolean;
+    social: boolean;
+    djep: boolean;
+  }>(() => {
     try {
       const raw = localStorage.getItem(PANELS_OPEN_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        return { google: !!parsed.google, monday: !!parsed.monday, social: !!parsed.social };
+        return {
+          google: !!parsed.google,
+          monday: !!parsed.monday,
+          social: !!parsed.social,
+          djep: !!parsed.djep,
+        };
       }
     } catch {}
-    return { google: false, monday: false, social: false };
+    return { google: false, monday: false, social: false, djep: false };
   });
   const [hideDuplicates, setHideDuplicates] = useState<boolean>(() => {
     try {
@@ -211,6 +228,10 @@ export default function UnifiedCalendarWidget() {
   });
   const [mondayConfigured, setMondayConfigured] = useState(false);
   const [mondayError, setMondayError] = useState<string | null>(null);
+  const [djepConfigured, setDjepConfigured] = useState(false);
+  const [djepError, setDjepError] = useState<string | null>(null);
+  const [djepCount, setDjepCount] = useState(0);
+  const [djepRefreshedAt, setDjepRefreshedAt] = useState<string | null>(null);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
