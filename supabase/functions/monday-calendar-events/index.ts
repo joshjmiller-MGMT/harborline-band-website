@@ -271,7 +271,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ configured: true, events: allEvents, debug: debugInfo }),
+      JSON.stringify({ configured: true, events: allEvents, missingDateItems, debug: debugInfo }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
