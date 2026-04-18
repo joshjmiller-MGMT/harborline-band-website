@@ -185,13 +185,12 @@ Deno.serve(async (req) => {
       let withFallbackDates = 0;
       let missingPrimary = 0;
       for (const item of items) {
-        // Skip "Lost Sale" / "Booked" / "Completed" groups entirely — they
-        // shouldn't appear in events OR the missing-dates log.
+        // Skip "Lost Sale" groups entirely — they shouldn't appear in events
+        // OR the missing-dates log. Booked/Completed items DO get flagged
+        // because they may still need a Next Action Date assigned.
         const groupTitleRaw = (item.group?.title || "").toLowerCase().replace(/[-_]/g, " ").trim();
         const isLostSale = groupTitleRaw.includes("lost sale");
-        const isBooked = groupTitleRaw.includes("booked");
-        const isCompleted = groupTitleRaw.includes("completed");
-        if (isLostSale || isBooked || isCompleted) continue;
+        if (isLostSale) continue;
 
         // Primary date column (e.g. "Next Action Date"). This is the one we
         // care about for the missing-dates report.
