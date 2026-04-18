@@ -123,8 +123,15 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
         p.dispatchEvent(new Event('change', { bubbles: true }));
         var form = u.form || document.querySelector("form[name='logonform']") || document.forms[0];
         if (!form) return { ok: false, reason: 'no-form' };
-        form.submit();
-        return { ok: true, action: form.action, userLen: u.value.length, passLen: p.value.length };
+        // The form has <input name="submit"> which shadows form.submit().
+        // Click the submit button instead, or invoke the prototype submit directly.
+        var btn = form.querySelector("input[type='submit'], button[type='submit']");
+        if (btn && typeof btn.click === 'function') {
+          btn.click();
+        } else {
+          HTMLFormElement.prototype.submit.call(form);
+        }
+        return { ok: true, action: form.action, userLen: u.value.length, passLen: p.value.length, viaButton: !!btn };
       } catch (e) {
         return { ok: false, error: String(e && e.message || e) };
       }
