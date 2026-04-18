@@ -1,12 +1,14 @@
-// Scrapes DJ Event Planner (baltimoresoundeventmanager.com) using Firecrawl.
-// Logs into the ASP site, navigates to "Web Links → SALES - MILLER", and
-// returns the events list filtered by the configured salesperson, with the
-// "Next Action Date" column driving the calendar date.
+// DJ Event Planner (DJEP) → calendar events
 //
-// Behavior:
-//   GET ?debug=1   → returns raw markdown + parsed events for inspection
-//   GET (default)  → returns { configured, events, debug? } in the same shape
-//                    as monday-calendar-events for easy widget consumption.
+// Uses Firecrawl's /v2/extract LLM-powered endpoint with a natural-language
+// prompt to log in, navigate to "Web Links → SALES - MILLER", and pull out the
+// events list with the "Next Action Date" column as the calendar date.
+//
+// Results are cached in the `djep_events_cache` Supabase table for 1 hour so
+// the dashboard stays snappy. Pass ?refresh=1 to force a fresh scrape.
+// Pass ?debug=1 to include the raw extract payload.
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,10 +19,13 @@ const corsHeaders = {
 const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
 const DJEP_USERNAME = Deno.env.get("DJEP_USERNAME");
 const DJEP_PASSWORD = Deno.env.get("DJEP_PASSWORD");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const DJEP_URL = "https://baltimoresoundeventmanager.com/dj_event_planner/base2.asp";
-const SALESPERSON_LINK_TEXT = "SALES - MILLER";
-const SALESPERSON_NAME = "Josh Miller"; // shown on each row; used as a sanity filter
+const DJEP_URL =
+  "https://baltimoresoundeventmanager.com/dj_event_planner/base2.asp";
+const CACHE_KEY = "djep:sales-miller";
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 type DjepEvent = {
   id: string;
@@ -42,31 +47,101 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-async function firecrawlScrape(): Promise<{ markdown: string; raw: any }> {
-  // Use Firecrawl actions to log in, click into Web Links → Sales - Miller,
-  // wait for the events list grid to render, and finally scrape markdown.
-  const body = {
-    url: DJEP_URL,
-    formats: ["markdown"],
-    onlyMainContent: false,
-    waitFor: 1500,
-    actions: [
-      { type: "wait", milliseconds: 1500 },
-      { type: "write", text: DJEP_USERNAME, selector: "input[name='UserName'], input[id*='UserName'], input[name='Username'], input[type='text']" },
-      { type: "write", text: DJEP_PASSWORD, selector: "input[type='password']" },
-      { type: "click", selector: "input[type='submit'], button[type='submit']" },
-      { type: "wait", milliseconds: 2500 },
-      // Open the Web Links section in the left nav.
-      { type: "click", text: "Web Links" },
-      { type: "wait", milliseconds: 1500 },
-      // Click the "SALES - MILLER" link.
-      { type: "click", text: SALESPERSON_LINK_TEXT },
-      { type: "wait", milliseconds: 3500 },
-      { type: "scrape" },
-    ],
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
+
+async function getCachedEvents(): Promise<
+  { events: DjepEvent[]; refreshed_at: string; expires_at: string } | null
+> {
+  const { data, error } = await supabase
+    .from("djep_events_cache")
+    .select("events, refreshed_at, expires_at")
+    .eq("cache_key", CACHE_KEY)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Cache read error:", error.message);
+    return null;
+  }
+  if (!data) return null;
+  if (new Date(data.expires_at).getTime() < Date.now()) return null;
+  return {
+    events: (data.events as DjepEvent[]) ?? [],
+    refreshed_at: data.refreshed_at,
+    expires_at: data.expires_at,
+  };
+}
+
+async function writeCache(events: DjepEvent[], raw: unknown) {
+  const now = new Date();
+  const expires = new Date(now.getTime() + CACHE_TTL_MS);
+  const { error } = await supabase
+    .from("djep_events_cache")
+    .upsert(
+      {
+        cache_key: CACHE_KEY,
+        events,
+        raw,
+        refreshed_at: now.toISOString(),
+        expires_at: expires.toISOString(),
+      },
+      { onConflict: "cache_key" }
+    );
+  if (error) console.error("Cache write error:", error.message);
+  return { refreshed_at: now.toISOString(), expires_at: expires.toISOString() };
+}
+
+// Firecrawl /v2/extract — uses an LLM agent to navigate the site and return
+// structured data per the supplied JSON schema. Much more reliable than
+// trying to script the ASP UI step-by-step with click actions.
+async function firecrawlExtract(): Promise<{ events: DjepEvent[]; raw: any }> {
+  const schema = {
+    type: "object",
+    properties: {
+      events: {
+        type: "array",
+        description:
+          "Every row from the Sales - Miller events list grid. Include all rows visible.",
+        items: {
+          type: "object",
+          properties: {
+            client: { type: "string", description: "Client / lead name" },
+            status: { type: "string", description: "Lead status (e.g. Inquiry, Booked)" },
+            next_action: { type: "string", description: "Next Action description" },
+            next_action_date: {
+              type: "string",
+              description:
+                "Next Action Date in MM/DD/YYYY format (this is what we use as the calendar date)",
+            },
+            event_date: { type: "string", description: "Event Date (MM/DD/YYYY) if shown" },
+            event_type: { type: "string" },
+            venue: { type: "string" },
+            salesperson: { type: "string" },
+            event_id: { type: "string", description: "DJEP Event ID number" },
+          },
+          required: ["client", "next_action_date"],
+        },
+      },
+    },
+    required: ["events"],
   };
 
-  const r = await fetch("https://api.firecrawl.dev/v2/scrape", {
+  const prompt = `Log in to the DJ Event Planner site using username "${DJEP_USERNAME}" and password "${DJEP_PASSWORD}".
+After logging in, click the "Web Links" item in the left navigation to expand it, then click the "SALES - MILLER" link.
+Wait for the events grid to load. The grid has columns including: Event Date, Client, Status, Next Action, Next Action Date, Event Type, Venue, Salesperson, Event ID, plus others.
+Extract every row in that grid where the salesperson is Josh Miller. For each row return the fields defined in the schema. The "Next Action Date" column is the most important field — it is the date we will display on the calendar.`;
+
+  const body = {
+    urls: [DJEP_URL],
+    prompt,
+    schema,
+    enableWebSearch: false,
+    // Allow long-running navigation; extract jobs are async on Firecrawl
+  };
+
+  // Kick off the extract job
+  const startRes = await fetch("https://api.firecrawl.dev/v2/extract", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
@@ -74,128 +149,106 @@ async function firecrawlScrape(): Promise<{ markdown: string; raw: any }> {
     },
     body: JSON.stringify(body),
   });
-
-  const data = await r.json();
-  if (!r.ok) {
-    throw new Error(`Firecrawl ${r.status}: ${JSON.stringify(data).slice(0, 600)}`);
+  const startJson = await startRes.json();
+  if (!startRes.ok) {
+    throw new Error(
+      `Firecrawl extract start ${startRes.status}: ${JSON.stringify(startJson).slice(0, 600)}`
+    );
   }
-  // v2 returns { success, data: { markdown, ... } } typically; some shapes nest under data.
-  const markdown =
-    data?.data?.markdown ??
-    data?.markdown ??
-    data?.data?.actions?.scrapes?.[0]?.markdown ??
-    "";
 
-  return { markdown, raw: data };
+  const jobId = startJson?.id ?? startJson?.data?.id;
+  // If the API returned data inline (sync), use it directly
+  if (!jobId && (startJson?.data || startJson?.success)) {
+    return parseExtractPayload(startJson);
+  }
+  if (!jobId) {
+    throw new Error(`Firecrawl extract: no job id in response ${JSON.stringify(startJson).slice(0, 400)}`);
+  }
+
+  // Poll for completion (extract is async — typically 30-60s)
+  const deadline = Date.now() + 90_000; // 90s budget
+  let lastJson: any = null;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const statusRes = await fetch(
+      `https://api.firecrawl.dev/v2/extract/${jobId}`,
+      {
+        headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}` },
+      }
+    );
+    const statusJson = await statusRes.json();
+    lastJson = statusJson;
+    const status = statusJson?.status ?? statusJson?.data?.status;
+    if (status === "completed" || statusJson?.data?.events || statusJson?.data?.data?.events) {
+      return parseExtractPayload(statusJson);
+    }
+    if (status === "failed" || status === "cancelled") {
+      throw new Error(`Firecrawl extract ${status}: ${JSON.stringify(statusJson).slice(0, 400)}`);
+    }
+  }
+  throw new Error(
+    `Firecrawl extract timed out after 90s. Last status: ${JSON.stringify(lastJson).slice(0, 400)}`
+  );
 }
 
-// Parse a markdown table row from the events list. The Sales - Miller view
-// is a single grid with these visible columns (per the user's screenshot):
-// Event Date | Client | Status | Next Action | Next Action Date | Event Type
-// | Package | Start-End Time | Assigned Employees | Venue | Setup Time
-// | Start Time | End Time | Addons | Salesperson | Total Fee | Balance Due
-// | Date Booked | TSB or BSE | Open In New Tab | Event ID
-//
-// Firecrawl's markdown for HTML grids commonly emits each row as a `|` separated
-// line. We try that first, then fall back to a heuristic line scan.
+function parseExtractPayload(payload: any): { events: DjepEvent[]; raw: any } {
+  // Firecrawl extract returns the structured data under a few possible shapes.
+  const extracted =
+    payload?.data?.events ??
+    payload?.data?.data?.events ??
+    payload?.events ??
+    payload?.data?.json?.events ??
+    [];
 
-function parseDjepEvents(markdown: string): DjepEvent[] {
   const events: DjepEvent[] = [];
-  if (!markdown) return events;
+  for (const row of Array.isArray(extracted) ? extracted : []) {
+    const dateRaw = String(row?.next_action_date ?? "");
+    const parsed = parseDate(dateRaw);
+    if (!parsed) continue;
 
-  // Try strict markdown table parse first.
-  const lines = markdown.split("\n");
-  // Find header line containing both "Event Date" and "Next Action Date".
-  let headerIdx = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const lower = lines[i].toLowerCase();
-    if (lower.includes("event date") && lower.includes("next action date") && lines[i].includes("|")) {
-      headerIdx = i;
-      break;
-    }
+    const salesperson = String(row?.salesperson ?? "");
+    if (salesperson && !salesperson.toLowerCase().includes("miller")) continue;
+
+    const client = String(row?.client ?? "Lead");
+    const action = String(row?.next_action ?? "");
+    const status = String(row?.status ?? "");
+    const eventDate = String(row?.event_date ?? "");
+    const eventType = String(row?.event_type ?? "");
+    const venue = String(row?.venue ?? "");
+    const eventId = String(row?.event_id ?? "");
+
+    const title = action ? `${action} · ${client}` : client;
+    const startISO = parsed.toISOString();
+    const fields: { label: string; value: string }[] = [];
+    if (status) fields.push({ label: "Status", value: status });
+    if (action) fields.push({ label: "Next Action", value: action });
+    if (eventDate) fields.push({ label: "Event Date", value: eventDate });
+    if (eventType) fields.push({ label: "Event Type", value: eventType });
+    if (venue) fields.push({ label: "Venue", value: venue });
+    if (salesperson) fields.push({ label: "Salesperson", value: salesperson });
+    if (eventId) fields.push({ label: "Event ID", value: eventId });
+
+    events.push({
+      id: `djep-${eventId || `${client}-${dateRaw}`}`.replace(/\s+/g, "-"),
+      title,
+      start: startISO,
+      end: startISO,
+      allDay: true,
+      source: "djep",
+      sourceLabel: "DJEP Leads",
+      color: "#10b981",
+      fields,
+      itemUrl: DJEP_URL,
+    });
   }
 
-  if (headerIdx >= 0) {
-    const headerCells = lines[headerIdx]
-      .split("|")
-      .map((c) => c.trim().toLowerCase())
-      .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1 || (idx === 0 && arr[0] !== ""));
-    const colIdx = (name: string) => headerCells.findIndex((c) => c.includes(name));
-    const idxNextActionDate = colIdx("next action date");
-    const idxClient = colIdx("client");
-    const idxNextAction = colIdx("next action");
-    const idxEventDate = colIdx("event date");
-    const idxStatus = colIdx("status");
-    const idxEventType = colIdx("event type");
-    const idxVenue = colIdx("venue");
-    const idxSalesperson = colIdx("salesperson");
-    const idxEventId = colIdx("event id");
-
-    for (let i = headerIdx + 2; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line.includes("|")) break;
-      // Skip the alignment row "| --- | --- |"
-      if (/^\s*\|?\s*[-: ]+\s*\|/.test(line) && !line.match(/[A-Za-z0-9]/)) continue;
-
-      const cells = line.split("|").map((c) => c.trim());
-      // Markdown rows usually start and end with "|", giving leading/trailing empties.
-      const firstReal = cells[0] === "" ? 1 : 0;
-      const trimmed = cells.slice(firstReal, cells[cells.length - 1] === "" ? -1 : undefined);
-
-      const get = (i: number) => (i >= 0 && i < trimmed.length ? trimmed[i] : "");
-
-      const nextActionDateRaw = get(idxNextActionDate);
-      if (!nextActionDateRaw) continue;
-      const parsed = parseDate(nextActionDateRaw);
-      if (!parsed) continue;
-
-      // Filter by salesperson if the column is present.
-      const salesperson = get(idxSalesperson);
-      if (salesperson && !salesperson.toLowerCase().includes("miller")) continue;
-
-      const client = get(idxClient) || "Lead";
-      const action = get(idxNextAction);
-      const eventDate = get(idxEventDate);
-      const status = get(idxStatus);
-      const eventType = get(idxEventType);
-      const venue = get(idxVenue);
-      const eventId = get(idxEventId);
-
-      const title = action ? `${action} · ${client}` : client;
-
-      const startISO = parsed.toISOString();
-      const fields: { label: string; value: string }[] = [];
-      if (status) fields.push({ label: "Status", value: status });
-      if (action) fields.push({ label: "Next Action", value: action });
-      if (eventDate) fields.push({ label: "Event Date", value: eventDate });
-      if (eventType) fields.push({ label: "Event Type", value: eventType });
-      if (venue) fields.push({ label: "Venue", value: venue });
-      if (salesperson) fields.push({ label: "Salesperson", value: salesperson });
-      if (eventId) fields.push({ label: "Event ID", value: eventId });
-
-      events.push({
-        id: `djep-${eventId || `${i}-${client}`}`.replace(/\s+/g, "-"),
-        title,
-        start: startISO,
-        end: startISO,
-        allDay: true,
-        source: "djep",
-        sourceLabel: "DJEP Leads",
-        color: "#10b981", // emerald — distinct from Monday purple
-        fields,
-        itemUrl: DJEP_URL,
-      });
-    }
-  }
-
-  return events;
+  return { events, raw: payload };
 }
 
 function parseDate(raw: string): Date | null {
-  // Common DJEP formats: "4/20/2026", "04/20/2026", "4/20/2026 3:30 PM"
-  const m = raw.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  const m = raw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
   if (!m) return null;
-  let [, mo, da, yr] = m;
+  const [, mo, da, yr] = m;
   const year = yr.length === 2 ? 2000 + Number(yr) : Number(yr);
   const d = new Date(year, Number(mo) - 1, Number(da));
   if (isNaN(d.getTime())) return null;
@@ -209,23 +262,44 @@ Deno.serve(async (req) => {
     return jsonResponse({ configured: false, events: [], error: "FIRECRAWL_API_KEY not set" });
   }
   if (!DJEP_USERNAME || !DJEP_PASSWORD) {
-    return jsonResponse({ configured: false, events: [], error: "DJEP_USERNAME / DJEP_PASSWORD not set" });
+    return jsonResponse({
+      configured: false,
+      events: [],
+      error: "DJEP_USERNAME / DJEP_PASSWORD not set",
+    });
   }
 
   const url = new URL(req.url);
   const debug = url.searchParams.get("debug") === "1";
+  const forceRefresh = url.searchParams.get("refresh") === "1";
+
+  // Try cache first
+  if (!forceRefresh) {
+    const cached = await getCachedEvents();
+    if (cached) {
+      return jsonResponse({
+        configured: true,
+        events: cached.events,
+        cached: true,
+        refreshed_at: cached.refreshed_at,
+        expires_at: cached.expires_at,
+        debug: debug ? { count: cached.events.length, source: "cache" } : { count: cached.events.length },
+      });
+    }
+  }
 
   try {
-    const { markdown, raw } = await firecrawlScrape();
-    const events = parseDjepEvents(markdown);
-
+    const { events, raw } = await firecrawlExtract();
+    const meta = await writeCache(events, raw);
     return jsonResponse({
       configured: true,
       events,
+      cached: false,
+      refreshed_at: meta.refreshed_at,
+      expires_at: meta.expires_at,
       debug: debug
         ? {
-            markdownLength: markdown.length,
-            markdownPreview: markdown.slice(0, 4000),
+            count: events.length,
             sampleEvents: events.slice(0, 5),
             rawKeys: Object.keys(raw || {}),
           }
@@ -233,7 +307,24 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("DJEP scrape error:", msg);
+    console.error("DJEP extract error:", msg);
+    // Fall back to stale cache if scrape failed
+    const stale = await supabase
+      .from("djep_events_cache")
+      .select("events, refreshed_at, expires_at")
+      .eq("cache_key", CACHE_KEY)
+      .maybeSingle();
+    if (stale.data) {
+      return jsonResponse({
+        configured: true,
+        events: stale.data.events ?? [],
+        cached: true,
+        stale: true,
+        refreshed_at: stale.data.refreshed_at,
+        expires_at: stale.data.expires_at,
+        error: msg,
+      });
+    }
     return jsonResponse({ configured: true, events: [], error: msg }, 200);
   }
 });
