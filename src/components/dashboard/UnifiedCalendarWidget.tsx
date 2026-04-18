@@ -882,7 +882,7 @@ export default function UnifiedCalendarWidget() {
               <SlidersHorizontal className="w-4 h-4" />
               Sources & Filters
               <span className="text-[10px] text-muted-foreground normal-case">
-                ({googleAccounts.length + mondaySources.length + socialBrands.length + (djepConfigured ? 1 : 0)} configured)
+                ({googleAccounts.length + mondaySources.length + socialBrands.length} configured)
               </span>
             </Button>
           </PopoverTrigger>
