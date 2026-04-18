@@ -1671,6 +1671,7 @@ export default function UnifiedCalendarWidget() {
                             date_column_id: s.date_column_id,
                             person_column_id: s.person_column_id ?? "",
                             person_id: s.person_id ?? "",
+                            skip_groups: s.skip_groups ?? "",
                           });
                         }}
                       >
