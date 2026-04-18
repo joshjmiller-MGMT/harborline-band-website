@@ -4,6 +4,7 @@ import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget"
 import SocialManagerWidget from "@/components/dashboard/SocialManagerWidget";
 import PostingTimesWidget from "@/components/dashboard/PostingTimesWidget";
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
+import BookingAgentWidget from "@/components/dashboard/BookingAgentWidget";
 import { LayoutDashboard } from "lucide-react";
 
 export default function TeamDashboard() {
@@ -20,6 +21,7 @@ export default function TeamDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <NeedsActionWidget />
           <UnifiedCalendarWidget />
+          <BookingAgentWidget />
           <PostingTimesWidget />
           <SocialManagerWidget />
           <ClaudeLogWidget />
