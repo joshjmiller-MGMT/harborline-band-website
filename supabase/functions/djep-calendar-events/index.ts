@@ -234,34 +234,51 @@ function stripTags(s: string): string {
 }
 
 function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } {
-  const tableMatches = [...html.matchAll(/<table[\s\S]*?<\/table>/gi)].map((m) => m[0]);
-  if (!tableMatches.length) return { events: [], debug: { reason: "no-tables" } };
+  // DJEP nests tables, so extracting <table>...</table> blocks is unreliable.
+  // Scan ALL <tr> rows, find the one whose cells match the events-list header,
+  // then collect subsequent rows with the same shape.
+  const allRows = [...html.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map((m) => m[0]);
+  if (!allRows.length) return { events: [], debug: { reason: "no-rows" } };
 
-  // Look for the table that contains DJEP-specific event columns.
-  const candidates = tableMatches.map((tbl, i) => {
-    const firstRow = tbl.match(/<tr[\s\S]*?<\/tr>/i)?.[0] ?? "";
-    const headers = [...firstRow.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) =>
-      stripTags(m[1]).toLowerCase()
-    );
-    const rowCount = (tbl.match(/<tr/gi) || []).length;
-    let score = 0;
-    if (headers.some((h) => h.includes("client"))) score += 3;
-    if (headers.some((h) => h.includes("next action"))) score += 5;
-    if (headers.some((h) => h.includes("event date"))) score += 3;
-    if (headers.some((h) => h.includes("salesperson"))) score += 2;
-    return { i, headers, rowCount, score, length: tbl.length, html: tbl };
-  });
-  candidates.sort((a, b) => b.score - a.score || b.length - a.length);
-  const best = candidates[0];
+  const rowCells = allRows.map((r) =>
+    [...r.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) => stripTags(m[1]))
+  );
+
+  // Find header row: cells include "Event Date", "Client", "Next Action Date".
+  let headerIdx = -1;
+  for (let i = 0; i < rowCells.length; i++) {
+    const lower = rowCells[i].map((c) => c.toLowerCase());
+    if (
+      lower.some((c) => c === "event date") &&
+      lower.some((c) => c === "client") &&
+      lower.some((c) => c.includes("next action date"))
+    ) {
+      headerIdx = i;
+      break;
+    }
+  }
+  if (headerIdx < 0) {
+    return {
+      events: [],
+      debug: {
+        reason: "no-header-row",
+        rowCount: allRows.length,
+        sampleHeaders: rowCells.slice(0, 10).map((cs) => cs.slice(0, 8)),
+      },
+    };
+  }
+
+  const headerCells = rowCells[headerIdx].map((c) => c.toLowerCase());
+  const expectedLen = headerCells.length;
+  const dataRows = rowCells.slice(headerIdx + 1).filter((cs) => cs.length === expectedLen);
   const debug = {
-    tableCount: tableMatches.length,
-    topCandidates: candidates.slice(0, 5).map(({ i, headers, rowCount, score, length }) => ({ i, headers: headers.slice(0, 12), rowCount, score, length })),
+    headerIdx,
+    expectedLen,
+    totalRows: allRows.length,
+    dataRowCount: dataRows.length,
+    headers: headerCells,
   };
-  if (!best || best.score === 0) return { events: [], debug: { ...debug, reason: "no-matching-table" } };
-  const table = best.html;
-
-  const rows = [...table.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map((m) => m[0]);
-  if (rows.length < 2) return { events: [], debug: { ...debug, reason: "no-rows" } };
+  if (!dataRows.length) return { events: [], debug: { ...debug, reason: "no-data-rows" } };
 
   const headerCells = [...rows[0].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) =>
     stripTags(m[1]).toLowerCase()
