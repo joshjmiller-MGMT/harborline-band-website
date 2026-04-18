@@ -3,7 +3,7 @@ import ClaudeLogWidget from "@/components/dashboard/ClaudeLogWidget";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
 import SocialManagerWidget from "@/components/dashboard/SocialManagerWidget";
 import PostingTimesWidget from "@/components/dashboard/PostingTimesWidget";
-import MissingDatesWidget from "@/components/dashboard/MissingDatesWidget";
+import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
 import { LayoutDashboard } from "lucide-react";
 
 export default function TeamDashboard() {
@@ -18,11 +18,11 @@ export default function TeamDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <NeedsActionWidget />
           <UnifiedCalendarWidget />
-          <ClaudeLogWidget />
-          <MissingDatesWidget />
           <PostingTimesWidget />
           <SocialManagerWidget />
+          <ClaudeLogWidget />
         </div>
       </div>
     </TeamLayout>
