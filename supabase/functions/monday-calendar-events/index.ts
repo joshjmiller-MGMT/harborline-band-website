@@ -183,12 +183,26 @@ Deno.serve(async (req) => {
 
       let withDates = 0;
       let withFallbackDates = 0;
+      let missingPrimary = 0;
       for (const item of items) {
-        // Try the primary date column first, then any configured fallbacks.
-        const primaryCol = item.column_values?.find((c: any) => c.id === src.date_column_id);
-        let { dateStr, timeStr } = extractDate(primaryCol);
-        let usedColumnId: string | null = dateStr ? src.date_column_id : null;
+        // Skip "Lost Sale" / "Booked" / "Completed" groups entirely — they
+        // shouldn't appear in events OR the missing-dates log.
+        const groupTitleRaw = (item.group?.title || "").toLowerCase().replace(/[-_]/g, " ").trim();
+        const isLostSale = groupTitleRaw.includes("lost sale");
+        const isBooked = groupTitleRaw.includes("booked");
+        const isCompleted = groupTitleRaw.includes("completed");
+        if (isLostSale || isBooked || isCompleted) continue;
 
+        // Primary date column (e.g. "Next Action Date"). This is the one we
+        // care about for the missing-dates report.
+        const primaryCol = item.column_values?.find((c: any) => c.id === src.date_column_id);
+        const primary = extractDate(primaryCol);
+
+        // Fallbacks are only used for *calendar rendering* so the event still
+        // shows up somewhere — they do NOT satisfy the missing-date check.
+        let dateStr = primary.dateStr;
+        let timeStr = primary.timeStr;
+        let usedColumnId: string | null = dateStr ? src.date_column_id : null;
         if (!dateStr) {
           for (const fallbackId of fallbackDateColumns) {
             const fbCol = item.column_values?.find((c: any) => c.id === fallbackId);
@@ -202,15 +216,10 @@ Deno.serve(async (req) => {
             }
           }
         }
-        // Skip "Lost Sale" groups entirely — they shouldn't appear in events
-        // OR the missing-dates log.
-        const groupTitleRaw = (item.group?.title || "").toLowerCase().replace(/[-_]/g, " ").trim();
-        const isLostSale = groupTitleRaw.includes("lost sale");
-        if (isLostSale) continue;
 
-        if (!dateStr) {
-          // Track items that need a date assigned. Used by the dashboard
-          // "Items Missing Dates" widget so the team can act on them.
+        // Flag items missing the PRIMARY date, regardless of fallbacks.
+        if (!primary.dateStr) {
+          missingPrimary++;
           missingDateItems.push({
             id: `monday-missing-${src.board_id}-${item.id}`,
             itemId: item.id,
@@ -223,8 +232,10 @@ Deno.serve(async (req) => {
             itemUrl: item.url || `https://view.monday.com/boards/${src.board_id}/pulses/${item.id}`,
             updatedAt: item.updated_at || null,
           });
-          continue;
         }
+
+        // No date at all (not even fallback) → can't render on calendar, skip.
+        if (!dateStr) continue;
         withDates++;
 
         const startISO = timeStr
