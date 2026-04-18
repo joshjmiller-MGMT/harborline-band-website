@@ -202,6 +202,10 @@ Deno.serve(async (req) => {
           }
         }
         if (!dateStr) continue;
+        // Skip any item in a "Lost Sale" group (case-insensitive, handles
+        // variants like "Lost Sales", "LOST SALE", "lost-sale").
+        const groupTitleRaw = (item.group?.title || "").toLowerCase().replace(/[-_]/g, " ").trim();
+        if (groupTitleRaw.includes("lost sale")) continue;
         withDates++;
 
         const startISO = timeStr
