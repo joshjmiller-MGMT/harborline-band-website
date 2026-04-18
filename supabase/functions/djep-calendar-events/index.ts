@@ -107,8 +107,34 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
     })();
   `;
 
-  // Submit the login form via JavaScript so values are guaranteed to be set
-  // (write actions can miss input events on legacy ASP forms).
+  // Find the SALES - MILLER link and navigate the top window directly to its href.
+  // This bypasses iframe/popup quirks that prevented the previous click from loading content.
+  const navigateSalesMillerJs = `
+    (() => {
+      const docs = [document];
+      try {
+        for (const f of Array.from(document.querySelectorAll('iframe, frame'))) {
+          try { if (f.contentDocument) docs.push(f.contentDocument); } catch(e) {}
+        }
+      } catch(e) {}
+      const allLinks = [];
+      for (const d of docs) {
+        try { allLinks.push(...Array.from(d.querySelectorAll('a[href]'))); } catch(e) {}
+      }
+      const matches = allLinks.filter(a => {
+        const t = (a.textContent || '').toLowerCase();
+        return t.includes('sales - miller') || t.includes('sales-miller') || t.includes('sales miller');
+      });
+      const link = matches[0];
+      if (!link) return { ok: false, reason: 'no-link', candidates: allLinks.map(a => (a.textContent||'').trim()).filter(Boolean).slice(0, 50) };
+      const href = link.getAttribute('href') || link.href;
+      if (!href) return { ok: false, reason: 'no-href' };
+      const absolute = new URL(href, location.href).href;
+      window.location.href = absolute;
+      return { ok: true, href: absolute, linkText: (link.textContent || '').trim() };
+    })();
+  `;
+
   const submitLoginJs = `
     (() => {
       try {
@@ -123,8 +149,6 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
         p.dispatchEvent(new Event('change', { bubbles: true }));
         var form = u.form || document.querySelector("form[name='logonform']") || document.forms[0];
         if (!form) return { ok: false, reason: 'no-form' };
-        // The form has <input name="submit"> which shadows form.submit().
-        // Click the submit button instead, or invoke the prototype submit directly.
         var btn = form.querySelector("input[type='submit'], button[type='submit']");
         if (btn && typeof btn.click === 'function') {
           btn.click();
@@ -146,15 +170,14 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
     timeout: 120000,
     actions: [
       { type: "wait", milliseconds: 1500 },
-      { type: "executeJavascript", script: `(() => ({ stage: 'logon-page', title: document.title, url: location.href, hasUser: !!document.querySelector("input[name='username']"), hasPass: !!document.querySelector("input[name='password']") }))()` },
       { type: "executeJavascript", script: submitLoginJs },
       { type: "wait", milliseconds: 5000 },
-      { type: "executeJavascript", script: `(() => ({ stage: 'post-login', title: document.title, url: location.href, bodyStart: (document.body.innerText || '').slice(0, 400) }))()` },
+      { type: "executeJavascript", script: `(() => ({ stage: 'post-login', title: document.title, url: location.href }))()` },
       { type: "executeJavascript", script: clickByTextJs("Web Links") },
-      { type: "wait", milliseconds: 1500 },
-      { type: "executeJavascript", script: clickByTextJs("SALES - MILLER") },
-      { type: "wait", milliseconds: 4500 },
-      { type: "executeJavascript", script: `(() => ({ stage: 'post-nav', title: document.title, url: location.href, tableCount: document.querySelectorAll('table').length }))()` },
+      { type: "wait", milliseconds: 2000 },
+      { type: "executeJavascript", script: navigateSalesMillerJs },
+      { type: "wait", milliseconds: 6000 },
+      { type: "executeJavascript", script: `(() => ({ stage: 'post-nav', title: document.title, url: location.href, tableCount: document.querySelectorAll('table').length, headers: Array.from(document.querySelectorAll('th')).slice(0, 30).map(e => (e.textContent||'').trim()) }))()` },
       { type: "scrape" },
     ],
   };
