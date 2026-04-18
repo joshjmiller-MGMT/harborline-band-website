@@ -25,6 +25,7 @@ export default function TeamDashboard() {
           <UnifiedCalendarWidget />
           <BookingAgentWidget />
           <PracticeTimerWidget />
+          <SongsTrackerWidget />
           <PostingTimesWidget />
           <SocialManagerWidget />
           <ClaudeLogWidget />
