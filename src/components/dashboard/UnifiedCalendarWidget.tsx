@@ -605,9 +605,9 @@ export default function UnifiedCalendarWidget() {
     let overrideKey: string | null = null;
     if (event.source === "google" && event.accountEmail) overrideKey = `google:${event.accountEmail}`;
     else if (event.source === "monday") {
-      const src = mondaySources.find((s) => s.label === event.sourceLabel);
+      const src = mondaySources.find((s) => s.label === event.meta?.sourceLabel);
       if (src) overrideKey = `monday:${src.id}`;
-    } else if (event.source === "social" && (event as any).brandId) overrideKey = `social:${(event as any).brandId}`;
+    } else if (event.source === "social" && event.brandId) overrideKey = `social:${event.brandId}`;
     else if (event.source === "djep") overrideKey = `djep:default`;
 
     const naturalStripe =
