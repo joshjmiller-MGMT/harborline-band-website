@@ -149,6 +149,7 @@ function useMetronome() {
   const [running, setRunning] = useState(false);
   const [muted, setMuted] = useState(false);
   const [bpm, setBpm] = useState(100);
+  const [currentBeat, setCurrentBeat] = useState(-1); // -1 = idle, 0..3 = beat in bar
 
   useEffect(() => { bpmRef.current = bpm; }, [bpm]);
   useEffect(() => { mutedRef.current = muted; }, [muted]);
@@ -162,26 +163,31 @@ function useMetronome() {
     return ctxRef.current;
   };
 
-  const click = (time: number, accent: boolean) => {
-    if (mutedRef.current) return;
+  const click = (time: number, beatInBar: number) => {
     const ctx = ctxRef.current!;
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = "square";
-    o.frequency.value = accent ? 1500 : 1000;
-    o.connect(g);
-    g.connect(ctx.destination);
-    g.gain.setValueAtTime(0.0001, time);
-    g.gain.exponentialRampToValueAtTime(accent ? 0.4 : 0.25, time + 0.001);
-    g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
-    o.start(time);
-    o.stop(time + 0.06);
+    const accent = beatInBar === 0;
+    if (!mutedRef.current) {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "square";
+      o.frequency.value = accent ? 1500 : 1000;
+      o.connect(g);
+      g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, time);
+      g.gain.exponentialRampToValueAtTime(accent ? 0.4 : 0.25, time + 0.001);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+      o.start(time);
+      o.stop(time + 0.06);
+    }
+    // Schedule UI beat indicator update at audio time
+    const delayMs = Math.max(0, (time - ctx.currentTime) * 1000);
+    window.setTimeout(() => setCurrentBeat(beatInBar), delayMs);
   };
 
   const scheduler = () => {
     const ctx = ctxRef.current!;
     while (nextNoteRef.current < ctx.currentTime + 0.1) {
-      click(nextNoteRef.current, beatRef.current % 4 === 0);
+      click(nextNoteRef.current, beatRef.current % 4);
       nextNoteRef.current += 60.0 / Math.max(20, bpmRef.current);
       beatRef.current += 1;
     }
@@ -199,11 +205,12 @@ function useMetronome() {
     if (timerRef.current) window.clearInterval(timerRef.current);
     timerRef.current = null;
     setRunning(false);
+    setCurrentBeat(-1);
   };
 
   useEffect(() => () => { if (timerRef.current) window.clearInterval(timerRef.current); }, []);
 
-  return { running, start, stop, bpm, setBpm, muted, setMuted };
+  return { running, start, stop, bpm, setBpm, muted, setMuted, currentBeat };
 }
 
 // ---------- Tap tempo ----------
