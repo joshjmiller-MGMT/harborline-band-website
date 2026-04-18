@@ -432,6 +432,14 @@ export default function PracticeTimerWidget() {
   useEffect(() => {
     loadPresets();
     loadHistory();
+    loadSongs();
+    const ch = supabase
+      .channel("songs_in_timer")
+      .on("postgres_changes", { event: "*", schema: "public", table: "practice_songs" }, loadSongs)
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   // When preset changes, populate working segments (only when no session running)
