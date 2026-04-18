@@ -1308,6 +1308,17 @@ export default function UnifiedCalendarWidget() {
                     </label>
                   );
                 })()}
+                {djepRefreshedAt && (
+                  <p className="text-[10px] text-muted-foreground/70 pl-6">
+                    Last refreshed{" "}
+                    {new Date(djepRefreshedAt).toLocaleString([], {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                )}
               </div>
             )}
           </div>
