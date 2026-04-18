@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_agent_config: {
+        Row: {
+          color: string
+          created_at: string
+          enabled: boolean
+          followup_values: string
+          id: string
+          last_contact_col: string
+          link_col: string
+          name_col: string
+          next_followup_col: string
+          notes_col: string
+          reachout_values: string
+          sheet_id: string
+          sheet_url: string
+          status_col: string
+          tab_gid: string
+          type_col: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          enabled?: boolean
+          followup_values?: string
+          id?: string
+          last_contact_col?: string
+          link_col?: string
+          name_col?: string
+          next_followup_col?: string
+          notes_col?: string
+          reachout_values?: string
+          sheet_id?: string
+          sheet_url?: string
+          status_col?: string
+          tab_gid?: string
+          type_col?: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          enabled?: boolean
+          followup_values?: string
+          id?: string
+          last_contact_col?: string
+          link_col?: string
+          name_col?: string
+          next_followup_col?: string
+          notes_col?: string
+          reachout_values?: string
+          sheet_id?: string
+          sheet_url?: string
+          status_col?: string
+          tab_gid?: string
+          type_col?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       claude_log: {
         Row: {
           context: string

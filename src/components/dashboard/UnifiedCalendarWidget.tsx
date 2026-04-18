@@ -286,7 +286,7 @@ export default function UnifiedCalendarWidget() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [gRes, mRes, dRes] = await Promise.all([
+      const [gRes, mRes, dRes, bRes] = await Promise.all([
         fetch(`${FUNCTIONS_BASE}/google-calendar-events`, {
           headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         }).then((r) => r.json()),
@@ -294,6 +294,9 @@ export default function UnifiedCalendarWidget() {
           headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         }).then((r) => r.json()),
         fetch(`${FUNCTIONS_BASE}/djep-calendar-events`, {
+          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        }).then((r) => r.json()).catch(() => ({ events: [] })),
+        fetch(`${FUNCTIONS_BASE}/booking-agent-rows`, {
           headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         }).then((r) => r.json()).catch(() => ({ events: [] })),
       ]);
@@ -366,6 +369,22 @@ export default function UnifiedCalendarWidget() {
           source: "djep",
           color: e.color || "#10b981",
           meta: e,
+        });
+      }
+
+      // Booking Agent (Google Sheet rows with a Next Followup date).
+      // We surface them under the existing Monday source so all current
+      // filter, color, and grouping logic continues to work without changes.
+      for (const e of bRes?.events || []) {
+        merged.push({
+          id: e.id,
+          title: e.title,
+          start: parseEventDate(e.start, e.allDay),
+          end: parseEventDate(e.end, e.allDay, true),
+          allDay: e.allDay,
+          source: "monday",
+          color: e.color || "#f59e0b",
+          meta: { ...e, sourceLabel: e.sourceLabel },
         });
       }
 

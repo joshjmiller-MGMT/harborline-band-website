@@ -5,6 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { AlertTriangle, ChevronDown } from "lucide-react";
 import MissingDatesWidget from "./MissingDatesWidget";
 import TodaysActionItemsWidget from "./TodaysActionItemsWidget";
+import BookingAgentActionWidget from "./BookingAgentActionWidget";
 
 export default function NeedsActionWidget() {
   const [open, setOpen] = useState(false);
@@ -30,6 +31,7 @@ export default function NeedsActionWidget() {
         <CollapsibleContent>
           <CardContent className="space-y-4">
             <TodaysActionItemsWidget />
+            <BookingAgentActionWidget />
             <MissingDatesWidget />
             {/* More action items can be slotted in here as they come up. */}
           </CardContent>
