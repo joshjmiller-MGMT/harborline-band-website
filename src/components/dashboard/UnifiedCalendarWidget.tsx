@@ -329,6 +329,30 @@ export default function UnifiedCalendarWidget() {
         setMondayError(mRes?.error || null);
       }
 
+      if (dRes?.configured) {
+        setDjepConfigured(true);
+        setDjepError(dRes.error || null);
+        setDjepRefreshedAt(dRes.refreshed_at || null);
+        const djepEvents = Array.isArray(dRes.events) ? dRes.events : [];
+        setDjepCount(djepEvents.length);
+        for (const e of djepEvents) {
+          merged.push({
+            id: e.id,
+            title: e.title,
+            start: parseEventDate(e.start, e.allDay),
+            end: parseEventDate(e.end, e.allDay, true),
+            allDay: e.allDay,
+            source: "djep",
+            color: e.color || DJEP_COLOR,
+            meta: e,
+          });
+        }
+      } else {
+        setDjepConfigured(false);
+        setDjepError(dRes?.error || null);
+        setDjepCount(0);
+      }
+
       // Preserve any social events already loaded by loadSocial
       setEvents((prev) => [...merged, ...prev.filter((e) => e.source === "social")]);
     } catch (err) {
