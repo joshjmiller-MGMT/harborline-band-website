@@ -732,11 +732,21 @@ export default function UnifiedCalendarWidget() {
     } catch {}
   };
 
-  const togglePanel = (key: "google" | "monday" | "social") => {
+  const togglePanel = (key: "google" | "monday" | "social" | "djep") => {
     setOpenPanels((prev) => {
       const next = { ...prev, [key]: !prev[key] };
       try {
         localStorage.setItem(PANELS_OPEN_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const toggleDjep = () => {
+    setDjepHidden((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(DJEP_HIDDEN_KEY, String(next));
       } catch {}
       return next;
     });
