@@ -308,7 +308,7 @@ Deno.serve(async (req) => {
         ? {
             count: events.length,
             sampleEvents: events.slice(0, 5),
-            rawKeys: Object.keys(raw || {}),
+            raw,
           }
         : { count: events.length },
     });
