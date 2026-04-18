@@ -271,6 +271,7 @@ export default function UnifiedCalendarWidget() {
     color: "#8b5cf6",
     person_column_id: "",
     person_id: "",
+    skip_groups: "",
   });
 
   const [newEvent, setNewEvent] = useState({
