@@ -631,6 +631,31 @@ export default function PracticeTimerWidget() {
         skipped: s.skipped,
       }))
     );
+
+    // Bump times_practiced for any segment label matching a tracked song
+    const labels = finalSegs
+      .filter((s) => s.actual_seconds > 0 && !s.skipped && s.label?.trim())
+      .map((s) => s.label.split("—")[0].trim().toLowerCase());
+    const matched = songs.filter((sg) => labels.includes(sg.title.toLowerCase()));
+    if (matched.length) {
+      const { data: current } = await supabase
+        .from("practice_songs")
+        .select("id, times_practiced")
+        .in("id", matched.map((m) => m.id));
+      await Promise.all(
+        (current || []).map((c) =>
+          supabase
+            .from("practice_songs")
+            .update({
+              times_practiced: (c.times_practiced || 0) + 1,
+              last_practiced_at: new Date().toISOString(),
+            })
+            .eq("id", c.id)
+        )
+      );
+      loadSongs();
+    }
+
     toast({ title: "Session logged", description: `${Math.round(totalSec / 60)} minutes practiced.` });
     setSessionId(null);
     setSessionStart(null);
