@@ -926,6 +926,7 @@ export default function PracticeTimerWidget() {
                       running={running && activeIdx === i}
                       onChange={(patch) => updateSeg(i, patch)}
                       onRemove={() => removeSeg(i)}
+                      songs={songs}
                     />
                   </div>
                 ))}
