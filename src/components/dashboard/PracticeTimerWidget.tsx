@@ -810,6 +810,49 @@ export default function PracticeTimerWidget() {
               </>
             )}
           </div>
+
+          {/* Metronome */}
+          <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Metronome</span>
+            <Button
+              size="sm"
+              variant={metro.running ? "default" : "outline"}
+              onClick={() => (metro.running ? metro.stop() : metro.start())}
+              className="h-7 gap-1 text-xs"
+            >
+              {metro.running ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+              {metro.running ? "Stop" : "Click"}
+            </Button>
+            <div className="flex items-center gap-1">
+              <Music className="w-3 h-3 text-muted-foreground" />
+              <Input
+                type="number"
+                min={30}
+                max={300}
+                value={metro.bpm}
+                onChange={(e) => metro.setBpm(parseInt(e.target.value || "0") || 0)}
+                className="h-7 w-16 text-xs"
+              />
+              <span className="text-xs text-muted-foreground">BPM</span>
+            </div>
+            <Button size="sm" variant="ghost" onClick={tap} className="h-7 gap-1 text-xs">
+              <Hand className="w-3 h-3" /> Tap
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => metro.setMuted(!metro.muted)}
+              className="h-7 gap-1 text-xs"
+              title={metro.muted ? "Unmute" : "Mute"}
+            >
+              {metro.muted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+            </Button>
+            {activeIdx != null && segments[activeIdx]?.bpm && (
+              <span className="text-[10px] text-muted-foreground ml-auto">
+                Synced to segment ({segments[activeIdx].bpm} BPM)
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Session meta */}
