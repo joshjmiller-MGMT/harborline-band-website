@@ -466,6 +466,27 @@ export default function UnifiedCalendarWidget() {
     await updateSource(s.id, { enabled: !s.enabled });
   };
 
+  const refreshDjep = async () => {
+    setDjepLoading(true);
+    try {
+      const res = await fetch(`${FUNCTIONS_BASE}/djep-calendar-events?refresh=1`, {
+        headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(`DJEP refresh failed: ${data.error}`);
+        return;
+      }
+      const count = Array.isArray(data.events) ? data.events.length : 0;
+      toast.success(`DJEP refreshed — ${count} event${count === 1 ? "" : "s"}`);
+      await loadAll();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "DJEP refresh failed");
+    } finally {
+      setDjepLoading(false);
+    }
+  };
+
   const createGoogleEvent = async () => {
     if (!newEvent.summary || !newEvent.start || !newEvent.end) {
       toast.error("Title, start, and end are required");
