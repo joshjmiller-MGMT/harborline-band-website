@@ -151,6 +151,7 @@ type MondaySource = {
   enabled: boolean;
   person_column_id?: string | null;
   person_id?: string | null;
+  skip_groups?: string;
 };
 
 type SocialBrand = {
@@ -270,6 +271,7 @@ export default function UnifiedCalendarWidget() {
     color: "#8b5cf6",
     person_column_id: "",
     person_id: "",
+    skip_groups: "",
   });
 
   const [newEvent, setNewEvent] = useState({
@@ -502,7 +504,7 @@ export default function UnifiedCalendarWidget() {
       toast.error(error.message);
       return;
     }
-    setNewSource({ board_id: "", date_column_id: "", label: "", color: "#8b5cf6", person_column_id: "", person_id: "" });
+    setNewSource({ board_id: "", date_column_id: "", label: "", color: "#8b5cf6", person_column_id: "", person_id: "", skip_groups: "" });
     await loadSources();
     await loadAll();
     toast.success("Monday source added");
@@ -1602,6 +1604,15 @@ export default function UnifiedCalendarWidget() {
                               placeholder="e.g. 54492562"
                             />
                           </div>
+                          <div className="col-span-2">
+                            <Label className="text-xs">Skip Groups <span className="text-muted-foreground">(comma-separated, case-insensitive)</span></Label>
+                            <Input
+                              value={editDraft.skip_groups ?? ""}
+                              onChange={(e) => setEditDraft({ ...editDraft, skip_groups: e.target.value })}
+                              placeholder="e.g. completed, archived"
+                            />
+                            <p className="text-[10px] text-muted-foreground mt-1">Items in groups whose title contains any of these keywords will be hidden. "Lost Sale" is always skipped.</p>
+                          </div>
                         </div>
                         <div className="flex gap-2 justify-end">
                           <Button size="sm" variant="outline" onClick={() => { setEditingId(null); setEditDraft({}); }}>
@@ -1660,6 +1671,7 @@ export default function UnifiedCalendarWidget() {
                             date_column_id: s.date_column_id,
                             person_column_id: s.person_column_id ?? "",
                             person_id: s.person_id ?? "",
+                            skip_groups: s.skip_groups ?? "",
                           });
                         }}
                       >
@@ -1754,6 +1766,14 @@ export default function UnifiedCalendarWidget() {
                     value={newSource.person_id}
                     onChange={(e) => setNewSource({ ...newSource, person_id: e.target.value })}
                     placeholder="e.g. 54492562"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-xs">Skip Groups <span className="text-muted-foreground">(comma-separated)</span></Label>
+                  <Input
+                    value={newSource.skip_groups}
+                    onChange={(e) => setNewSource({ ...newSource, skip_groups: e.target.value })}
+                    placeholder="e.g. completed, archived"
                   />
                 </div>
                 <Button onClick={addMondaySource} className="col-span-2" size="sm">

@@ -125,6 +125,7 @@ export type Database = {
           label: string
           person_column_id: string | null
           person_id: string | null
+          skip_groups: string
           updated_at: string
         }
         Insert: {
@@ -138,6 +139,7 @@ export type Database = {
           label: string
           person_column_id?: string | null
           person_id?: string | null
+          skip_groups?: string
           updated_at?: string
         }
         Update: {
@@ -151,6 +153,7 @@ export type Database = {
           label?: string
           person_column_id?: string | null
           person_id?: string | null
+          skip_groups?: string
           updated_at?: string
         }
         Relationships: []
