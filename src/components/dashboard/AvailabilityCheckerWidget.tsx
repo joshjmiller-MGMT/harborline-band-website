@@ -105,9 +105,20 @@ export default function AvailabilityCheckerWidget() {
               <Calendar mode="single" selected={date} onSelect={setDate} initialFocus className="pointer-events-auto" />
             </PopoverContent>
           </Popover>
-          <Button onClick={run} disabled={loading || !date} size="sm">
+          <Button onClick={() => run(false)} disabled={loading || !date} size="sm">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Check"}
           </Button>
+          {report && (
+            <Button onClick={() => run(true)} disabled={loading} size="sm" variant="outline" className="gap-1.5">
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          )}
+          {report?.cached && report.refreshed_at && (
+            <span className="text-xs text-muted-foreground">
+              Cached · {formatDistanceToNow(new Date(report.refreshed_at), { addSuffix: true })}
+            </span>
+          )}
         </div>
 
         {needsGmailReconnect && (
