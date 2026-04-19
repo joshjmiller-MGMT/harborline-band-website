@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
+import PracticeTimerWidget from "@/components/dashboard/PracticeTimerWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -214,6 +215,11 @@ export default function TeamPractice() {
           <p className="text-muted-foreground mt-2">
             Totals, streaks, category breakdown, and a year-long practice heatmap.
           </p>
+        </div>
+
+        {/* Practice timer */}
+        <div className="mb-6">
+          <PracticeTimerWidget />
         </div>
 
         {/* Stat tiles */}

@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      availability_cache: {
+        Row: {
+          created_at: string
+          date: string
+          expires_at: string
+          id: string
+          refreshed_at: string
+          report: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          expires_at: string
+          id?: string
+          refreshed_at?: string
+          report?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          expires_at?: string
+          id?: string
+          refreshed_at?: string
+          report?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       booking_agent_config: {
         Row: {
           color: string
