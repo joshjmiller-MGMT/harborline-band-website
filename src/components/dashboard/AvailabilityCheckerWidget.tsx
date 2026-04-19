@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { CalendarSearch, CalendarIcon, Loader2, Mail, CalendarDays, ExternalLink, AlertCircle } from "lucide-react";
-import { format } from "date-fns";
+import { CalendarSearch, CalendarIcon, Loader2, Mail, CalendarDays, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,6 +18,8 @@ interface Report {
   gmail: { connected: boolean; accounts: any[]; messages: any[] };
   monday: { events: any[] };
   djep: { events: any[] };
+  cached?: boolean;
+  refreshed_at?: string;
 }
 
 const verdictMeta: Record<Verdict, { label: string; className: string }> = {
@@ -33,14 +35,14 @@ export default function AvailabilityCheckerWidget() {
   const [report, setReport] = useState<Report | null>(null);
   const { toast } = useToast();
 
-  const run = async () => {
+  const run = async (force = false) => {
     if (!date) return;
     setLoading(true);
-    setReport(null);
+    if (!force) setReport(null);
     try {
       const dateStr = format(date, "yyyy-MM-dd");
       const { data, error } = await supabase.functions.invoke("availability-checker", {
-        body: { date: dateStr },
+        body: { date: dateStr, force },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -103,9 +105,20 @@ export default function AvailabilityCheckerWidget() {
               <Calendar mode="single" selected={date} onSelect={setDate} initialFocus className="pointer-events-auto" />
             </PopoverContent>
           </Popover>
-          <Button onClick={run} disabled={loading || !date} size="sm">
+          <Button onClick={() => run(false)} disabled={loading || !date} size="sm">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Check"}
           </Button>
+          {report && (
+            <Button onClick={() => run(true)} disabled={loading} size="sm" variant="outline" className="gap-1.5">
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          )}
+          {report?.cached && report.refreshed_at && (
+            <span className="text-xs text-muted-foreground">
+              Cached · {formatDistanceToNow(new Date(report.refreshed_at), { addSuffix: true })}
+            </span>
+          )}
         </div>
 
         {needsGmailReconnect && (

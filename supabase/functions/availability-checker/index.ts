@@ -244,12 +244,30 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const dateStr: string = body.date;
+    const force: boolean = !!body.force;
     if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       return new Response(JSON.stringify({ error: "date (YYYY-MM-DD) required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Try cache first (1-hour TTL) unless force=true
+    if (!force) {
+      const { data: cached } = await supabase
+        .from("availability_cache")
+        .select("report, refreshed_at, expires_at")
+        .eq("date", dateStr)
+        .maybeSingle();
+      if (cached && new Date(cached.expires_at).getTime() > Date.now()) {
+        return new Response(JSON.stringify({
+          ...(cached.report as any),
+          cached: true,
+          refreshed_at: cached.refreshed_at,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
     const [y, m, d] = dateStr.split("-").map(Number);
     const variants = buildDateVariants(y, m, d);
 
@@ -260,7 +278,6 @@ Deno.serve(async (req) => {
       callInternalFn("djep-calendar-events", {}).catch(() => null),
     ]);
 
-    // Filter Monday/DJEP events to that date
     const mondayEvents = Array.isArray(mondayRes?.events)
       ? mondayRes.events.filter((e: any) => eventOnDate(e, dateStr)).map((e: any) => ({ ...e, source: "monday" }))
       : [];
@@ -268,7 +285,6 @@ Deno.serve(async (req) => {
       ? djepRes.events.filter((e: any) => eventOnDate(e, dateStr)).map((e: any) => ({ ...e, source: "djep" }))
       : [];
 
-    // Tier verdict
     const calEvents = (gcal as any).events || [];
     const confirmedCal = calEvents.filter((e: any) => e.status === "confirmed");
     const tentativeCal = calEvents.filter((e: any) => e.status === "tentative");
@@ -282,14 +298,25 @@ Deno.serve(async (req) => {
       verdict = "mention_only";
     }
 
-    return new Response(JSON.stringify({
+    const report = {
       date: dateStr,
       verdict,
       googleCalendar: gcal,
       gmail,
       monday: { events: mondayEvents, accounts: mondayRes?.sources || [] },
       djep: { events: djepEvents },
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    };
+
+    // Cache for 1 hour
+    const refreshedAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    await supabase
+      .from("availability_cache")
+      .upsert({ date: dateStr, report, refreshed_at: refreshedAt, expires_at: expiresAt }, { onConflict: "date" });
+
+    return new Response(JSON.stringify({ ...report, cached: false, refreshed_at: refreshedAt }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return new Response(JSON.stringify({ error: msg }), {
