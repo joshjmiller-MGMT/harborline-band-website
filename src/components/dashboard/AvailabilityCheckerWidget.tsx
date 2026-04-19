@@ -53,8 +53,34 @@ export default function AvailabilityCheckerWidget() {
     }
   };
 
+  const [reconnecting, setReconnecting] = useState<string | null>(null);
   const v = report ? verdictMeta[report.verdict] : null;
-  const needsGmailReconnect = report?.gmail.accounts?.some((a: any) => a.needsReconnect);
+  const accountsNeedingGmail: string[] = (report?.gmail.accounts || [])
+    .filter((a: any) => a.needsReconnect)
+    .map((a: any) => a.email)
+    .filter(Boolean);
+  const needsGmailReconnect = accountsNeedingGmail.length > 0;
+
+  const reconnect = async (email?: string) => {
+    setReconnecting(email || "all");
+    try {
+      const params = new URLSearchParams({ action: "start", return_to: "/team/dashboard" });
+      if (email) params.set("login_hint", email);
+      const res = await fetch(
+        `https://zsfkgncdenqzctdzxedl.supabase.co/functions/v1/google-calendar-oauth?${params}`,
+      );
+      const data = await res.json();
+      if (data?.auth_url) {
+        window.location.href = data.auth_url;
+      } else {
+        throw new Error(data?.error || "Could not start OAuth flow");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({ title: "Reconnect failed", description: msg, variant: "destructive" });
+      setReconnecting(null);
+    }
+  };
 
   return (
     <Card className="bg-card/50 border-border">
