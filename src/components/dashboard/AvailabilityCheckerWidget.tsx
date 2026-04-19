@@ -53,8 +53,34 @@ export default function AvailabilityCheckerWidget() {
     }
   };
 
+  const [reconnecting, setReconnecting] = useState<string | null>(null);
   const v = report ? verdictMeta[report.verdict] : null;
-  const needsGmailReconnect = report?.gmail.accounts?.some((a: any) => a.needsReconnect);
+  const accountsNeedingGmail: string[] = (report?.gmail.accounts || [])
+    .filter((a: any) => a.needsReconnect)
+    .map((a: any) => a.email)
+    .filter(Boolean);
+  const needsGmailReconnect = accountsNeedingGmail.length > 0;
+
+  const reconnect = async (email?: string) => {
+    setReconnecting(email || "all");
+    try {
+      const params = new URLSearchParams({ action: "start", return_to: "/team/dashboard" });
+      if (email) params.set("login_hint", email);
+      const res = await fetch(
+        `https://zsfkgncdenqzctdzxedl.supabase.co/functions/v1/google-calendar-oauth?${params}`,
+      );
+      const data = await res.json();
+      if (data?.auth_url) {
+        window.location.href = data.auth_url;
+      } else {
+        throw new Error(data?.error || "Could not start OAuth flow");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({ title: "Reconnect failed", description: msg, variant: "destructive" });
+      setReconnecting(null);
+    }
+  };
 
   return (
     <Card className="bg-card/50 border-border">
@@ -85,7 +111,26 @@ export default function AvailabilityCheckerWidget() {
         {needsGmailReconnect && (
           <div className="flex items-start gap-2 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded-md p-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span>One or more Google accounts haven't granted Gmail access. Reconnect them on the calendar widget to enable email scanning.</span>
+            <div className="flex-1 space-y-2">
+              <span>
+                {accountsNeedingGmail.length === 1 ? "This Google account hasn't" : "These Google accounts haven't"} granted Gmail access. Reconnect to enable email scanning.
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {accountsNeedingGmail.map((email) => (
+                  <Button
+                    key={email}
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1.5"
+                    disabled={reconnecting === email || reconnecting === "all"}
+                    onClick={() => reconnect(email)}
+                  >
+                    {reconnecting === email ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                    Reconnect {email}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
