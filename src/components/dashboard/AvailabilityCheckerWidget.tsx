@@ -35,14 +35,14 @@ export default function AvailabilityCheckerWidget() {
   const [report, setReport] = useState<Report | null>(null);
   const { toast } = useToast();
 
-  const run = async () => {
+  const run = async (force = false) => {
     if (!date) return;
     setLoading(true);
-    setReport(null);
+    if (!force) setReport(null);
     try {
       const dateStr = format(date, "yyyy-MM-dd");
       const { data, error } = await supabase.functions.invoke("availability-checker", {
-        body: { date: dateStr },
+        body: { date: dateStr, force },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
