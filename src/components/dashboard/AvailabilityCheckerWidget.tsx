@@ -18,6 +18,8 @@ interface Report {
   gmail: { connected: boolean; accounts: any[]; messages: any[] };
   monday: { events: any[] };
   djep: { events: any[] };
+  cached?: boolean;
+  refreshed_at?: string;
 }
 
 const verdictMeta: Record<Verdict, { label: string; className: string }> = {
