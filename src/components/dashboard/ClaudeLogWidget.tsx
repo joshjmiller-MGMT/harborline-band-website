@@ -27,6 +27,7 @@ export default function ClaudeLogWidget() {
   const [pasteJson, setPasteJson] = useState("");
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [form, setForm] = useState({ machine: "", context: "", summary: "", nextSteps: "", tags: "" });
 
   const fetchEntries = async () => {
@@ -38,6 +39,7 @@ export default function ClaudeLogWidget() {
       toast.error("Failed to load log");
     } else {
       setEntries((data || []) as LogEntry[]);
+      setLastUpdated(new Date());
     }
     setLoading(false);
   };
@@ -152,7 +154,19 @@ export default function ClaudeLogWidget() {
             <h2 className="font-display text-xl tracking-wide-custom text-foreground flex items-center gap-2">
               <Bot className="w-5 h-5 text-primary" /> Claude Log
             </h2>
-            <p className="text-xs text-muted-foreground mt-1">Synced across all machines via the cloud.</p>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
+              <span>Synced across all machines via the cloud.</span>
+              <span className="text-foreground/80">
+                · {entries.length} {entries.length === 1 ? "entry" : "entries"}
+              </span>
+              {lastUpdated && (
+                <span className="inline-flex items-center gap-1">
+                  ·
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  last updated {lastUpdated.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                </span>
+              )}
+            </p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button size="sm" variant="outline" onClick={() => exportLog("md")} disabled={entries.length === 0} title="Download as Markdown (best for feeding to Claude)">
