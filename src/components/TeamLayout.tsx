@@ -1,6 +1,7 @@
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { useTeamAuth } from "@/hooks/useTeamAuth";
 import { Music, Image, Calendar, FolderOpen, LogOut, FileText, Home, LayoutDashboard, Activity, Share2, Phone, ChevronDown, Briefcase } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,15 +15,15 @@ const managementNav = [
   { name: "Dashboard", href: "/team/dashboard", icon: LayoutDashboard, description: "Overview and live activity" },
   { name: "Social", href: "/team/social", icon: Share2, description: "Posting times & social manager" },
   { name: "Booking", href: "/team/booking", icon: Phone, description: "Lead pipeline & venue tracker" },
+  { name: "Scheduler", href: "/team/scheduler", icon: Calendar, description: "Rehearsal & event scheduling" },
+  { name: "Doc Generator", href: "/team/run-of-show", icon: FileText, description: "Run of show & client docs" },
 ];
 
 const teamNav = [
   { name: "Practice", href: "/team/practice", icon: Activity },
   { name: "Songs", href: "/team/songs", icon: Music },
   { name: "Gallery", href: "/team/gallery", icon: Image },
-  { name: "Scheduler", href: "/team/scheduler", icon: Calendar },
   { name: "Resources", href: "/team/resources", icon: FolderOpen },
-  { name: "Doc Generator", href: "/team/run-of-show", icon: FileText },
 ];
 
 export default function TeamLayout({ children }: { children: React.ReactNode }) {
