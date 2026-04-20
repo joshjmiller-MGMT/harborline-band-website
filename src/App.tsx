@@ -65,6 +65,7 @@ import TeamRunOfShow from "./pages/team/TeamRunOfShow";
 import TeamDashboard from "./pages/team/TeamDashboard";
 import TeamPractice from "./pages/team/TeamPractice";
 import TeamSocial from "./pages/team/TeamSocial";
+import TeamBooking from "./pages/team/TeamBooking";
 
 const queryClient = new QueryClient();
 
@@ -137,6 +138,7 @@ const App = () => (
               <Route path="/team/dashboard" element={<TeamDashboard />} />
               <Route path="/team/practice" element={<TeamPractice />} />
               <Route path="/team/social" element={<TeamSocial />} />
+              <Route path="/team/booking" element={<TeamBooking />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
