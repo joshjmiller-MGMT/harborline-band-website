@@ -1,336 +1,433 @@
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Bot, Plus, Trash2, ChevronDown, ChevronUp, Loader2, ClipboardPaste, Code2, Download } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+import { Bot, Plus, Download, Upload, RefreshCw, Code } from "lucide-react";
 
-interface LogEntry {
+const supabase = createClient(
+  "https://uqrpshzgonoopcwjglzl.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxcnBzaHpnb25vb3Bjd2pnbHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NTc5NDUsImV4cCI6MjA5MjAzMzk0NX0.MI0M8Cwz3gdnePHxnAJHoeBV1gxfvP0LOwhCRcY8sm8",
+);
+
+interface ClaudeLogEntry {
   id: string;
-  timestamp: string;
-  machine: string;
-  context: string;
+  session_id: string;
+  date: string;
+  title: string;
+  type: string;
+  topics: string[];
+  tools_used: string[];
+  files_created: string[];
   summary: string;
-  next_steps: string;
-  tags: string[];
+  key_decisions: string[];
+  loose_ends: string[];
+  created_at: string;
 }
 
 export default function ClaudeLogWidget() {
-  const [entries, setEntries] = useState<LogEntry[]>([]);
+  const [entries, setEntries] = useState<ClaudeLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showPaste, setShowPaste] = useState(false);
-  const [showApi, setShowApi] = useState(false);
-  const [pasteJson, setPasteJson] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [form, setForm] = useState({ machine: "", context: "", summary: "", nextSteps: "", tags: "" });
+  const [pasteText, setPasteText] = useState("");
+  const [pasteError, setPasteError] = useState("");
+  const [copied, setCopied] = useState<"json" | "md" | null>(null);
+  const [form, setForm] = useState({
+    title: "",
+    date: "",
+    summary: "",
+    loose_ends: "",
+    topics: "",
+    type: "Cowork",
+  });
 
   const fetchEntries = async () => {
-    const { data, error } = await supabase
+    setLoading(true);
+    setError("");
+    const { data, error: err } = await supabase
       .from("claude_log")
       .select("*")
-      .order("timestamp", { ascending: false });
-    if (error) {
-      toast.error("Failed to load log");
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false });
+    if (err) {
+      setError(`Could not load from Supabase: ${err.message}`);
     } else {
-      setEntries((data || []) as LogEntry[]);
-      setLastUpdated(new Date());
+      setEntries(data as ClaudeLogEntry[]);
     }
     setLoading(false);
   };
 
   useEffect(() => {
     fetchEntries();
-
-    // Realtime: instant updates when any client inserts/updates/deletes
-    const channel = supabase
-      .channel("claude_log_changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "claude_log" }, () => fetchEntries())
-      .subscribe();
-
-    // Re-fetch when the tab becomes visible again (e.g. opened in the morning)
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") fetchEntries();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-
-    // Safety net: re-fetch every 15 minutes while the tab is open so a tab
-    // left open overnight reflects entries posted from other machines.
-    const interval = setInterval(() => fetchEntries(), 15 * 60 * 1000);
-
-    return () => {
-      supabase.removeChannel(channel);
-      document.removeEventListener("visibilitychange", onVisibility);
-      clearInterval(interval);
-    };
   }, []);
 
+  const lastUpdated = entries[0]
+    ? new Date(entries[0].created_at).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+
   const addEntry = async () => {
-    if (!form.summary.trim()) return;
-    setSaving(true);
-    const { error } = await supabase.from("claude_log").insert({
-      machine: form.machine || "Unknown Machine",
-      context: form.context,
+    if (!form.title.trim() || !form.summary.trim()) return;
+    const { error: err } = await supabase.from("claude_log").insert({
+      session_id: `manual_${Date.now()}`,
+      date: form.date || new Date().toISOString().split("T")[0],
+      title: form.title,
+      type: form.type,
       summary: form.summary,
-      next_steps: form.nextSteps,
-      tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
+      topics: form.topics
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+      tools_used: [],
+      files_created: [],
+      key_decisions: [],
+      loose_ends: form.loose_ends
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
     });
-    setSaving(false);
-    if (error) {
-      toast.error("Failed to save entry");
-    } else {
-      toast.success("Entry saved");
-      setForm({ machine: "", context: "", summary: "", nextSteps: "", tags: "" });
+    if (!err) {
+      setForm({ title: "", date: "", summary: "", loose_ends: "", topics: "", type: "Cowork" });
       setShowAdd(false);
+      fetchEntries();
     }
   };
 
-  const importJson = async () => {
-    if (!pasteJson.trim()) return;
-    setSaving(true);
+  const importEntries = async () => {
     try {
-      const parsed = JSON.parse(pasteJson);
-      const items = Array.isArray(parsed) ? parsed : [parsed];
-      const rows = items.map((it: any) => ({
-        machine: it.machine || "Unknown Machine",
-        context: it.context || "",
-        summary: it.summary || "",
-        next_steps: it.next_steps || it.nextSteps || "",
-        tags: Array.isArray(it.tags) ? it.tags : (typeof it.tags === "string" ? it.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : []),
-        ...(it.timestamp ? { timestamp: it.timestamp } : {}),
-      })).filter(r => r.summary);
-      if (rows.length === 0) throw new Error("No valid entries found (need at least 'summary')");
-      const { error } = await supabase.from("claude_log").insert(rows);
-      if (error) throw error;
-      toast.success(`Imported ${rows.length} entr${rows.length === 1 ? "y" : "ies"}`);
-      setPasteJson("");
+      const parsed = JSON.parse(pasteText) as ClaudeLogEntry[];
+      if (!Array.isArray(parsed)) throw new Error();
+      const existingIds = new Set(entries.map((e) => e.id));
+      const toInsert = parsed
+        .filter((e) => !existingIds.has(e.id))
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        .map(({ id: _id, created_at: _ca, ...rest }) => rest);
+      if (toInsert.length === 0) {
+        setPasteError("No new entries to import.");
+        return;
+      }
+      const { error: err } = await supabase.from("claude_log").insert(toInsert);
+      if (err) {
+        setPasteError(err.message);
+        return;
+      }
+      setPasteText("");
       setShowPaste(false);
-    } catch (e: any) {
-      toast.error(e.message || "Invalid JSON");
-    } finally {
-      setSaving(false);
+      setPasteError("");
+      fetchEntries();
+    } catch {
+      setPasteError("Invalid JSON — paste the exported log.");
     }
   };
 
-  const exportLog = (format: "json" | "md") => {
-    if (entries.length === 0) {
-      toast.error("No entries to export");
-      return;
-    }
-    const stamp = new Date().toISOString().slice(0, 10);
-    let blob: Blob;
-    let filename: string;
-    if (format === "json") {
-      blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
-      filename = `claude-log-${stamp}.json`;
-    } else {
-      const md = [
-        `# Claude Log Export`,
-        `_Exported ${new Date().toLocaleString()} — ${entries.length} entries_`,
-        `\nUse this file to update Claude's memory of prior work on the Harborline website.\n`,
-        ...entries.map(e => {
-          const dt = new Date(e.timestamp);
-          return [
-            `## ${dt.toLocaleString()} — ${e.machine}${e.context ? ` (${e.context})` : ""}`,
-            `**Summary:** ${e.summary}`,
-            e.next_steps ? `\n**Next Steps:** ${e.next_steps}` : "",
-            e.tags?.length ? `\n**Tags:** ${e.tags.join(", ")}` : "",
-          ].filter(Boolean).join("\n");
-        }),
-      ].join("\n\n");
-      blob = new Blob([md], { type: "text/markdown" });
-      filename = `claude-log-${stamp}.md`;
-    }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success(`Exported ${entries.length} entries as ${format.toUpperCase()}`);
+  const exportJson = () => {
+    navigator.clipboard.writeText(JSON.stringify(entries, null, 2));
+    setCopied("json");
+    setTimeout(() => setCopied(null), 2000);
   };
 
-  const deleteEntry = async (id: string) => {
-    const { error } = await supabase.from("claude_log").delete().eq("id", id);
-    if (error) toast.error("Failed to delete");
-    else setExpanded(null);
+  const exportMd = () => {
+    const md = entries
+      .map(
+        (e) =>
+          `## ${e.title}\n**Date:** ${e.date}  **Type:** ${e.type || "Cowork"}\n\n${e.summary}` +
+          ((e.loose_ends || []).length ? `\n\n**Loose Ends:** ${e.loose_ends.join(", ")}` : "") +
+          ((e.topics || []).length ? `\n**Topics:** ${e.topics.join(", ")}` : "") +
+          "\n\n---",
+      )
+      .join("\n\n");
+    navigator.clipboard.writeText(`# Claude Log\n\n${md}`);
+    setCopied("md");
+    setTimeout(() => setCopied(null), 2000);
   };
 
   return (
-    <Card className="border-border">
-      <CardContent className="pt-6">
-        <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <h2 className="font-display text-xl tracking-wide-custom text-foreground flex items-center gap-2">
-              <Bot className="w-5 h-5 text-primary" /> Claude Log
-            </h2>
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
-              <span>Synced across all machines via the cloud.</span>
-              <span className="text-foreground/80">
-                · {entries.length} {entries.length === 1 ? "entry" : "entries"}
-              </span>
-              {lastUpdated && (
-                <span className="inline-flex items-center gap-1">
-                  ·
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  last updated {lastUpdated.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                </span>
-              )}
-            </p>
+    <div className="bg-card border border-border rounded-xl p-6 flex flex-col gap-4">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Bot className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold tracking-wide">Claude Log</h2>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button size="sm" variant="outline" onClick={() => exportLog("md")} disabled={entries.length === 0} title="Download as Markdown (best for feeding to Claude)">
-              <Download className="w-4 h-4 mr-1" /> Export .md
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => exportLog("json")} disabled={entries.length === 0} title="Download as JSON (re-importable)">
-              <Download className="w-4 h-4 mr-1" /> Export .json
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => { setShowApi(!showApi); setShowAdd(false); setShowPaste(false); }}>
-              <Code2 className="w-4 h-4 mr-1" /> API
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => { setShowPaste(!showPaste); setShowAdd(false); setShowApi(false); }}>
-              <ClipboardPaste className="w-4 h-4 mr-1" /> Paste JSON
-            </Button>
-            <Button size="sm" onClick={() => { setShowAdd(!showAdd); setShowPaste(false); setShowApi(false); }}>
-              <Plus className="w-4 h-4 mr-1" /> Add
-            </Button>
+          <p className="text-xs text-muted-foreground">
+            Synced across all machines via the cloud.
+            {!loading && (
+              <>
+                {" · "}
+                <span className="text-foreground font-medium">
+                  {entries.length} {entries.length === 1 ? "entry" : "entries"}
+                </span>
+                {lastUpdated && (
+                  <>
+                    {" "}
+                    · last updated <span className="text-foreground">{lastUpdated}</span>
+                  </>
+                )}
+              </>
+            )}
+          </p>
+        </div>
+        <button
+          onClick={fetchEntries}
+          className="text-muted-foreground hover:text-foreground transition-colors mt-1"
+          title="Refresh"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+        </button>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={exportMd}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md hover:bg-accent transition-colors"
+        >
+          <Download className="w-3 h-3" />
+          {copied === "md" ? "Copied!" : "Export .md"}
+        </button>
+        <button
+          onClick={exportJson}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md hover:bg-accent transition-colors"
+        >
+          <Download className="w-3 h-3" />
+          {copied === "json" ? "Copied!" : "Export .json"}
+        </button>
+        <a
+          href="https://uqrpshzgonoopcwjglzl.supabase.co/rest/v1/claude_log?select=*&order=date.desc"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md hover:bg-accent transition-colors"
+        >
+          <Code className="w-3 h-3" />
+          API
+        </a>
+        <button
+          onClick={() => {
+            setShowPaste(!showPaste);
+            setShowAdd(false);
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md hover:bg-accent transition-colors"
+        >
+          <Upload className="w-3 h-3" />
+          Paste JSON
+        </button>
+        <button
+          onClick={() => {
+            setShowAdd(!showAdd);
+            setShowPaste(false);
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+        >
+          <Plus className="w-3 h-3" />
+          Add
+        </button>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2 flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={fetchEntries} className="underline ml-2 shrink-0">
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Paste JSON panel */}
+      {showPaste && (
+        <div className="border border-border rounded-lg p-4 flex flex-col gap-3">
+          <p className="text-xs text-muted-foreground">Paste exported JSON to merge entries:</p>
+          <textarea
+            value={pasteText}
+            onChange={(e) => {
+              setPasteText(e.target.value);
+              setPasteError("");
+            }}
+            rows={5}
+            placeholder='[{"id":"...","date":"...","title":"...","summary":"..."}]'
+            className="w-full text-xs font-mono bg-background border border-border rounded-md p-2 resize-y focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          {pasteError && <p className="text-xs text-destructive">{pasteError}</p>}
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => {
+                setShowPaste(false);
+                setPasteError("");
+              }}
+              className="px-3 py-1.5 text-xs border border-border rounded-md hover:bg-accent transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={importEntries}
+              className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+            >
+              Merge Entries
+            </button>
           </div>
         </div>
+      )}
 
-        {showApi && (
-          <Card className="mb-4 border-primary/40">
-            <CardContent className="pt-4">
-              <p className="text-xs uppercase tracking-widest text-primary mb-2">Auto-Update via API</p>
-              <p className="text-xs text-muted-foreground mb-3">
-                Claude (or any script) can POST entries directly to the log. No auth header needed — the table allows public inserts within the team portal pattern.
-              </p>
-              <pre className="text-xs bg-muted text-foreground p-3 rounded overflow-x-auto whitespace-pre">{`curl -X POST '${import.meta.env.VITE_SUPABASE_URL}/rest/v1/claude_log' \\
-  -H 'apikey: ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}' \\
-  -H 'Authorization: Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}' \\
-  -H 'Content-Type: application/json' \\
-  -H 'Prefer: return=minimal' \\
-  -d '{
-    "machine": "Claude Code CLI",
-    "context": "Harborline website",
-    "summary": "What was worked on...",
-    "next_steps": "Pick up here next...",
-    "tags": ["claude", "auto"]
-  }'`}</pre>
-              <p className="text-xs text-muted-foreground mt-3">
-                Tell Claude: "After each session, POST a summary entry to my Claude Log using the curl above." Realtime sync means it appears here instantly.
-              </p>
-              <div className="flex justify-end mt-3">
-                <Button variant="outline" size="sm" onClick={() => setShowApi(false)}>Close</Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {showPaste && (
-          <Card className="mb-4 border-primary/40">
-            <CardContent className="pt-4">
-              <p className="text-xs uppercase tracking-widest text-primary mb-2">Import JSON</p>
-              <p className="text-xs text-muted-foreground mb-3">
-                Paste a single entry or an array. Required: <code className="text-foreground">summary</code>. Optional: <code className="text-foreground">machine, context, next_steps, tags, timestamp</code>.
-              </p>
-              <Textarea
-                rows={10}
-                value={pasteJson}
-                onChange={e => setPasteJson(e.target.value)}
-                placeholder={`{\n  "machine": "Claude Code CLI",\n  "context": "Harborline website",\n  "summary": "Refactored Claude Log into dashboard widget",\n  "next_steps": "Add teammate view mode",\n  "tags": ["claude", "dashboard"]\n}`}
-                className="font-mono text-xs"
+      {/* Add entry panel */}
+      {showAdd && (
+        <div className="border border-primary/30 rounded-lg p-4 flex flex-col gap-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary">New Entry</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground uppercase tracking-wide">Title</label>
+              <input
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="Session title"
+                className="text-xs bg-background border border-border rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
               />
-              <div className="flex gap-2 justify-end mt-3">
-                <Button variant="outline" size="sm" onClick={() => { setShowPaste(false); setPasteJson(""); }}>Cancel</Button>
-                <Button size="sm" onClick={importJson} disabled={saving || !pasteJson.trim()}>
-                  {saving && <Loader2 className="w-3 h-3 mr-1 animate-spin" />} Import
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground uppercase tracking-wide">Date</label>
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                className="text-xs bg-background border border-border rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground uppercase tracking-wide">Type</label>
+              <select
+                value={form.type}
+                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                className="text-xs bg-background border border-border rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option>Cowork</option>
+                <option>Manual</option>
+                <option>Note</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground uppercase tracking-wide">Topics</label>
+              <input
+                value={form.topics}
+                onChange={(e) => setForm((f) => ({ ...f, topics: e.target.value }))}
+                placeholder="github, admin, ..."
+                className="text-xs bg-background border border-border rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground uppercase tracking-wide">Summary</label>
+            <textarea
+              value={form.summary}
+              onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
+              rows={3}
+              placeholder="What was worked on..."
+              className="text-xs bg-background border border-border rounded-md px-2 py-1.5 resize-y focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground uppercase tracking-wide">Loose Ends</label>
+            <input
+              value={form.loose_ends}
+              onChange={(e) => setForm((f) => ({ ...f, loose_ends: e.target.value }))}
+              placeholder="What to pick up next time..."
+              className="text-xs bg-background border border-border rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => setShowAdd(false)}
+              className="px-3 py-1.5 text-xs border border-border rounded-md hover:bg-accent transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={addEntry}
+              className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+            >
+              Save Entry
+            </button>
+          </div>
+        </div>
+      )}
 
-        {showAdd && (
-          <Card className="mb-4 border-primary/40">
-            <CardContent className="pt-4">
-              <p className="text-xs uppercase tracking-widest text-primary mb-3">New Entry</p>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div><Label className="text-xs text-muted-foreground mb-1 block">Machine</Label><Input value={form.machine} onChange={e => setForm(f => ({...f, machine: e.target.value}))} placeholder="e.g. Home iMac" /></div>
-                <div><Label className="text-xs text-muted-foreground mb-1 block">Context</Label><Input value={form.context} onChange={e => setForm(f => ({...f, context: e.target.value}))} placeholder="e.g. Admin build" /></div>
-              </div>
-              <div className="mb-3"><Label className="text-xs text-muted-foreground mb-1 block">Summary</Label><Textarea rows={3} value={form.summary} onChange={e => setForm(f => ({...f, summary: e.target.value}))} placeholder="What was worked on..." /></div>
-              <div className="mb-3"><Label className="text-xs text-muted-foreground mb-1 block">Next Steps</Label><Textarea rows={2} value={form.nextSteps} onChange={e => setForm(f => ({...f, nextSteps: e.target.value}))} placeholder="What to pick up next..." /></div>
-              <div className="mb-3"><Label className="text-xs text-muted-foreground mb-1 block">Tags</Label><Input value={form.tags} onChange={e => setForm(f => ({...f, tags: e.target.value}))} placeholder="website, admin" /></div>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" size="sm" onClick={() => setShowAdd(false)}>Cancel</Button>
-                <Button size="sm" onClick={addEntry} disabled={saving}>
-                  {saving && <Loader2 className="w-3 h-3 mr-1 animate-spin" />} Save
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
+      {/* Entry list */}
+      <div className="flex flex-col gap-2 max-h-[480px] overflow-y-auto pr-1">
         {loading ? (
-          <div className="text-center py-10 text-muted-foreground">
-            <Loader2 className="w-6 h-6 mx-auto animate-spin opacity-50" />
-          </div>
+          <p className="text-xs text-muted-foreground text-center py-8">Loading from Supabase...</p>
         ) : entries.length === 0 ? (
-          <div className="text-center py-10 text-muted-foreground">
-            <Bot className="w-8 h-8 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">No log entries yet.</p>
-          </div>
+          <p className="text-xs text-muted-foreground text-center py-8">No log entries yet.</p>
         ) : (
-          <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-            {entries.map(entry => {
-              const isOpen = expanded === entry.id;
-              const dt = new Date(entry.timestamp);
-              return (
-                <Card key={entry.id} className={`cursor-pointer transition-colors ${isOpen ? "border-primary/50" : "border-border"}`} onClick={() => setExpanded(isOpen ? null : entry.id)}>
-                  <CardContent className="pt-3 pb-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-xs font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full">{entry.machine}</span>
-                          {entry.context && <span className="text-xs text-muted-foreground">{entry.context}</span>}
-                          <span className="text-xs text-muted-foreground ml-auto">{dt.toLocaleDateString()} {dt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>
-                        </div>
-                        <p className={`text-sm text-foreground ${isOpen ? "" : "truncate"}`}>{entry.summary}</p>
-                      </div>
-                      {isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
+          entries.map((entry) => {
+            const isOpen = expanded === entry.id;
+            const looseEnds = entry.loose_ends || [];
+            const topics = entry.topics || [];
+            return (
+              <div
+                key={entry.id}
+                onClick={() => setExpanded(isOpen ? null : entry.id)}
+                className={`border rounded-lg px-4 py-3 cursor-pointer transition-colors ${
+                  isOpen ? "border-primary/50 bg-primary/5" : "border-border hover:border-border/80 hover:bg-accent/30"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                        {entry.type || "Cowork"}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">{entry.date}</span>
                     </div>
-                    {isOpen && (
-                      <div className="mt-3 pt-3 border-t border-border space-y-3">
-                        {entry.next_steps && (
-                          <div>
-                            <p className="text-xs uppercase tracking-widest text-primary mb-1">Next Steps</p>
-                            <p className="text-sm text-foreground whitespace-pre-wrap">{entry.next_steps}</p>
-                          </div>
-                        )}
-                        {entry.tags && entry.tags.length > 0 && (
-                          <div className="flex gap-1 flex-wrap">
-                            {entry.tags.map((t, i) => <span key={i} className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{t}</span>)}
-                          </div>
-                        )}
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive text-xs" onClick={e => { e.stopPropagation(); deleteEntry(entry.id); }}>
-                          <Trash2 className="w-3 h-3 mr-1" /> Delete
-                        </Button>
+                    <p className={`text-sm font-medium text-foreground ${isOpen ? "" : "truncate"}`}>{entry.title}</p>
+                    <p className={`text-xs text-muted-foreground mt-0.5 ${isOpen ? "" : "truncate"}`}>
+                      {isOpen ? entry.summary : entry.summary?.slice(0, 100)}
+                    </p>
+                  </div>
+                  {looseEnds.length > 0 && !isOpen && (
+                    <span className="shrink-0 text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full font-medium">
+                      {looseEnds.length} loose end{looseEnds.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+
+                {isOpen && (
+                  <div className="mt-3 pt-3 border-t border-border flex flex-col gap-2">
+                    {looseEnds.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary mb-1">
+                          Loose Ends
+                        </p>
+                        <ul className="flex flex-col gap-0.5">
+                          {looseEnds.map((s, i) => (
+                            <li key={i} className="text-xs text-muted-foreground">
+                              → {s}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                    {topics.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {topics.map((t, i) => (
+                          <span key={i} className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {(entry.tools_used || []).length > 0 && (
+                      <p className="text-[10px] text-muted-foreground">Tools: {entry.tools_used.join(", ")}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
