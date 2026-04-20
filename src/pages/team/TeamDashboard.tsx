@@ -6,7 +6,8 @@ import PostingTimesWidget from "@/components/dashboard/PostingTimesWidget";
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
 import BookingAgentWidget from "@/components/dashboard/BookingAgentWidget";
 import AvailabilityCheckerWidget from "@/components/dashboard/AvailabilityCheckerWidget";
-import { LayoutDashboard } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LayoutDashboard, Share2 } from "lucide-react";
 
 export default function TeamDashboard() {
   return (
@@ -19,15 +20,33 @@ export default function TeamDashboard() {
           <p className="text-muted-foreground mt-2">Overview and tools for the Harborline team.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <NeedsActionWidget />
-          <AvailabilityCheckerWidget />
-          <UnifiedCalendarWidget />
-          <BookingAgentWidget />
-          <PostingTimesWidget />
-          <SocialManagerWidget />
-          <ClaudeLogWidget />
-        </div>
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="overview" className="gap-2">
+              <LayoutDashboard className="w-4 h-4" /> Overview
+            </TabsTrigger>
+            <TabsTrigger value="social" className="gap-2">
+              <Share2 className="w-4 h-4" /> Social
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <NeedsActionWidget />
+              <AvailabilityCheckerWidget />
+              <UnifiedCalendarWidget />
+              <BookingAgentWidget />
+              <ClaudeLogWidget />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="social">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <PostingTimesWidget />
+              <SocialManagerWidget />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </TeamLayout>
   );
