@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Share2, Plus, Sparkles, Repeat, Calendar as CalIcon, Trash2, Wand2, Instagram, Music2, Facebook, ChevronRight, Copy, CheckCircle2,
 } from "lucide-react";
+import WeekScheduleCalendar from "./WeekScheduleCalendar";
 
 type Brand = {
   id: string; slug: string; name: string; color: string; platforms: string[]; voice_notes: string;
