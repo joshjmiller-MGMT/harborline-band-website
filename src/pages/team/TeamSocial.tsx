@@ -14,7 +14,7 @@ export default function TeamSocial() {
           <p className="text-muted-foreground mt-2">Posting times and social media management.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
           <PostingTimesWidget />
           <SocialManagerWidget />
         </div>

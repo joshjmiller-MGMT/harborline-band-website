@@ -126,68 +126,70 @@ export default function PostingTimesWidget() {
           </div>
         )}
 
-        {/* Heatmap */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-semibold flex items-center gap-2">
-              <Clock className="w-4 h-4" /> Engagement Heatmap (ET)
-            </h4>
-            <span className="text-xs text-muted-foreground">
-              Updated {new Date(row.refreshed_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-            <div className="inline-block min-w-full">
-              <div className="grid" style={{ gridTemplateColumns: "auto repeat(24, minmax(18px, 1fr))" }}>
-                {/* Header row: hours */}
-                <div />
-                {Array.from({ length: 24 }, (_, h) => (
-                  <div key={`h-${h}`} className="text-[9px] text-muted-foreground text-center pb-1">
-                    {h % 3 === 0 ? formatHour(h) : ""}
-                  </div>
-                ))}
-                {/* Rows */}
-                {DAYS.map((day, di) => (
-                  <>
-                    <div key={`d-${di}`} className="text-xs text-muted-foreground pr-2 flex items-center justify-end">
-                      {day}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Heatmap */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <Clock className="w-4 h-4" /> Engagement Heatmap (ET)
+              </h4>
+              <span className="text-xs text-muted-foreground">
+                Updated {new Date(row.refreshed_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="inline-block min-w-full">
+                <div className="grid" style={{ gridTemplateColumns: "auto repeat(24, minmax(18px, 1fr))" }}>
+                  {/* Header row: hours */}
+                  <div />
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <div key={`h-${h}`} className="text-[9px] text-muted-foreground text-center pb-1">
+                      {h % 3 === 0 ? formatHour(h) : ""}
                     </div>
-                    {Array.from({ length: 24 }, (_, h) => {
-                      const score = row.heatmap?.[di]?.[h] ?? 0;
-                      return (
-                        <div
-                          key={`c-${di}-${h}`}
-                          className="aspect-square rounded-sm m-[1px]"
-                          style={{ backgroundColor: heatColor(score) }}
-                          title={`${day} ${formatHour(h)} — score ${score}`}
-                        />
-                      );
-                    })}
-                  </>
-                ))}
+                  ))}
+                  {/* Rows */}
+                  {DAYS.map((day, di) => (
+                    <>
+                      <div key={`d-${di}`} className="text-xs text-muted-foreground pr-2 flex items-center justify-end">
+                        {day}
+                      </div>
+                      {Array.from({ length: 24 }, (_, h) => {
+                        const score = row.heatmap?.[di]?.[h] ?? 0;
+                        return (
+                          <div
+                            key={`c-${di}-${h}`}
+                            className="aspect-square rounded-sm m-[1px]"
+                            style={{ backgroundColor: heatColor(score) }}
+                            title={`${day} ${formatHour(h)} — score ${score}`}
+                          />
+                        );
+                      })}
+                    </>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Top windows */}
-        <div>
-          <h4 className="text-sm font-semibold flex items-center gap-2 mb-2">
-            <TrendingUp className="w-4 h-4" /> Top windows
-          </h4>
-          <ul className="space-y-2">
-            {row.top_windows?.map((w, i) => (
-              <li key={i} className="rounded-md border p-2 text-sm">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium">{w.day}</span>
-                  <Badge variant="outline">
-                    {formatHour(w.start_hour)}–{formatHour(w.end_hour)} ET
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">{w.rationale}</p>
-              </li>
-            ))}
-          </ul>
+          {/* Top windows */}
+          <div>
+            <h4 className="text-sm font-semibold flex items-center gap-2 mb-2">
+              <TrendingUp className="w-4 h-4" /> Top windows
+            </h4>
+            <ul className="space-y-2">
+              {row.top_windows?.map((w, i) => (
+                <li key={i} className="rounded-md border p-2 text-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium">{w.day}</span>
+                    <Badge variant="outline">
+                      {formatHour(w.start_hour)}–{formatHour(w.end_hour)} ET
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{w.rationale}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         {/* Sources */}
