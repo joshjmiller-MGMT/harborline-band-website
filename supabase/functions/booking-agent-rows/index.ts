@@ -106,6 +106,17 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    // Parse optional ?tab=lead|venue (default: lead)
+    const url = new URL(req.url);
+    let tabParam = (url.searchParams.get("tab") || "").toLowerCase();
+    if (!tabParam && req.method === "POST") {
+      try {
+        const body = await req.clone().json();
+        if (body && typeof body.tab === "string") tabParam = body.tab.toLowerCase();
+      } catch (_) { /* ignore */ }
+    }
+    const useVenueTab = tabParam === "venue" || tabParam === "venues" || tabParam === "festival";
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: cfg } = await supabase
       .from("booking_agent_config")
@@ -115,27 +126,36 @@ Deno.serve(async (req) => {
 
     if (!cfg) {
       return new Response(
-        JSON.stringify({ configured: false, events: [], reachouts: [], followups: [], note: "No booking_agent_config row" }),
+        JSON.stringify({ configured: false, events: [], reachouts: [], followups: [], rows: [], note: "No booking_agent_config row" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const c = cfg as unknown as Config;
 
-    if (!c.enabled || !c.sheet_id || !c.next_followup_col || !c.name_col) {
+    if (!useVenueTab && (!c.enabled || !c.sheet_id || !c.next_followup_col || !c.name_col)) {
       return new Response(
         JSON.stringify({
           configured: false,
           events: [],
           reachouts: [],
           followups: [],
+          rows: [],
           note: "Booking Agent not fully configured. Set Sheet ID, Name column, and Next Followup Date column.",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const gidPart = c.tab_gid ? `&gid=${encodeURIComponent(c.tab_gid)}` : "";
+    if (useVenueTab && (!c.enabled || !c.sheet_id)) {
+      return new Response(
+        JSON.stringify({ configured: false, rows: [], note: "Booking Agent not configured. Set the Sheet ID first." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const activeGid = useVenueTab ? c.venue_tab_gid : c.tab_gid;
+    const gidPart = activeGid ? `&gid=${encodeURIComponent(activeGid)}` : "";
     const csvUrl = `https://docs.google.com/spreadsheets/d/${c.sheet_id}/export?format=csv${gidPart}`;
     const resp = await fetch(csvUrl);
     if (!resp.ok) {
@@ -145,6 +165,7 @@ Deno.serve(async (req) => {
           events: [],
           reachouts: [],
           followups: [],
+          rows: [],
           error: `Could not fetch sheet (status ${resp.status}). Set the sheet to "Anyone with the link can view".`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -155,13 +176,36 @@ Deno.serve(async (req) => {
     const grid = parseCSV(csv);
     if (grid.length === 0) {
       return new Response(
-        JSON.stringify({ configured: true, events: [], reachouts: [], followups: [], note: "Sheet is empty" }),
+        JSON.stringify({ configured: true, events: [], reachouts: [], followups: [], rows: [], note: "Sheet is empty" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const headers = grid[0];
     const dataRows = grid.slice(1);
+
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/${c.sheet_id}/edit${activeGid ? `#gid=${activeGid}` : ""}`;
+
+    // === Venue & Festival tab: return generic header→value rows ===
+    if (useVenueTab) {
+      const rows = dataRows
+        .map((r, i) => {
+          const obj: Record<string, string> = {};
+          headers.forEach((h, hi) => {
+            const key = (h || `col_${hi}`).trim() || `col_${hi}`;
+            obj[key] = (r[hi] || "").trim();
+          });
+          const hasAny = Object.values(obj).some((v) => v !== "");
+          if (!hasAny) return null;
+          return { id: `venue-${i}`, rowIndex: i + 2, fields: obj };
+        })
+        .filter(Boolean);
+
+      return new Response(
+        JSON.stringify({ configured: true, tab: "venue", headers, rows, count: rows.length, sheetUrl }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const idx = {
       status: resolveCol(c.status_col, headers),
