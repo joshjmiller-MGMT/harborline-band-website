@@ -1,6 +1,7 @@
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { useTeamAuth } from "@/hooks/useTeamAuth";
 import { Music, Image, Calendar, FolderOpen, LogOut, FileText, Home, LayoutDashboard, Activity, Share2, Phone, ChevronDown, Briefcase } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
