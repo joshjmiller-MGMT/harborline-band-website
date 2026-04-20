@@ -41,7 +41,7 @@ const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 // Canonical columns shown in the table. Matched case-insensitively against headers.
 const COMM_COLUMNS = [
-  { key: "venue", label: "Venue / Festival", aliases: ["venue", "venue / festival", "venue/festival", "name", "festival", "place"] },
+  { key: "venue", label: "Venue / Festival", aliases: ["venue", "venue / festival", "venue / festival name", "venue/festival", "name", "festival", "place"] },
   { key: "responded", label: "Responded?", aliases: ["responded?", "responded", "response", "reply"] },
   { key: "status", label: "Contact Status", aliases: ["contact status", "status"] },
   { key: "lastContacted", label: "Last Contacted", aliases: ["last contacted", "last contact", "last reached"] },
