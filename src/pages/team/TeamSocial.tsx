@@ -1,0 +1,24 @@
+import TeamLayout from "@/components/TeamLayout";
+import SocialManagerWidget from "@/components/dashboard/SocialManagerWidget";
+import PostingTimesWidget from "@/components/dashboard/PostingTimesWidget";
+import { Share2 } from "lucide-react";
+
+export default function TeamSocial() {
+  return (
+    <TeamLayout>
+      <div className="container mx-auto px-6 py-12">
+        <div className="mb-8">
+          <h1 className="font-display text-3xl tracking-wide-custom text-foreground flex items-center gap-3">
+            <Share2 className="w-7 h-7 text-primary" /> Social
+          </h1>
+          <p className="text-muted-foreground mt-2">Posting times and social media management.</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <PostingTimesWidget />
+          <SocialManagerWidget />
+        </div>
+      </div>
+    </TeamLayout>
+  );
+}
