@@ -57,14 +57,42 @@ export default function PostingTimesWidget() {
     setData(next);
     setLoading(false);
 
-    // Lazy refresh: if any platform is missing or older than 24h
-    const now = Date.now();
+    // Auto-refresh once per local calendar day, after 6am.
+    // Triggers on missing data or if newest cache row was last refreshed before today 6am.
+    const now = new Date();
+    const todaySixAm = new Date(now);
+    todaySixAm.setHours(6, 0, 0, 0);
+    const cutoff = now.getTime() >= todaySixAm.getTime()
+      ? todaySixAm.getTime()
+      : todaySixAm.getTime() - 24 * 60 * 60 * 1000; // before 6am: use yesterday 6am
     const stale = (["instagram", "tiktok"] as Platform[]).some((p) => {
       const row = next[p];
       if (!row) return true;
-      return now - new Date(row.refreshed_at).getTime() > 24 * 60 * 60 * 1000;
+      return new Date(row.refreshed_at).getTime() < cutoff;
     });
     if (stale) refresh(true);
+  };
+
+  // Most recent refresh across both platforms
+  const lastRefreshed = (() => {
+    const times = (["instagram", "tiktok"] as Platform[])
+      .map((p) => data[p]?.refreshed_at)
+      .filter(Boolean)
+      .map((t) => new Date(t as string).getTime());
+    return times.length ? new Date(Math.max(...times)) : null;
+  })();
+
+  const formatLastRefreshed = (d: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return "just now";
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const sameDay = d.toDateString() === now.toDateString();
+    if (sameDay) return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    return d.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   };
 
   const refresh = async (silent = false) => {
