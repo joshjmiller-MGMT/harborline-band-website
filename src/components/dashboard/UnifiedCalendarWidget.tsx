@@ -952,14 +952,11 @@ export default function UnifiedCalendarWidget() {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Embedded availability checker */}
-        <div className="mb-4">
-          <AvailabilityCheckerWidget />
-        </div>
-
-        {/* Status pills */}
-        <div className="flex flex-wrap gap-2 mb-4 text-xs">
-          <span
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(280px,360px)] gap-4 mb-4">
+          <div>
+            {/* Status pills */}
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span
             className={`px-2 py-1 rounded ${
               googleConnected
                 ? "bg-green-500/20 text-green-400"
