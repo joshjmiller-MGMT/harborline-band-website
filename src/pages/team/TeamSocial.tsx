@@ -15,8 +15,8 @@ export default function TeamSocial() {
         </div>
 
         <div className="space-y-6">
-          <PostingTimesWidget />
           <SocialManagerWidget />
+          <PostingTimesWidget />
         </div>
       </div>
     </TeamLayout>
