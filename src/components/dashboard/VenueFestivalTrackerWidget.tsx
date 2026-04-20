@@ -5,7 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Building2, RefreshCw, ExternalLink, Settings as SettingsIcon, Save, Search, Calendar, CheckCircle2, Circle, Clock, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Building2,
+  RefreshCw,
+  ExternalLink,
+  Settings as SettingsIcon,
+  Save,
+  Search,
+  Calendar,
+  CheckCircle2,
+  Circle,
+  Clock,
+  AlertTriangle,
+  Info,
+} from "lucide-react";
 import { toast } from "sonner";
 
 type VenueRow = { id: string; rowIndex: number; fields: Record<string, string> };
@@ -19,15 +39,14 @@ type Config = {
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
-// Canonical columns we expect on the Venue & Festival Tracker tab.
-// We match these case-insensitively against actual sheet headers.
+// Canonical columns shown in the table. Matched case-insensitively against headers.
 const COMM_COLUMNS = [
-  { key: "venue", label: "Venue", aliases: ["venue", "venue / festival", "venue/festival", "name", "festival", "place"] },
+  { key: "venue", label: "Venue / Festival", aliases: ["venue", "venue / festival", "venue/festival", "name", "festival", "place"] },
+  { key: "responded", label: "Responded?", aliases: ["responded?", "responded", "response", "reply"] },
   { key: "status", label: "Contact Status", aliases: ["contact status", "status"] },
   { key: "lastContacted", label: "Last Contacted", aliases: ["last contacted", "last contact", "last reached"] },
   { key: "nextAction", label: "Next Action", aliases: ["next action", "next step", "follow-up", "followup"] },
   { key: "nextActionDate", label: "Next Action Date", aliases: ["next action date", "next followup date", "next follow-up date", "follow up date", "due"] },
-  { key: "responded", label: "Responded?", aliases: ["responded?", "responded", "response", "reply"] },
 ] as const;
 
 type CommKey = typeof COMM_COLUMNS[number]["key"];
@@ -69,6 +88,7 @@ export default function VenueFestivalTrackerWidget() {
   const [note, setNote] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [detailRow, setDetailRow] = useState<VenueRow | null>(null);
 
   const [config, setConfig] = useState<Config | null>(null);
   const [draftGid, setDraftGid] = useState("");
@@ -141,29 +161,33 @@ export default function VenueFestivalTrackerWidget() {
     return map;
   }, [headers]);
 
+  // First non-empty header — used as a fallback "venue" label so we always
+  // have *something* to show even if header naming is unusual.
+  const firstHeader = useMemo(() => headers.find((h) => (h || "").trim()) || "", [headers]);
+
   const get = (r: VenueRow, key: CommKey): string => {
     const h = headerMap[key];
-    if (!h) return "";
-    return (r.fields[h] || "").trim();
+    if (h) return (r.fields[h] || "").trim();
+    if (key === "venue" && firstHeader) {
+      return (r.fields[firstHeader] || "").trim();
+    }
+    return "";
   };
 
-  // Filter out completely empty rows (no venue name)
-  const populatedRows = useMemo(
-    () => rows.filter((r) => get(r, "venue").length > 0),
-    [rows, headerMap],
-  );
+  // Show every row from the sheet — do NOT filter by date/status/etc.
+  const allRows = rows;
 
   const statusOptions = useMemo(() => {
     const set = new Set<string>();
-    populatedRows.forEach((r) => {
+    allRows.forEach((r) => {
       const s = get(r, "status");
       if (s) set.add(s);
     });
     return Array.from(set).sort();
-  }, [populatedRows, headerMap]);
+  }, [allRows, headerMap]);
 
   const filtered = useMemo(() => {
-    let list = populatedRows;
+    let list = allRows;
     if (statusFilter !== "all") {
       list = list.filter((r) => get(r, "status").toLowerCase() === statusFilter.toLowerCase());
     }
@@ -174,9 +198,15 @@ export default function VenueFestivalTrackerWidget() {
       );
     }
     return list;
-  }, [populatedRows, statusFilter, search, headerMap]);
+  }, [allRows, statusFilter, search, headerMap]);
 
-  const missingCanonical = COMM_COLUMNS.filter((c) => !headerMap[c.key]);
+  // Headers shown inside the popout card as "other details" (everything that
+  // isn't already one of the 6 main columns and isn't empty for that row).
+  const mainHeaderSet = useMemo(() => {
+    const s = new Set<string>();
+    Object.values(headerMap).forEach((h) => h && s.add(h));
+    return s;
+  }, [headerMap]);
 
   return (
     <Card className="bg-card/50 border-border">
@@ -184,7 +214,7 @@ export default function VenueFestivalTrackerWidget() {
         <CardTitle className="font-display text-lg tracking-wide-custom flex items-center gap-2 text-foreground">
           <Building2 className="w-5 h-5 text-primary" />
           Venue &amp; Festival Tracker
-          {populatedRows.length > 0 && <Badge variant="outline" className="ml-1">{populatedRows.length}</Badge>}
+          {allRows.length > 0 && <Badge variant="outline" className="ml-1">{allRows.length}</Badge>}
         </CardTitle>
         <div className="flex items-center gap-1">
           {sheetUrl && (
@@ -260,14 +290,7 @@ export default function VenueFestivalTrackerWidget() {
           </div>
         )}
 
-        {populatedRows.length > 0 && missingCanonical.length > 0 && (
-          <div className="mb-3 p-2 rounded text-[11px] bg-amber-500/10 text-amber-300 border border-amber-500/30">
-            Couldn't auto-detect columns: {missingCanonical.map((c) => c.label).join(", ")}.
-            Make sure your tab has those exact headers (case-insensitive) for full functionality.
-          </div>
-        )}
-
-        {populatedRows.length > 0 && (
+        {allRows.length > 0 && (
           <div className="flex items-center gap-2 mb-3">
             <div className="relative flex-1">
               <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -297,7 +320,7 @@ export default function VenueFestivalTrackerWidget() {
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            {populatedRows.length === 0
+            {allRows.length === 0
               ? "No venues yet. Configure the Venue & Festival Tracker tab gid in Settings."
               : "No matches for that filter."}
           </p>
@@ -306,12 +329,12 @@ export default function VenueFestivalTrackerWidget() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40">
                 <tr>
-                  <th className="text-left px-3 py-2 font-display tracking-wide-custom text-xs text-muted-foreground">Venue / Festival</th>
-                  <th className="text-left px-3 py-2 font-display tracking-wide-custom text-xs text-muted-foreground">Contact Status</th>
-                  <th className="text-left px-3 py-2 font-display tracking-wide-custom text-xs text-muted-foreground">Last Contacted</th>
-                  <th className="text-left px-3 py-2 font-display tracking-wide-custom text-xs text-muted-foreground">Next Action</th>
-                  <th className="text-left px-3 py-2 font-display tracking-wide-custom text-xs text-muted-foreground">Next Action Date</th>
-                  <th className="text-left px-3 py-2 font-display tracking-wide-custom text-xs text-muted-foreground">Responded?</th>
+                  {COMM_COLUMNS.map((c) => (
+                    <th key={c.key} className="text-left px-3 py-2 font-display tracking-wide-custom text-xs text-muted-foreground whitespace-nowrap">
+                      {c.label}
+                    </th>
+                  ))}
+                  <th className="w-10" />
                 </tr>
               </thead>
               <tbody>
@@ -322,9 +345,16 @@ export default function VenueFestivalTrackerWidget() {
                   const responded = respondedTone(get(r, "responded"));
                   const nextDate = get(r, "nextActionDate");
                   return (
-                    <tr key={r.id} className="border-t border-border/30 hover:bg-muted/20 align-top">
+                    <tr
+                      key={r.id}
+                      className="border-t border-border/30 hover:bg-muted/20 align-top cursor-pointer"
+                      onClick={() => setDetailRow(r)}
+                    >
                       <td className="px-3 py-2 text-foreground font-medium">
-                        {get(r, "venue") || "—"}
+                        {get(r, "venue") || <span className="text-muted-foreground italic">(unnamed row {r.rowIndex})</span>}
+                      </td>
+                      <td className={`px-3 py-2 text-xs ${responded.cls}`}>
+                        {responded.label}
                       </td>
                       <td className="px-3 py-2">
                         {status ? (
@@ -352,8 +382,8 @@ export default function VenueFestivalTrackerWidget() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className={`px-3 py-2 text-xs ${responded.cls}`}>
-                        {responded.label}
+                      <td className="px-3 py-2 text-muted-foreground">
+                        <Info className="w-4 h-4" />
                       </td>
                     </tr>
                   );
@@ -362,6 +392,72 @@ export default function VenueFestivalTrackerWidget() {
             </table>
           </div>
         )}
+
+        {/* Popout details card */}
+        <Dialog open={!!detailRow} onOpenChange={(open) => !open && setDetailRow(null)}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            {detailRow && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-primary" />
+                    {get(detailRow, "venue") || `Row ${detailRow.rowIndex}`}
+                  </DialogTitle>
+                  <DialogDescription>
+                    All fields from the Venue &amp; Festival Tracker · row {detailRow.rowIndex}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 mt-2">
+                  {/* Main 6 columns */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {COMM_COLUMNS.filter((c) => c.key !== "venue").map((c) => {
+                      const val = get(detailRow, c.key);
+                      return (
+                        <div key={c.key} className="p-2 rounded border border-border/40 bg-muted/20">
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{c.label}</div>
+                          <div className="text-sm text-foreground">{val || <span className="text-muted-foreground">—</span>}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* All other columns */}
+                  {headers.filter((h) => h && !mainHeaderSet.has(h) && h !== firstHeader).length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-2">Other details</div>
+                      <div className="space-y-2">
+                        {headers
+                          .filter((h) => h && !mainHeaderSet.has(h) && h !== firstHeader)
+                          .map((h) => {
+                            const val = (detailRow.fields[h] || "").trim();
+                            return (
+                              <div key={h} className="flex gap-3 text-sm border-b border-border/20 pb-1.5">
+                                <div className="w-1/3 text-muted-foreground text-xs pt-0.5">{h}</div>
+                                <div className="flex-1 text-foreground/90 whitespace-pre-wrap break-words">
+                                  {val || <span className="text-muted-foreground italic">empty</span>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+
+                  {sheetUrl && (
+                    <div className="pt-2 border-t border-border/30">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={sheetUrl} target="_blank" rel="noreferrer">
+                          <ExternalLink className="w-4 h-4 mr-1" /> Open in Google Sheets
+                        </a>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
