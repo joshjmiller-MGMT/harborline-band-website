@@ -237,9 +237,17 @@ export default function PostingTimesWidget() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="flex items-center gap-2 font-display tracking-wide-custom">
-          <Clock className="w-5 h-5 text-primary" /> Best Times to Post
-        </CardTitle>
+        <div>
+          <CardTitle className="flex items-center gap-2 font-display tracking-wide-custom">
+            <Clock className="w-5 h-5 text-primary" /> Best Times to Post
+          </CardTitle>
+          <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            {lastRefreshed
+              ? <>Last refreshed {formatLastRefreshed(lastRefreshed)} · auto-refreshes every morning</>
+              : <>Auto-refreshes every morning</>}
+          </p>
+        </div>
         <Button size="sm" variant="outline" onClick={() => refresh(false)} disabled={refreshing}>
           <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
           {refreshing ? "Refreshing" : "Refresh"}
