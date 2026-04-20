@@ -130,6 +130,10 @@ export default function PostingTimesWidget() {
 
   useEffect(() => {
     load();
+    // Re-check every 30 minutes — picks up the morning refresh even if the
+    // tab has been left open overnight.
+    const t = setInterval(() => { load(); }, 30 * 60 * 1000);
+    return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
