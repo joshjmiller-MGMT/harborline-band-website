@@ -115,7 +115,7 @@ function looksLikeVenueHeaders(headers: string[]): boolean {
 
 function extractCandidateSheetGids(html: string): string[] {
   const gids: string[] = [];
-  const regex = /\["dt[^"]+",\["(\d+)"/g;
+  const regex = /\[\\"dt[^\\"]+\\",\[\\"(\d+)\\"/g;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(html)) !== null) {
     const gid = match[1];
