@@ -102,6 +102,39 @@ function parseCSV(text: string): string[][] {
   return rows.filter((r) => r.some((c) => c.trim() !== ""));
 }
 
+function normalizeHeaders(headers: string[]): string[] {
+  return headers.map((h) => (h || "").trim().toLowerCase());
+}
+
+function looksLikeVenueHeaders(headers: string[]): boolean {
+  const lower = normalizeHeaders(headers);
+  return lower.includes("venue / festival name")
+    || lower.includes("venue / festival")
+    || (lower.includes("responded?") && lower.includes("contact status") && lower.includes("next action"));
+}
+
+function extractCandidateSheetGids(html: string): string[] {
+  const gids: string[] = [];
+  const regex = /\[\\"dt[^\\"]+\\",\[\\"(\d+)\\"/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(html)) !== null) {
+    const gid = match[1];
+    if (gid && !gids.includes(gid)) gids.push(gid);
+  }
+  return gids;
+}
+
+async function fetchSheetGrid(sheetId: string, gid: string) {
+  const gidPart = gid ? `&gid=${encodeURIComponent(gid)}` : "";
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv${gidPart}`;
+  const resp = await fetch(csvUrl);
+  if (!resp.ok) {
+    return { ok: false, status: resp.status, csvUrl, grid: [] as string[][] };
+  }
+  const csv = await resp.text();
+  return { ok: true, status: resp.status, csvUrl, grid: parseCSV(csv) };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -154,11 +187,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    const activeGid = useVenueTab ? c.venue_tab_gid : c.tab_gid;
-    const gidPart = activeGid ? `&gid=${encodeURIComponent(activeGid)}` : "";
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${c.sheet_id}/export?format=csv${gidPart}`;
-    const resp = await fetch(csvUrl);
-    if (!resp.ok) {
+    let activeGid = useVenueTab ? c.venue_tab_gid : c.tab_gid;
+    let note: string | undefined;
+
+    let sheetResult = await fetchSheetGrid(c.sheet_id, activeGid);
+    if (!sheetResult.ok) {
       return new Response(
         JSON.stringify({
           configured: true,
@@ -166,24 +199,56 @@ Deno.serve(async (req) => {
           reachouts: [],
           followups: [],
           rows: [],
-          error: `Could not fetch sheet (status ${resp.status}). Set the sheet to "Anyone with the link can view".`,
+          error: `Could not fetch sheet (status ${sheetResult.status}). Set the sheet to "Anyone with the link can view".`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const csv = await resp.text();
-    const grid = parseCSV(csv);
+    let grid = sheetResult.grid;
+
+    // If the venue gid is blank or points at the wrong tab, scan candidate sheet gids
+    // and auto-resolve the one whose header row matches the venue tracker columns.
+    if (useVenueTab) {
+      const initialHeaders = grid[0] || [];
+      if (!activeGid || !looksLikeVenueHeaders(initialHeaders)) {
+        try {
+          const editResp = await fetch(`https://docs.google.com/spreadsheets/d/${c.sheet_id}/edit`);
+          if (editResp.ok) {
+            const html = await editResp.text();
+            const candidateGids = extractCandidateSheetGids(html).filter((gid) => gid !== activeGid);
+            for (const gid of candidateGids) {
+              const candidate = await fetchSheetGrid(c.sheet_id, gid);
+              if (!candidate.ok || candidate.grid.length === 0) continue;
+              if (!looksLikeVenueHeaders(candidate.grid[0] || [])) continue;
+              activeGid = gid;
+              sheetResult = candidate;
+              grid = candidate.grid;
+              note = c.venue_tab_gid
+                ? `Configured venue tab gid did not match the venue tracker, so the correct tab was auto-detected.`
+                : `Auto-detected the Venue & Festival Tracker tab.`;
+              await supabase
+                .from("booking_agent_config")
+                .update({ venue_tab_gid: gid, updated_at: new Date().toISOString() })
+                .eq("id", "default");
+              break;
+            }
+          }
+        } catch (_) {
+          // fall back to the original sheet result if auto-detection fails
+        }
+      }
+    }
+
     if (grid.length === 0) {
       return new Response(
-        JSON.stringify({ configured: true, events: [], reachouts: [], followups: [], rows: [], note: "Sheet is empty" }),
+        JSON.stringify({ configured: true, events: [], reachouts: [], followups: [], rows: [], note: note || "Sheet is empty" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const headers = grid[0];
     const dataRows = grid.slice(1);
-
     const sheetUrl = `https://docs.google.com/spreadsheets/d/${c.sheet_id}/edit${activeGid ? `#gid=${activeGid}` : ""}`;
 
     // === Venue & Festival tab: return generic header→value rows ===
@@ -202,7 +267,7 @@ Deno.serve(async (req) => {
         .filter(Boolean);
 
       return new Response(
-        JSON.stringify({ configured: true, tab: "venue", headers, rows, count: rows.length, sheetUrl }),
+        JSON.stringify({ configured: true, tab: "venue", headers, rows, count: rows.length, sheetUrl, note }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -254,7 +319,7 @@ Deno.serve(async (req) => {
 
       const item = {
         id: `booking-${i}-${name.slice(0, 32).replace(/\s+/g, "-")}`,
-        rowIndex: i + 2, // 1-indexed + header
+        rowIndex: i + 2,
         name,
         status: statusRaw,
         type: idx.type >= 0 ? row[idx.type] || "" : "",
@@ -283,8 +348,6 @@ Deno.serve(async (req) => {
           end: endISO,
           allDay: !parsed.time,
           source: "booking",
-          // Label includes "Action Items" so it's automatically picked up by
-          // the existing Today's Action Items widget (which filters by regex).
           sourceLabel: "Booking Agent — Action Items",
           color: c.color || "#f59e0b",
           itemUrl: item.link || `https://docs.google.com/spreadsheets/d/${c.sheet_id}/edit${c.tab_gid ? `#gid=${c.tab_gid}` : ""}`,
@@ -300,7 +363,7 @@ Deno.serve(async (req) => {
         reachouts,
         followups,
         counts: { reachouts: reachouts.length, followups: followups.length, events: events.length },
-        sheetUrl: `https://docs.google.com/spreadsheets/d/${c.sheet_id}/edit${c.tab_gid ? `#gid=${c.tab_gid}` : ""}`,
+        sheetUrl,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
