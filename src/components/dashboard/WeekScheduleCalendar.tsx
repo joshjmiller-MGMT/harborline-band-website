@@ -13,6 +13,7 @@ type Post = {
   id: string; brand_id: string; source_id: string | null; title: string; notes: string;
   status: "idea" | "drafting" | "scheduled" | "posted";
   scheduled_for: string | null; posted_at: string | null;
+  [key: string]: any;
 };
 
 type DragPayload =
