@@ -63,6 +63,7 @@ export type Database = {
           tab_gid: string
           type_col: string
           updated_at: string
+          venue_tab_gid: string
         }
         Insert: {
           color?: string
@@ -82,6 +83,7 @@ export type Database = {
           tab_gid?: string
           type_col?: string
           updated_at?: string
+          venue_tab_gid?: string
         }
         Update: {
           color?: string
@@ -101,6 +103,7 @@ export type Database = {
           tab_gid?: string
           type_col?: string
           updated_at?: string
+          venue_tab_gid?: string
         }
         Relationships: []
       }

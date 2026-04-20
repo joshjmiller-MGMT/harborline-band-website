@@ -1,8 +1,8 @@
 import { useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
 import BookingAgentWidget from "@/components/dashboard/BookingAgentWidget";
+import VenueFestivalTrackerWidget from "@/components/dashboard/VenueFestivalTrackerWidget";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Phone, Building2, Users } from "lucide-react";
 
 export default function TeamBooking() {
@@ -35,21 +35,7 @@ export default function TeamBooking() {
           </TabsContent>
 
           <TabsContent value="venue-festival" className="mt-6">
-            <Card className="bg-card/50 border-border">
-              <CardHeader>
-                <CardTitle className="font-display text-lg tracking-wide-custom flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-primary" />
-                  Venue & Festival Tracker
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Coming soon — this tab will pull the Venue &amp; Festival tab from the JJMM
-                  contact spreadsheet, showing target venues, festival deadlines, and submission
-                  status.
-                </p>
-              </CardContent>
-            </Card>
+            <VenueFestivalTrackerWidget />
           </TabsContent>
         </Tabs>
       </div>
