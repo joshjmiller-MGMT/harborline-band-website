@@ -16,6 +16,7 @@ type Config = {
   enabled: boolean;
   sheet_id: string;
   tab_gid: string;
+  venue_tab_gid: string;
   status_col: string;
   name_col: string;
   next_followup_col: string;
