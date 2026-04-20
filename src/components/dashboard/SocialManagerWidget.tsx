@@ -287,6 +287,45 @@ export default function SocialManagerWidget() {
 
           {brands.map((b) => (
             <TabsContent key={b.slug} value={b.slug} className="space-y-4">
+              {/* Week schedule (drag & drop) */}
+              {b.id === activeBrand?.id && (
+                <WeekScheduleCalendar
+                  brand={b}
+                  sources={brandSources}
+                  posts={brandPosts}
+                  onOpenPost={(p) => setPostDialog(p)}
+                  onSchedulePost={async (postId, iso) => {
+                    await updatePost(postId, { scheduled_for: iso, status: "scheduled" });
+                  }}
+                  onUnschedule={async (postId) => {
+                    await updatePost(postId, { scheduled_for: null, status: "drafting" });
+                  }}
+                  onCreatePostFromSource={async (sourceId, iso) => {
+                    if (!activeBrand) return;
+                    const src = brandSources.find((s) => s.id === sourceId);
+                    if (!src) return;
+                    const { data, error } = await supabase
+                      .from("social_posts")
+                      .insert({
+                        brand_id: activeBrand.id,
+                        source_id: src.id,
+                        title: `${src.title} — ${new Date(iso).toLocaleDateString()}`,
+                        notes: src.description,
+                        status: "scheduled",
+                        scheduled_for: iso,
+                      })
+                      .select()
+                      .single();
+                    if (error) {
+                      toast({ title: "Failed to schedule", description: error.message, variant: "destructive" });
+                      return;
+                    }
+                    setPosts((prev) => [data as Post, ...prev]);
+                    toast({ title: "Scheduled", description: src.title });
+                  }}
+                />
+              )}
+
               {/* Sources sidebar (top) */}
               <div className="grid md:grid-cols-2 gap-3">
                 <SourcesPanel
