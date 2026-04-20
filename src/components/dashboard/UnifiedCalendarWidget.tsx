@@ -1407,6 +1407,11 @@ export default function UnifiedCalendarWidget() {
           </div>
           </PopoverContent>
         </Popover>
+          </div>
+          <div>
+            <AvailabilityCheckerWidget />
+          </div>
+        </div>
 
 
         {/* View toggle */}
