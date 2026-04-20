@@ -293,7 +293,7 @@ export default function SocialManagerWidget() {
                   brand={b}
                   sources={brandSources}
                   posts={brandPosts}
-                  onOpenPost={(p) => setPostDialog(p)}
+                  onOpenPost={(p) => setPostDialog(p as Post)}
                   onSchedulePost={async (postId, iso) => {
                     await updatePost(postId, { scheduled_for: iso, status: "scheduled" });
                   }}
