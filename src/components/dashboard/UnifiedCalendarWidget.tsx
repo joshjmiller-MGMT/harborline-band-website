@@ -43,6 +43,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import ColorSwatchPicker from "./ColorSwatchPicker";
+import AvailabilityCheckerWidget from "./AvailabilityCheckerWidget";
 
 const COLOR_OVERRIDES_KEY = "unifiedCalendar.colorOverrides";
 
@@ -951,6 +952,11 @@ export default function UnifiedCalendarWidget() {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Embedded availability checker */}
+        <div className="mb-4">
+          <AvailabilityCheckerWidget />
+        </div>
+
         {/* Status pills */}
         <div className="flex flex-wrap gap-2 mb-4 text-xs">
           <span
