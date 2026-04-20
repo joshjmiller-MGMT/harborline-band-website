@@ -46,11 +46,28 @@ export default function ClaudeLogWidget() {
 
   useEffect(() => {
     fetchEntries();
+
+    // Realtime: instant updates when any client inserts/updates/deletes
     const channel = supabase
       .channel("claude_log_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "claude_log" }, () => fetchEntries())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    // Re-fetch when the tab becomes visible again (e.g. opened in the morning)
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") fetchEntries();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    // Safety net: re-fetch every 15 minutes while the tab is open so a tab
+    // left open overnight reflects entries posted from other machines.
+    const interval = setInterval(() => fetchEntries(), 15 * 60 * 1000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener("visibilitychange", onVisibility);
+      clearInterval(interval);
+    };
   }, []);
 
   const addEntry = async () => {
