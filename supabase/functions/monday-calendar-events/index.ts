@@ -256,7 +256,10 @@ Deno.serve(async (req) => {
           statusTexts.some((t) => /booked|lost\s*sale/.test(t));
         const skipLeadsStatus = isLeadsSource && isBookedOrLost;
 
-        if (!primary.dateStr && !skipForDone && !skipLeadsStatus) {
+        // Apply same exclusions to events list (action items)
+        if (skipForDone || skipLeadsStatus) continue;
+
+        if (!primary.dateStr) {
           missingPrimary++;
           missingDateItems.push({
             id: `monday-missing-${src.board_id}-${item.id}`,
