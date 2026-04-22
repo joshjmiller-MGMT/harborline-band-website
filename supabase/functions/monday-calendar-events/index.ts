@@ -200,11 +200,12 @@ Deno.serve(async (req) => {
         const isLostSale = groupTitleRaw.includes("lost sale");
         const matchesSkipKeyword = skipGroupKeywords.some((kw) => groupTitleRaw.includes(kw));
 
-        // Events board: skip any "Completed Gigs" (or similar "completed") group entirely.
+        // Events board: track "Completed Gigs" group — these should be excluded
+        // from "Items Missing Dates" but still considered for "Today's Action Items"
+        // (filtered by the Next Action Step = Done rule below).
         const sourceIdentEarly = `${src.label || ""} ${boardName || ""}`.toLowerCase();
         const isEventsSourceEarly = /event/i.test(sourceIdentEarly);
         const isCompletedGroup = /complete/.test(groupTitleRaw);
-        if (isEventsSourceEarly && isCompletedGroup) continue;
 
         if (isLostSale || matchesSkipKeyword) continue;
 
@@ -239,10 +240,10 @@ Deno.serve(async (req) => {
         const isEventsSource = /event/i.test(sourceIdent);
         const isLeadsSource = /lead/i.test(sourceIdent);
 
-        // --- Events: skip when "Next Action" column = "Done" ---
+        // --- Events: skip when "Next Action" / "Next Action Step" column = "Done" ---
         const nextActionCol = item.column_values?.find((c: any) => {
           const title = (c.column?.title || "").toLowerCase().trim();
-          return title === "next action" || title === "next actions";
+          return title === "next action" || title === "next actions" || title === "next action step" || title === "next action steps";
         });
         const nextActionDone = (nextActionCol?.text || "").trim().toLowerCase() === "done";
         const skipForDone = isEventsSource && nextActionDone;
@@ -266,7 +267,7 @@ Deno.serve(async (req) => {
         // Apply same exclusions to events list (action items)
         if (skipForDone || skipLeadsStatus) continue;
 
-        if (!primary.dateStr) {
+        if (!primary.dateStr && !(isEventsSourceEarly && isCompletedGroup)) {
           missingPrimary++;
           missingDateItems.push({
             id: `monday-missing-${src.board_id}-${item.id}`,
