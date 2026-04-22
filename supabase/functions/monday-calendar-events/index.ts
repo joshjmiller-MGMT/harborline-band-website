@@ -235,7 +235,13 @@ Deno.serve(async (req) => {
         const nextActionDone = (nextActionCol?.text || "").trim().toLowerCase() === "done";
         const skipForDone = isEventsSource && nextActionDone;
 
-        if (!primary.dateStr && !skipForDone) {
+        // Skip "Leads" source items in the "Booked" group (lost sale already
+        // skipped globally above).
+        const isLeadsSource = /lead/i.test(src.label || "");
+        const isBookedGroup = /booked/i.test(item.group?.title || "");
+        const skipLeadsBooked = isLeadsSource && isBookedGroup;
+
+        if (!primary.dateStr && !skipForDone && !skipLeadsBooked) {
           missingPrimary++;
           missingDateItems.push({
             id: `monday-missing-${src.board_id}-${item.id}`,
