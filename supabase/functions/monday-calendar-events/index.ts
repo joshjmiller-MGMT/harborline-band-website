@@ -226,8 +226,13 @@ Deno.serve(async (req) => {
         }
 
         // Flag items missing the PRIMARY date, regardless of fallbacks.
-        // Skip "events" source items whose "Next Action" column is "Done".
-        const isEventsSource = /event/i.test(src.label || "");
+        // Match board identity against BOTH the source label AND the actual
+        // Monday board name, so renames/labels don't break the filter.
+        const sourceIdent = `${src.label || ""} ${boardName || ""}`.toLowerCase();
+        const isEventsSource = /event/i.test(sourceIdent);
+        const isLeadsSource = /lead/i.test(sourceIdent);
+
+        // --- Events: skip when "Next Action" column = "Done" ---
         const nextActionCol = item.column_values?.find((c: any) => {
           const title = (c.column?.title || "").toLowerCase().trim();
           return title === "next action" || title === "next actions";
@@ -235,13 +240,23 @@ Deno.serve(async (req) => {
         const nextActionDone = (nextActionCol?.text || "").trim().toLowerCase() === "done";
         const skipForDone = isEventsSource && nextActionDone;
 
-        // Skip "Leads" source items in the "Booked" group (lost sale already
-        // skipped globally above).
-        const isLeadsSource = /lead/i.test(src.label || "");
-        const isBookedGroup = /booked/i.test(item.group?.title || "");
-        const skipLeadsBooked = isLeadsSource && isBookedGroup;
+        // --- Leads: skip when item is "Booked" or "Lost Sale" ---
+        // Check group title AND any status column text (e.g. "Status",
+        // "Stage", "Lead Status") for those labels.
+        const groupTitleLc = (item.group?.title || "").toLowerCase();
+        const statusTexts: string[] = (item.column_values || [])
+          .filter((c: any) => {
+            const title = (c.column?.title || "").toLowerCase();
+            return /status|stage|sale/.test(title);
+          })
+          .map((c: any) => (c.text || "").toLowerCase().trim())
+          .filter(Boolean);
+        const isBookedOrLost =
+          /booked|lost\s*sale/.test(groupTitleLc) ||
+          statusTexts.some((t) => /booked|lost\s*sale/.test(t));
+        const skipLeadsStatus = isLeadsSource && isBookedOrLost;
 
-        if (!primary.dateStr && !skipForDone && !skipLeadsBooked) {
+        if (!primary.dateStr && !skipForDone && !skipLeadsStatus) {
           missingPrimary++;
           missingDateItems.push({
             id: `monday-missing-${src.board_id}-${item.id}`,
