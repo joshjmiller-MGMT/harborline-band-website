@@ -226,7 +226,16 @@ Deno.serve(async (req) => {
         }
 
         // Flag items missing the PRIMARY date, regardless of fallbacks.
-        if (!primary.dateStr) {
+        // Skip "events" source items whose "Next Action" column is "Done".
+        const isEventsSource = /event/i.test(src.label || "");
+        const nextActionCol = item.column_values?.find((c: any) => {
+          const title = (c.column?.title || "").toLowerCase().trim();
+          return title === "next action" || title === "next actions";
+        });
+        const nextActionDone = (nextActionCol?.text || "").trim().toLowerCase() === "done";
+        const skipForDone = isEventsSource && nextActionDone;
+
+        if (!primary.dateStr && !skipForDone) {
           missingPrimary++;
           missingDateItems.push({
             id: `monday-missing-${src.board_id}-${item.id}`,
