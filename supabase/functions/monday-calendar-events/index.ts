@@ -276,11 +276,16 @@ Deno.serve(async (req) => {
         if (!dateStr) continue;
         withDates++;
 
+        // For all-day items, emit a naive local-time ISO string (no "Z"),
+        // so the browser parses it in the user's local timezone instead of
+        // shifting it back a day from UTC midnight.
+        // For timed items, the Monday-provided time is already in the user's
+        // local clock — preserve it the same way.
         const startISO = timeStr
-          ? new Date(`${dateStr}T${timeStr}`).toISOString()
-          : new Date(`${dateStr}T00:00:00`).toISOString();
+          ? `${dateStr}T${timeStr.length === 5 ? `${timeStr}:00` : timeStr}`
+          : `${dateStr}T00:00:00`;
         const endISO = timeStr
-          ? new Date(new Date(startISO).getTime() + 60 * 60 * 1000).toISOString()
+          ? `${dateStr}T${timeStr.length === 5 ? `${timeStr}:00` : timeStr}`
           : startISO;
 
         const fields: { label: string; value: string; columnId: string }[] = [];
