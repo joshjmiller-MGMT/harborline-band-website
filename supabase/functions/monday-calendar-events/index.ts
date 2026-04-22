@@ -200,11 +200,12 @@ Deno.serve(async (req) => {
         const isLostSale = groupTitleRaw.includes("lost sale");
         const matchesSkipKeyword = skipGroupKeywords.some((kw) => groupTitleRaw.includes(kw));
 
-        // Events board: skip any "Completed Gigs" (or similar "completed") group entirely.
+        // Events board: track "Completed Gigs" group — these should be excluded
+        // from "Items Missing Dates" but still considered for "Today's Action Items"
+        // (filtered by the Next Action Step = Done rule below).
         const sourceIdentEarly = `${src.label || ""} ${boardName || ""}`.toLowerCase();
         const isEventsSourceEarly = /event/i.test(sourceIdentEarly);
         const isCompletedGroup = /complete/.test(groupTitleRaw);
-        if (isEventsSourceEarly && isCompletedGroup) continue;
 
         if (isLostSale || matchesSkipKeyword) continue;
 
