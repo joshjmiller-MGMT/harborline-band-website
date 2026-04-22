@@ -240,10 +240,10 @@ Deno.serve(async (req) => {
         const isEventsSource = /event/i.test(sourceIdent);
         const isLeadsSource = /lead/i.test(sourceIdent);
 
-        // --- Events: skip when "Next Action" column = "Done" ---
+        // --- Events: skip when "Next Action" / "Next Action Step" column = "Done" ---
         const nextActionCol = item.column_values?.find((c: any) => {
           const title = (c.column?.title || "").toLowerCase().trim();
-          return title === "next action" || title === "next actions";
+          return title === "next action" || title === "next actions" || title === "next action step" || title === "next action steps";
         });
         const nextActionDone = (nextActionCol?.text || "").trim().toLowerCase() === "done";
         const skipForDone = isEventsSource && nextActionDone;
