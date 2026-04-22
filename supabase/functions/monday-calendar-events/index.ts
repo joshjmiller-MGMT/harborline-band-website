@@ -199,6 +199,13 @@ Deno.serve(async (req) => {
         const groupTitleRaw = (item.group?.title || "").toLowerCase().replace(/[-_]/g, " ").trim();
         const isLostSale = groupTitleRaw.includes("lost sale");
         const matchesSkipKeyword = skipGroupKeywords.some((kw) => groupTitleRaw.includes(kw));
+
+        // Events board: skip any "Completed Gigs" (or similar "completed") group entirely.
+        const sourceIdentEarly = `${src.label || ""} ${boardName || ""}`.toLowerCase();
+        const isEventsSourceEarly = /event/i.test(sourceIdentEarly);
+        const isCompletedGroup = /complete/.test(groupTitleRaw);
+        if (isEventsSourceEarly && isCompletedGroup) continue;
+
         if (isLostSale || matchesSkipKeyword) continue;
 
         // Primary date column (e.g. "Next Action Date"). This is the one we
