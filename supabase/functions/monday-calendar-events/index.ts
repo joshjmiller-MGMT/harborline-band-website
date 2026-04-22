@@ -267,7 +267,7 @@ Deno.serve(async (req) => {
         // Apply same exclusions to events list (action items)
         if (skipForDone || skipLeadsStatus) continue;
 
-        if (!primary.dateStr) {
+        if (!primary.dateStr && !(isEventsSourceEarly && isCompletedGroup)) {
           missingPrimary++;
           missingDateItems.push({
             id: `monday-missing-${src.board_id}-${item.id}`,
