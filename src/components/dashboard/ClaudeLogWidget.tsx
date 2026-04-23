@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { Bot, Plus, Download, Upload, RefreshCw, Code } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-const supabase = createClient(
-  "https://uqrpshzgonoopcwjglzl.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxcnBzaHpnb25vb3Bjd2pnbHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NTc5NDUsImV4cCI6MjA5MjAzMzk0NX0.MI0M8Cwz3gdnePHxnAJHoeBV1gxfvP0LOwhCRcY8sm8",
-);
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 interface ClaudeLogEntry {
   id: string;
