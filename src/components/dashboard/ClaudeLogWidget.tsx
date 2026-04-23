@@ -194,7 +194,7 @@ export default function ClaudeLogWidget() {
           {copied === "json" ? "Copied!" : "Export .json"}
         </button>
         <a
-          href="https://uqrpshzgonoopcwjglzl.supabase.co/rest/v1/claude_log?select=*&order=date.desc"
+          href={`${SUPABASE_URL}/rest/v1/claude_log?select=*&order=date.desc&apikey=${SUPABASE_KEY}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md hover:bg-accent transition-colors"
