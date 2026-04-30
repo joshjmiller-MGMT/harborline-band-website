@@ -48,7 +48,7 @@ const AnniversariesPage = () => {
     <Layout
       title="Anniversary Party Band Baltimore | Harborline Live Entertainment"
       description="Celebrate your milestone anniversary with Harborline. Live band entertainment for silver, golden, and special anniversary celebrations in Baltimore."
-      canonical="https://harborlinemusic.com/anniversaries"
+      canonical="https://harborlineband.com/anniversaries"
     >
       <script type="application/ld+json">
         {JSON.stringify(serviceSchema)}

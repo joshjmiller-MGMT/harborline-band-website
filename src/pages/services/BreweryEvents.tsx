@@ -48,7 +48,7 @@ const BreweryEventsPage = () => {
     <Layout
       title="Brewery Live Music Baltimore | Harborline Entertainment"
       description="Book Harborline for your brewery or taproom. Live music for taproom entertainment, beer releases, and private brewery events in Baltimore."
-      canonical="https://harborlinemusic.com/brewery-events"
+      canonical="https://harborlineband.com/brewery-events"
     >
       <script type="application/ld+json">
         {JSON.stringify(serviceSchema)}

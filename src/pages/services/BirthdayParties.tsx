@@ -48,7 +48,7 @@ const BirthdayPartiesPage = () => {
     <Layout
       title="Birthday Party Band Baltimore | Harborline Live Entertainment"
       description="Make your birthday celebration unforgettable with Harborline. Live band entertainment for milestone birthdays, sweet 16s, and surprise parties in Baltimore."
-      canonical="https://harborlinemusic.com/birthday-parties"
+      canonical="https://harborlineband.com/birthday-parties"
     >
       <script type="application/ld+json">
         {JSON.stringify(serviceSchema)}

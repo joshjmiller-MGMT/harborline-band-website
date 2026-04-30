@@ -17,7 +17,7 @@ const AboutPage = () => {
     <Layout
       title="About Harborline | Baltimore's Premier Event Band"
       description="Harborline is the DMV's premiere event band bringing modern soul and R&B energy to every celebration. The best of the old and the best of the new."
-      canonical="https://harborlinemusic.com/about"
+      canonical="https://harborlineband.com/about"
     >
       <PageHero
         eyebrow="OUR STORY"

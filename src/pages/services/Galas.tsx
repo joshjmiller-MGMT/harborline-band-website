@@ -16,7 +16,7 @@ const GalasPage = () => {
     <Layout
       title="Gala Entertainment Baltimore | Harborline Live Band"
       description="Sophisticated live entertainment for galas, fundraisers, and black-tie events in Baltimore. Harborline brings elegance and energy to your special occasion."
-      canonical="https://harborlinemusic.com/galas"
+      canonical="https://harborlineband.com/galas"
     >
       <PageHero
         eyebrow="GALAS & FUNDRAISERS"

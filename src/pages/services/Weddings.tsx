@@ -48,7 +48,7 @@ const WeddingsPage = () => {
     <Layout
       title="Wedding Band Baltimore | Harborline Live Music"
       description="Make your Baltimore wedding unforgettable with Harborline. Live ceremony music, cocktail hour entertainment, and high-energy reception performances."
-      canonical="https://harborlinemusic.com/weddings"
+      canonical="https://harborlineband.com/weddings"
     >
       <script type="application/ld+json">
         {JSON.stringify(weddingSchema)}

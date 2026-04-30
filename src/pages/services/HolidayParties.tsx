@@ -48,7 +48,7 @@ const HolidayPartiesPage = () => {
     <Layout
       title="Holiday Party Band Baltimore | Harborline Live Entertainment"
       description="Book Harborline for your holiday party. Live band entertainment for corporate holiday parties, festive galas, and New Year's Eve celebrations in Baltimore."
-      canonical="https://harborlinemusic.com/holiday-parties"
+      canonical="https://harborlineband.com/holiday-parties"
     >
       <script type="application/ld+json">
         {JSON.stringify(serviceSchema)}

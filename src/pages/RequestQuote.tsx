@@ -11,7 +11,7 @@ const RequestQuotePage = () => {
       <Helmet>
         <title>Request a Quote | Harborline Entertainment</title>
         <meta name="description" content="Get a custom quote for your event. Harborline provides live entertainment for weddings, corporate events, and private celebrations in Baltimore, Maryland and beyond." />
-        <link rel="canonical" href="https://harborlinemusic.com/request-a-quote" />
+        <link rel="canonical" href="https://harborlineband.com/request-a-quote" />
       </Helmet>
       
       <Header />

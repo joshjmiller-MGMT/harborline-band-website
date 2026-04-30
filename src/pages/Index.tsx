@@ -18,9 +18,9 @@ const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "MusicGroup",
   "name": "Harborline",
-  "url": "https://harborlinemusic.com",
-  "logo": "https://harborlinemusic.com/logo.png",
-  "image": "https://harborlinemusic.com/logo.png",
+  "url": "https://harborlineband.com",
+  "logo": "https://harborlineband.com/logo.png",
+  "image": "https://harborlineband.com/logo.png",
   "description": "Baltimore's premier event and corporate music group. Live entertainment for weddings, galas, corporate events, and private celebrations across Maryland.",
   "foundingDate": "2009",
   "areaServed": [
@@ -44,7 +44,7 @@ const organizationSchema = {
     "@type": "ContactPoint",
     "telephone": "+1-443-405-2378",
     "contactType": "booking",
-    "email": "info@harborlinemusic.com"
+    "email": "harborlineband@gmail.com"
   },
   "priceRange": "$$$$",
   "aggregateRating": {
@@ -61,10 +61,10 @@ const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
   "name": "Harborline Entertainment",
-  "@id": "https://harborlinemusic.com",
-  "url": "https://harborlinemusic.com",
+  "@id": "https://harborlineband.com",
+  "url": "https://harborlineband.com",
   "telephone": "+1-443-405-2378",
-  "email": "info@harborlinemusic.com",
+  "email": "harborlineband@gmail.com",
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Baltimore",
@@ -144,14 +144,14 @@ const Index = () => {
         <title>Harborline | Baltimore's Premier Event & Corporate Band</title>
         <meta name="description" content="Top-rated live entertainment for weddings, galas, corporate events, and private celebrations in Baltimore, Maryland, Washington DC, and the Mid-Atlantic region." />
         <meta name="keywords" content="Baltimore wedding band, corporate event band, live music Baltimore, wedding entertainment Maryland, jazz band Baltimore, gala entertainment, party band DC" />
-        <link rel="canonical" href="https://harborlinemusic.com" />
+        <link rel="canonical" href="https://harborlineband.com" />
         
         {/* Open Graph */}
         <meta property="og:title" content="Harborline | Baltimore's Premier Event Band" />
         <meta property="og:description" content="Top-rated live entertainment for weddings, galas, and corporate events in Baltimore and the Mid-Atlantic." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://harborlinemusic.com" />
-        <meta property="og:image" content="https://harborlinemusic.com/og-image.jpg" />
+        <meta property="og:url" content="https://harborlineband.com" />
+        <meta property="og:image" content="https://harborlineband.com/og-image.jpg" />
         <meta property="og:locale" content="en_US" />
         <meta property="og:site_name" content="Harborline" />
         
@@ -159,7 +159,7 @@ const Index = () => {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Harborline | Baltimore Event Band" />
         <meta name="twitter:description" content="Top-rated live entertainment for weddings, galas, and corporate events." />
-        <meta name="twitter:image" content="https://harborlinemusic.com/og-image.jpg" />
+        <meta name="twitter:image" content="https://harborlineband.com/og-image.jpg" />
         
         {/* Additional SEO Meta */}
         <meta name="robots" content="index, follow" />

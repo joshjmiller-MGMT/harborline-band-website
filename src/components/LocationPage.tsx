@@ -18,7 +18,7 @@ const LocationPage = ({ city, region, description, venues, nearbyAreas }: Locati
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     "name": "Harborline",
-    "@id": `https://harborlinemusic.com/locations/${city.toLowerCase().replace(/\s/g, '-')}`,
+    "@id": `https://harborlineband.com/locations/${city.toLowerCase().replace(/\s/g, '-')}`,
     "description": `Live event band and entertainment services in ${city}, ${region}`,
     "areaServed": {
       "@type": "City",
@@ -35,7 +35,7 @@ const LocationPage = ({ city, region, description, venues, nearbyAreas }: Locati
     <Layout
       title={`${city} Event Band | Harborline Live Entertainment`}
       description={`Book Harborline for weddings, corporate events, and private parties in ${city}, ${region}. Professional live entertainment that creates unforgettable celebrations.`}
-      canonical={`https://harborlinemusic.com/locations/${city.toLowerCase().replace(/\s/g, '-')}`}
+      canonical={`https://harborlineband.com/locations/${city.toLowerCase().replace(/\s/g, '-')}`}
     >
       <script type="application/ld+json">
         {JSON.stringify(localBusinessSchema)}

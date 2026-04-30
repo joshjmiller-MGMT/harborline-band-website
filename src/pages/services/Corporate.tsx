@@ -25,7 +25,7 @@ const CorporatePage = () => {
     <Layout
       title="Corporate Event Band Baltimore | Harborline Entertainment"
       description="Elevate your corporate event with Harborline. Professional live entertainment for galas, conferences, company parties, and team events in Baltimore."
-      canonical="https://harborlinemusic.com/corporate"
+      canonical="https://harborlineband.com/corporate"
     >
       <PageHero
         eyebrow="CORPORATE EVENTS"

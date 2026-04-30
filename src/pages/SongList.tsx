@@ -275,7 +275,7 @@ ${generateContent()}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                     🎵 HARBORLINE 🎵
            Baltimore's Premier Event Band
-           www.harborlinemusic.com
+           www.harborlineband.com
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
 
@@ -421,7 +421,7 @@ ${generateContent()}
     <div class="footer">
       <img src="${logoNew}" alt="Harborline" class="footer-logo" onerror="this.style.display='none'">
       <p class="footer-tagline">Baltimore's Premier Event Band</p>
-      <a href="https://harborlinemusic.com" class="footer-link">harborlinemusic.com</a>
+      <a href="https://harborlineband.com" class="footer-link">harborlineband.com</a>
     </div>
   </div>
 </body>
@@ -702,7 +702,7 @@ ${generateContent()}
         <p class="footer-tagline">Baltimore's Premier Event Band</p>
       </div>
       <div>
-        <p class="footer-contact">harborlinemusic.com</p>
+        <p class="footer-contact">harborlineband.com</p>
         <p class="footer-date">Generated on ${today}</p>
       </div>
     </div>
@@ -973,7 +973,7 @@ ${generateContent()}
     <Layout
       title="Song List & Repertoire | Harborline Baltimore Band"
       description="Browse Harborline's extensive song list featuring Motown, Top 40, rock classics, jazz standards, and more. Request your favorite songs for your event."
-      canonical="https://harborlinemusic.com/songs"
+      canonical="https://harborlineband.com/songs"
     >
       {content}
     </Layout>

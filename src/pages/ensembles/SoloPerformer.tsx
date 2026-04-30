@@ -50,7 +50,7 @@ const SoloPerformerPage = () => {
     <Layout
       title="Solo Pianist & Guitarist Baltimore | Harborline Solo Performers"
       description="Solo pianist, guitarist, or vocalist for intimate events. Perfect ambient entertainment for cocktail hours, dinners, and small gatherings."
-      canonical="https://harborlinemusic.com/ensembles/solo-performer"
+      canonical="https://harborlineband.com/ensembles/solo-performer"
     >
       <script type="application/ld+json">
         {JSON.stringify(schema)}

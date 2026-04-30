@@ -16,7 +16,7 @@ const PrivatePartiesPage = () => {
     <Layout
       title="Private Party Band Baltimore | Harborline Entertainment"
       description="Live entertainment for private parties, birthdays, anniversaries, and special celebrations in Baltimore. Harborline creates unforgettable experiences."
-      canonical="https://harborlinemusic.com/private-parties"
+      canonical="https://harborlineband.com/private-parties"
     >
       <PageHero
         eyebrow="PRIVATE PARTIES"

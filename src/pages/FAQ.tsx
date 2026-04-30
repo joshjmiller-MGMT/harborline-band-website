@@ -70,7 +70,7 @@ const FAQPage = () => {
     <Layout
       title="FAQ | Harborline Baltimore Event Band"
       description="Frequently asked questions about booking Harborline for your wedding, corporate event, or private party in Baltimore, Maryland."
-      canonical="https://harborlinemusic.com/faq"
+      canonical="https://harborlineband.com/faq"
     >
       <script type="application/ld+json">
         {JSON.stringify(faqSchema)}

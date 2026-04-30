@@ -16,8 +16,8 @@ const baseOrgSchema = {
   "@context": "https://schema.org",
   "@type": "MusicGroup",
   "name": "Harborline",
-  "url": "https://harborlinemusic.com",
-  "logo": "https://harborlinemusic.com/logo.png",
+  "url": "https://harborlineband.com",
+  "logo": "https://harborlineband.com/logo.png",
   "sameAs": [
     "https://www.instagram.com/harborline.band/",
     "https://www.facebook.com/Harborline.band/",
@@ -31,7 +31,7 @@ const Layout = ({
   description = "Top-rated live entertainment for weddings, galas, corporate events, and private celebrations in Baltimore, Maryland, and the Mid-Atlantic region.",
   canonical,
   keywords = "Baltimore wedding band, corporate event band, live music Baltimore, wedding entertainment Maryland",
-  ogImage = "https://harborlinemusic.com/og-image.jpg"
+  ogImage = "https://harborlineband.com/og-image.jpg"
 }: LayoutProps) => {
   return (
     <>

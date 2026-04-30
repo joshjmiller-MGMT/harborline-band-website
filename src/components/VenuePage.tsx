@@ -56,7 +56,7 @@ const VenuePage = ({
     <Layout
       title={`${venueName} Wedding Band | Harborline at ${venueName}`}
       description={`Book Harborline to perform at ${venueName} in ${city}. Expert live band with experience at this stunning ${venueType.toLowerCase()}. Weddings, galas, and corporate events.`}
-      canonical={`https://harborlinemusic.com/venues/${slug}`}
+      canonical={`https://harborlineband.com/venues/${slug}`}
     >
       <script type="application/ld+json">
         {JSON.stringify(venueSchema)}

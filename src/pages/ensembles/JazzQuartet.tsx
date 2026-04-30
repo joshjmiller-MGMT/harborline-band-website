@@ -50,7 +50,7 @@ const JazzQuartetPage = () => {
     <Layout
       title="Jazz Quartet Baltimore | Harborline Live Jazz Music"
       description="Add sophistication to your event with Harborline's jazz quartet. Perfect for cocktail hours, corporate events, and upscale celebrations."
-      canonical="https://harborlinemusic.com/ensembles/jazz-quartet"
+      canonical="https://harborlineband.com/ensembles/jazz-quartet"
     >
       <script type="application/ld+json">
         {JSON.stringify(schema)}

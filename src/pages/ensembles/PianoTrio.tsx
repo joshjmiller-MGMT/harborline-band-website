@@ -50,7 +50,7 @@ const PianoTrioPage = () => {
     <Layout
       title="Piano Trio Baltimore | Harborline Live Piano Music"
       description="Create an atmosphere of elegance with Harborline's piano trio. Perfect for weddings, cocktail hours, and sophisticated gatherings."
-      canonical="https://harborlinemusic.com/ensembles/piano-trio"
+      canonical="https://harborlineband.com/ensembles/piano-trio"
     >
       <script type="application/ld+json">
         {JSON.stringify(schema)}

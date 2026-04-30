@@ -50,7 +50,7 @@ const StringEnsemblePage = () => {
     <Layout
       title="String Quartet Baltimore | Harborline String Ensemble"
       description="Elegant string quartet for wedding ceremonies and formal events. Classical repertoire and modern pop arrangements performed with sophistication."
-      canonical="https://harborlinemusic.com/ensembles/string-ensemble"
+      canonical="https://harborlineband.com/ensembles/string-ensemble"
     >
       <script type="application/ld+json">
         {JSON.stringify(schema)}

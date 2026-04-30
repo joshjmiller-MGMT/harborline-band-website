@@ -50,7 +50,7 @@ const AcousticDuoPage = () => {
     <Layout
       title="Acoustic Duo Baltimore | Harborline Live Acoustic Music"
       description="Intimate acoustic performances for ceremonies, cocktail hours, and small gatherings. Beautiful harmonies and stripped-down arrangements."
-      canonical="https://harborlinemusic.com/ensembles/acoustic-duo"
+      canonical="https://harborlineband.com/ensembles/acoustic-duo"
     >
       <script type="application/ld+json">
         {JSON.stringify(schema)}

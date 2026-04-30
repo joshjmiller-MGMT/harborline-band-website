@@ -49,7 +49,7 @@ const FullBandPage = () => {
     <Layout
       title="Full Dance Band Baltimore | Harborline 8-12 Piece Band"
       description="Experience the ultimate in live entertainment with Harborline's full dance band. 8-12 musicians delivering high-energy performances for weddings and events."
-      canonical="https://harborlinemusic.com/ensembles/full-band"
+      canonical="https://harborlineband.com/ensembles/full-band"
     >
       <script type="application/ld+json">
         {JSON.stringify(schema)}
