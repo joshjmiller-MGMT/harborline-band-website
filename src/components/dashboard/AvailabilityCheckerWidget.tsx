@@ -69,7 +69,7 @@ export default function AvailabilityCheckerWidget() {
       const params = new URLSearchParams({ action: "start", return_to: "/team/dashboard" });
       if (email) params.set("login_hint", email);
       const res = await fetch(
-        `https://zsfkgncdenqzctdzxedl.supabase.co/functions/v1/google-calendar-oauth?${params}`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-oauth?${params}`,
       );
       const data = await res.json();
       if (data?.auth_url) {
