@@ -102,7 +102,7 @@ export default function AvailabilityCheckerWidget() {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={date} onSelect={setDate} initialFocus className="pointer-events-auto" />
+              <Calendar mode="single" selected={date} onSelect={setDate} autoFocus className="pointer-events-auto" />
             </PopoverContent>
           </Popover>
           <Button onClick={() => run(false)} disabled={loading || !date} size="sm">
