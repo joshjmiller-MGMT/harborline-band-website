@@ -19,6 +19,10 @@ import WeddingsPage from "./pages/services/Weddings";
 import CorporatePage from "./pages/services/Corporate";
 import GalasPage from "./pages/services/Galas";
 import PrivatePartiesPage from "./pages/services/PrivateParties";
+import BirthdayPartiesPage from "./pages/services/BirthdayParties";
+import HolidayPartiesPage from "./pages/services/HolidayParties";
+import AnniversariesPage from "./pages/services/Anniversaries";
+import BreweryEventsPage from "./pages/services/BreweryEvents";
 
 // Ensemble Pages
 import FullBandPage from "./pages/ensembles/FullBand";
@@ -92,6 +96,10 @@ const App = () => (
               <Route path="/corporate" element={<CorporatePage />} />
               <Route path="/galas" element={<GalasPage />} />
               <Route path="/private-parties" element={<PrivatePartiesPage />} />
+              <Route path="/birthday-parties" element={<BirthdayPartiesPage />} />
+              <Route path="/holiday-parties" element={<HolidayPartiesPage />} />
+              <Route path="/anniversaries" element={<AnniversariesPage />} />
+              <Route path="/brewery-events" element={<BreweryEventsPage />} />
               
               {/* Ensemble Routes */}
               <Route path="/ensembles/full-band" element={<FullBandPage />} />
