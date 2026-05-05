@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { CalendarSearch, CalendarIcon, Loader2, Mail, CalendarDays, ExternalLink, AlertCircle, RefreshCw, Plug } from "lucide-react";
+import { CalendarSearch, CalendarIcon, Loader2, Mail, CalendarDays, ExternalLink, AlertCircle, RefreshCw, Plug, Phone, Music2, Megaphone } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +26,9 @@ interface Report {
   gmail: { connected: boolean; accounts: any[]; messages: any[] };
   monday: { events: any[] };
   djep: { events: any[] };
+  booking?: { events: any[]; sheetUrl?: string | null };
+  practice?: { sessions: any[] };
+  social?: { posts: any[] };
   cached?: boolean;
   refreshed_at?: string;
 }
@@ -227,8 +230,8 @@ export default function AvailabilityCheckerWidget() {
                 <Badge variant="outline" className={`mt-1 ${v.className}`}>{v.label}</Badge>
               </div>
               <div className="text-right text-xs text-muted-foreground">
-                <div>{report.googleCalendar.events.length} cal · {report.gmail.messages.length} email</div>
-                <div>{report.monday.events.length} Monday · {report.djep.events.length} DJEP</div>
+                <div>{report.googleCalendar.events.length} cal · {report.gmail.messages.length} email · {report.booking?.events.length ?? 0} booking</div>
+                <div>{report.monday.events.length} Monday · {report.djep.events.length} DJEP · {report.practice?.sessions.length ?? 0} practice · {report.social?.posts.length ?? 0} social</div>
               </div>
             </div>
 
@@ -253,6 +256,42 @@ export default function AvailabilityCheckerWidget() {
                 {report.djep.events.map((e: any, i: number) => (
                   <Row key={`dj-${i}`} title={e.title || e.name || "(untitled)"} subtitle={e.venue || e.location || ""} />
                 ))}
+              </Section>
+            )}
+
+            {(report.booking?.events?.length ?? 0) > 0 && (
+              <Section icon={<Phone className="w-4 h-4" />} title={`Booking Sheet (${report.booking!.events.length})`}>
+                {report.booking!.events.map((e: any, i: number) => (
+                  <Row key={`bk-${i}`} title={e.title || e.name || "(untitled)"} subtitle={`${e.kind ? e.kind + " · " : ""}${e.sourceLabel || "Booking Agent"}`} link={e.itemUrl || report.booking?.sheetUrl || undefined} />
+                ))}
+              </Section>
+            )}
+
+            {(report.practice?.sessions?.length ?? 0) > 0 && (
+              <Section icon={<Music2 className="w-4 h-4" />} title={`Practice (${report.practice!.sessions.length})`}>
+                {report.practice!.sessions.map((s: any) => (
+                  <Row
+                    key={`pr-${s.id}`}
+                    title={s.preset_name || "Practice session"}
+                    subtitle={`${s.total_minutes || 0} min${s.song_of_the_day ? ` · ${s.song_of_the_day}` : ""}`}
+                  />
+                ))}
+              </Section>
+            )}
+
+            {(report.social?.posts?.length ?? 0) > 0 && (
+              <Section icon={<Megaphone className="w-4 h-4" />} title={`Social posts (${report.social!.posts.length})`}>
+                {report.social!.posts.map((p: any) => {
+                  const brand = p.social_brands?.name || "";
+                  const when = p.posted_at ? "posted" : "scheduled";
+                  return (
+                    <Row
+                      key={`so-${p.id}`}
+                      title={p.title || "(untitled)"}
+                      subtitle={`${brand}${brand ? " · " : ""}${when} · ${p.status || ""}`}
+                    />
+                  );
+                })}
               </Section>
             )}
 

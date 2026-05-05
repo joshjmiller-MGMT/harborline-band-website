@@ -245,15 +245,19 @@ async function checkGmail(supabase: any, dateStr: string, variants: string[]) {
   return { accounts, messages, connected: true };
 }
 
-async function callInternalFn(path: string, params: Record<string, string>) {
+async function callInternalFn(path: string, params: Record<string, string>, method: "GET" | "POST" = "GET", body?: any) {
   const url = new URL(`${SUPABASE_URL}/functions/v1/${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  const res = await fetch(url.toString(), {
+  const init: RequestInit = {
+    method,
     headers: {
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       apikey: SUPABASE_ANON_KEY,
+      ...(body ? { "Content-Type": "application/json" } : {}),
     },
-  });
+  };
+  if (body) init.body = JSON.stringify(body);
+  const res = await fetch(url.toString(), init);
   if (!res.ok) return null;
   return await res.json();
 }
@@ -262,6 +266,27 @@ function eventOnDate(ev: any, dateStr: string): boolean {
   const s = ev.start || ev.startDate || ev.date || ev.start_at;
   if (!s) return false;
   return String(s).slice(0, 10) === dateStr;
+}
+
+async function checkPractice(supabase: any, dateStr: string) {
+  const { data } = await supabase
+    .from("practice_sessions")
+    .select("id, started_at, ended_at, total_minutes, preset_name, song_of_the_day, notes")
+    .gte("started_at", `${dateStr}T00:00:00`)
+    .lt("started_at", `${dateStr}T23:59:59.999`)
+    .order("started_at", { ascending: true });
+  return { sessions: data || [] };
+}
+
+async function checkScheduledSocial(supabase: any, dateStr: string) {
+  const start = `${dateStr}T00:00:00`;
+  const end = `${dateStr}T23:59:59.999`;
+  const { data } = await supabase
+    .from("social_posts")
+    .select("id, title, scheduled_for, posted_at, status, brand_id, social_brands(name, slug, color)")
+    .or(`and(scheduled_for.gte.${start},scheduled_for.lte.${end}),and(posted_at.gte.${start},posted_at.lte.${end})`)
+    .order("scheduled_for", { ascending: true });
+  return { posts: data || [] };
 }
 
 Deno.serve(async (req) => {
@@ -296,11 +321,14 @@ Deno.serve(async (req) => {
     const [y, m, d] = dateStr.split("-").map(Number);
     const variants = buildDateVariants(y, m, d);
 
-    const [gcal, gmail, mondayRes, djepRes] = await Promise.all([
+    const [gcal, gmail, mondayRes, djepRes, bookingRes, practice, social] = await Promise.all([
       checkGoogleCalendars(supabase, dateStr).catch((e) => ({ error: String(e), accounts: [], events: [] })),
       checkGmail(supabase, dateStr, variants).catch((e) => ({ error: String(e), accounts: [], messages: [] })),
       callInternalFn("monday-calendar-events", {}).catch(() => null),
       callInternalFn("djep-calendar-events", {}).catch(() => null),
+      callInternalFn("booking-agent-rows", {}, "POST", {}).catch(() => null),
+      checkPractice(supabase, dateStr).catch((e) => ({ error: String(e), sessions: [] })),
+      checkScheduledSocial(supabase, dateStr).catch((e) => ({ error: String(e), posts: [] })),
     ]);
 
     const mondayEvents = Array.isArray(mondayRes?.events)
@@ -308,6 +336,9 @@ Deno.serve(async (req) => {
       : [];
     const djepEvents = Array.isArray(djepRes?.events)
       ? djepRes.events.filter((e: any) => eventOnDate(e, dateStr)).map((e: any) => ({ ...e, source: "djep" }))
+      : [];
+    const bookingEvents = Array.isArray(bookingRes?.events)
+      ? bookingRes.events.filter((e: any) => eventOnDate(e, dateStr)).map((e: any) => ({ ...e, source: "booking" }))
       : [];
 
     const calEvents = (gcal as any).events || [];
@@ -319,7 +350,10 @@ Deno.serve(async (req) => {
       verdict = "confirmed_busy";
     } else if (tentativeCal.length > 0) {
       verdict = "tentative";
-    } else if (((gmail as any).messages || []).length > 0) {
+    } else if (
+      ((gmail as any).messages || []).length > 0 ||
+      bookingEvents.length > 0
+    ) {
       verdict = "mention_only";
     }
 
@@ -330,6 +364,9 @@ Deno.serve(async (req) => {
       gmail,
       monday: { events: mondayEvents, accounts: mondayRes?.sources || [] },
       djep: { events: djepEvents },
+      booking: { events: bookingEvents, sheetUrl: bookingRes?.sheetUrl || null },
+      practice,
+      social,
     };
 
     // Cache for 1 hour

@@ -8,7 +8,7 @@ import TodaysActionItemsWidget from "./TodaysActionItemsWidget";
 import BookingAgentActionWidget from "./BookingAgentActionWidget";
 
 export default function NeedsActionWidget() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   return (
     <Card className="bg-card/50 border-destructive/40 lg:col-span-2">
