@@ -5,7 +5,21 @@ import SongsTrackerWidget from "@/components/dashboard/SongsTrackerWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Flame, Calendar, BarChart3, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { Activity, Flame, Calendar, BarChart3, Clock, Plus } from "lucide-react";
 
 interface SessionRow {
   id: string;
@@ -57,24 +71,68 @@ export default function TeamPractice() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [segments, setSegments] = useState<SegmentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [logOpen, setLogOpen] = useState(false);
+  const [logDate, setLogDate] = useState(dayKey(new Date()));
+  const [logHours, setLogHours] = useState("");
+  const [logMinutes, setLogMinutes] = useState("");
+  const [logNotes, setLogNotes] = useState("");
+  const [logSong, setLogSong] = useState("");
+  const [logSubmitting, setLogSubmitting] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    const since = addDays(new Date(), -365).toISOString();
     const [s, seg] = await Promise.all([
       supabase
         .from("practice_sessions")
         .select("id, preset_name, started_at, ended_at, total_minutes, status")
-        .gte("started_at", since)
         .order("started_at", { ascending: false }),
       supabase
         .from("practice_session_segments")
         .select("id, session_id, category, actual_seconds, created_at")
-        .gte("created_at", since),
+        .order("created_at", { ascending: false }),
     ]);
     setSessions((s.data as SessionRow[]) || []);
     setSegments((seg.data as SegmentRow[]) || []);
     setLoading(false);
+  };
+
+  const submitPastSession = async () => {
+    const h = parseInt(logHours || "0", 10) || 0;
+    const m = parseInt(logMinutes || "0", 10) || 0;
+    const total = h * 60 + m;
+    if (total <= 0) {
+      toast({ title: "Add a duration", description: "Hours or minutes must be > 0.", variant: "destructive" });
+      return;
+    }
+    if (!logDate) {
+      toast({ title: "Pick a date", variant: "destructive" });
+      return;
+    }
+    setLogSubmitting(true);
+    const startedAt = new Date(`${logDate}T18:00:00`);
+    const endedAt = new Date(startedAt.getTime() + total * 60_000);
+    const { error } = await supabase.from("practice_sessions").insert({
+      preset_id: null,
+      preset_name: "Manual entry",
+      song_of_the_day: logSong || "",
+      notes: logNotes || "",
+      started_at: startedAt.toISOString(),
+      ended_at: endedAt.toISOString(),
+      total_minutes: total,
+      status: "completed",
+    });
+    setLogSubmitting(false);
+    if (error) {
+      toast({ title: "Couldn't save session", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Session logged", description: `${fmtMin(total)} on ${logDate}` });
+    setLogOpen(false);
+    setLogHours("");
+    setLogMinutes("");
+    setLogNotes("");
+    setLogSong("");
+    load();
   };
 
   useEffect(() => {
@@ -158,16 +216,28 @@ export default function TeamPractice() {
 
   const categoryMax = categoryTotals[0]?.minutes || 1;
 
-  // Heatmap: 7 rows (Sun..Sat) × 53 weeks
+  // Heatmap spans the earliest session (or 53 weeks back, whichever is older)
+  // up to today. Sized in whole weeks. Capped at 5 years to keep render bounded.
+  const heatmapWeeks = useMemo(() => {
+    const earliest = sessions.length
+      ? new Date(sessions[sessions.length - 1].started_at)
+      : addDays(today, -52 * 7);
+    const earliestDay = startOfDay(earliest);
+    const minWeeks = 53;
+    const maxWeeks = 260;
+    const daysSpan = Math.ceil((today.getTime() - earliestDay.getTime()) / (1000 * 60 * 60 * 24));
+    const computed = Math.ceil(daysSpan / 7) + 1;
+    return Math.max(minWeeks, Math.min(maxWeeks, computed));
+  }, [sessions, today]);
+
   const heatmap = useMemo(() => {
-    // Find the Sunday that starts the 53-week window ending today
     const end = today;
     const endDow = end.getDay();
     const lastSunday = addDays(end, -endDow);
-    const startSunday = addDays(lastSunday, -52 * 7);
+    const startSunday = addDays(lastSunday, -(heatmapWeeks - 1) * 7);
     const max = Math.max(...Array.from(dayTotals.values()), 1);
     const weeks: { date: Date; minutes: number; level: number }[][] = [];
-    for (let w = 0; w < 53; w++) {
+    for (let w = 0; w < heatmapWeeks; w++) {
       const col: { date: Date; minutes: number; level: number }[] = [];
       for (let d = 0; d < 7; d++) {
         const date = addDays(startSunday, w * 7 + d);
@@ -189,7 +259,7 @@ export default function TeamPractice() {
       weeks.push(col);
     }
     return weeks;
-  }, [dayTotals, today]);
+  }, [dayTotals, today, heatmapWeeks]);
 
   const monthLabels = useMemo(() => {
     const labels: { col: number; label: string }[] = [];
@@ -209,13 +279,93 @@ export default function TeamPractice() {
   return (
     <TeamLayout>
       <div className="container mx-auto px-6 py-12">
-        <div className="mb-8">
-          <h1 className="font-display text-3xl tracking-wide-custom text-foreground flex items-center gap-3">
-            <Activity className="w-7 h-7 text-primary" /> Practice Analytics
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Totals, streaks, category breakdown, and a year-long practice heatmap.
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="font-display text-3xl tracking-wide-custom text-foreground flex items-center gap-3">
+              <Activity className="w-7 h-7 text-primary" /> Practice Analytics
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Totals, streaks, category breakdown, and a practice heatmap spanning your full history.
+            </p>
+          </div>
+          <Dialog open={logOpen} onOpenChange={setLogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Plus className="w-4 h-4" /> Log past session
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Log a past session</DialogTitle>
+                <DialogDescription>
+                  Backfill a practice session you forgot to start the timer for.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="log-date">Date</Label>
+                  <Input
+                    id="log-date"
+                    type="date"
+                    value={logDate}
+                    max={dayKey(new Date())}
+                    onChange={(e) => setLogDate(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="log-hours">Hours</Label>
+                    <Input
+                      id="log-hours"
+                      type="number"
+                      min="0"
+                      max="24"
+                      placeholder="0"
+                      value={logHours}
+                      onChange={(e) => setLogHours(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="log-minutes">Minutes</Label>
+                    <Input
+                      id="log-minutes"
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="0"
+                      value={logMinutes}
+                      onChange={(e) => setLogMinutes(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="log-song">Song of the day (optional)</Label>
+                  <Input
+                    id="log-song"
+                    value={logSong}
+                    onChange={(e) => setLogSong(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="log-notes">Notes (optional)</Label>
+                  <Textarea
+                    id="log-notes"
+                    rows={3}
+                    value={logNotes}
+                    onChange={(e) => setLogNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setLogOpen(false)} disabled={logSubmitting}>
+                  Cancel
+                </Button>
+                <Button onClick={submitPastSession} disabled={logSubmitting}>
+                  {logSubmitting ? "Saving…" : "Save session"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Practice timer */}
@@ -299,7 +449,7 @@ export default function TeamPractice() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <Flame className="w-4 h-4 text-primary" /> Practice heatmap · last 53 weeks
+              <Flame className="w-4 h-4 text-primary" /> Practice heatmap · last {heatmapWeeks} weeks
             </CardTitle>
           </CardHeader>
           <CardContent>
