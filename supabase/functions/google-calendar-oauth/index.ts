@@ -99,12 +99,17 @@ Deno.serve(async (req) => {
           .delete()
           .eq("account_email", userInfo.email);
       }
+      const gmailScopeGranted = (tokens.scope || "").includes("gmail.readonly");
       const { error: insErr } = await supabase.from("google_calendar_tokens").insert({
         account_email: userInfo.email,
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
         expires_at: expiresAt,
         scope: tokens.scope,
+        needs_reconnect: false,
+        last_refresh_at: new Date().toISOString(),
+        last_refresh_error: null,
+        gmail_scope_granted: gmailScopeGranted,
       });
       if (insErr) throw insErr;
 

@@ -1,15 +1,23 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { CalendarSearch, CalendarIcon, Loader2, Mail, CalendarDays, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
+import { CalendarSearch, CalendarIcon, Loader2, Mail, CalendarDays, ExternalLink, AlertCircle, RefreshCw, Plug } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 type Verdict = "confirmed_busy" | "tentative" | "mention_only" | "clear";
+
+type TokenHealth = {
+  account_email: string | null;
+  needs_reconnect: boolean;
+  last_refresh_at: string | null;
+  last_refresh_error: string | null;
+  gmail_scope_granted: boolean;
+};
 
 interface Report {
   date: string;
@@ -33,7 +41,22 @@ export default function AvailabilityCheckerWidget() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<Report | null>(null);
+  const [tokens, setTokens] = useState<TokenHealth[]>([]);
   const { toast } = useToast();
+
+  const loadTokenHealth = async () => {
+    const { data } = await supabase
+      .from("google_calendar_tokens")
+      .select("account_email, needs_reconnect, last_refresh_at, last_refresh_error, gmail_scope_granted")
+      .order("created_at", { ascending: true });
+    setTokens((data || []) as TokenHealth[]);
+  };
+
+  useEffect(() => {
+    loadTokenHealth();
+    const t = setInterval(loadTokenHealth, 5 * 60 * 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const run = async (force = false) => {
     if (!date) return;
@@ -52,16 +75,18 @@ export default function AvailabilityCheckerWidget() {
       toast({ title: "Check failed", description: msg, variant: "destructive" });
     } finally {
       setLoading(false);
+      loadTokenHealth();
     }
   };
 
   const [reconnecting, setReconnecting] = useState<string | null>(null);
   const v = report ? verdictMeta[report.verdict] : null;
-  const accountsNeedingGmail: string[] = (report?.gmail.accounts || [])
-    .filter((a: any) => a.needsReconnect)
-    .map((a: any) => a.email)
-    .filter(Boolean);
-  const needsGmailReconnect = accountsNeedingGmail.length > 0;
+
+  // Persistent connection state from the DB (survives refreshes, no need to run a check)
+  const noTokens = tokens.length === 0;
+  const accountsNeedingReconnect = tokens.filter((t) => t.needs_reconnect).map((t) => t.account_email).filter(Boolean) as string[];
+  const accountsMissingGmailScope = tokens.filter((t) => !t.gmail_scope_granted && !t.needs_reconnect).map((t) => t.account_email).filter(Boolean) as string[];
+  const allHealthy = tokens.length > 0 && accountsNeedingReconnect.length === 0 && accountsMissingGmailScope.length === 0;
 
   const reconnect = async (email?: string) => {
     setReconnecting(email || "all");
@@ -121,15 +146,55 @@ export default function AvailabilityCheckerWidget() {
           )}
         </div>
 
-        {needsGmailReconnect && (
+        {/* Persistent connection state — visible without running a check */}
+        {noTokens && (
+          <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/30 border border-border rounded-md p-2">
+            <Plug className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-2">
+              <span>No Google account connected. Connect to enable calendar + email availability checks.</span>
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" disabled={reconnecting === "all"} onClick={() => reconnect()}>
+                {reconnecting === "all" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plug className="w-3 h-3" />}
+                Connect Google
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {accountsNeedingReconnect.length > 0 && (
+          <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-2">
+              <span>
+                {accountsNeedingReconnect.length === 1 ? "Google connection has expired or been revoked. Reconnect to restore." : "Multiple Google connections have expired or been revoked. Reconnect each to restore."}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {accountsNeedingReconnect.map((email) => (
+                  <Button
+                    key={email}
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1.5"
+                    disabled={reconnecting === email || reconnecting === "all"}
+                    onClick={() => reconnect(email)}
+                  >
+                    {reconnecting === email ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plug className="w-3 h-3" />}
+                    Reconnect {email}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {accountsMissingGmailScope.length > 0 && (
           <div className="flex items-start gap-2 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded-md p-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <div className="flex-1 space-y-2">
               <span>
-                {accountsNeedingGmail.length === 1 ? "This Google account hasn't" : "These Google accounts haven't"} granted Gmail access. Reconnect to enable email scanning.
+                {accountsMissingGmailScope.length === 1 ? "This Google account hasn't" : "These Google accounts haven't"} granted Gmail access. Reconnect to enable email scanning.
               </span>
               <div className="flex flex-wrap gap-2">
-                {accountsNeedingGmail.map((email) => (
+                {accountsMissingGmailScope.map((email) => (
                   <Button
                     key={email}
                     size="sm"
@@ -144,6 +209,13 @@ export default function AvailabilityCheckerWidget() {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {allHealthy && (
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Google connected · {tokens.length === 1 ? tokens[0].account_email : `${tokens.length} accounts`}
           </div>
         )}
 

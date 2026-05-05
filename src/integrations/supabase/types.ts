@@ -212,7 +212,11 @@ export type Database = {
           account_email: string | null
           created_at: string
           expires_at: string
+          gmail_scope_granted: boolean
           id: string
+          last_refresh_at: string | null
+          last_refresh_error: string | null
+          needs_reconnect: boolean
           refresh_token: string
           scope: string | null
           updated_at: string
@@ -222,7 +226,11 @@ export type Database = {
           account_email?: string | null
           created_at?: string
           expires_at: string
+          gmail_scope_granted?: boolean
           id?: string
+          last_refresh_at?: string | null
+          last_refresh_error?: string | null
+          needs_reconnect?: boolean
           refresh_token: string
           scope?: string | null
           updated_at?: string
@@ -232,7 +240,11 @@ export type Database = {
           account_email?: string | null
           created_at?: string
           expires_at?: string
+          gmail_scope_granted?: boolean
           id?: string
+          last_refresh_at?: string | null
+          last_refresh_error?: string | null
+          needs_reconnect?: boolean
           refresh_token?: string
           scope?: string | null
           updated_at?: string
@@ -293,6 +305,7 @@ export type Database = {
           platform: string
           refreshed_at: string
           sources: string[]
+          style: string
           top_windows: Json
           updated_at: string
         }
@@ -304,6 +317,7 @@ export type Database = {
           platform: string
           refreshed_at?: string
           sources?: string[]
+          style?: string
           top_windows?: Json
           updated_at?: string
         }
@@ -315,8 +329,42 @@ export type Database = {
           platform?: string
           refreshed_at?: string
           sources?: string[]
+          style?: string
           top_windows?: Json
           updated_at?: string
+        }
+        Relationships: []
+      }
+      posting_times_sources: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string
+          raw_markdown: string
+          scrape_error: string | null
+          scraped_at: string
+          source_label: string
+          source_url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform: string
+          raw_markdown: string
+          scrape_error?: string | null
+          scraped_at?: string
+          source_label: string
+          source_url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string
+          raw_markdown?: string
+          scrape_error?: string | null
+          scraped_at?: string
+          source_label?: string
+          source_url?: string
         }
         Relationships: []
       }
@@ -735,7 +783,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_old_posting_times_sources: { Args: never; Returns: undefined }
+      trigger_posting_times_refresh: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never

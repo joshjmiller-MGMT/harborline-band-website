@@ -28,11 +28,28 @@ async function ensureFreshToken(supabase: any, row: any): Promise<string> {
     }),
   });
   const refreshed = await refreshRes.json();
-  if (!refreshRes.ok) throw new Error(`Refresh failed: ${JSON.stringify(refreshed)}`);
+  if (!refreshRes.ok) {
+    const errMsg = `Refresh failed: ${JSON.stringify(refreshed)}`;
+    await supabase
+      .from("google_calendar_tokens")
+      .update({
+        needs_reconnect: true,
+        last_refresh_error: errMsg,
+        last_refresh_at: new Date().toISOString(),
+      })
+      .eq("id", row.id);
+    throw new Error(errMsg);
+  }
   const newExpires = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
   await supabase
     .from("google_calendar_tokens")
-    .update({ access_token: refreshed.access_token, expires_at: newExpires })
+    .update({
+      access_token: refreshed.access_token,
+      expires_at: newExpires,
+      needs_reconnect: false,
+      last_refresh_at: new Date().toISOString(),
+      last_refresh_error: null,
+    })
     .eq("id", row.id);
   return refreshed.access_token;
 }
@@ -156,7 +173,15 @@ async function checkGmail(supabase: any, dateStr: string, variants: string[]) {
     try {
       const token = await ensureFreshToken(supabase, row);
       const scope = row.scope || "";
-      if (!scope.includes("gmail.readonly")) {
+      const hasGmail = scope.includes("gmail.readonly");
+      // Persist scope-grant state so the widget can show it without running a check.
+      if (row.gmail_scope_granted !== hasGmail) {
+        await supabase
+          .from("google_calendar_tokens")
+          .update({ gmail_scope_granted: hasGmail })
+          .eq("id", row.id);
+      }
+      if (!hasGmail) {
         accounts.push({ email: row.account_email, gmailScope: false, needsReconnect: true });
         return;
       }
