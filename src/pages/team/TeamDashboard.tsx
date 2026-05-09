@@ -3,6 +3,7 @@ import AvailabilityCheckerWidget from "@/components/dashboard/AvailabilityChecke
 import ClaudeLogWidget from "@/components/dashboard/ClaudeLogWidget";
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
 import PostingTimesWidget from "@/components/dashboard/PostingTimesWidget";
+import SmartTaskWidget from "@/components/dashboard/SmartTaskWidget";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
 import { LayoutDashboard } from "lucide-react";
 
@@ -20,6 +21,7 @@ export default function TeamDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <AvailabilityCheckerWidget />
           <NeedsActionWidget />
+          <SmartTaskWidget />
           <UnifiedCalendarWidget />
           <PostingTimesWidget />
           <ClaudeLogWidget />

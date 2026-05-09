@@ -656,6 +656,42 @@ export type Database = {
         }
         Relationships: []
       }
+      smart_task_enrichments: {
+        Row: {
+          blockers: string | null
+          created_at: string
+          definition_of_done: string | null
+          due_date: string | null
+          effort: string | null
+          id: string
+          measure: string | null
+          raw_input: string
+          revised_title: string | null
+        }
+        Insert: {
+          blockers?: string | null
+          created_at?: string
+          definition_of_done?: string | null
+          due_date?: string | null
+          effort?: string | null
+          id?: string
+          measure?: string | null
+          raw_input: string
+          revised_title?: string | null
+        }
+        Update: {
+          blockers?: string | null
+          created_at?: string
+          definition_of_done?: string | null
+          due_date?: string | null
+          effort?: string | null
+          id?: string
+          measure?: string | null
+          raw_input?: string
+          revised_title?: string | null
+        }
+        Relationships: []
+      }
       social_brands: {
         Row: {
           color: string
@@ -1032,4 +1068,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
