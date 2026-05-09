@@ -1,6 +1,6 @@
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { useTeamAuth } from "@/hooks/useTeamAuth";
-import { Music, Image, Calendar, FolderOpen, LogOut, FileText, Home, LayoutDashboard, Activity, Share2, Phone, ChevronDown, Briefcase } from "lucide-react";
+import { Music, Image, Calendar, FolderOpen, LogOut, FileText, Home, LayoutDashboard, Activity, Share2, Phone, ChevronDown, Briefcase, Images } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ const teamNav = [
   { name: "Practice", href: "/team/practice", icon: Activity },
   { name: "Songs", href: "/team/songs", icon: Music },
   { name: "Gallery", href: "/team/gallery", icon: Image },
+  { name: "Assets", href: "/team/visual-assets", icon: Images },
   { name: "Resources", href: "/team/resources", icon: FolderOpen },
 ];
 

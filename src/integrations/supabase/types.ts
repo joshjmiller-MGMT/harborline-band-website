@@ -623,6 +623,39 @@ export type Database = {
         }
         Relationships: []
       }
+      run_of_show: {
+        Row: {
+          created_at: string
+          details: Json
+          event_date: string
+          event_name: string | null
+          id: string
+          organization: string | null
+          updated_at: string
+          venue: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          event_date: string
+          event_name?: string | null
+          id?: string
+          organization?: string | null
+          updated_at?: string
+          venue?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          event_date?: string
+          event_name?: string | null
+          id?: string
+          organization?: string | null
+          updated_at?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
       social_brands: {
         Row: {
           color: string
@@ -778,12 +811,94 @@ export type Database = {
           },
         ]
       }
+      visual_assets: {
+        Row: {
+          ai_error: string | null
+          ai_processed_at: string | null
+          ai_suggested_alt: string | null
+          ai_suggested_caption: string | null
+          ai_suggested_tags: string[]
+          alt_text: string | null
+          caption: string | null
+          created_at: string
+          derivative_paths: Json
+          file_size_bytes: number | null
+          filename: string
+          folder: string
+          height: number | null
+          id: string
+          mime_type: string | null
+          rights: string
+          shoot_date: string | null
+          storage_path: string
+          tags: string[]
+          updated_at: string
+          uploaded_at: string
+          uploaded_by: string | null
+          ventures: string[]
+          width: number | null
+        }
+        Insert: {
+          ai_error?: string | null
+          ai_processed_at?: string | null
+          ai_suggested_alt?: string | null
+          ai_suggested_caption?: string | null
+          ai_suggested_tags?: string[]
+          alt_text?: string | null
+          caption?: string | null
+          created_at?: string
+          derivative_paths?: Json
+          file_size_bytes?: number | null
+          filename: string
+          folder?: string
+          height?: number | null
+          id?: string
+          mime_type?: string | null
+          rights?: string
+          shoot_date?: string | null
+          storage_path: string
+          tags?: string[]
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          ventures?: string[]
+          width?: number | null
+        }
+        Update: {
+          ai_error?: string | null
+          ai_processed_at?: string | null
+          ai_suggested_alt?: string | null
+          ai_suggested_caption?: string | null
+          ai_suggested_tags?: string[]
+          alt_text?: string | null
+          caption?: string | null
+          created_at?: string
+          derivative_paths?: Json
+          file_size_bytes?: number | null
+          filename?: string
+          folder?: string
+          height?: number | null
+          id?: string
+          mime_type?: string | null
+          rights?: string
+          shoot_date?: string | null
+          storage_path?: string
+          tags?: string[]
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          ventures?: string[]
+          width?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       cleanup_old_posting_times_sources: { Args: never; Returns: undefined }
+      trigger_availability_prefetch: { Args: never; Returns: undefined }
       trigger_posting_times_refresh: { Args: never; Returns: number }
     }
     Enums: {
@@ -917,3 +1032,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

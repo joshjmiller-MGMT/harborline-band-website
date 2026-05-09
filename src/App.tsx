@@ -70,6 +70,7 @@ import TeamDashboard from "./pages/team/TeamDashboard";
 import TeamPractice from "./pages/team/TeamPractice";
 import TeamSocial from "./pages/team/TeamSocial";
 import TeamBooking from "./pages/team/TeamBooking";
+import TeamVisualAssets from "./pages/team/TeamVisualAssets";
 
 const queryClient = new QueryClient();
 
@@ -147,7 +148,8 @@ const App = () => (
               <Route path="/team/practice" element={<TeamPractice />} />
               <Route path="/team/social" element={<TeamSocial />} />
               <Route path="/team/booking" element={<TeamBooking />} />
-              
+              <Route path="/team/visual-assets" element={<TeamVisualAssets />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TeamAuthProvider>
