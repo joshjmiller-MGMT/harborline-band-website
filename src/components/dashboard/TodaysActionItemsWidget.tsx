@@ -4,7 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarClock, RefreshCw, ExternalLink, ChevronDown } from "lucide-react";
+import { CalendarClock, RefreshCw, ExternalLink, ChevronDown, ArrowRight } from "lucide-react";
+
+type CalEventField = {
+  label: string;
+  value: string;
+  columnId?: string;
+};
 
 type CalEvent = {
   id: string;
@@ -16,7 +22,28 @@ type CalEvent = {
   sourceLabel: string;
   color: string;
   itemUrl?: string;
+  fields?: CalEventField[];
 };
+
+const NEXT_ACTION_TITLES = [
+  "next action",
+  "next actions",
+  "next action step",
+  "next action steps",
+];
+const STATUS_TITLES = ["status", "stage", "lead status", "sale status"];
+
+function getNextActionLabel(fields?: CalEventField[]): string | null {
+  if (!fields || fields.length === 0) return null;
+  const norm = (s: string) => s.toLowerCase().trim();
+  const findBy = (titles: string[]) =>
+    fields.find((f) => titles.includes(norm(f.label)) && f.value && f.value.trim());
+  const action = findBy(NEXT_ACTION_TITLES);
+  if (action) return action.value.trim();
+  const status = findBy(STATUS_TITLES);
+  if (status) return status.value.trim();
+  return null;
+}
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -37,6 +64,7 @@ function ItemRow({ e, overdue }: { e: CalEvent; overdue: boolean }) {
     : e.allDay
       ? "Today"
       : `Today · ${new Date(e.start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  const nextAction = getNextActionLabel(e.fields);
   return (
     <li>
       <a
@@ -52,6 +80,12 @@ function ItemRow({ e, overdue }: { e: CalEvent; overdue: boolean }) {
         <ExternalLink className="w-3.5 h-3.5 mt-0.5 text-muted-foreground group-hover:text-foreground flex-shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-sm text-foreground truncate">{e.title}</p>
+          {nextAction && (
+            <p className="text-xs text-foreground/80 truncate flex items-center gap-1">
+              <ArrowRight className="w-3 h-3 flex-shrink-0 text-primary" />
+              <span className="truncate">{nextAction}</span>
+            </p>
+          )}
           <p className={`text-xs truncate ${overdue ? "text-destructive" : "text-muted-foreground"}`}>
             {dateLabel} · {e.sourceLabel}
           </p>
