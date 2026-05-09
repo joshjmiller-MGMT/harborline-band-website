@@ -1,7 +1,91 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+// Parse a free-form event-date string ("6/15/2026", "06.15.26", "June 15, 2026", etc.)
+// into YYYY-MM-DD, or null if unparseable.
+function parseEventDateToISO(raw: string): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  // M/D/YYYY or M-D-YYYY or M.D.YYYY
+  let m = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+  if (m) {
+    const [, mo, d, y] = m;
+    return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  // M/D/YY (assume 20YY)
+  m = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2})$/);
+  if (m) {
+    const [, mo, d, yy] = m;
+    return `20${yy}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  // YYYY-MM-DD passthrough
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  // "June 15, 2026" / "Jun 15 2026"
+  const monthsLong = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+  const monthsShort = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const lower = s.toLowerCase().replace(/,/g, '');
+  m = lower.match(/^(\w+)\s+(\d{1,2})\s+(\d{4})$/);
+  if (m) {
+    const [, monStr, d, y] = m;
+    const idx = monthsLong.indexOf(monStr);
+    const idxShort = monthsShort.indexOf(monStr);
+    const monthNum = idx >= 0 ? idx + 1 : (idxShort >= 0 ? idxShort + 1 : 0);
+    if (monthNum > 0) {
+      return `${y}-${String(monthNum).padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+  }
+  return null;
+}
+
+async function upsertRunOfShow(eventData: any, organization?: string) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+  const isoDate = parseEventDateToISO(eventData?.details?.['event date'] || '');
+  if (!isoDate) return;
+  try {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const venue = eventData?.details?.['venue'] || null;
+    const eventName = eventData?.eventName || null;
+    const org = organization || null;
+    // Upsert by (event_date, venue, organization). The unique index uses
+    // COALESCE on venue/organization, so nulls collapse to '' for matching.
+    const { data: existing } = await supabase
+      .from('run_of_show')
+      .select('id')
+      .eq('event_date', isoDate)
+      .eq('venue', venue ?? '')
+      .eq('organization', org ?? '')
+      .maybeSingle();
+    if (existing?.id) {
+      await supabase
+        .from('run_of_show')
+        .update({
+          event_name: eventName,
+          details: eventData?.details || {},
+        })
+        .eq('id', existing.id);
+    } else {
+      await supabase
+        .from('run_of_show')
+        .insert({
+          event_date: isoDate,
+          event_name: eventName,
+          venue,
+          organization: org,
+          details: eventData?.details || {},
+        });
+    }
+  } catch (_err) {
+    // Don't fail the doc generation if persistence has a hiccup.
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -63,8 +147,12 @@ Deno.serve(async (req) => {
 
     const filename = `${eventData.eventName || 'run-of-show'}`.replace(/[^a-zA-Z0-9-_]/g, '_');
 
-    return new Response(JSON.stringify({ 
-      file: base64, 
+    // Persist a row to run_of_show so availability-checker can flag this date as locked-in.
+    // Fire-and-forget: doc generation must succeed even if persistence fails.
+    upsertRunOfShow(eventData, organization).catch(() => {});
+
+    return new Response(JSON.stringify({
+      file: base64,
       filename,
       format: 'html',
       contentType: 'text/html',

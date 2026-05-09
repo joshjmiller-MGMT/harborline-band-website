@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { CalendarSearch, CalendarIcon, Loader2, Mail, CalendarDays, ExternalLink, AlertCircle, RefreshCw, Plug, Phone, Music2, Megaphone } from "lucide-react";
+import { CalendarSearch, CalendarIcon, Loader2, Mail, CalendarDays, ExternalLink, AlertCircle, RefreshCw, Plug, Phone, Music2, Megaphone, FileText } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,7 @@ interface Report {
   booking?: { events: any[]; sheetUrl?: string | null };
   practice?: { sessions: any[] };
   social?: { posts: any[] };
+  runOfShow?: { docs: any[] };
   cached?: boolean;
   refreshed_at?: string;
 }
@@ -230,10 +231,22 @@ export default function AvailabilityCheckerWidget() {
                 <Badge variant="outline" className={`mt-1 ${v.className}`}>{v.label}</Badge>
               </div>
               <div className="text-right text-xs text-muted-foreground">
-                <div>{report.googleCalendar.events.length} cal · {report.gmail.messages.length} email · {report.booking?.events.length ?? 0} booking</div>
+                <div>{report.googleCalendar.events.length} cal · {report.gmail.messages.length} email · {report.booking?.events.length ?? 0} booking · {report.runOfShow?.docs.length ?? 0} ROS</div>
                 <div>{report.monday.events.length} Monday · {report.djep.events.length} DJEP · {report.practice?.sessions.length ?? 0} practice · {report.social?.posts.length ?? 0} social</div>
               </div>
             </div>
+
+            {(report.runOfShow?.docs?.length ?? 0) > 0 && (
+              <Section icon={<FileText className="w-4 h-4" />} title={`Run-of-Show docs (${report.runOfShow!.docs.length})`}>
+                {report.runOfShow!.docs.map((d: any) => (
+                  <Row
+                    key={`ros-${d.id}`}
+                    title={d.event_name || "(unnamed event)"}
+                    subtitle={`${d.venue || "no venue"}${d.organization ? " · " + d.organization : ""}`}
+                  />
+                ))}
+              </Section>
+            )}
 
             {report.googleCalendar.events.length > 0 && (
               <Section icon={<CalendarDays className="w-4 h-4" />} title={`Google Calendar (${report.googleCalendar.events.length})`}>

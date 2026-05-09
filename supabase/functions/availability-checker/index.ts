@@ -278,6 +278,15 @@ async function checkPractice(supabase: any, dateStr: string) {
   return { sessions: data || [] };
 }
 
+async function checkRunOfShow(supabase: any, dateStr: string) {
+  const { data } = await supabase
+    .from("run_of_show")
+    .select("id, event_date, event_name, venue, organization, created_at, updated_at")
+    .eq("event_date", dateStr)
+    .order("updated_at", { ascending: false });
+  return { docs: data || [] };
+}
+
 async function checkScheduledSocial(supabase: any, dateStr: string) {
   const start = `${dateStr}T00:00:00`;
   const end = `${dateStr}T23:59:59.999`;
@@ -321,7 +330,7 @@ Deno.serve(async (req) => {
     const [y, m, d] = dateStr.split("-").map(Number);
     const variants = buildDateVariants(y, m, d);
 
-    const [gcal, gmail, mondayRes, djepRes, bookingRes, practice, social] = await Promise.all([
+    const [gcal, gmail, mondayRes, djepRes, bookingRes, practice, social, runOfShow] = await Promise.all([
       checkGoogleCalendars(supabase, dateStr).catch((e) => ({ error: String(e), accounts: [], events: [] })),
       checkGmail(supabase, dateStr, variants).catch((e) => ({ error: String(e), accounts: [], messages: [] })),
       callInternalFn("monday-calendar-events", {}).catch(() => null),
@@ -329,6 +338,7 @@ Deno.serve(async (req) => {
       callInternalFn("booking-agent-rows", {}, "POST", {}).catch(() => null),
       checkPractice(supabase, dateStr).catch((e) => ({ error: String(e), sessions: [] })),
       checkScheduledSocial(supabase, dateStr).catch((e) => ({ error: String(e), posts: [] })),
+      checkRunOfShow(supabase, dateStr).catch((e) => ({ error: String(e), docs: [] })),
     ]);
 
     const mondayEvents = Array.isArray(mondayRes?.events)
@@ -345,8 +355,15 @@ Deno.serve(async (req) => {
     const confirmedCal = calEvents.filter((e: any) => e.status === "confirmed");
     const tentativeCal = calEvents.filter((e: any) => e.status === "tentative");
 
+    const rosDocs = (runOfShow as any).docs || [];
+
     let verdict: "confirmed_busy" | "tentative" | "mention_only" | "clear" = "clear";
-    if (confirmedCal.length > 0 || mondayEvents.length > 0 || djepEvents.length > 0) {
+    if (
+      confirmedCal.length > 0 ||
+      mondayEvents.length > 0 ||
+      djepEvents.length > 0 ||
+      rosDocs.length > 0
+    ) {
       verdict = "confirmed_busy";
     } else if (tentativeCal.length > 0) {
       verdict = "tentative";
@@ -367,6 +384,7 @@ Deno.serve(async (req) => {
       booking: { events: bookingEvents, sheetUrl: bookingRes?.sheetUrl || null },
       practice,
       social,
+      runOfShow,
     };
 
     // Cache for 1 hour
