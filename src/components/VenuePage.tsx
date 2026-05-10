@@ -136,7 +136,7 @@ const VenuePage = ({
                   <motion.img
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    src={ASSET_MANIFEST[images[selectedImage].src]}
+                    src={ASSET_MANIFEST[images[selectedImage].src].w2000}
                     alt={images[selectedImage].alt}
                     className="max-w-full max-h-[90vh] object-contain rounded-lg"
                   />
