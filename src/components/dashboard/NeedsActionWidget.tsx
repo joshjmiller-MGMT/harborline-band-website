@@ -6,6 +6,7 @@ import { AlertTriangle, ChevronDown } from "lucide-react";
 import MissingDatesWidget from "./MissingDatesWidget";
 import TodaysActionItemsWidget from "./TodaysActionItemsWidget";
 import BookingAgentActionWidget from "./BookingAgentActionWidget";
+import WaitingOnJoshWidget from "./WaitingOnJoshWidget";
 
 export default function NeedsActionWidget() {
   const [open, setOpen] = useState(true);
@@ -30,6 +31,7 @@ export default function NeedsActionWidget() {
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="space-y-4">
+            <WaitingOnJoshWidget />
             <TodaysActionItemsWidget />
             <BookingAgentActionWidget />
             <MissingDatesWidget />

@@ -928,6 +928,42 @@ export type Database = {
         }
         Relationships: []
       }
+      waiting_on_josh: {
+        Row: {
+          detail: string | null
+          id: string
+          priority: string
+          queued_at: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          source_session: string | null
+          title: string
+        }
+        Insert: {
+          detail?: string | null
+          id?: string
+          priority?: string
+          queued_at?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_session?: string | null
+          title: string
+        }
+        Update: {
+          detail?: string | null
+          id?: string
+          priority?: string
+          queued_at?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_session?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
