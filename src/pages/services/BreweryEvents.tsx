@@ -2,10 +2,8 @@ import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import { Beer, Music, Users, Calendar, CheckCircle } from "lucide-react";
-import galleryImage4 from "@/assets/gallery-4.jpg";
-import galleryImage5 from "@/assets/gallery-5.jpg";
-
 const features = [
   { icon: Beer, text: "Brewery Atmosphere" },
   { icon: Music, text: "Acoustic to Full Band" },
@@ -104,13 +102,13 @@ const BreweryEventsPage = () => {
               transition={{ duration: 0.6 }}
               className="grid grid-cols-2 gap-4"
             >
-              <img
-                src={galleryImage4}
+              <OptimizedImage
+                src="gallery-4"
                 alt="Brewery performance"
                 className="rounded-lg shadow-lg"
               />
-              <img
-                src={galleryImage5}
+              <OptimizedImage
+                src="gallery-5"
                 alt="Taproom entertainment"
                 className="rounded-lg shadow-lg mt-8"
               />

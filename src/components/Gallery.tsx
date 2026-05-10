@@ -1,16 +1,13 @@
 import { motion } from "framer-motion";
-import groupWaterfront1 from "@/assets/band/group-waterfront-1.webp";
-import jazzTrio1 from "@/assets/band/jazz-trio-1.webp";
-import livePerformance1 from "@/assets/band/live-performance-1.png";
-import groupPortrait from "@/assets/band/group-portrait.jpg";
-import specialEventDancer from "@/assets/band/special-event-dancer.webp";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import type { AssetSlug } from "@/lib/asset-manifest";
 
-const images = [
-  { src: groupWaterfront1, alt: "Harborline band group photo by the water" },
-  { src: livePerformance1, alt: "Live performance - drums and saxophone" },
-  { src: jazzTrio1, alt: "Jazz trio performing under tent" },
-  { src: groupPortrait, alt: "Harborline band official group portrait" },
-  { src: specialEventDancer, alt: "Special event with ribbon dancer and live band" },
+const images: { src: AssetSlug; alt: string }[] = [
+  { src: "band/group-waterfront-1", alt: "Harborline band group photo by the water" },
+  { src: "band/live-performance-1", alt: "Live performance - drums and saxophone" },
+  { src: "band/jazz-trio-1", alt: "Jazz trio performing under tent" },
+  { src: "band/group-portrait", alt: "Harborline band official group portrait" },
+  { src: "band/special-event-dancer", alt: "Special event with ribbon dancer and live band" },
 ];
 
 const Gallery = () => {
@@ -41,7 +38,7 @@ const Gallery = () => {
             transition={{ duration: 0.6 }}
             className="col-span-2 row-span-2 relative group overflow-hidden rounded-lg"
           >
-            <img
+            <OptimizedImage
               src={images[0].src}
               alt={images[0].alt}
               className="w-full h-full object-cover aspect-square md:aspect-auto transition-transform duration-700 group-hover:scale-105"
@@ -59,7 +56,7 @@ const Gallery = () => {
               transition={{ duration: 0.6, delay: (index + 1) * 0.1 }}
               className="relative group overflow-hidden rounded-lg aspect-square"
             >
-              <img
+              <OptimizedImage
                 src={image.src}
                 alt={image.alt}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"

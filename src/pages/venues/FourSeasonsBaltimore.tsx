@@ -1,7 +1,5 @@
 import VenuePage from "@/components/VenuePage";
-import fourSeasons1 from "@/assets/venues/four-seasons-1.jpg";
-import fourSeasons2 from "@/assets/venues/four-seasons-2.jpg";
-
+import { OptimizedImage } from "@/components/OptimizedImage";
 const FourSeasonsBaltimorePage = () => {
   return (
     <VenuePage
@@ -33,8 +31,8 @@ const FourSeasonsBaltimorePage = () => {
         { name: "Legg Mason Tower", slug: "legg-mason-tower" }
       ]}
       images={[
-        { src: fourSeasons1, alt: "Four Seasons Baltimore ballroom with crystal chandeliers and harbor views" },
-        { src: fourSeasons2, alt: "Four Seasons Baltimore waterfront terrace ceremony at sunset" }
+        { src: "venues/four-seasons-1", alt: "Four Seasons Baltimore ballroom with crystal chandeliers and harbor views" },
+        { src: "venues/four-seasons-2", alt: "Four Seasons Baltimore waterfront terrace ceremony at sunset" }
       ]}
     />
   );

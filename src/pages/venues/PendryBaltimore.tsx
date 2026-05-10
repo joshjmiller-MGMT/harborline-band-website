@@ -1,7 +1,5 @@
 import VenuePage from "@/components/VenuePage";
-import pendry1 from "@/assets/venues/pendry-1.jpg";
-import pendry2 from "@/assets/venues/pendry-2.jpg";
-
+import { OptimizedImage } from "@/components/OptimizedImage";
 const PendryBaltimorePage = () => {
   return (
     <VenuePage
@@ -33,8 +31,8 @@ const PendryBaltimorePage = () => {
         { name: "American Visionary Art Museum", slug: "american-visionary-art-museum" }
       ]}
       images={[
-        { src: pendry1, alt: "The Pendry Baltimore elegant ballroom with arched ceilings and harbor views" },
-        { src: pendry2, alt: "The Pendry Baltimore waterfront pier wedding ceremony at sunset" }
+        { src: "venues/pendry-1", alt: "The Pendry Baltimore elegant ballroom with arched ceilings and harbor views" },
+        { src: "venues/pendry-2", alt: "The Pendry Baltimore waterfront pier wedding ceremony at sunset" }
       ]}
     />
   );

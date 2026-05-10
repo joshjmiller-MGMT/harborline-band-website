@@ -1,7 +1,5 @@
 import VenuePage from "@/components/VenuePage";
-import cylburn1 from "@/assets/venues/cylburn-1.jpg";
-import cylburn2 from "@/assets/venues/cylburn-2.jpg";
-
+import { OptimizedImage } from "@/components/OptimizedImage";
 const CylburnArboretumPage = () => {
   return (
     <VenuePage
@@ -33,8 +31,8 @@ const CylburnArboretumPage = () => {
         { name: "Cloisters Castle", slug: "cloisters-castle" }
       ]}
       images={[
-        { src: cylburn1, alt: "Cylburn Arboretum garden wedding ceremony with greenhouse and flowering gardens" },
-        { src: cylburn2, alt: "Cylburn Arboretum Victorian mansion with fountain and tented reception" }
+        { src: "venues/cylburn-1", alt: "Cylburn Arboretum garden wedding ceremony with greenhouse and flowering gardens" },
+        { src: "venues/cylburn-2", alt: "Cylburn Arboretum Victorian mansion with fountain and tented reception" }
       ]}
     />
   );

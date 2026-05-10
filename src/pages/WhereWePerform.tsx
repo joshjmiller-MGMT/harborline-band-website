@@ -7,70 +7,63 @@ import { MapPin, Building2, Star, Users, Calendar, Award, Clock, Ticket, List, C
 import { Link } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Featured venues with images
-import pendryImg from "@/assets/venues/pendry-1.jpg";
-import peabodyImg from "@/assets/venues/peabody-1.jpg";
-import belvedereImg from "@/assets/venues/belvedere-1.jpg";
-import fourSeasonsImg from "@/assets/venues/four-seasons-1.jpg";
-import avamImg from "@/assets/venues/avam-1.jpg";
-import cloisterImg from "@/assets/venues/cloisters-1.jpg";
-import cylburnImg from "@/assets/venues/cylburn-1.jpg";
-import evergreenImg from "@/assets/venues/evergreen-1.jpg";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import type { AssetSlug } from "@/lib/asset-manifest";
 
-const featuredVenues = [
+const featuredVenues: { name: string; href: string; image: AssetSlug; type: string; location: string }[] = [
   {
     name: "The Pendry Baltimore",
     href: "/venues/pendry-baltimore",
-    image: pendryImg,
+    image: "venues/pendry-1",
     type: "Luxury Hotel",
     location: "Fells Point",
   },
   {
     name: "George Peabody Library",
     href: "/venues/george-peabody-library",
-    image: peabodyImg,
+    image: "venues/peabody-1",
     type: "Historic Library",
     location: "Mount Vernon",
   },
   {
     name: "The Belvedere",
     href: "/venues/the-belvedere",
-    image: belvedereImg,
+    image: "venues/belvedere-1",
     type: "Historic Landmark",
     location: "Mount Vernon",
   },
   {
     name: "Four Seasons Baltimore",
     href: "/venues/four-seasons-baltimore",
-    image: fourSeasonsImg,
+    image: "venues/four-seasons-1",
     type: "Luxury Hotel",
     location: "Harbor East",
   },
   {
     name: "American Visionary Art Museum",
     href: "/venues/american-visionary-art-museum",
-    image: avamImg,
+    image: "venues/avam-1",
     type: "Art Museum",
     location: "Federal Hill",
   },
   {
     name: "Cloisters Castle",
     href: "/venues/cloisters-castle",
-    image: cloisterImg,
+    image: "venues/cloisters-1",
     type: "Historic Castle",
     location: "Lutherville",
   },
   {
     name: "Cylburn Arboretum",
     href: "/venues/cylburn-arboretum",
-    image: cylburnImg,
+    image: "venues/cylburn-1",
     type: "Garden Estate",
     location: "North Baltimore",
   },
   {
     name: "Evergreen Museum",
     href: "/venues/evergreen-museum",
-    image: evergreenImg,
+    image: "venues/evergreen-1",
     type: "Historic Mansion",
     location: "North Baltimore",
   },
@@ -639,7 +632,7 @@ const WhereWePerformPage = () => {
                   className="group block bg-card border border-border rounded-xl overflow-hidden hover:border-primary/50 transition-all duration-300"
                 >
                   <div className="aspect-[4/3] overflow-hidden">
-                    <img
+                    <OptimizedImage
                       src={venue.image}
                       alt={venue.name}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"

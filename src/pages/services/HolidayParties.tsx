@@ -2,10 +2,8 @@ import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import { Sparkles, Music, Building2, Gift, TreePine, CheckCircle } from "lucide-react";
-import galleryImage1 from "@/assets/gallery-1.jpg";
-import galleryImage5 from "@/assets/gallery-5.jpg";
-
 const features = [
   { icon: TreePine, text: "Holiday Classics" },
   { icon: Gift, text: "Festive Entertainment" },
@@ -103,13 +101,13 @@ const HolidayPartiesPage = () => {
               transition={{ duration: 0.6 }}
               className="grid grid-cols-2 gap-4"
             >
-              <img
-                src={galleryImage1}
+              <OptimizedImage
+                src="gallery-1"
                 alt="Holiday party performance"
                 className="rounded-lg shadow-lg"
               />
-              <img
-                src={galleryImage5}
+              <OptimizedImage
+                src="gallery-5"
                 alt="Festive celebration"
                 className="rounded-lg shadow-lg mt-8"
               />

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import heroImage from "@/assets/band-hero.jpg";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 interface PageHeroProps {
   eyebrow?: string;
@@ -14,8 +14,8 @@ const PageHero = ({ eyebrow, title, subtitle, showCTA = true }: PageHeroProps) =
     <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden pt-20">
       {/* Background Image */}
       <div className="absolute inset-0">
-        <img
-          src={heroImage}
+        <OptimizedImage
+          src="band-hero"
           alt="Harborline performing"
           className="w-full h-full object-cover object-center"
         />

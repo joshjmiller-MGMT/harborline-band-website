@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { MapPin, Music, Heart, Users, CheckCircle, Star, Building2, Camera } from "lucide-react";
 import { useState } from "react";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { ASSET_MANIFEST } from "@/lib/asset-manifest";
 
 interface VenuePageProps {
   venueName: string;
@@ -15,7 +17,7 @@ interface VenuePageProps {
   capacity?: string;
   highlights: string[];
   nearbyVenues: { name: string; slug: string }[];
-  images?: { src: string; alt: string }[];
+  images?: { src: import("@/lib/asset-manifest").AssetSlug; alt: string }[];
 }
 
 const VenuePage = ({ 
@@ -112,7 +114,7 @@ const VenuePage = ({
                           className="relative aspect-[4/3] overflow-hidden rounded-lg cursor-pointer group"
                           onClick={() => setSelectedImage(index)}
                         >
-                          <img
+                          <OptimizedImage
                             src={image.src}
                             alt={image.alt}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
@@ -134,7 +136,7 @@ const VenuePage = ({
                   <motion.img
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    src={images[selectedImage].src}
+                    src={ASSET_MANIFEST[images[selectedImage].src]}
                     alt={images[selectedImage].alt}
                     className="max-w-full max-h-[90vh] object-contain rounded-lg"
                   />

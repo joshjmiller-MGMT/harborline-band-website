@@ -1,7 +1,5 @@
 import VenuePage from "@/components/VenuePage";
-import cloisters1 from "@/assets/venues/cloisters-1.jpg";
-import cloisters2 from "@/assets/venues/cloisters-2.jpg";
-
+import { OptimizedImage } from "@/components/OptimizedImage";
 const CloistersCastlePage = () => {
   return (
     <VenuePage
@@ -33,8 +31,8 @@ const CloistersCastlePage = () => {
         { name: "George Peabody Library", slug: "george-peabody-library" }
       ]}
       images={[
-        { src: cloisters1, alt: "Cloisters Castle fairytale exterior with towers and garden wedding ceremony" },
-        { src: cloisters2, alt: "Cloisters Castle grand hall interior with candlelit wedding reception" }
+        { src: "venues/cloisters-1", alt: "Cloisters Castle fairytale exterior with towers and garden wedding ceremony" },
+        { src: "venues/cloisters-2", alt: "Cloisters Castle grand hall interior with candlelit wedding reception" }
       ]}
     />
   );

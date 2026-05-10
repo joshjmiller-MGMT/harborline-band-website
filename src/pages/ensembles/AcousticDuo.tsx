@@ -2,10 +2,8 @@ import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import { Guitar, Mic2, Users, Heart, CheckCircle } from "lucide-react";
-import galleryImage2 from "@/assets/gallery-2.jpg";
-import galleryImage3 from "@/assets/gallery-3.jpg";
-
 const features = [
   { icon: Users, text: "2 Musicians" },
   { icon: Guitar, text: "Acoustic Sound" },
@@ -106,13 +104,13 @@ const AcousticDuoPage = () => {
               transition={{ duration: 0.6 }}
               className="grid grid-cols-2 gap-4"
             >
-              <img
-                src={galleryImage2}
+              <OptimizedImage
+                src="gallery-2"
                 alt="Acoustic duo performance"
                 className="rounded-lg shadow-lg"
               />
-              <img
-                src={galleryImage3}
+              <OptimizedImage
+                src="gallery-3"
                 alt="Intimate event setting"
                 className="rounded-lg shadow-lg mt-8"
               />

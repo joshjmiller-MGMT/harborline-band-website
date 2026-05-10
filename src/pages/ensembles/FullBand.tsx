@@ -2,10 +2,8 @@ import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import { Users, Music, Mic2, Zap, Volume2, CheckCircle } from "lucide-react";
-import liveDjSax from "@/assets/band/live-dj-sax.webp";
-import specialEventDancer from "@/assets/band/special-event-dancer.webp";
-
 const features = [
   { icon: Users, text: "8-12 Musicians" },
   { icon: Volume2, text: "Full Horn Section" },
@@ -105,13 +103,13 @@ const FullBandPage = () => {
               transition={{ duration: 0.6 }}
               className="grid grid-cols-2 gap-4"
             >
-              <img
-                src={liveDjSax}
+              <OptimizedImage
+                src="band/live-dj-sax"
                 alt="Full band with DJ and saxophone"
                 className="rounded-lg shadow-lg"
               />
-              <img
-                src={specialEventDancer}
+              <OptimizedImage
+                src="band/special-event-dancer"
                 alt="Special event with ribbon dancer and live band"
                 className="rounded-lg shadow-lg mt-8"
               />

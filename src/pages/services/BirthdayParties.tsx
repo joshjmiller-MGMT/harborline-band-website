@@ -2,10 +2,8 @@ import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import { Cake, Music, Users, Sparkles, Mic2, CheckCircle } from "lucide-react";
-import galleryImage3 from "@/assets/gallery-3.jpg";
-import galleryImage4 from "@/assets/gallery-4.jpg";
-
 const features = [
   { icon: Cake, text: "Milestone Celebrations" },
   { icon: Music, text: "Custom Song Dedications" },
@@ -103,13 +101,13 @@ const BirthdayPartiesPage = () => {
               transition={{ duration: 0.6 }}
               className="grid grid-cols-2 gap-4"
             >
-              <img
-                src={galleryImage3}
+              <OptimizedImage
+                src="gallery-3"
                 alt="Birthday party celebration"
                 className="rounded-lg shadow-lg"
               />
-              <img
-                src={galleryImage4}
+              <OptimizedImage
+                src="gallery-4"
                 alt="Party entertainment"
                 className="rounded-lg shadow-lg mt-8"
               />

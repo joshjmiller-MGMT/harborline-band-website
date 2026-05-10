@@ -1,6 +1,5 @@
 import VenuePage from "@/components/VenuePage";
-import leggMason1 from "@/assets/venues/legg-mason-1.jpg";
-
+import { OptimizedImage } from "@/components/OptimizedImage";
 const LeggMasonTowerPage = () => {
   return (
     <VenuePage
@@ -32,7 +31,7 @@ const LeggMasonTowerPage = () => {
         { name: "American Visionary Art Museum", slug: "american-visionary-art-museum" }
       ]}
       images={[
-        { src: leggMason1, alt: "Legg Mason Tower penthouse event space with panoramic city views at night" }
+        { src: "venues/legg-mason-1", alt: "Legg Mason Tower penthouse event space with panoramic city views at night" }
       ]}
     />
   );

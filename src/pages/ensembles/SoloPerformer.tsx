@@ -2,10 +2,8 @@ import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import { User, Piano, Mic2, Guitar, CheckCircle } from "lucide-react";
-import galleryImage1 from "@/assets/gallery-1.jpg";
-import galleryImage2 from "@/assets/gallery-2.jpg";
-
 const features = [
   { icon: User, text: "1 Musician" },
   { icon: Piano, text: "Piano or Guitar" },
@@ -107,13 +105,13 @@ const SoloPerformerPage = () => {
               transition={{ duration: 0.6 }}
               className="grid grid-cols-2 gap-4"
             >
-              <img
-                src={galleryImage1}
+              <OptimizedImage
+                src="gallery-1"
                 alt="Solo performer"
                 className="rounded-lg shadow-lg"
               />
-              <img
-                src={galleryImage2}
+              <OptimizedImage
+                src="gallery-2"
                 alt="Intimate event setting"
                 className="rounded-lg shadow-lg mt-8"
               />

@@ -2,10 +2,8 @@ import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import { Heart, Music, Users, Sparkles, Clock, CheckCircle } from "lucide-react";
-import groupWaterfront2 from "@/assets/band/group-waterfront-2.webp";
-import jazzTrio1 from "@/assets/band/jazz-trio-1.webp";
-
 const features = [
   { icon: Music, text: "Custom First Dance Arrangements" },
   { icon: Users, text: "Flexible Band Sizes" },
@@ -103,13 +101,13 @@ const WeddingsPage = () => {
               transition={{ duration: 0.6 }}
               className="grid grid-cols-2 gap-4"
             >
-              <img
-                src={groupWaterfront2}
+              <OptimizedImage
+                src="band/group-waterfront-2"
                 alt="Band candid moment with vocalist"
                 className="rounded-lg shadow-lg"
               />
-              <img
-                src={jazzTrio1}
+              <OptimizedImage
+                src="band/jazz-trio-1"
                 alt="Jazz trio for wedding ceremony"
                 className="rounded-lg shadow-lg mt-8"
               />

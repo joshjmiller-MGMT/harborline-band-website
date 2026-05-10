@@ -1,7 +1,5 @@
 import VenuePage from "@/components/VenuePage";
-import boRailroad1 from "@/assets/venues/bo-railroad-1.jpg";
-import boRailroad2 from "@/assets/venues/bo-railroad-2.jpg";
-
+import { OptimizedImage } from "@/components/OptimizedImage";
 const BORailroadMuseumPage = () => {
   return (
     <VenuePage
@@ -33,8 +31,8 @@ const BORailroadMuseumPage = () => {
         { name: "The Pendry Baltimore", slug: "pendry-baltimore" }
       ]}
       images={[
-        { src: boRailroad1, alt: "B&O Railroad Museum historic hall with vintage locomotives and wedding reception" },
-        { src: boRailroad2, alt: "B&O Railroad Museum roundhouse with domed ceiling and elegant event setup" }
+        { src: "venues/bo-railroad-1", alt: "B&O Railroad Museum historic hall with vintage locomotives and wedding reception" },
+        { src: "venues/bo-railroad-2", alt: "B&O Railroad Museum roundhouse with domed ceiling and elegant event setup" }
       ]}
     />
   );

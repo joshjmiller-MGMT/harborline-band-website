@@ -1,73 +1,10 @@
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import { Helmet } from "react-helmet-async";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import type { AssetSlug } from "@/lib/asset-manifest";
 
-// Gallery images
-import gallery1 from "@/assets/gallery-1.jpg";
-import gallery2 from "@/assets/gallery-2.jpg";
-import gallery3 from "@/assets/gallery-3.jpg";
-import gallery4 from "@/assets/gallery-4.jpg";
-import gallery5 from "@/assets/gallery-5.jpg";
-import heroBand from "@/assets/band-hero.jpg";
-import heroImage from "@/assets/hero-band.jpg";
-
-// Band member photos
-import groupLaughing from "@/assets/band/group-laughing.jpg";
-import groupPortrait from "@/assets/band/group-portrait.jpg";
-import member1 from "@/assets/band/member-1.jpg";
-import member2 from "@/assets/band/member-2.jpg";
-import member3 from "@/assets/band/member-3.jpg";
-import member4 from "@/assets/band/member-4.jpg";
-import member5 from "@/assets/band/member-5.jpg";
-import member6 from "@/assets/band/member-6.jpg";
-import livePerformance1 from "@/assets/band/live-performance-1.png";
-
-import setupTent from "@/assets/band/setup-tent.png";
-import setupWaterfront from "@/assets/band/setup-waterfront.png";
-
-// New waterfront group photos
-import groupWaterfront1 from "@/assets/band/group-waterfront-1.webp";
-import groupWaterfront2 from "@/assets/band/group-waterfront-2.webp";
-import groupWaterfront3 from "@/assets/band/group-waterfront-3.webp";
-import groupWaterfront4 from "@/assets/band/group-waterfront-4.webp";
-
-// New performance photos
-import jazzTrio1 from "@/assets/band/jazz-trio-1.webp";
-import jazzTrio2 from "@/assets/band/jazz-trio-2.webp";
-import liveDjSax from "@/assets/band/live-dj-sax.webp";
-import specialEventDancer from "@/assets/band/special-event-dancer.webp";
-
-// New player portraits (grouped by player)
-import portraitPlayer1A from "@/assets/band/portrait-player1-a.jpg";
-import portraitPlayer1B from "@/assets/band/portrait-player1-b.jpg";
-import portraitPlayer2A from "@/assets/band/portrait-player2-a.jpg";
-import portraitPlayer3A from "@/assets/band/portrait-player3-a.jpg";
-import portraitPlayer4A from "@/assets/band/portrait-player4-a.jpg";
-import portraitPlayer4B from "@/assets/band/portrait-player4-b.jpg";
-import portraitPlayer5A from "@/assets/band/portrait-player5-a.jpg";
-import portraitPlayer5B from "@/assets/band/portrait-player5-b.jpg";
-
-// Venue images
-import avam1 from "@/assets/venues/avam-1.jpg";
-import belvedere1 from "@/assets/venues/belvedere-1.jpg";
-import belvedere2 from "@/assets/venues/belvedere-2.jpg";
-import boRailroad1 from "@/assets/venues/bo-railroad-1.jpg";
-import boRailroad2 from "@/assets/venues/bo-railroad-2.jpg";
-import cloisters1 from "@/assets/venues/cloisters-1.jpg";
-import cloisters2 from "@/assets/venues/cloisters-2.jpg";
-import cylburn1 from "@/assets/venues/cylburn-1.jpg";
-import cylburn2 from "@/assets/venues/cylburn-2.jpg";
-import evergreen1 from "@/assets/venues/evergreen-1.jpg";
-import evergreen2 from "@/assets/venues/evergreen-2.jpg";
-import fourSeasons1 from "@/assets/venues/four-seasons-1.jpg";
-import fourSeasons2 from "@/assets/venues/four-seasons-2.jpg";
-import leggMason1 from "@/assets/venues/legg-mason-1.jpg";
-import peabody1 from "@/assets/venues/peabody-1.jpg";
-import peabody2 from "@/assets/venues/peabody-2.jpg";
-import pendry1 from "@/assets/venues/pendry-1.jpg";
-import pendry2 from "@/assets/venues/pendry-2.jpg";
-
-// Logos
+// Logos — kept as bundled imports (small + on critical render path)
 import logoCircle from "@/assets/logo-circle.png";
 import logoText from "@/assets/logo-text.png";
 import logoBlack from "@/assets/logo-black.png";
@@ -75,74 +12,74 @@ import logoNew from "@/assets/logo-new.png";
 import logoIcon from "@/assets/logo-icon.png";
 import logoOriginal from "@/assets/logo.png";
 
-const galleryImages = [
+const galleryImages: { src: AssetSlug; alt: string; category: string }[] = [
   // New waterfront group shots
-  { src: groupWaterfront1, alt: "Full band group photo by the water - everyone smiling", category: "Band" },
-  { src: groupWaterfront2, alt: "Candid band moment with vocalist featured", category: "Band" },
-  { src: groupWaterfront3, alt: "Fun band photo with peace sign", category: "Band" },
-  { src: groupWaterfront4, alt: "Band sharing a candid moment by the bay", category: "Band" },
+  { src: "band/group-waterfront-1", alt: "Full band group photo by the water - everyone smiling", category: "Band" },
+  { src: "band/group-waterfront-2", alt: "Candid band moment with vocalist featured", category: "Band" },
+  { src: "band/group-waterfront-3", alt: "Fun band photo with peace sign", category: "Band" },
+  { src: "band/group-waterfront-4", alt: "Band sharing a candid moment by the bay", category: "Band" },
   // New performance shots
-  { src: jazzTrio1, alt: "Jazz trio performing under white tent - piano, drums, upright bass", category: "Band" },
-  { src: jazzTrio2, alt: "Jazz trio in action - intimate performance", category: "Band" },
-  { src: liveDjSax, alt: "DJ and saxophone player performing together", category: "Band" },
-  { src: specialEventDancer, alt: "Special event with ribbon dancer and live band", category: "Band" },
+  { src: "band/jazz-trio-1", alt: "Jazz trio performing under white tent - piano, drums, upright bass", category: "Band" },
+  { src: "band/jazz-trio-2", alt: "Jazz trio in action - intimate performance", category: "Band" },
+  { src: "band/live-dj-sax", alt: "DJ and saxophone player performing together", category: "Band" },
+  { src: "band/special-event-dancer", alt: "Special event with ribbon dancer and live band", category: "Band" },
   // Original photos
-  { src: groupLaughing, alt: "Harborline band group photo - candid laughing moment", category: "Band" },
-  { src: groupPortrait, alt: "Harborline band official group portrait", category: "Band" },
-  { src: livePerformance1, alt: "Live performance - drums and saxophone", category: "Band" },
-  { src: setupTent, alt: "Professional DJ and sound setup in white tent", category: "Band" },
-  { src: setupWaterfront, alt: "Waterfront keyboard setup with bay view", category: "Band" },
-  { src: gallery1, alt: "Harborline performing at a corporate event", category: "Band" },
-  { src: gallery2, alt: "Band members at an outdoor celebration", category: "Band" },
-  { src: gallery3, alt: "Setup for an elegant waterfront event", category: "Band" },
-  { src: gallery4, alt: "The band posing by the Chesapeake Bay", category: "Band" },
-  { src: gallery5, alt: "Keyboardist performing live", category: "Band" },
-  { src: heroBand, alt: "Harborline hero band image", category: "Band" },
-  { src: heroImage, alt: "Hero band performance", category: "Band" },
+  { src: "band/group-laughing", alt: "Harborline band group photo - candid laughing moment", category: "Band" },
+  { src: "band/group-portrait", alt: "Harborline band official group portrait", category: "Band" },
+  { src: "band/live-performance-1", alt: "Live performance - drums and saxophone", category: "Band" },
+  { src: "band/setup-tent", alt: "Professional DJ and sound setup in white tent", category: "Band" },
+  { src: "band/setup-waterfront", alt: "Waterfront keyboard setup with bay view", category: "Band" },
+  { src: "gallery-1", alt: "Harborline performing at a corporate event", category: "Band" },
+  { src: "gallery-2", alt: "Band members at an outdoor celebration", category: "Band" },
+  { src: "gallery-3", alt: "Setup for an elegant waterfront event", category: "Band" },
+  { src: "gallery-4", alt: "The band posing by the Chesapeake Bay", category: "Band" },
+  { src: "gallery-5", alt: "Keyboardist performing live", category: "Band" },
+  { src: "band-hero", alt: "Harborline hero band image", category: "Band" },
+  { src: "hero-band", alt: "Hero band performance", category: "Band" },
 ];
 
-const memberImages = [
+const memberImages: { src: AssetSlug; alt: string; player: number }[] = [
   // Player 1 - Glasses, beard
-  { src: portraitPlayer1A, alt: "Band member portrait - serious", player: 1 },
-  { src: portraitPlayer1B, alt: "Band member portrait - smiling", player: 1 },
+  { src: "band/portrait-player1-a", alt: "Band member portrait - serious", player: 1 },
+  { src: "band/portrait-player1-b", alt: "Band member portrait - smiling", player: 1 },
   // Player 2 - Female vocalist
-  { src: portraitPlayer2A, alt: "Band member portrait - vocalist", player: 2 },
+  { src: "band/portrait-player2-a", alt: "Band member portrait - vocalist", player: 2 },
   // Player 3 - Long hair
-  { src: portraitPlayer3A, alt: "Band member portrait - guitarist", player: 3 },
+  { src: "band/portrait-player3-a", alt: "Band member portrait - guitarist", player: 3 },
   // Player 4 - Curly hair, mustache
-  { src: portraitPlayer4A, alt: "Band member portrait - smiling", player: 4 },
-  { src: portraitPlayer4B, alt: "Band member portrait - serious", player: 4 },
+  { src: "band/portrait-player4-a", alt: "Band member portrait - smiling", player: 4 },
+  { src: "band/portrait-player4-b", alt: "Band member portrait - serious", player: 4 },
   // Player 5 - Durag
-  { src: portraitPlayer5A, alt: "Band member portrait - smiling", player: 5 },
-  { src: portraitPlayer5B, alt: "Band member portrait - serious", player: 5 },
+  { src: "band/portrait-player5-a", alt: "Band member portrait - smiling", player: 5 },
+  { src: "band/portrait-player5-b", alt: "Band member portrait - serious", player: 5 },
   // Existing portraits
-  { src: member1, alt: "Band member portrait", player: 6 },
-  { src: member2, alt: "Band member portrait", player: 7 },
-  { src: member3, alt: "Band member portrait", player: 8 },
-  { src: member4, alt: "Band member portrait", player: 9 },
-  { src: member5, alt: "Band member portrait", player: 10 },
-  { src: member6, alt: "Band member portrait", player: 11 },
+  { src: "band/member-1", alt: "Band member portrait", player: 6 },
+  { src: "band/member-2", alt: "Band member portrait", player: 7 },
+  { src: "band/member-3", alt: "Band member portrait", player: 8 },
+  { src: "band/member-4", alt: "Band member portrait", player: 9 },
+  { src: "band/member-5", alt: "Band member portrait", player: 10 },
+  { src: "band/member-6", alt: "Band member portrait", player: 11 },
 ];
 
-const venueImages = [
-  { src: avam1, alt: "American Visionary Art Museum", category: "Venue" },
-  { src: belvedere1, alt: "The Belvedere", category: "Venue" },
-  { src: belvedere2, alt: "The Belvedere interior", category: "Venue" },
-  { src: boRailroad1, alt: "B&O Railroad Museum", category: "Venue" },
-  { src: boRailroad2, alt: "B&O Railroad Museum interior", category: "Venue" },
-  { src: cloisters1, alt: "Cloisters Castle", category: "Venue" },
-  { src: cloisters2, alt: "Cloisters Castle grounds", category: "Venue" },
-  { src: cylburn1, alt: "Cylburn Arboretum", category: "Venue" },
-  { src: cylburn2, alt: "Cylburn Arboretum gardens", category: "Venue" },
-  { src: evergreen1, alt: "Evergreen Museum", category: "Venue" },
-  { src: evergreen2, alt: "Evergreen Museum interior", category: "Venue" },
-  { src: fourSeasons1, alt: "Four Seasons Baltimore", category: "Venue" },
-  { src: fourSeasons2, alt: "Four Seasons Baltimore ballroom", category: "Venue" },
-  { src: leggMason1, alt: "Legg Mason Tower", category: "Venue" },
-  { src: peabody1, alt: "George Peabody Library", category: "Venue" },
-  { src: peabody2, alt: "George Peabody Library interior", category: "Venue" },
-  { src: pendry1, alt: "Pendry Baltimore", category: "Venue" },
-  { src: pendry2, alt: "Pendry Baltimore event space", category: "Venue" },
+const venueImages: { src: AssetSlug; alt: string; category: string }[] = [
+  { src: "venues/avam-1", alt: "American Visionary Art Museum", category: "Venue" },
+  { src: "venues/belvedere-1", alt: "The Belvedere", category: "Venue" },
+  { src: "venues/belvedere-2", alt: "The Belvedere interior", category: "Venue" },
+  { src: "venues/bo-railroad-1", alt: "B&O Railroad Museum", category: "Venue" },
+  { src: "venues/bo-railroad-2", alt: "B&O Railroad Museum interior", category: "Venue" },
+  { src: "venues/cloisters-1", alt: "Cloisters Castle", category: "Venue" },
+  { src: "venues/cloisters-2", alt: "Cloisters Castle grounds", category: "Venue" },
+  { src: "venues/cylburn-1", alt: "Cylburn Arboretum", category: "Venue" },
+  { src: "venues/cylburn-2", alt: "Cylburn Arboretum gardens", category: "Venue" },
+  { src: "venues/evergreen-1", alt: "Evergreen Museum", category: "Venue" },
+  { src: "venues/evergreen-2", alt: "Evergreen Museum interior", category: "Venue" },
+  { src: "venues/four-seasons-1", alt: "Four Seasons Baltimore", category: "Venue" },
+  { src: "venues/four-seasons-2", alt: "Four Seasons Baltimore ballroom", category: "Venue" },
+  { src: "venues/legg-mason-1", alt: "Legg Mason Tower", category: "Venue" },
+  { src: "venues/peabody-1", alt: "George Peabody Library", category: "Venue" },
+  { src: "venues/peabody-2", alt: "George Peabody Library interior", category: "Venue" },
+  { src: "venues/pendry-1", alt: "Pendry Baltimore", category: "Venue" },
+  { src: "venues/pendry-2", alt: "Pendry Baltimore event space", category: "Venue" },
 ];
 
 const logos = [
@@ -236,7 +173,7 @@ const GalleryPage = ({ embedded = false }: { embedded?: boolean }) => {
                   transition={{ duration: 0.4, delay: index * 0.05 }}
                   className="relative group overflow-hidden rounded-lg aspect-square"
                 >
-                  <img
+                  <OptimizedImage
                     src={image.src}
                     alt={image.alt}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -268,7 +205,7 @@ const GalleryPage = ({ embedded = false }: { embedded?: boolean }) => {
                   transition={{ duration: 0.4, delay: index * 0.05 }}
                   className="relative group overflow-hidden rounded-lg aspect-[3/4]"
                 >
-                  <img
+                  <OptimizedImage
                     src={image.src}
                     alt={image.alt}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -300,7 +237,7 @@ const GalleryPage = ({ embedded = false }: { embedded?: boolean }) => {
                   transition={{ duration: 0.4, delay: index * 0.03 }}
                   className="relative group overflow-hidden rounded-lg aspect-square"
                 >
-                  <img
+                  <OptimizedImage
                     src={image.src}
                     alt={image.alt}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"

@@ -2,10 +2,8 @@ import Layout from "@/components/Layout";
 import PageHero from "@/components/PageHero";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import { Piano, Music, Users, Heart, CheckCircle } from "lucide-react";
-import jazzTrio1 from "@/assets/band/jazz-trio-1.webp";
-import jazzTrio2 from "@/assets/band/jazz-trio-2.webp";
-
 const features = [
   { icon: Users, text: "3 Musicians" },
   { icon: Piano, text: "Piano-Led Sound" },
@@ -106,13 +104,13 @@ const PianoTrioPage = () => {
               transition={{ duration: 0.6 }}
               className="grid grid-cols-2 gap-4"
             >
-              <img
-                src={jazzTrio1}
+              <OptimizedImage
+                src="band/jazz-trio-1"
                 alt="Piano trio performing with drums and upright bass"
                 className="rounded-lg shadow-lg"
               />
-              <img
-                src={jazzTrio2}
+              <OptimizedImage
+                src="band/jazz-trio-2"
                 alt="Elegant trio performance under tent"
                 className="rounded-lg shadow-lg mt-8"
               />

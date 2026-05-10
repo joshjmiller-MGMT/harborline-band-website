@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import heroBand from "@/assets/band-hero.jpg";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import logo from "@/assets/logo-circle.png";
 const Hero = () => {
   return <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
-        <img src={heroBand} alt="Harborline performing live" className="w-full h-full object-cover" />
+        <OptimizedImage src="band-hero" alt="Harborline performing live" className="w-full h-full object-cover" />
         {/* Dark overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/70 to-background" />
         <div className="absolute inset-0 bg-background/40" />

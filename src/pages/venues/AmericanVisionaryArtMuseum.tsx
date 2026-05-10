@@ -1,6 +1,5 @@
 import VenuePage from "@/components/VenuePage";
-import avam1 from "@/assets/venues/avam-1.jpg";
-
+import { OptimizedImage } from "@/components/OptimizedImage";
 const AmericanVisionaryArtMuseumPage = () => {
   return (
     <VenuePage
@@ -32,7 +31,7 @@ const AmericanVisionaryArtMuseumPage = () => {
         { name: "George Peabody Library", slug: "george-peabody-library" }
       ]}
       images={[
-        { src: avam1, alt: "American Visionary Art Museum colorful interior with whimsical art installations" }
+        { src: "venues/avam-1", alt: "American Visionary Art Museum colorful interior with whimsical art installations" }
       ]}
     />
   );

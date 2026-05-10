@@ -1,24 +1,17 @@
 import { motion } from "framer-motion";
 import { Instagram } from "lucide-react";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import type { AssetSlug } from "@/lib/asset-manifest";
 
-import ig1 from "@/assets/instagram/ig-1.png";
-import ig2 from "@/assets/instagram/ig-2.png";
-import ig3 from "@/assets/instagram/ig-3.png";
-import ig4 from "@/assets/instagram/ig-4.png";
-import ig5 from "@/assets/instagram/ig-5.png";
-import ig6 from "@/assets/instagram/ig-6.png";
-import ig7 from "@/assets/instagram/ig-7.png";
-import ig8 from "@/assets/instagram/ig-8.png";
-
-const instagramPosts = [
-  { url: "https://www.instagram.com/harborline.band/reel/DQKEwAXjC8n/", thumbnail: ig1 },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DN3nioKYj6D/", thumbnail: ig2 },
-  { url: "https://www.instagram.com/joshjmillerofficial/reel/DUqps0tEbJ6/", thumbnail: ig3 },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/p/DUlckBnjTh3/", thumbnail: ig4 },
-  { url: "https://www.instagram.com/harborline.band/reel/DSaXaZ-jV4l/", thumbnail: ig5 },
-  { url: "https://www.instagram.com/the.economy.band/reel/DGmQKv5sMJB/", thumbnail: ig6 },
-  { url: "https://www.instagram.com/100daysoffiddle/reel/DIjnjrrgjOC/", thumbnail: ig7 },
-  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DLSiBjwM--m/", thumbnail: ig8 },
+const instagramPosts: { url: string; thumbnail: AssetSlug }[] = [
+  { url: "https://www.instagram.com/harborline.band/reel/DQKEwAXjC8n/", thumbnail: "instagram/ig-1" },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DN3nioKYj6D/", thumbnail: "instagram/ig-2" },
+  { url: "https://www.instagram.com/joshjmillerofficial/reel/DUqps0tEbJ6/", thumbnail: "instagram/ig-3" },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/p/DUlckBnjTh3/", thumbnail: "instagram/ig-4" },
+  { url: "https://www.instagram.com/harborline.band/reel/DSaXaZ-jV4l/", thumbnail: "instagram/ig-5" },
+  { url: "https://www.instagram.com/the.economy.band/reel/DGmQKv5sMJB/", thumbnail: "instagram/ig-6" },
+  { url: "https://www.instagram.com/100daysoffiddle/reel/DIjnjrrgjOC/", thumbnail: "instagram/ig-7" },
+  { url: "https://www.instagram.com/baltimoresoundentertainment/reel/DLSiBjwM--m/", thumbnail: "instagram/ig-8" },
 ];
 
 const InstagramGrid = () => {
@@ -71,11 +64,10 @@ const InstagramGrid = () => {
               transition={{ duration: 0.4, delay: index * 0.05 }}
               className="group relative aspect-square overflow-hidden rounded-sm bg-card border border-border/50"
             >
-              <img
+              <OptimizedImage
                 src={post.thumbnail}
                 alt={`Instagram post ${index + 1}`}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                loading="lazy"
               />
               <div className="absolute inset-0 bg-background/0 group-hover:bg-background/60 transition-all duration-300 flex items-center justify-center">
                 <Instagram className="text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-8 h-8" />

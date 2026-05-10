@@ -1,7 +1,5 @@
 import VenuePage from "@/components/VenuePage";
-import pendry1 from "@/assets/venues/pendry-1.jpg";
-import pendry2 from "@/assets/venues/pendry-2.jpg";
-
+import { OptimizedImage } from "@/components/OptimizedImage";
 const SagamorePendryPage = () => {
   return (
     <VenuePage
@@ -33,8 +31,8 @@ const SagamorePendryPage = () => {
         { name: "The Belvedere", slug: "the-belvedere" }
       ]}
       images={[
-        { src: pendry1, alt: "Sagamore Pendry elegant ballroom with French Revival architecture" },
-        { src: pendry2, alt: "Sagamore Pendry waterfront pier ceremony at golden hour" }
+        { src: "venues/pendry-1", alt: "Sagamore Pendry elegant ballroom with French Revival architecture" },
+        { src: "venues/pendry-2", alt: "Sagamore Pendry waterfront pier ceremony at golden hour" }
       ]}
     />
   );

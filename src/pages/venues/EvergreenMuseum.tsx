@@ -1,7 +1,5 @@
 import VenuePage from "@/components/VenuePage";
-import evergreen1 from "@/assets/venues/evergreen-1.jpg";
-import evergreen2 from "@/assets/venues/evergreen-2.jpg";
-
+import { OptimizedImage } from "@/components/OptimizedImage";
 const EvergreenMuseumPage = () => {
   return (
     <VenuePage
@@ -33,8 +31,8 @@ const EvergreenMuseumPage = () => {
         { name: "The Pendry Baltimore", slug: "pendry-baltimore" }
       ]}
       images={[
-        { src: evergreen1, alt: "Evergreen Museum Victorian mansion with formal gardens and wedding ceremony" },
-        { src: evergreen2, alt: "Evergreen Museum carriage house interior with exposed brick and candlelit reception" }
+        { src: "venues/evergreen-1", alt: "Evergreen Museum Victorian mansion with formal gardens and wedding ceremony" },
+        { src: "venues/evergreen-2", alt: "Evergreen Museum carriage house interior with exposed brick and candlelit reception" }
       ]}
     />
   );
