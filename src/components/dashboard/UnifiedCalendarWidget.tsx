@@ -33,6 +33,7 @@ import {
   RefreshCw,
   Settings as SettingsIcon,
   Link as LinkIcon,
+  Unlink,
   Trash2,
   KeyRound,
   Pencil,
@@ -505,6 +506,22 @@ export default function UnifiedCalendarWidget() {
       popup?.close();
       toast.error("Failed to start Google OAuth");
     }
+  };
+
+  const disconnectGoogle = async (email: string) => {
+    if (!confirm(`Disconnect ${email}? You'll need to re-consent to reconnect (events from this account disappear from the calendar until you do).`)) {
+      return;
+    }
+    const { error } = await supabase
+      .from("google_calendar_tokens")
+      .delete()
+      .eq("account_email", email);
+    if (error) {
+      toast.error(`Disconnect failed: ${error.message}`);
+      return;
+    }
+    toast.success(`${email} disconnected`);
+    await loadAll();
   };
 
   const addMondaySource = async () => {
@@ -1114,16 +1131,27 @@ export default function UnifiedCalendarWidget() {
                               </span>
                             )}
                           </label>
-                          {broken && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            {broken && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => connectGoogle(email)}
+                              >
+                                <LinkIcon className="w-3 h-3 mr-1" /> Reconnect
+                              </Button>
+                            )}
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="h-7 px-2 text-xs shrink-0"
-                              onClick={() => connectGoogle(email)}
+                              variant="ghost"
+                              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                              onClick={() => disconnectGoogle(email)}
+                              title={`Disconnect ${email}`}
                             >
-                              <LinkIcon className="w-3 h-3 mr-1" /> Reconnect
+                              <Unlink className="w-3 h-3 mr-1" /> Disconnect
                             </Button>
-                          )}
+                          </div>
                         </div>
                       );
                     })}
