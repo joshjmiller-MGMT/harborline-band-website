@@ -126,7 +126,22 @@ export function parseShapeD(text: string, sourceFilename?: string): ParseResult 
         fields.event_date = v;
         break;
       case "client": {
-        const [primary, secondary] = v.split(/\s*&\s*|\s+and\s+/i).map((s) => s.trim());
+        const [rawPrimary, rawSecondary] = v.split(/\s*&\s*|\s+and\s+/i).map((s) => s.trim());
+        // Shared-surname carry-forward: "David & Erica Hoffman" → primary
+        // "David Hoffman", secondary "Erica Hoffman". Triggered when the first
+        // half is a single token (no surname) and the second half has 2+ tokens.
+        const primaryTokens = rawPrimary ? rawPrimary.split(/\s+/) : [];
+        const secondaryTokens = rawSecondary ? rawSecondary.split(/\s+/) : [];
+        let primary = rawPrimary;
+        const secondary = rawSecondary;
+        if (
+          primaryTokens.length === 1 &&
+          secondaryTokens.length >= 2 &&
+          /^[A-Z]/.test(secondaryTokens[secondaryTokens.length - 1])
+        ) {
+          const surname = secondaryTokens[secondaryTokens.length - 1];
+          primary = `${rawPrimary} ${surname}`;
+        }
         fields.client!.primary = primary;
         if (secondary) fields.client!.secondary = secondary;
         break;
