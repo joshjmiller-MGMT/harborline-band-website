@@ -1,22 +1,33 @@
-// ingest-event — Sub-Plan 03 v2 architecture, Layer 2 (ingestion routes).
+// ingest-event — Sub-Plan 03 v2 architecture, Layers 2-4.
 //
-// Cut 1: PLUMBING ONLY. All 4 routes accept their inputs, compute a
-// source_files provenance entry, and upsert a canonical_events row keyed by
-// (event_date, normalized_name). Shape detection + deterministic parsers
-// (Layer 3+) land in Cut 2; LLM extraction fallback (Layer 4) in Cut 3.
+// Cut 2: parser extraction now runs inline. When the request payload includes
+// `text` (or `rawText`), the shape detector classifies the input and routes to
+// Parser A/B/C/D. Shape W still falls through to plumbing-only insert (LLM
+// extraction lands in Cut 3).
 //
 // Routes:
-//   paste         — pasted free text or sheet rows (current generator's input)
-//   drive-url     — Drive file ID → MCP read → text → parser dispatch
-//   djep-scrape   — { name, date } → Firecrawl scrape of DJEP record
-//   drive-search  — { name, date } → search Drive for files matching this event
+//   paste         — pasted free text. Triggers shape detection + parser run.
+//   drive-url     — Drive file ID + optional pre-fetched text (Drive read happens
+//                   in Cut 5; if caller passes payload.text, it parses now).
+//   djep-scrape   — { name, date } → Firecrawl scrape (full scrape in Cut 5).
+//   drive-search  — { name, date } → Drive search (full search in Cut 5).
 //
 // Request shape: { route, name, eventDate, organization?, eventType?, payload }
-// Response shape: { id, route, sourceFile, merged: boolean }
+// Response shape: { id, route, sourceFile, merged, shape?, fields?, warnings? }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { detectShape } from "./shape-detector.ts";
+import { parseShapeA } from "./parser-a-tsb-narrative.ts";
+import { parseShapeB } from "./parser-b-dj-qa.ts";
+import { parseShapeC } from "./parser-c-ceremony.ts";
+import { parseShapeD } from "./parser-d-harborline-sheet.ts";
+import type {
+  CanonicalEventFields,
+  ParseResult,
+  Shape,
+} from "./canonical-event-types.ts";
 
-const EXTRACTOR_VERSION = "v2.0-cut1-stub";
+const EXTRACTOR_VERSION = "v2.1-cut2-deterministic";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,8 +53,9 @@ type SourceFile = {
     | "unknown";
   drive_id?: string;
   modified_at?: string;
-  detected_shape?: "A" | "B" | "C" | "D" | "W" | null;
+  detected_shape?: Shape | null;
   extracted_excerpt?: string;
+  is_blank_starter?: boolean;
   ingested_at: string;
 };
 
@@ -54,8 +66,6 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-// Mirrors the generated normalized_name column in SQL so the client can
-// pre-check / cache without a round-trip. Keep in sync with the migration.
 function normalizeName(name: string): string {
   return name
     .trim()
@@ -64,7 +74,6 @@ function normalizeName(name: string): string {
     .replace(/[\p{P}]+$/u, "");
 }
 
-// Parse event-date strings the same way generate-run-of-show does.
 function parseEventDateToISO(raw: string): string | null {
   if (!raw) return null;
   const s = String(raw).trim();
@@ -108,16 +117,17 @@ function buildSourceFileForRoute(
 ): SourceFile {
   const ingested_at = new Date().toISOString();
   const p = payload ?? {};
+  const text = typeof p.text === "string" ? p.text
+    : typeof p.rawText === "string" ? p.rawText
+    : "";
   switch (route) {
-    case "paste": {
-      const excerpt = typeof p.text === "string" ? p.text.slice(0, 500) : undefined;
+    case "paste":
       return {
         source_type: "paste",
         detected_shape: null,
-        extracted_excerpt: excerpt,
+        extracted_excerpt: text.slice(0, 500),
         ingested_at,
       };
-    }
     case "drive-url": {
       const url = typeof p.url === "string" ? p.url : undefined;
       const drive_id = typeof p.driveId === "string" ? p.driveId : undefined;
@@ -133,28 +143,86 @@ function buildSourceFileForRoute(
         source_type,
         modified_at: typeof p.modifiedAt === "string" ? p.modifiedAt : undefined,
         detected_shape: null,
+        extracted_excerpt: text.slice(0, 500),
         ingested_at,
       };
     }
-    case "djep-scrape": {
+    case "djep-scrape":
       return {
         source_type: "djep-scrape",
         url: typeof p.djepUrl === "string" ? p.djepUrl : undefined,
         detected_shape: null,
+        extracted_excerpt: text.slice(0, 500),
         ingested_at,
       };
-    }
-    case "drive-search": {
+    case "drive-search":
       return {
         source_type: "drive-search-hit",
         url: typeof p.url === "string" ? p.url : undefined,
         drive_id: typeof p.driveId === "string" ? p.driveId : undefined,
         modified_at: typeof p.modifiedAt === "string" ? p.modifiedAt : undefined,
         detected_shape: null,
+        extracted_excerpt: text.slice(0, 500),
         ingested_at,
       };
-    }
   }
+}
+
+function runParser(shape: Shape, text: string, filename?: string): ParseResult | null {
+  switch (shape) {
+    case "A": return parseShapeA(text, filename);
+    case "B": return parseShapeB(text, filename);
+    case "C": return parseShapeC(text, filename);
+    case "D": return parseShapeD(text, filename);
+    case "W": return null;
+  }
+}
+
+// Merge a partial CanonicalEventFields into an existing row, preferring the
+// prior value when set. This is the "deterministic-parser doesn't clobber"
+// rule from the v2 architecture sketch (Layer 4 enrichment).
+function mergeFields(
+  prev: Record<string, unknown>,
+  next: CanonicalEventFields,
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...prev };
+
+  // `name` is intentionally excluded — it's caller-controlled and load-bearing
+  // for the unique-index merge key. See upsertCanonicalEvent for the rationale.
+  const scalarKeys: (keyof CanonicalEventFields)[] = [
+    "event_date", "end_date", "organization", "event_type", "venue_name", "attire",
+  ];
+  for (const k of scalarKeys) {
+    if (next[k] && !merged[k]) merged[k] = next[k] as string;
+  }
+
+  const objectKeys: (keyof CanonicalEventFields)[] = [
+    "client", "venue", "contact", "guests", "logistics", "preferences",
+  ];
+  for (const k of objectKeys) {
+    const incoming = next[k] as Record<string, unknown> | undefined;
+    if (!incoming) continue;
+    const existing = (merged[k] as Record<string, unknown> | undefined) || {};
+    const combined: Record<string, unknown> = { ...existing };
+    for (const [field, value] of Object.entries(incoming)) {
+      if (value !== undefined && value !== null && value !== "" && !combined[field]) {
+        combined[field] = value;
+      }
+    }
+    merged[k] = combined;
+  }
+
+  const arrayKeys: (keyof CanonicalEventFields)[] = [
+    "personnel", "vendors", "timeline", "song_sections",
+  ];
+  for (const k of arrayKeys) {
+    const incoming = next[k] as unknown[] | undefined;
+    if (!incoming || incoming.length === 0) continue;
+    const existing = (merged[k] as unknown[] | undefined) || [];
+    merged[k] = [...existing, ...incoming];
+  }
+
+  return merged;
 }
 
 async function upsertCanonicalEvent(opts: {
@@ -163,6 +231,7 @@ async function upsertCanonicalEvent(opts: {
   organization?: string;
   eventType?: string;
   sourceFile: SourceFile;
+  parsedFields?: CanonicalEventFields;
 }): Promise<{ id: string; merged: boolean }> {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
@@ -170,10 +239,13 @@ async function upsertCanonicalEvent(opts: {
 
   const normalized = normalizeName(opts.name);
 
-  // Look up existing row by (event_date, normalized_name) — the unique key.
   const { data: existing, error: selectErr } = await supabase
     .from("canonical_events")
-    .select("id, source_files")
+    .select(
+      "id, source_files, name, organization, event_type, venue_name, attire, " +
+      "client, venue, contact, guests, logistics, personnel, vendors, " +
+      "timeline, song_sections, preferences",
+    )
     .eq("event_date", opts.eventDate)
     .eq("normalized_name", normalized)
     .maybeSingle();
@@ -184,32 +256,82 @@ async function upsertCanonicalEvent(opts: {
     const prevSources = Array.isArray(existing.source_files)
       ? existing.source_files
       : [];
+
+    const mergedFields = opts.parsedFields
+      ? mergeFields(existing as Record<string, unknown>, opts.parsedFields)
+      : {};
+
+    // mergeFields returns the full prev+next blob. Compute the diff to limit
+    // the UPDATE to fields that actually changed.
+    const update: Record<string, unknown> = {
+      source_files: [...prevSources, opts.sourceFile],
+      extractor_version: EXTRACTOR_VERSION,
+      extracted_at: new Date().toISOString(),
+      ...(opts.organization && !existing.organization
+        ? { organization: opts.organization }
+        : {}),
+      ...(opts.eventType && !existing.event_type
+        ? { event_type: opts.eventType }
+        : {}),
+    };
+    for (
+      const k of [
+        "venue_name", "attire", "client", "venue", "contact", "guests",
+        "logistics", "personnel", "vendors", "timeline", "song_sections", "preferences",
+      ]
+    ) {
+      const prev = (existing as Record<string, unknown>)[k];
+      const merged = mergedFields[k];
+      if (merged !== undefined && JSON.stringify(merged) !== JSON.stringify(prev)) {
+        update[k] = merged;
+      }
+    }
+
     const { error: updateErr } = await supabase
       .from("canonical_events")
-      .update({
-        source_files: [...prevSources, opts.sourceFile],
-        extractor_version: EXTRACTOR_VERSION,
-        extracted_at: new Date().toISOString(),
-        // Only set organization / event_type on existing rows if they were null —
-        // don't clobber better data from a prior ingest.
-        ...(opts.organization ? { organization: opts.organization } : {}),
-        ...(opts.eventType ? { event_type: opts.eventType } : {}),
-      })
+      .update(update)
       .eq("id", existing.id);
     if (updateErr) throw new Error(`update failed: ${updateErr.message}`);
     return { id: existing.id, merged: true };
   }
 
+  // New row. The canonical `name` always uses the caller-supplied value — the
+  // unique index keys off normalized_name, and letting the parser override it
+  // would break dedup on re-ingest (a second caller posting the same name+date
+  // wouldn't find this row). The parser's name suggestion is logged on the
+  // source_files entry for traceability.
+  if (opts.parsedFields?.name && opts.parsedFields.name !== opts.name) {
+    (opts.sourceFile as Record<string, unknown>).parsed_name_suggestion =
+      opts.parsedFields.name;
+  }
+  const newRow: Record<string, unknown> = {
+    event_date: opts.eventDate,
+    name: opts.name,
+    organization: opts.parsedFields?.organization || opts.organization || null,
+    event_type: opts.parsedFields?.event_type || opts.eventType || null,
+    source_files: [opts.sourceFile],
+    extractor_version: EXTRACTOR_VERSION,
+  };
+  if (opts.parsedFields) {
+    const f = opts.parsedFields;
+    if (f.venue_name) newRow.venue_name = f.venue_name;
+    if (f.attire) newRow.attire = f.attire;
+    if (f.end_date) newRow.end_date = f.end_date;
+    if (f.client && Object.keys(f.client).length) newRow.client = f.client;
+    if (f.venue && Object.keys(f.venue).length) newRow.venue = f.venue;
+    if (f.contact && Object.keys(f.contact).length) newRow.contact = f.contact;
+    if (f.guests && Object.keys(f.guests).length) newRow.guests = f.guests;
+    if (f.logistics && Object.keys(f.logistics).length) newRow.logistics = f.logistics;
+    if (f.preferences && Object.keys(f.preferences).length) newRow.preferences = f.preferences;
+    if (f.personnel && f.personnel.length) newRow.personnel = f.personnel;
+    if (f.vendors && f.vendors.length) newRow.vendors = f.vendors;
+    if (f.timeline && f.timeline.length) newRow.timeline = f.timeline;
+    if (f.song_sections && f.song_sections.length) newRow.song_sections = f.song_sections;
+  }
+
   const { data: inserted, error: insertErr } = await supabase
     .from("canonical_events")
-    .insert({
-      event_date: opts.eventDate,
-      name: opts.name,
-      organization: opts.organization ?? null,
-      event_type: opts.eventType ?? null,
-      source_files: [opts.sourceFile],
-      extractor_version: EXTRACTOR_VERSION,
-    })
+    .insert(newRow)
     .select("id")
     .single();
   if (insertErr) throw new Error(`insert failed: ${insertErr.message}`);
@@ -246,13 +368,35 @@ Deno.serve(async (req) => {
       );
     }
 
+    const text = typeof payload.text === "string" ? payload.text
+      : typeof payload.rawText === "string" ? payload.rawText
+      : "";
+    const filename = typeof payload.filename === "string" ? payload.filename : undefined;
+
     const sourceFile = buildSourceFileForRoute(route, payload);
+
+    // Shape detection + parser run when we have text
+    let parseResult: ParseResult | null = null;
+    if (text.trim()) {
+      const detection = detectShape({
+        text,
+        filename,
+        source_type: sourceFile.source_type,
+      });
+      sourceFile.detected_shape = detection.shape;
+      parseResult = runParser(detection.shape, text, filename);
+      if (parseResult) {
+        sourceFile.is_blank_starter = parseResult.is_blank_starter || false;
+      }
+    }
+
     const { id, merged } = await upsertCanonicalEvent({
       name,
       eventDate,
       organization,
       eventType,
       sourceFile,
+      parsedFields: parseResult?.fields,
     });
 
     return jsonResponse({
@@ -261,8 +405,12 @@ Deno.serve(async (req) => {
       merged,
       sourceFile,
       extractor_version: EXTRACTOR_VERSION,
-      // Cut 1 plumbing only — extraction fields stay null until Cut 2.
-      cut: 1,
+      cut: 2,
+      shape: parseResult?.shape ?? sourceFile.detected_shape ?? null,
+      confidence: parseResult?.confidence ?? null,
+      is_blank_starter: parseResult?.is_blank_starter ?? false,
+      warnings: parseResult?.warnings ?? [],
+      fields_extracted: parseResult ? Object.keys(parseResult.fields).length : 0,
     });
   } catch (err) {
     return jsonResponse(
