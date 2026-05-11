@@ -8,17 +8,20 @@
 // Output selection:
 //   - Explicit `output_type` in request body wins.
 //   - Otherwise auto-select from event.organization + event.event_type:
-//       organization='harborline' OR event_type contains 'country-club'  → X-prime
-//       Shape B-flavored input (detected by line_dances presence)        → Z
-//       Default                                                          → X
+//       event_type matches client-planner / wedding-client-planner            → C-client
+//       organization='harborline' or 'tsb'                                    → X-prime
+//       event_type contains 'country-club' or 'corporate'                     → X-prime
+//       Shape B-flavored input (detected by line_dances presence)             → Z
+//       Default                                                               → X
 //
-// Request:  { canonical_event_id, output_type?: 'X' | 'X-prime' | 'Z' }
+// Request:  { canonical_event_id, output_type?: 'X' | 'X-prime' | 'Z' | 'C-client' }
 // Response: { html, base64, filename, output_type, canonical_event_id }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { renderOutputX } from "./render-output-x.ts";
 import { renderOutputXPrime } from "./render-output-x-prime.ts";
 import { renderOutputZ } from "./render-output-z.ts";
+import { renderOutputCClient } from "./render-output-c-client.ts";
 import type { CanonicalEvent, OutputType } from "./canonical-event-types.ts";
 
 const corsHeaders = {
@@ -38,8 +41,13 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 function autoSelectOutput(event: CanonicalEvent): OutputType {
-  if (event.organization === "harborline") return "X-prime";
-  if ((event.event_type || "").toLowerCase().includes("country-club")) return "X-prime";
+  const type = (event.event_type || "").toLowerCase();
+  const org = (event.organization || "").toLowerCase();
+
+  if (type.includes("client-planner")) return "C-client";
+
+  if (org === "harborline" || org === "tsb") return "X-prime";
+  if (type.includes("country-club") || type.includes("corporate")) return "X-prime";
 
   const hasLineDances = !!(
     event.preferences?.line_dances &&
@@ -61,6 +69,7 @@ function safeFilename(name: string, outputType: OutputType): string {
   const cleaned = (name || "run-of-show").replace(/[^a-zA-Z0-9-_]/g, "_");
   const suffix = outputType === "X-prime" ? "harborline-ros"
     : outputType === "Z" ? "dj-ros"
+    : outputType === "C-client" ? "client-plan"
     : "bse-ros";
   return `${cleaned}-${suffix}`;
 }
@@ -74,8 +83,8 @@ Deno.serve(async (req) => {
     const requestedOutput = body?.output_type as OutputType | undefined;
 
     if (!id) return jsonResponse({ error: "canonical_event_id (string) required" }, 400);
-    if (requestedOutput && !["X", "X-prime", "Z"].includes(requestedOutput)) {
-      return jsonResponse({ error: "output_type must be X | X-prime | Z" }, 400);
+    if (requestedOutput && !["X", "X-prime", "Z", "C-client"].includes(requestedOutput)) {
+      return jsonResponse({ error: "output_type must be X | X-prime | Z | C-client" }, 400);
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -102,6 +111,7 @@ Deno.serve(async (req) => {
     switch (outputType) {
       case "X-prime": html = renderOutputXPrime(event); break;
       case "Z": html = renderOutputZ(event); break;
+      case "C-client": html = renderOutputCClient(event); break;
       case "X":
       default: html = renderOutputX(event); break;
     }
