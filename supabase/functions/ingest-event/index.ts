@@ -27,7 +27,7 @@ import type {
   Shape,
 } from "./canonical-event-types.ts";
 
-const EXTRACTOR_VERSION = "v2.2-cut3-llm";
+const EXTRACTOR_VERSION = "v2.3-cut5-djep-scrape";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,6 +64,26 @@ function jsonResponse(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+// DJEP match → plain-text representation the parsers/LLM can read. Each
+// DJEP field row becomes a "Label: value" line — Shape B-friendly format.
+function formatDjepMatchAsText(match: {
+  title?: string;
+  event_date?: string;
+  fields?: { label: string; value: string }[];
+  source_url?: string;
+}): string {
+  const lines: string[] = [];
+  if (match.title) lines.push(`DJEP Event: ${match.title}`);
+  if (match.event_date) lines.push(`Wedding Date: ${match.event_date}`);
+  for (const row of match.fields || []) {
+    if (row.label && row.value) {
+      lines.push(`${row.label}: ${row.value}`);
+    }
+  }
+  if (match.source_url) lines.push(`\nSource: ${match.source_url}`);
+  return lines.join("\n");
 }
 
 function normalizeName(name: string): string {
@@ -413,12 +433,46 @@ Deno.serve(async (req) => {
       );
     }
 
-    const text = typeof payload.text === "string" ? payload.text
+    let text = typeof payload.text === "string" ? payload.text
       : typeof payload.rawText === "string" ? payload.rawText
       : "";
     const filename = typeof payload.filename === "string" ? payload.filename : undefined;
 
+    // Cut 5: djep-scrape route auto-fetches the DJEP record by name+date when
+    // no text was supplied by the caller. Filters the djep_events_cache table
+    // populated by djep-calendar-events (no per-call Firecrawl scrape).
+    if (route === "djep-scrape" && !text.trim()) {
+      try {
+        const lookup = await fetch(
+          `${SUPABASE_URL}/functions/v1/djep-event-lookup`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name, date: eventDate }),
+          },
+        );
+        if (lookup.ok) {
+          const result = await lookup.json();
+          const best = (result.matches || [])[0];
+          if (best) {
+            text = formatDjepMatchAsText(best);
+            (payload as Record<string, unknown>).djep_match = best;
+          }
+        }
+      } catch (err) {
+        console.error("djep-event-lookup failed", err);
+      }
+    }
+
     const sourceFile = buildSourceFileForRoute(route, payload);
+    if (route === "djep-scrape" && payload.djep_match) {
+      const m = payload.djep_match as { djep_id?: string; source_url?: string };
+      (sourceFile as Record<string, unknown>).djep_id = m.djep_id;
+      (sourceFile as Record<string, unknown>).url = m.source_url ?? sourceFile.url;
+    }
 
     // Layer 3: shape detection + deterministic parser
     let parseResult: ParseResult | null = null;
@@ -493,7 +547,7 @@ Deno.serve(async (req) => {
       merged,
       sourceFile,
       extractor_version: EXTRACTOR_VERSION,
-      cut: 3,
+      cut: 5,
       shape: finalShape,
       confidence: parseResult?.confidence ?? (llmResult?.confidence ?? null),
       is_blank_starter: parseResult?.is_blank_starter ?? false,
