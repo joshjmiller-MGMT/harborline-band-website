@@ -1,617 +1,1001 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import {
-  Loader2, Search, Link2, ClipboardPaste, Download, FileText, ExternalLink,
-  Sparkles, AlertCircle, CheckCircle2,
-} from "lucide-react";
+import { generateDocx, generateDocxBlob } from "@/utils/docxGenerator";
+import { useGoogleDriveUpload } from "@/hooks/useGoogleDriveUpload";
+import logoCircle from "@/assets/logo-harborline-doc.png";
+import logoTextHarborline from "@/assets/logo-harborline-doc.png";
+import logoTextBSE from "@/assets/logo-bse-dark.png";
+import logoTextTSB from "@/assets/logo-tsb.webp";
 
-type Mode = "paste" | "search" | "url";
-type Organization = "harborline" | "bse" | "tsb";
-type OutputType = "auto" | "X" | "X-prime" | "Z";
+type OrgKey = "harborline" | "bse" | "tsb";
 
-type DriveFile = {
-  id: string;
-  name: string;
-  mime_type: string;
-  modified_time: string;
-  owners: string[];
-  web_view_link: string;
-  size: number | null;
+const ORG_INFO: Record<OrgKey, { name: string; logoText: string }> = {
+  harborline: { name: "Harborline", logoText: logoTextHarborline },
+  bse: { name: "Baltimore Sound Entertainment", logoText: logoTextBSE },
+  tsb: { name: "Tom Starr Band", logoText: logoTextTSB },
 };
 
-type IngestResponse = {
-  id: string;
-  route: string;
-  merged: boolean;
-  sourceFile: {
-    source_type: string;
-    detected_shape: string | null;
-    extracted_excerpt: string;
-    drive_id?: string;
-    url?: string;
-    is_blank_starter: boolean;
-  };
-  extractor_version: string;
-  shape: string;
-  confidence: number | null;
-  is_blank_starter: boolean;
-  llm_ran: boolean;
-  llm_skipped_reason: string | null;
-  warnings: string[];
-  fields_extracted: number;
+type TemplateType = "wedding-ros" | "client-planner" | "corporate-ros" | "party-runsheet";
+
+const TEMPLATE_INFO: Record<TemplateType, { name: string; description: string; audience: "internal" | "client" }> = {
+  "wedding-ros": {
+    name: "Wedding Ceremony",
+    description: "Formal run of show with event details header, timeline sections, and song lists.",
+    audience: "internal",
+  },
+  "client-planner": {
+    name: "Client Planner",
+    description: "Client-facing template for organizing ceremony music choices and event details.",
+    audience: "client",
+  },
+  "corporate-ros": {
+    name: "Corporate Event",
+    description: "Multi-day scheduling, sound/production notes, and logistics.",
+    audience: "internal",
+  },
+  "party-runsheet": {
+    name: "Party Run Sheet",
+    description: "Day-of run sheet with event details, timeline, team, songlist, and logistics.",
+    audience: "internal",
+  },
 };
 
-type CanonicalEventRow = {
-  id: string;
-  event_date: string;
-  name: string;
-  organization: string | null;
-  event_type: string | null;
-  venue: any;
-  client: any;
-  personnel: any[] | null;
-  timeline: any[] | null;
-  song_sections: any[] | null;
-  vendors: any[] | null;
+// Required fields per template type
+const TEMPLATE_FIELDS: Record<TemplateType, { label: string; key: string }[]> = {
+  "wedding-ros": [
+    { label: "Event Name", key: "event name" },
+    { label: "Event Date", key: "event date" },
+    { label: "Setup Time", key: "setup time" },
+    { label: "Start / End", key: "start / end" },
+    { label: "Client", key: "client" },
+    { label: "Event Type", key: "event type" },
+    { label: "Venue", key: "venue" },
+    { label: "Venue Address", key: "venue address" },
+    { label: "Venue Type", key: "venue type" },
+    { label: "Ensemble", key: "ensemble" },
+    { label: "Musicians", key: "musicians" },
+    { label: "Other Staff Members", key: "other staff members" },
+    { label: "Guest Count", key: "guest count" },
+    { label: "Attire", key: "attire" },
+    { label: "Officiant", key: "officiant" },
+    { label: "Coordinator", key: "coordinator" },
+    { label: "Musician Food & Bev", key: "musician food & bev" },
+    { label: "Audio Reinforcement", key: "audio reinforcement" },
+    { label: "Project Lead", key: "project lead" },
+    { label: "Musician POS", key: "musician pos" },
+  ],
+  "client-planner": [
+    { label: "Event Name", key: "event name" },
+    { label: "Event Date", key: "event date" },
+    { label: "Event Type", key: "event type" },
+    { label: "Venue", key: "venue" },
+    { label: "Musicians", key: "musicians" },
+    { label: "Ensemble", key: "ensemble" },
+    { label: "Guest Count", key: "guest count" },
+    { label: "Musician Salesperson", key: "musician salesperson" },
+    { label: "Coordinator", key: "coordinator" },
+  ],
+  "corporate-ros": [
+    { label: "Event Name", key: "event name" },
+    { label: "Event Date", key: "event date" },
+    { label: "Event Type", key: "event type" },
+    { label: "Client", key: "client" },
+    { label: "Organization", key: "organization" },
+    { label: "Venue", key: "venue" },
+    { label: "Venue Address", key: "venue address" },
+    { label: "Guest Count", key: "guest count" },
+    { label: "Setup Time", key: "setup time" },
+    { label: "Start / End", key: "start / end" },
+    { label: "Load-in Time", key: "load-in time" },
+    { label: "Soundcheck", key: "soundcheck" },
+    { label: "Parking", key: "parking" },
+    { label: "Attire", key: "attire" },
+    { label: "Audio Reinforcement", key: "audio reinforcement" },
+    { label: "Project Lead", key: "project lead" },
+    { label: "Musician POS", key: "musician pos" },
+  ],
+  "party-runsheet": [
+    { label: "Event Name", key: "event name" },
+    { label: "Event Date", key: "event date" },
+    { label: "Event Type", key: "event type" },
+    { label: "Client", key: "client" },
+    { label: "Venue", key: "venue" },
+    { label: "Venue Address", key: "venue address" },
+    { label: "Ensemble", key: "ensemble" },
+    { label: "Guest Count", key: "guest count" },
+    { label: "Setup Time", key: "setup time" },
+    { label: "Start / End", key: "start / end" },
+    { label: "Load-in Time", key: "load-in time" },
+    { label: "Soundcheck", key: "soundcheck" },
+    { label: "Parking", key: "parking" },
+    { label: "Entrance", key: "entrance" },
+    { label: "Officiant", key: "officiant" },
+    { label: "Coordinator", key: "coordinator" },
+    { label: "Project Lead", key: "project lead" },
+    { label: "Musician POS", key: "musician pos" },
+    { label: "Green Room", key: "green room" },
+    { label: "Attire", key: "attire" },
+    { label: "Posting", key: "posting" },
+    { label: "Musician Food & Bev", key: "musician food & bev" },
+    { label: "Audio Reinforcement", key: "audio reinforcement" },
+  ],
 };
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-
-const ORG_LABELS: Record<Organization, string> = {
-  harborline: "Harborline",
-  bse: "Baltimore Sound Entertainment (BSE)",
-  tsb: "Tom Starr Band (TSB)",
+const DETAIL_KEY_ALIASES: Record<string, string> = {
+  "musicians salesperson": "musician salesperson",
+  "musicians sales person": "musician salesperson",
+  "musician sales person": "musician salesperson",
+  salesperson: "musician salesperson",
+  "sales person": "musician salesperson",
+  "sales rep": "musician salesperson",
+  "coordinator or on-site point of contact": "coordinator",
+  "coordinator or on site point of contact": "coordinator",
+  "on-site point of contact": "coordinator",
+  "on site point of contact": "coordinator",
+  "event coordinator": "coordinator",
+  "day-of coordinator": "coordinator",
+  "day of coordinator": "coordinator",
+  "wedding coordinator": "coordinator",
+  "band project lead": "project lead",
+  "music project lead": "project lead",
+  "musician project lead": "project lead",
+  "on site poc": "musician pos",
+  "on-site poc": "musician pos",
+  onsite: "musician pos",
+  "musician p o s": "musician pos",
+  "musician poc": "musician pos",
+  "musician point of contact": "musician pos",
+  "musician on-site point of contact": "musician pos",
+  "musician on site point of contact": "musician pos",
+  "musician on-site poc": "musician pos",
+  "musician on site poc": "musician pos",
+  "musician onsite poc": "musician pos",
+  "musician point person": "musician pos",
 };
 
-const OUTPUT_LABELS: Record<OutputType, string> = {
-  auto: "Auto-select",
-  X: "X — BSE Musicians",
-  "X-prime": "X′ — Harborline / TSB Musicians",
-  Z: "Z — DJ-facing",
+const normalizeDetailKey = (rawKey: string): string => {
+  const cleaned = rawKey
+    .toLowerCase()
+    .replace(/[’']/g, "")
+    .replace(/[.]/g, " ")
+    .replace(/:$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (DETAIL_KEY_ALIASES[cleaned]) return DETAIL_KEY_ALIASES[cleaned];
+  if (cleaned.includes("musician") && (cleaned.includes("salesperson") || cleaned.includes("sales person") || cleaned.includes("sales rep"))) {
+    return "musician salesperson";
+  }
+  if (cleaned.includes("coordinator")) return "coordinator";
+  if (cleaned.includes("project") && cleaned.includes("lead")) return "project lead";
+  if (cleaned.includes("musician") && (cleaned.includes("pos") || cleaned.includes("poc") || cleaned.includes("point of contact") || cleaned.includes("point person"))) {
+    return "musician pos";
+  }
+
+  return cleaned;
 };
 
-function extractDriveIdFromUrl(url: string): string | null {
-  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  return m ? m[1] : null;
+const normalizeDetails = (details: Record<string, string>): Record<string, string> => {
+  return Object.entries(details).reduce<Record<string, string>>((acc, [key, value]) => {
+    const normalizedKey = normalizeDetailKey(key);
+    if (!value) return acc;
+    if (!acc[normalizedKey] || value.length > acc[normalizedKey].length) {
+      acc[normalizedKey] = value;
+    }
+    return acc;
+  }, {});
+};
+
+interface SheetData {
+  headers: string[];
+  rows: string[][];
+  sheetTitle: string;
 }
 
-function fmtBytes(b: number | null): string {
-  if (!b) return "";
-  if (b < 1024) return `${b}B`;
-  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)}KB`;
-  return `${(b / 1024 / 1024).toFixed(1)}MB`;
+interface ParsedEventData {
+  eventName: string;
+  details: Record<string, string>;
+  personnel: { role: string; name: string }[];
+  timeline: { time: string; description: string }[];
+  songSections: { title: string; time: string; songs: any[] }[];
 }
 
-function fmtMime(m: string): string {
-  if (m.includes("spreadsheet")) return "Sheet";
-  if (m.includes("document")) return "Doc";
-  if (m.includes("folder")) return "Folder";
-  if (m.includes("pdf")) return "PDF";
-  return m.split(".").pop() || m;
-}
-
-function describeShape(shape: string): string {
-  return ({ A: "Shape A — TSB Narrative", B: "Shape B — DJ Q&A", C: "Shape C — Ceremony", D: "Shape D — Harborline Spreadsheet", W: "Shape W — Wild (LLM-extracted)" } as Record<string, string>)[shape] || shape;
-}
+const imageToBase64 = (src: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext("2d")!.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+};
 
 export default function RunOfShowGenerator() {
-  const [mode, setMode] = useState<Mode>("search");
-  const [eventName, setEventName] = useState("");
-  const [eventDate, setEventDate] = useState("");
-  const [organization, setOrganization] = useState<Organization>("harborline");
+  const [inputUrl, setInputUrl] = useState("");
+  const [template, setTemplate] = useState<TemplateType>("party-runsheet");
+  const [loading, setLoading] = useState(false);
+  const [sheetData, setSheetData] = useState<SheetData | null>(null);
+  const [parsedData, setParsedData] = useState<ParsedEventData | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [sourceType, setSourceType] = useState<string>("");
+  const [logosBase64, setLogosBase64] = useState<{ circle: string; text: string } | null>(null);
+  const [organization, setOrganization] = useState<OrgKey>("harborline");
+  const [manualOverrides, setManualOverrides] = useState("");
+  const manualOverridesRef = useRef<HTMLTextAreaElement>(null);
 
-  const [pasteText, setPasteText] = useState("");
-  const [driveUrl, setDriveUrl] = useState("");
+  const { uploadToDrive, uploading: driveUploading } = useGoogleDriveUpload();
+  const currentLogoText = ORG_INFO[organization].logoText;
 
-  const [searchResults, setSearchResults] = useState<DriveFile[] | null>(null);
-  const [searching, setSearching] = useState(false);
+  useEffect(() => {
+    Promise.all([imageToBase64(logoCircle), imageToBase64(currentLogoText)])
+      .then(([circle, text]) => setLogosBase64({ circle, text }))
+      .catch(() => console.warn("Failed to preload logos"));
+  }, [currentLogoText]);
 
-  const [ingesting, setIngesting] = useState(false);
-  const [ingestResult, setIngestResult] = useState<IngestResponse | null>(null);
-  const [canonicalRow, setCanonicalRow] = useState<CanonicalEventRow | null>(null);
-
-  const [rendering, setRendering] = useState<OutputType | null>(null);
-
-  const reset = () => {
-    setIngestResult(null);
-    setCanonicalRow(null);
-    setSearchResults(null);
+  const detectUrlType = (url: string): string => {
+    if (url.includes('docs.google.com/spreadsheets')) return 'Google Sheet';
+    if (url.includes('docs.google.com/document')) return 'Google Doc';
+    if (url.includes('.csv')) return 'CSV';
+    return 'Webpage';
   };
 
-  const validateNameDate = (): boolean => {
-    if (!eventName.trim()) {
-      toast({ title: "Event name required", variant: "destructive" });
-      return false;
-    }
-    if (!eventDate.trim()) {
-      toast({ title: "Event date required", variant: "destructive" });
-      return false;
-    }
-    return true;
+  const decodeBase64Utf8 = (base64: string): string => {
+    const binary = window.atob(base64);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder("utf-8").decode(bytes);
   };
 
-  const loadCanonicalRow = async (id: string) => {
-    const { data, error } = await supabase
-      .from("canonical_events")
-      .select("id, event_date, name, organization, event_type, venue, client, personnel, timeline, song_sections, vendors")
-      .eq("id", id)
-      .single();
-    if (error) {
-      toast({ title: "Couldn't load canonical event", description: error.message, variant: "destructive" });
+  // Parse manual overrides text into key-value pairs
+  const parseManualOverrides = (): Record<string, string> => {
+    const overrides: Record<string, string> = {};
+    if (!manualOverrides.trim()) return overrides;
+    const lines = manualOverrides.split("\n");
+    for (const line of lines) {
+      const colonIdx = line.indexOf(":");
+      if (colonIdx > 0) {
+        const key = normalizeDetailKey(line.substring(0, colonIdx).trim());
+        const value = line.substring(colonIdx + 1).trim();
+        if (key && value) {
+          overrides[key] = value;
+        }
+      }
+    }
+    return overrides;
+  };
+
+  // Get merged details (parsed + overrides)
+  const getMergedDetails = (): Record<string, string> => {
+    const base = normalizeDetails(parsedData?.details || {});
+    const overrides = parseManualOverrides();
+    const merged = { ...base, ...overrides };
+
+    // Apply org-specific defaults for project lead
+    if (!merged['project lead'] && !merged['bandleader']) {
+      if (organization === 'tsb') merged['project lead'] = 'Tom Starr';
+      else if (organization === 'harborline') merged['project lead'] = 'Josh Miller';
+    }
+    // Default musician POS to project lead / bandleader
+    if (!merged['musician pos']) {
+      if (merged['project lead']) merged['musician pos'] = merged['project lead'];
+      else if (merged['bandleader']) merged['musician pos'] = merged['bandleader'];
+    }
+
+    return merged;
+  };
+
+  // Get the list of fields for the current template and their status
+  const getFieldStatus = () => {
+    const fields = TEMPLATE_FIELDS[template] || [];
+    const merged = getMergedDetails();
+    return fields.map(f => ({
+      ...f,
+      value: merged[f.key] || "",
+      found: !!merged[f.key],
+    }));
+  };
+
+  const fetchData = async () => {
+    if (!inputUrl.trim()) {
+      toast({ title: "Missing URL", description: "Please paste a URL to import.", variant: "destructive" });
       return;
     }
-    setCanonicalRow(data as CanonicalEventRow);
-  };
 
-  const callIngest = async (body: Record<string, unknown>) => {
-    setIngesting(true);
+    setLoading(true);
+    setParsedData(null);
+    setSourceType(detectUrlType(inputUrl));
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/ingest-event`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${SUPABASE_ANON}`,
-        },
-        body: JSON.stringify(body),
+      const isSheet = inputUrl.includes('docs.google.com/spreadsheets');
+      const sheetIdMatch = inputUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+
+      const { data, error } = await supabase.functions.invoke("fetch-google-sheet", {
+        body: isSheet && sheetIdMatch
+          ? { sheetId: sheetIdMatch[1], url: inputUrl }
+          : { url: inputUrl },
       });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({
-          title: "Ingest failed",
-          description: data?.error || data?.message || `HTTP ${res.status}`,
-          variant: "destructive",
-        });
-        return;
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setSheetData(data);
+      setSourceType(data.sourceType || detectUrlType(inputUrl));
+
+      const { data: genData, error: genError } = await supabase.functions.invoke("generate-run-of-show", {
+        body: { sheetData: data, template, format: "html", logos: logosBase64, organization },
+      });
+
+      if (!genError && genData?.parsedData) {
+        setParsedData(genData.parsedData);
       }
-      setIngestResult(data);
-      await loadCanonicalRow(data.id);
+
+      toast({ title: "Data loaded", description: `Imported from ${detectUrlType(inputUrl)}.` });
+    } catch (err: any) {
       toast({
-        title: data.merged ? "Merged into existing event" : "Event ingested",
-        description: `${data.fields_extracted} fields · ${describeShape(data.shape)}`,
+        title: "Failed to fetch",
+        description: err.message || "Make sure the link is publicly accessible.",
+        variant: "destructive",
       });
-    } catch (err) {
-      toast({ title: "Network error", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
-      setIngesting(false);
+      setLoading(false);
     }
   };
 
-  const handlePaste = () => {
-    if (!validateNameDate()) return;
-    if (!pasteText.trim()) {
-      toast({ title: "Paste some text first", variant: "destructive" });
-      return;
-    }
-    callIngest({
-      route: "paste",
-      name: eventName,
-      eventDate,
-      organization,
-      payload: { text: pasteText },
-    });
-  };
+  const buildWrappedHtml = (html: string, title: string, mode: "preview" | "print") => {
+    const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
+    const originalStyles = styleMatch ? styleMatch[1] : "";
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/);
+    const bodyContent = bodyMatch ? bodyMatch[1] : html;
 
-  const handleSearch = async () => {
-    if (!validateNameDate()) return;
-    setSearching(true);
-    setSearchResults(null);
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/drive-search-event`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${SUPABASE_ANON}`,
-        },
-        body: JSON.stringify({ name: eventName, date: eventDate }),
-      });
-      const data = await res.json();
-      if (!res.ok && res.status !== 412) {
-        toast({ title: "Drive search failed", description: data?.message || data?.error || `HTTP ${res.status}`, variant: "destructive" });
-        return;
-      }
-      if (data.error === "drive_scope_not_granted") {
-        toast({ title: "Drive scope not granted", description: "Re-consent at /team/dashboard Google panel.", variant: "destructive" });
-        return;
-      }
-      if (data.error === "drive_api_not_enabled") {
-        toast({
-          title: "Drive API not enabled",
-          description: "Click Enable in the Cloud Console, then retry.",
-          variant: "destructive",
+    return `<!DOCTYPE html><html lang="en"><head>
+      <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${title}</title>
+      <style>
+        ${originalStyles}
+        html, body { margin: 0; padding: 0; background: #1a1a1a; min-height: 100vh; }
+        .page-shell { max-width: 780px; margin: 40px auto; background: white; box-shadow: 0 4px 40px rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; padding: 0; }
+        @media print { html, body { background: white; } .page-shell { margin: 0; box-shadow: none; border-radius: 0; max-width: none; } }
+      </style>
+      ${mode === "print" ? `<script>
+        window.addEventListener("load", () => {
+          const runPrint = () => {
+            window.focus();
+            window.print();
+          };
+
+          if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => setTimeout(runPrint, 150));
+          } else {
+            setTimeout(runPrint, 300);
+          }
         });
-        return;
-      }
-      const files = (data.files || []) as DriveFile[];
-      setSearchResults(files);
-
-      // Auto-confirm rule: exactly 1 file → ingest immediately.
-      if (files.length === 1) {
-        toast({ title: "1 match — auto-selecting", description: files[0].name });
-        await selectDriveFile(files[0]);
-      } else if (files.length === 0) {
-        toast({ title: "No Drive matches", description: "Try Paste or Drive URL mode instead." });
-      } else if (files.length >= 5) {
-        toast({ title: `${files.length} matches`, description: "Narrow your search or pick from the list." });
-      }
-    } catch (err) {
-      toast({ title: "Network error", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
-    } finally {
-      setSearching(false);
-    }
+      <\/script>` : ""}
+    </head><body><div class="page-shell">${bodyContent}</div></body></html>`;
   };
 
-  const selectDriveFile = async (file: DriveFile) => {
-    callIngest({
-      route: "drive-url",
-      name: eventName,
-      eventDate,
-      organization,
-      payload: {
-        driveId: file.id,
-        mimeType: file.mime_type,
-        url: file.web_view_link,
-        fileName: file.name,
-      },
-    });
+  const writePreviewWindow = (previewWindow: Window, html: string) => {
+    previewWindow.document.open();
+    previewWindow.document.write(html);
+    previewWindow.document.close();
   };
 
-  const handleUrl = () => {
-    if (!validateNameDate()) return;
-    const id = extractDriveIdFromUrl(driveUrl);
-    if (!id) {
-      toast({ title: "Couldn't extract Drive file ID", description: "Paste a Google Drive URL like https://docs.google.com/spreadsheets/d/{ID}/edit", variant: "destructive" });
+  const writeLoadingPreview = (previewWindow: Window, mode: "preview" | "print") => {
+    writePreviewWindow(
+      previewWindow,
+      `<!DOCTYPE html><html lang="en"><head>
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Preparing ${mode === "print" ? "print view" : "preview"}...</title>
+        <style>
+          html, body { margin: 0; min-height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #111827; color: white; }
+          body { display: grid; place-items: center; padding: 24px; }
+          .shell { text-align: center; max-width: 420px; }
+          .spinner { width: 32px; height: 32px; margin: 0 auto 16px; border: 3px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+          .copy { color: rgba(255,255,255,0.72); font-size: 14px; line-height: 1.5; }
+          @keyframes spin { to { transform: rotate(360deg); } }
+        </style>
+      </head><body>
+        <div class="shell">
+          <div class="spinner"></div>
+          <h1 style="margin: 0 0 10px; font-size: 20px; font-weight: 600;">Preparing ${mode === "print" ? "print view" : "preview"}…</h1>
+          <div class="copy">This tab was opened early so Safari allows the document to load correctly.</div>
+        </div>
+      </body></html>`,
+    );
+  };
+
+  const generateDocument = async (mode: "download" | "preview" | "print" | "docx") => {
+    const needsPreviewWindow = mode === "preview" || mode === "print";
+    const previewWindow = needsPreviewWindow ? window.open("", "_blank") : null;
+
+    if (needsPreviewWindow && !previewWindow) {
+      toast({
+        title: "Popup blocked",
+        description: "Safari blocked the preview tab. Please allow pop-ups for this site and try again.",
+        variant: "destructive",
+      });
       return;
     }
-    callIngest({
-      route: "drive-url",
-      name: eventName,
-      eventDate,
-      organization,
-      payload: { driveId: id, url: driveUrl },
-    });
-  };
 
-  const handleRender = async (output: OutputType) => {
-    if (!ingestResult) return;
-    setRendering(output);
+    if (previewWindow && (mode === "preview" || mode === "print")) {
+      writeLoadingPreview(previewWindow, mode);
+    }
+
+    setGenerating(true);
     try {
-      const body: Record<string, unknown> = {
-        canonical_event_id: ingestResult.id,
-      };
-      if (output !== "auto") body.output_type = output;
+      const overrides = parseManualOverrides();
+      const mergedSheetData = sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
 
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/render-canonical-event`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${SUPABASE_ANON}`,
-        },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: "Render failed", description: data?.error || `HTTP ${res.status}`, variant: "destructive" });
+      if (mode === "docx") {
+        const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
+          body: {
+            sheetData: mergedSheetData,
+            template,
+            format: "html",
+            logos: logosBase64,
+            overrides,
+            organization,
+            requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
+          },
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        const eventData = data?.parsedData || parsedData;
+        if (!eventData) throw new Error("No parsed data available for DOCX export.");
+
+        if (overrides && typeof overrides === "object") {
+          for (const [key, value] of Object.entries(overrides)) {
+            if (value.trim()) {
+              eventData.details[key.toLowerCase()] = value.trim();
+              if (key.toLowerCase() === "event name") eventData.eventName = value.trim();
+            }
+          }
+        }
+
+        await generateDocx(
+          eventData,
+          template,
+          organization,
+          TEMPLATE_FIELDS[template],
+          currentLogoText,
+        );
+        toast({ title: "Downloaded!", description: "DOCX file saved — ready for Google Drive." });
         return;
       }
 
-      // Trigger download
-      const blob = new Blob([data.html], { type: "text/html;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${data.filename || "run-of-show"}.html`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
+        body: {
+          sheetData: mergedSheetData,
+          template,
+          format: "html",
+          logos: logosBase64,
+          overrides,
+          organization,
+          requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.file) throw new Error("No document was returned.");
+
+      const html = decodeBase64Utf8(data.file);
+
+      if (mode === "download") {
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${data.filename || "run-of-show"}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast({ title: "Downloaded!", description: "HTML file saved." });
+        return;
+      }
+
+      if (!previewWindow || (mode !== "preview" && mode !== "print")) {
+        throw new Error("Preview window was unavailable.");
+      }
+
+      const wrappedHtml = buildWrappedHtml(html, data.filename || "Document", mode);
+      writePreviewWindow(previewWindow, wrappedHtml);
+      previewWindow.focus();
+
+      toast({ title: mode === "print" ? "Print dialog opened" : "Preview opened", description: "Opened in a new tab." });
+    } catch (err: any) {
+      if (previewWindow && !previewWindow.closed) {
+        writePreviewWindow(
+          previewWindow,
+          `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Preview failed</title></head><body style="font-family: system-ui, sans-serif; padding: 24px; line-height: 1.5;"><h1 style="margin-top: 0;">Preview failed</h1><p>${(err?.message || "Something went wrong generating the document.").replace(/[<>&]/g, "")}</p></body></html>`,
+        );
+      }
 
       toast({
-        title: `Rendered ${data.output_type}${data.auto_selected ? " (auto)" : ""}`,
-        description: data.filename,
+        title: "Generation failed",
+        description: err.message || "Something went wrong generating the document.",
+        variant: "destructive",
       });
-    } catch (err) {
-      toast({ title: "Network error", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
-      setRendering(null);
+      setGenerating(false);
     }
   };
 
-  const eventFieldsSection = (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-      <div>
-        <Label htmlFor="event-name">Event name</Label>
-        <Input
-          id="event-name"
-          placeholder="e.g. Hoffman Wedding"
-          value={eventName}
-          onChange={(e) => setEventName(e.target.value)}
-        />
-      </div>
-      <div>
-        <Label htmlFor="event-date">Event date</Label>
-        <Input
-          id="event-date"
-          type="date"
-          value={eventDate}
-          onChange={(e) => setEventDate(e.target.value)}
-        />
-      </div>
-      <div>
-        <Label htmlFor="org">Organization</Label>
-        <Select value={organization} onValueChange={(v) => setOrganization(v as Organization)}>
-          <SelectTrigger id="org"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {(Object.keys(ORG_LABELS) as Organization[]).map((k) => (
-              <SelectItem key={k} value={k}>{ORG_LABELS[k]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-  );
+  const handleDriveUpload = async () => {
+    setGenerating(true);
+    try {
+      const overrides = parseManualOverrides();
+      const mergedSheetData = sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
+
+      const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
+        body: {
+          sheetData: mergedSheetData,
+          template,
+          format: "html",
+          logos: logosBase64,
+          overrides,
+          organization,
+          requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const eventData = data?.parsedData || parsedData;
+      if (!eventData) throw new Error("No parsed data available for DOCX export.");
+
+      if (overrides && typeof overrides === "object") {
+        for (const [key, value] of Object.entries(overrides)) {
+          if (value.trim()) {
+            eventData.details[key.toLowerCase()] = value.trim();
+            if (key.toLowerCase() === "event name") eventData.eventName = value.trim();
+          }
+        }
+      }
+
+      const { blob, filename } = await generateDocxBlob(
+        eventData,
+        template,
+        organization,
+        TEMPLATE_FIELDS[template],
+        currentLogoText,
+      );
+
+      uploadToDrive({ fileName: filename, fileBlob: blob });
+    } catch (err: any) {
+      toast({ title: "Error preparing document", description: err.message, variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const getExportData = () => parsedData || null;
+
+  const exportAsPlainText = () => {
+    const data = getExportData();
+    if (!data) { toast({ title: "No data", description: "Import a sheet first.", variant: "destructive" }); return; }
+    let text = `${data.eventName || "Run of Show"}\n${"=".repeat(40)}\n\n`;
+    const details = data.details || {};
+    for (const [key, value] of Object.entries(details)) { if (value) text += `${key}: ${value}\n`; }
+    if (Object.keys(details).length > 0) text += "\n";
+    for (const section of data.songSections || []) {
+      text += `--- ${section.title} ---\n`;
+      for (const song of section.songs) {
+        text += `  ${song.time || ""} ${song.title}${song.artist ? ` - ${song.artist}` : ""}${song.notes ? ` (${song.notes})` : ""}\n`;
+      }
+      text += "\n";
+    }
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `${data.eventName || "run-of-show"}.txt`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast({ title: "Downloaded!", description: "TXT file saved." });
+  };
+
+  const exportAsCsv = () => {
+    const data = getExportData();
+    if (!data) { toast({ title: "No data", description: "Import a sheet first.", variant: "destructive" }); return; }
+    const rows: string[][] = [["Section", "Time", "Song", "Artist", "Notes"]];
+    for (const section of data.songSections || []) {
+      for (const song of section.songs) {
+        rows.push([section.title, song.time || "", song.title || "", song.artist || "", song.notes || ""]);
+      }
+    }
+    const csv = rows.map(r => r.map(c => `"${(c || "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `${data.eventName || "run-of-show"}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast({ title: "Downloaded!", description: "CSV file saved." });
+  };
+
+  const copyToClipboard = () => {
+    const data = getExportData();
+    if (!data) { toast({ title: "No data", description: "Import a sheet first.", variant: "destructive" }); return; }
+    let text = "";
+    for (const section of data.songSections || []) {
+      for (const song of section.songs) { text += `• ${song.title}${song.artist ? ` - ${song.artist}` : ""}\n`; }
+    }
+    navigator.clipboard.writeText(text.trim()).then(() => {
+      toast({ title: "Copied!", description: "Song list copied to clipboard." });
+    });
+  };
+
+  const totalSongs = parsedData?.songSections.reduce((sum, s) => sum + s.songs.length, 0) || 0;
+  const fieldStatus = getFieldStatus();
+  const missingFields = fieldStatus.filter(f => !f.found);
+  const foundFields = fieldStatus.filter(f => f.found);
+
+  const focusManualOverrides = () => {
+    window.requestAnimationFrame(() => {
+      const textarea = manualOverridesRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      const cursor = textarea.value.length;
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  };
+
+  const addManualEntry = () => {
+    setManualOverrides((prev) => {
+      const existingKeys = new Set(
+        prev
+          .split("\n")
+          .map((line) => line.split(":")[0]?.trim())
+          .filter(Boolean)
+          .map((key) => normalizeDetailKey(key)),
+      );
+
+      const linesToAdd = missingFields
+        .filter((field) => !existingKeys.has(field.key))
+        .map((field) => `${field.label}: `);
+
+      if (linesToAdd.length === 0) return prev;
+      return prev.trimEnd() ? `${prev.trimEnd()}\n${linesToAdd.join("\n")}` : linesToAdd.join("\n");
+    });
+
+    focusManualOverrides();
+  };
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-bold">Doc Generator</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Ingest an event from a paste, a Drive search, or a Drive URL. The canonical event lands in <code className="text-xs">canonical_events</code>; render to any output (X / X′ / Z).
+    <div className="container mx-auto px-6 py-10 max-w-4xl">
+      <div className="mb-8">
+        <h1 className="text-4xl font-display tracking-display text-foreground mb-2">
+          Doc Generator
+        </h1>
+        <p className="text-muted-foreground">
+          Import event data and export branded documents — internal run sheets or client-facing planners.
         </p>
       </div>
 
-      {!ingestResult && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">1. Pick your input</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {eventFieldsSection}
-
-            <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
-              <TabsList className="mb-4">
-                <TabsTrigger value="search" className="gap-1.5">
-                  <Search className="w-3.5 h-3.5" /> Drive search
-                </TabsTrigger>
-                <TabsTrigger value="url" className="gap-1.5">
-                  <Link2 className="w-3.5 h-3.5" /> Drive URL
-                </TabsTrigger>
-                <TabsTrigger value="paste" className="gap-1.5">
-                  <ClipboardPaste className="w-3.5 h-3.5" /> Paste
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="search" className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Search Drive by name + date. We try 13 date variants × name variants. Auto-confirm on 1 match; pick from list otherwise.
-                </p>
-                <Button onClick={handleSearch} disabled={searching || ingesting}>
-                  {searching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
-                  Search Drive
-                </Button>
-
-                {searchResults && searchResults.length === 0 && (
-                  <div className="flex items-start gap-2 p-3 rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-                    <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                    <div className="text-sm">
-                      <p className="font-medium">No Drive matches for "{eventName}" on {eventDate}.</p>
-                      <p className="text-muted-foreground mt-1">Try the Drive URL tab if you know the file, or paste raw text.</p>
-                    </div>
-                  </div>
-                )}
-
-                {searchResults && searchResults.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">
-                      {searchResults.length} match{searchResults.length === 1 ? "" : "es"}. Click a row to ingest.
-                    </p>
-                    {searchResults.map((f) => (
-                      <div key={f.id} className="flex items-start justify-between p-3 gap-2 rounded-md border border-border bg-card/40">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                            <span className="font-medium truncate">{f.name}</span>
-                            <span className="text-xs text-muted-foreground shrink-0">
-                              {fmtMime(f.mime_type)}
-                            </span>
-                            {f.size != null && (
-                              <span className="text-xs text-muted-foreground shrink-0">
-                                · {fmtBytes(f.size)}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1 truncate">
-                            Modified {new Date(f.modified_time).toLocaleDateString()} · Owner {f.owners[0] || "—"}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <a href={f.web_view_link} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-8 px-2 rounded-md hover:bg-accent" title="Open in Drive">
-                            <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
-                          </a>
-                          <Button
-                            size="sm"
-                            onClick={() => selectDriveFile(f)}
-                            disabled={ingesting || f.mime_type.includes("folder")}
-                            title={f.mime_type.includes("folder") ? "Folders can't be ingested directly" : "Ingest this file"}
-                          >
-                            {ingesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Ingest"}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="url" className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Paste a Google Drive URL. Docs and Sheets fetch directly; other formats need pre-fetched text via Paste mode.
-                </p>
-                <div>
-                  <Label htmlFor="drive-url">Drive URL</Label>
-                  <Input
-                    id="drive-url"
-                    placeholder="https://docs.google.com/spreadsheets/d/.../edit"
-                    value={driveUrl}
-                    onChange={(e) => setDriveUrl(e.target.value)}
-                  />
-                </div>
-                <Button onClick={handleUrl} disabled={ingesting || !driveUrl.trim()}>
-                  {ingesting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Link2 className="w-4 h-4 mr-2" />}
-                  Ingest from URL
-                </Button>
-              </TabsContent>
-
-              <TabsContent value="paste" className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Paste the doc body. For PDFs/DOCX, copy text from the file and paste here.
-                </p>
-                <Textarea
-                  placeholder="Paste event details, ROS, planner answers, etc..."
-                  value={pasteText}
-                  onChange={(e) => setPasteText(e.target.value)}
-                  className="min-h-[240px] font-mono text-xs"
-                />
-                <Button onClick={handlePaste} disabled={ingesting || !pasteText.trim()}>
-                  {ingesting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ClipboardPaste className="w-4 h-4 mr-2" />}
-                  Ingest paste
-                </Button>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      )}
-
-      {ingestResult && canonicalRow && (
-        <CanonicalEventResult
-          ingestResult={ingestResult}
-          canonicalRow={canonicalRow}
-          onRender={handleRender}
-          rendering={rendering}
-          onReset={() => {
-            reset();
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function CanonicalEventResult({
-  ingestResult,
-  canonicalRow,
-  onRender,
-  rendering,
-  onReset,
-}: {
-  ingestResult: IngestResponse;
-  canonicalRow: CanonicalEventRow;
-  onRender: (output: OutputType) => void;
-  rendering: OutputType | null;
-  onReset: () => void;
-}) {
-  const personnelCount = canonicalRow.personnel?.length ?? 0;
-  const timelineCount = canonicalRow.timeline?.length ?? 0;
-  const songCount = (canonicalRow.song_sections || []).reduce((a, s: any) => a + (s.songs?.length || 0), 0);
-  const sectionCount = canonicalRow.song_sections?.length ?? 0;
-  const vendorCount = canonicalRow.vendors?.length ?? 0;
-
-  const venue = canonicalRow.venue || {};
-  const client = canonicalRow.client || {};
-
-  return (
-    <>
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                {canonicalRow.name}
-              </CardTitle>
-              <CardDescription>
-                {canonicalRow.event_date} · {describeShape(ingestResult.shape)} · {ingestResult.fields_extracted} fields
-                {ingestResult.merged && <span className="ml-1 text-amber-600">· merged into existing event</span>}
-                {ingestResult.llm_ran && <span className="ml-1 text-blue-600">· LLM enriched</span>}
-              </CardDescription>
-            </div>
-            <Button variant="outline" size="sm" onClick={onReset}>
-              Start over
+      {/* Step 1: Import Data */}
+      <Card className="mb-6 bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
+            <span className="text-primary">1.</span> Import Data
+          </CardTitle>
+          <CardDescription>
+            Paste a URL to import — Google Sheets, Google Docs, CSV files, or any public webpage.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3">
+            <Input
+              placeholder="https://docs.google.com/spreadsheets/d/... or any URL"
+              value={inputUrl}
+              onChange={(e) => setInputUrl(e.target.value)}
+              className="flex-1 bg-secondary/50 border-border"
+            />
+            <Button onClick={fetchData} disabled={loading || !inputUrl}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+              {loading ? "Fetching..." : "Fetch"}
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            <FieldStat label="Venue" value={venue.name || "—"} />
-            <FieldStat label="Client" value={[client.primary, client.secondary].filter(Boolean).join(" & ") || "—"} />
-            <FieldStat label="Org" value={canonicalRow.organization || "—"} />
-            <FieldStat label="Type" value={canonicalRow.event_type || "—"} />
-            <FieldStat label="Personnel" value={String(personnelCount)} />
-            <FieldStat label="Timeline" value={`${timelineCount} entries`} />
-            <FieldStat label="Songs" value={`${songCount} in ${sectionCount} section${sectionCount === 1 ? "" : "s"}`} />
-            <FieldStat label="Vendors" value={String(vendorCount)} />
-          </div>
+          {inputUrl && !loading && !sheetData && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Detected: {detectUrlType(inputUrl)}
+            </p>
+          )}
 
-          {ingestResult.warnings.length > 0 && (
-            <div className="flex items-start gap-2 p-3 rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-              <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium">Parser warnings:</p>
-                <ul className="text-xs mt-1 space-y-0.5">
-                  {ingestResult.warnings.map((w, i) => <li key={i}>· {w}</li>)}
-                </ul>
+          {parsedData && (
+            <div className="mt-4 space-y-3">
+              <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                  <span className="text-foreground font-medium text-sm">
+                    Sheet loaded: {sheetData?.sheetTitle || "Untitled"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                  {parsedData.eventName && (
+                    <div className="flex items-start gap-2">
+                      <CalendarDays className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Event</span>
+                        <p className="text-foreground">{parsedData.eventName}</p>
+                      </div>
+                    </div>
+                  )}
+                  {parsedData.details['venue'] && (
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Venue</span>
+                        <p className="text-foreground">{parsedData.details['venue']}</p>
+                      </div>
+                    </div>
+                  )}
+                  {parsedData.details['event date'] && (
+                    <div className="flex items-start gap-2">
+                      <CalendarDays className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Date</span>
+                        <p className="text-foreground">{parsedData.details['event date']}</p>
+                      </div>
+                    </div>
+                  )}
+                  {parsedData.details['client'] && (
+                    <div className="flex items-start gap-2">
+                      <Users className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground text-xs">Client</span>
+                        <p className="text-foreground">{parsedData.details['client']}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-4 mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
+                  {Object.keys(parsedData.details).length > 0 && (
+                    <span>{Object.keys(parsedData.details).length} detail fields</span>
+                  )}
+                  {parsedData.personnel.length > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {parsedData.personnel.length} personnel
+                    </span>
+                  )}
+                  {parsedData.timeline.length > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {parsedData.timeline.length} timeline events
+                    </span>
+                  )}
+                  {totalSongs > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Music className="w-3 h-3" />
+                      {totalSongs} songs in {parsedData.songSections.length} set{parsedData.songSections.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">2. Render output</CardTitle>
-          <CardDescription>
-            Auto picks the right template from organization + content. Click a specific template to override.
-          </CardDescription>
+      {/* Step 2: Choose Template */}
+      <Card className="mb-6 bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
+            <span className="text-primary">2.</span> Choose Template
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {(Object.keys(OUTPUT_LABELS) as OutputType[]).map((out) => (
-              <Button
-                key={out}
-                variant={out === "auto" ? "default" : "outline"}
-                onClick={() => onRender(out)}
-                disabled={rendering !== null}
-                className="h-auto py-3 px-3 flex flex-col items-start text-left whitespace-normal"
+          <div className="grid grid-cols-2 gap-3">
+            {(Object.entries(TEMPLATE_INFO) as [TemplateType, { name: string; description: string; audience: "internal" | "client" }][]).map(([key, info]) => (
+              <button
+                key={key}
+                onClick={() => setTemplate(key)}
+                className={`text-left p-4 rounded-lg border-2 transition-all ${
+                  template === key
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-secondary/20 hover:border-muted-foreground/30"
+                }`}
               >
-                <div className="flex items-center gap-1.5 w-full">
-                  {rendering === out ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
-                   out === "auto" ? <Sparkles className="w-3.5 h-3.5" /> :
-                   <Download className="w-3.5 h-3.5" />}
-                  <span className="text-sm font-medium">{OUTPUT_LABELS[out].split(" — ")[0]}</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className={`font-medium text-sm ${template === key ? "text-primary" : "text-foreground"}`}>
+                    {info.name}
+                  </p>
+                  <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
+                    info.audience === "client"
+                      ? "bg-accent/20 text-accent-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}>
+                    {info.audience === "client" ? "Client-Facing" : "Internal"}
+                  </span>
                 </div>
-                <span className="text-xs text-muted-foreground mt-1 font-normal">
-                  {OUTPUT_LABELS[out].split(" — ")[1] || "Best template for this event"}
-                </span>
-              </Button>
+                <p className="text-xs text-muted-foreground">{info.description}</p>
+              </button>
             ))}
           </div>
         </CardContent>
       </Card>
-    </>
-  );
-}
 
-function FieldStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
-      <div className="text-sm font-medium truncate" title={value}>{value}</div>
+      {/* Step 3: Organization / Brand */}
+      <Card className="mb-6 bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
+            <span className="text-primary">3.</span> Organization
+          </CardTitle>
+          <CardDescription>
+            Choose which brand logo appears on the generated document.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select value={organization} onValueChange={(v) => setOrganization(v as OrgKey)}>
+            <SelectTrigger className="w-full bg-secondary/50 border-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.entries(ORG_INFO) as [OrgKey, { name: string }][]).map(([key, info]) => (
+                <SelectItem key={key} value={key}>{info.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      {/* Step 4: Review */}
+      <Card className="mb-6 bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
+            <span className="text-primary">4.</span> Review Fields
+          </CardTitle>
+          <CardDescription>
+            Check which fields were found in the imported data. Missing fields will export as blanks unless you add them with Manual entry below.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Field status report */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {fieldStatus.map((field) => (
+              <div
+                key={field.key}
+                className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md ${
+                  field.found
+                    ? "bg-primary/5 text-foreground"
+                    : "bg-destructive/5 text-muted-foreground"
+                }`}
+              >
+                {field.found ? (
+                  <CircleCheck className="w-3.5 h-3.5 text-primary shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
+                )}
+                <span className="font-medium text-xs">{field.label}</span>
+                {field.found && (
+                  <span className="text-xs text-muted-foreground truncate ml-auto max-w-[140px]">
+                    {field.value}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Summary */}
+          <div className="flex flex-col gap-3 pt-2 border-t border-border/50 sm:flex-row sm:items-center sm:justify-between">
+            {missingFields.length === 0 ? (
+              <span className="text-primary flex items-center gap-1 text-xs">
+                <CircleCheck className="w-3.5 h-3.5" />
+                All {fieldStatus.length} fields populated
+              </span>
+            ) : (
+              <span className="text-destructive flex items-center gap-1 text-xs">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                {missingFields.length} of {fieldStatus.length} fields missing — will appear as blank lines
+              </span>
+            )}
+
+            {missingFields.length > 0 && (
+              <Button type="button" variant="outline" size="sm" onClick={addManualEntry}>
+                Manual entry
+              </Button>
+            )}
+          </div>
+
+          {/* Manual overrides */}
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">
+              Add or override fields manually
+            </label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Enter one field per line as <code className="bg-secondary/50 px-1 py-0.5 rounded text-[11px]">Label: Value</code>. 
+              {missingFields.length > 0 && (
+                <> Missing: {missingFields.map(f => f.label).join(", ")}</>
+              )}
+            </p>
+            <Textarea
+              ref={manualOverridesRef}
+              placeholder={`Event Name: Smith Wedding\nVenue: Baltimore Country Club\nEvent Date: April 24, 2026\nClient: John Smith`}
+              value={manualOverrides}
+              onChange={(e) => setManualOverrides(e.target.value)}
+              className="bg-secondary/50 border-border font-mono text-sm min-h-[100px]"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Step 5: Export */}
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
+            <span className="text-primary">5.</span> Export Document
+          </CardTitle>
+          {missingFields.length > 0 && !sheetData && (
+            <CardDescription className="flex items-center gap-1 text-xs">
+              <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground" />
+              No data imported — document will have blank fields. You can still export.
+            </CardDescription>
+          )}
+        </CardHeader>
+        <CardContent className="flex justify-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="hero" size="sm">
+                  {(generating || driveUploading) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
+                  Export
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-52">
+                <DropdownMenuItem onClick={() => generateDocument("preview")}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => generateDocument("print")}>
+                  <Printer className="w-4 h-4 mr-2" />
+                  Print / Save as PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => generateDocument("docx")}>
+                  <File className="w-4 h-4 mr-2" />
+                  Download DOCX
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => generateDocument("download")}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Download HTML
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportAsPlainText}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Download TXT
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportAsCsv}>
+                  <Table className="w-4 h-4 mr-2" />
+                  Download CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={copyToClipboard}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy to Clipboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDriveUpload}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload to Google Drive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+        </CardContent>
+      </Card>
     </div>
   );
 }
