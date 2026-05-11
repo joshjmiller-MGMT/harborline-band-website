@@ -27,7 +27,7 @@ import type {
   Shape,
 } from "./canonical-event-types.ts";
 
-const EXTRACTOR_VERSION = "v2.3-cut5-djep-scrape";
+const EXTRACTOR_VERSION = "v2.4-cut6-drive-fetch";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,6 +37,123 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CALENDAR_CLIENT_ID");
+const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CALENDAR_CLIENT_SECRET");
+
+// Drive export mapping: Google-native MIME → text export MIME.
+// Anything not listed uses files.get?alt=media (raw bytes) — non-text formats
+// like PDF/DOCX/PPTX aren't parsed here; the caller should pre-fetch + extract
+// text before posting, or punt to LLM-via-OCR in a future cut.
+const DRIVE_EXPORT_MIME: Record<string, string> = {
+  "application/vnd.google-apps.spreadsheet": "text/csv",
+  "application/vnd.google-apps.document": "text/plain",
+  "application/vnd.google-apps.presentation": "text/plain",
+};
+
+async function refreshGoogleToken(supabase: any, row: any): Promise<string> {
+  const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID!,
+      client_secret: GOOGLE_CLIENT_SECRET!,
+      refresh_token: row.refresh_token,
+      grant_type: "refresh_token",
+    }),
+  });
+  const refreshed = await refreshRes.json();
+  if (!refreshRes.ok) {
+    await supabase
+      .from("google_calendar_tokens")
+      .update({
+        needs_reconnect: true,
+        last_refresh_error: JSON.stringify(refreshed).slice(0, 500),
+        last_refresh_at: new Date().toISOString(),
+      })
+      .eq("id", row.id);
+    throw new Error(`Google token refresh failed: ${JSON.stringify(refreshed)}`);
+  }
+  const newExpires = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
+  await supabase
+    .from("google_calendar_tokens")
+    .update({
+      access_token: refreshed.access_token,
+      expires_at: newExpires,
+      needs_reconnect: false,
+      last_refresh_at: new Date().toISOString(),
+      last_refresh_error: null,
+    })
+    .eq("id", row.id);
+  return refreshed.access_token;
+}
+
+async function getGoogleAccessToken(supabase: any): Promise<string | null> {
+  const { data: rows } = await supabase
+    .from("google_calendar_tokens")
+    .select("*")
+    .order("created_at", { ascending: true })
+    .limit(1);
+  const row = rows?.[0];
+  if (!row) return null;
+  const expiresAt = new Date(row.expires_at).getTime();
+  if (Date.now() < expiresAt - 60_000) return row.access_token;
+  return await refreshGoogleToken(supabase, row);
+}
+
+// Cut 6: backend fetch of Drive file content. Supports Google-native Docs and
+// Sheets via files.export (text/plain and text/csv respectively). Raw formats
+// like PDF/DOCX go through files.get?alt=media but we don't extract text from
+// the binary here — caller should pre-fetch + parse those formats. Returns
+// { text, mimeType } or throws with a structured error message.
+async function fetchDriveFileText(
+  supabase: any,
+  driveId: string,
+  hintMime?: string,
+): Promise<{ text: string; mimeType: string }> {
+  const accessToken = await getGoogleAccessToken(supabase);
+  if (!accessToken) {
+    throw new Error("no_google_account_connected: connect a Google account on /team/dashboard first");
+  }
+
+  // Resolve real MIME if caller didn't supply one (lets the UI just pass a Drive URL).
+  let mimeType = hintMime || "";
+  if (!mimeType) {
+    const metaRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${driveId}?fields=mimeType,name`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    if (!metaRes.ok) {
+      const err = await metaRes.text();
+      throw new Error(`drive_meta_failed (${metaRes.status}): ${err.slice(0, 200)}`);
+    }
+    const meta = await metaRes.json();
+    mimeType = meta.mimeType || "";
+  }
+
+  const exportMime = DRIVE_EXPORT_MIME[mimeType];
+  const url = exportMime
+    ? `https://www.googleapis.com/drive/v3/files/${driveId}/export?mimeType=${encodeURIComponent(exportMime)}`
+    : `https://www.googleapis.com/drive/v3/files/${driveId}?alt=media`;
+
+  let res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (res.status === 401) {
+    const { data: rows } = await supabase
+      .from("google_calendar_tokens")
+      .select("*").order("created_at", { ascending: true }).limit(1);
+    const fresh = await refreshGoogleToken(supabase, rows![0]);
+    res = await fetch(url, { headers: { Authorization: `Bearer ${fresh}` } });
+  }
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`drive_fetch_failed (${res.status}): ${err.slice(0, 200)}`);
+  }
+
+  // For non-Google-native formats we just return the raw text as-is. PDFs etc
+  // will return binary that won't parse usefully — caller should detect and
+  // pre-process those formats before posting.
+  const text = await res.text();
+  return { text, mimeType };
+}
 
 type Route = "paste" | "drive-url" | "djep-scrape" | "drive-search";
 
@@ -369,11 +486,25 @@ async function upsertCanonicalEvent(opts: {
     (opts.sourceFile as Record<string, unknown>).parsed_name_suggestion =
       opts.parsedFields.name;
   }
+  // Caller-supplied organization + event_type win over parser/LLM output (same
+  // rule as `name`). The parser/LLM "Organization: Baltimore Sound
+  // Entertainment" reads the booking agency from the doc body, but the caller
+  // is naming the canonical org-of-record (e.g. "harborline" for a Harborline
+  // ROS even if BSE booked the gig). Parser/LLM values still log on the source
+  // entry for traceability.
+  if (opts.parsedFields?.organization && opts.parsedFields.organization !== opts.organization) {
+    (opts.sourceFile as Record<string, unknown>).parsed_organization_suggestion =
+      opts.parsedFields.organization;
+  }
+  if (opts.parsedFields?.event_type && opts.parsedFields.event_type !== opts.eventType) {
+    (opts.sourceFile as Record<string, unknown>).parsed_event_type_suggestion =
+      opts.parsedFields.event_type;
+  }
   const newRow: Record<string, unknown> = {
     event_date: opts.eventDate,
     name: opts.name,
-    organization: opts.parsedFields?.organization || opts.organization || null,
-    event_type: opts.parsedFields?.event_type || opts.eventType || null,
+    organization: opts.organization || opts.parsedFields?.organization || null,
+    event_type: opts.eventType || opts.parsedFields?.event_type || null,
     source_files: [opts.sourceFile],
     extractor_version: EXTRACTOR_VERSION,
   };
@@ -436,7 +567,46 @@ Deno.serve(async (req) => {
     let text = typeof payload.text === "string" ? payload.text
       : typeof payload.rawText === "string" ? payload.rawText
       : "";
-    const filename = typeof payload.filename === "string" ? payload.filename : undefined;
+    let filename = typeof payload.filename === "string" ? payload.filename : undefined;
+    let resolvedMime = typeof payload.mimeType === "string" ? payload.mimeType : undefined;
+
+    // Cut 6: backend Drive fetch. When the caller passes driveId (or a Drive URL
+    // we can extract one from) but no pre-fetched text, fetch the file content
+    // from Drive directly using Josh's stored OAuth token. Lets the UI just
+    // send {driveId, mimeType} and get a canonical row back without exposing
+    // access tokens to the browser.
+    if (!text.trim() && (route === "drive-url" || route === "drive-search")) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { persistSession: false },
+      });
+      let driveId = typeof payload.driveId === "string" ? payload.driveId : "";
+      if (!driveId && typeof payload.url === "string") {
+        const m = payload.url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (m) driveId = m[1];
+      }
+      if (driveId) {
+        try {
+          const fetched = await fetchDriveFileText(supabase, driveId, resolvedMime);
+          text = fetched.text;
+          resolvedMime = fetched.mimeType;
+          // Push the resolved mime + fetched text back into payload so
+          // buildSourceFileForRoute can categorize source_type and capture an
+          // extracted_excerpt for the audit trail.
+          (payload as Record<string, unknown>).mimeType = fetched.mimeType;
+          (payload as Record<string, unknown>).driveId = driveId;
+          (payload as Record<string, unknown>).text = text;
+        } catch (err) {
+          return jsonResponse(
+            {
+              error: err instanceof Error ? err.message : String(err),
+              drive_id: driveId,
+              hint: "If this file isn't a Google Doc or Sheet (PDF, DOCX, etc.), pre-fetch text on the client and pass it as payload.text.",
+            },
+            err instanceof Error && err.message.startsWith("no_google_account_connected") ? 412 : 502,
+          );
+        }
+      }
+    }
 
     // Cut 5: djep-scrape route auto-fetches the DJEP record by name+date when
     // no text was supplied by the caller. Filters the djep_events_cache table
