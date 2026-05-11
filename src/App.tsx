@@ -71,6 +71,7 @@ import TeamPractice from "./pages/team/TeamPractice";
 import TeamSocial from "./pages/team/TeamSocial";
 import TeamBooking from "./pages/team/TeamBooking";
 import TeamVisualAssets from "./pages/team/TeamVisualAssets";
+import TeamBrandStudio from "./pages/team/TeamBrandStudio";
 
 const queryClient = new QueryClient();
 
@@ -149,6 +150,7 @@ const App = () => (
               <Route path="/team/social" element={<TeamSocial />} />
               <Route path="/team/booking" element={<TeamBooking />} />
               <Route path="/team/visual-assets" element={<TeamVisualAssets />} />
+              <Route path="/team/brand-studio" element={<TeamBrandStudio />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

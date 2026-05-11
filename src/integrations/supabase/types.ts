@@ -107,6 +107,230 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_collaborators: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          engagement_status: string
+          found_via: string | null
+          id: string
+          name: string
+          notes: string | null
+          rate_note: string | null
+          roles: string[]
+          skill_level: string | null
+          updated_at: string
+          ventures: string[]
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          engagement_status?: string
+          found_via?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          rate_note?: string | null
+          roles?: string[]
+          skill_level?: string | null
+          updated_at?: string
+          ventures?: string[]
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          engagement_status?: string
+          found_via?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          rate_note?: string | null
+          roles?: string[]
+          skill_level?: string | null
+          updated_at?: string
+          ventures?: string[]
+        }
+        Relationships: []
+      }
+      brand_decisions: {
+        Row: {
+          created_at: string
+          decided_at: string
+          decided_by: string | null
+          decision: string
+          id: string
+          rationale: string | null
+          related_assets: string[] | null
+          superseded_by: string | null
+          title: string
+          ventures: string[]
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string
+          decided_by?: string | null
+          decision: string
+          id?: string
+          rationale?: string | null
+          related_assets?: string[] | null
+          superseded_by?: string | null
+          title: string
+          ventures?: string[]
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string
+          decided_by?: string | null
+          decision?: string
+          id?: string
+          rationale?: string | null
+          related_assets?: string[] | null
+          superseded_by?: string | null
+          title?: string
+          ventures?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_decisions_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "brand_decisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_releases: {
+        Row: {
+          blockers: string | null
+          collaborator_ids: string[] | null
+          created_at: string
+          id: string
+          kind: string
+          notes: string | null
+          release_date: string | null
+          status: string
+          title: string
+          updated_at: string
+          venture: string
+        }
+        Insert: {
+          blockers?: string | null
+          collaborator_ids?: string[] | null
+          created_at?: string
+          id?: string
+          kind: string
+          notes?: string | null
+          release_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          venture: string
+        }
+        Update: {
+          blockers?: string | null
+          collaborator_ids?: string[] | null
+          created_at?: string
+          id?: string
+          kind?: string
+          notes?: string | null
+          release_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          venture?: string
+        }
+        Relationships: []
+      }
+      canonical_events: {
+        Row: {
+          attire: string | null
+          client: Json
+          contact: Json
+          created_at: string
+          end_date: string | null
+          event_date: string
+          event_type: string | null
+          extracted_at: string
+          extractor_version: string | null
+          guests: Json
+          id: string
+          last_rendered_at: string | null
+          last_rendered_outputs: string[] | null
+          logistics: Json
+          name: string
+          normalized_name: string | null
+          organization: string | null
+          personnel: Json
+          preferences: Json
+          song_sections: Json
+          source_files: Json
+          timeline: Json
+          updated_at: string
+          vendors: Json
+          venue: Json
+          venue_name: string | null
+        }
+        Insert: {
+          attire?: string | null
+          client?: Json
+          contact?: Json
+          created_at?: string
+          end_date?: string | null
+          event_date: string
+          event_type?: string | null
+          extracted_at?: string
+          extractor_version?: string | null
+          guests?: Json
+          id?: string
+          last_rendered_at?: string | null
+          last_rendered_outputs?: string[] | null
+          logistics?: Json
+          name: string
+          normalized_name?: string | null
+          organization?: string | null
+          personnel?: Json
+          preferences?: Json
+          song_sections?: Json
+          source_files?: Json
+          timeline?: Json
+          updated_at?: string
+          vendors?: Json
+          venue?: Json
+          venue_name?: string | null
+        }
+        Update: {
+          attire?: string | null
+          client?: Json
+          contact?: Json
+          created_at?: string
+          end_date?: string | null
+          event_date?: string
+          event_type?: string | null
+          extracted_at?: string
+          extractor_version?: string | null
+          guests?: Json
+          id?: string
+          last_rendered_at?: string | null
+          last_rendered_outputs?: string[] | null
+          logistics?: Json
+          name?: string
+          normalized_name?: string | null
+          organization?: string | null
+          personnel?: Json
+          preferences?: Json
+          song_sections?: Json
+          source_files?: Json
+          timeline?: Json
+          updated_at?: string
+          vendors?: Json
+          venue?: Json
+          venue_name?: string | null
+        }
+        Relationships: []
+      }
       claude_log: {
         Row: {
           context: string
