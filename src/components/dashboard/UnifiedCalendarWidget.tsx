@@ -449,12 +449,22 @@ export default function UnifiedCalendarWidget() {
     loadAll();
     loadSources();
     loadSocial();
-    // Detect google_connected redirect
+    // Detect google_connected redirect (same-window fallback when popup couldn't self-close).
     if (new URLSearchParams(window.location.search).get("google_connected") === "1") {
       toast.success("Google Calendar connected");
       window.history.replaceState({}, "", window.location.pathname);
       setTimeout(loadAll, 500);
     }
+    // The OAuth callback popup posts this message right before it closes itself.
+    // Listening here means the dashboard refreshes in place without a full page reload.
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === "google_oauth_complete") {
+        toast.success("Google Calendar connected");
+        loadAll();
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
   }, []);
 
   const connectGoogle = async (loginHint?: string) => {

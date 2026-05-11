@@ -115,14 +115,59 @@ Deno.serve(async (req) => {
       });
       if (insErr) throw insErr;
 
-      // Redirect back to dashboard
-      const returnTo = stateReturn || "/team/dashboard";
-      const html = `<!DOCTYPE html><html><body><script>
-        window.location.href = ${JSON.stringify(returnTo + "?google_connected=1")};
-      </script><p>Connected. Redirecting…</p></body></html>`;
+      // Return a self-closing popup page. The popup (a) posts a message to
+      // its opener so the dashboard can refresh in place, then (b) closes
+      // itself. Same-window fallback: if there's no opener, redirect to the
+      // dashboard with ?google_connected=1 so the existing useEffect picks it
+      // up. The visible "Connected ✓" copy is what users see for the brief
+      // moment between the script firing and the window closing — or for the
+      // longer moment if scripts are blocked, in which case the meta refresh
+      // takes over.
+      const FRONTEND_ORIGIN = Deno.env.get("FRONTEND_ORIGIN") || "https://harborlineband.com";
+      const returnPath = stateReturn && stateReturn.startsWith("/") ? stateReturn : "/team/dashboard";
+      const returnUrl = `${FRONTEND_ORIGIN}${returnPath}?google_connected=1`;
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Connected</title>
+  <meta http-equiv="refresh" content="3; url=${returnUrl}">
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 48px 32px; background: #0a0a0a; color: #fafafa; }
+    .wrap { max-width: 420px; margin: 0 auto; }
+    .check { color: #10b981; font-size: 28px; font-weight: 600; margin: 0 0 8px; }
+    p { color: #a1a1aa; font-size: 14px; line-height: 1.5; margin: 0 0 16px; }
+    a { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="check">Connected ✓</p>
+    <p>You can close this window.</p>
+    <p><a href="${returnUrl}">Return to the dashboard</a> if it doesn't return on its own.</p>
+  </div>
+  <script>
+    (function () {
+      try {
+        var hasOpener = window.opener && !window.opener.closed;
+        if (hasOpener) {
+          try { window.opener.postMessage({ type: "google_oauth_complete" }, "*"); } catch (_) {}
+          window.close();
+          // If close was blocked (some browsers refuse for non-script-opened windows), fall through to redirect after a short delay.
+          setTimeout(function () { window.location.replace(${JSON.stringify(returnUrl)}); }, 800);
+        } else {
+          window.location.replace(${JSON.stringify(returnUrl)});
+        }
+      } catch (_) {
+        try { window.location.replace(${JSON.stringify(returnUrl)}); } catch (_) {}
+      }
+    })();
+  </script>
+</body>
+</html>`;
       return new Response(html, {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "text/html" },
+        headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
