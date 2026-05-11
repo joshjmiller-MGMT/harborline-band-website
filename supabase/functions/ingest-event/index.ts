@@ -1,9 +1,8 @@
 // ingest-event — Sub-Plan 03 v2 architecture, Layers 2-4.
 //
-// Cut 2: parser extraction now runs inline. When the request payload includes
-// `text` (or `rawText`), the shape detector classifies the input and routes to
-// Parser A/B/C/D. Shape W still falls through to plumbing-only insert (LLM
-// extraction lands in Cut 3).
+// Cut 3: LLM extraction (Anthropic Sonnet 4.6) handles Shape W AND enriches
+// Shape A/B/C/D rows for fields the deterministic parsers missed. Prior data
+// is never clobbered — LLM only fills nulls in the existing extraction.
 //
 // Routes:
 //   paste         — pasted free text. Triggers shape detection + parser run.
@@ -21,13 +20,14 @@ import { parseShapeA } from "./parser-a-tsb-narrative.ts";
 import { parseShapeB } from "./parser-b-dj-qa.ts";
 import { parseShapeC } from "./parser-c-ceremony.ts";
 import { parseShapeD } from "./parser-d-harborline-sheet.ts";
+import { extractCanonicalEvent } from "./llm-extract.ts";
 import type {
   CanonicalEventFields,
   ParseResult,
   Shape,
 } from "./canonical-event-types.ts";
 
-const EXTRACTOR_VERSION = "v2.1-cut2-deterministic";
+const EXTRACTOR_VERSION = "v2.2-cut3-llm";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -166,6 +166,51 @@ function buildSourceFileForRoute(
         ingested_at,
       };
   }
+}
+
+// Merge deterministic parser output (primary) with LLM extraction (enrichment).
+// Deterministic wins on every populated field; LLM fills nulls/empties.
+// Used for both Shape W (parser=null, LLM=primary) and A/B/C/D (parser=primary,
+// LLM=gap-filler).
+function mergeParserAndLlmFields(
+  primary: CanonicalEventFields | undefined,
+  enrichment: CanonicalEventFields | undefined,
+): CanonicalEventFields | undefined {
+  if (!primary && !enrichment) return undefined;
+  if (!enrichment) return primary;
+  if (!primary) return enrichment;
+
+  const out: Record<string, unknown> = { ...primary };
+
+  for (const k of [
+    "name", "event_date", "end_date", "organization", "event_type",
+    "venue_name", "attire",
+  ] as const) {
+    if (!out[k] && enrichment[k]) out[k] = enrichment[k];
+  }
+
+  for (const k of ["client", "venue", "contact", "guests", "logistics", "preferences"] as const) {
+    const a = (out[k] as Record<string, unknown> | undefined) || {};
+    const b = (enrichment[k] as Record<string, unknown> | undefined) || {};
+    const combined: Record<string, unknown> = { ...a };
+    for (const [field, value] of Object.entries(b)) {
+      if (value !== undefined && value !== null && value !== "" && !combined[field]) {
+        combined[field] = value;
+      }
+    }
+    if (Object.keys(combined).length > 0) out[k] = combined;
+  }
+
+  for (const k of ["personnel", "vendors", "timeline", "song_sections"] as const) {
+    const a = (out[k] as unknown[] | undefined) || [];
+    const b = (enrichment[k] as unknown[] | undefined) || [];
+    // Deterministic parser owns its arrays; LLM array only contributes
+    // when the parser produced nothing. Prevents duplicate personnel rows
+    // when both ran on the same input.
+    if (a.length === 0 && b.length > 0) out[k] = b;
+  }
+
+  return out as CanonicalEventFields;
 }
 
 function runParser(shape: Shape, text: string, filename?: string): ParseResult | null {
@@ -375,14 +420,16 @@ Deno.serve(async (req) => {
 
     const sourceFile = buildSourceFileForRoute(route, payload);
 
-    // Shape detection + parser run when we have text
+    // Layer 3: shape detection + deterministic parser
     let parseResult: ParseResult | null = null;
+    let detectedShape: Shape | null = null;
     if (text.trim()) {
       const detection = detectShape({
         text,
         filename,
         source_type: sourceFile.source_type,
       });
+      detectedShape = detection.shape;
       sourceFile.detected_shape = detection.shape;
       parseResult = runParser(detection.shape, text, filename);
       if (parseResult) {
@@ -390,13 +437,54 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Layer 4: LLM extraction (Cut 3)
+    //  - Shape W or no deterministic match  → LLM extraction IS the parser
+    //  - Shape A/B/C/D with a blank starter → skip (nothing to extract)
+    //  - Shape A/B/C/D with content         → LLM enriches gaps (fills nulls)
+    //  - Skip entirely if disabled via payload.skip_llm = true (debugging)
+    let llmResult: ParseResult | null = null;
+    let llmRan = false;
+    const llmSkipped = payload.skip_llm === true;
+    const isBlankStarter = parseResult?.is_blank_starter === true;
+    const shouldRunLlm = text.trim() && !llmSkipped && !isBlankStarter;
+
+    if (shouldRunLlm) {
+      const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+      if (!apiKey) {
+        console.warn("ingest-event: ANTHROPIC_API_KEY not set; skipping LLM extraction");
+      } else {
+        try {
+          llmResult = await extractCanonicalEvent({
+            apiKey,
+            text,
+            hintShape: detectedShape ?? undefined,
+            hintName: name,
+            hintDate: eventDate,
+          });
+          llmRan = true;
+        } catch (err) {
+          console.error("llm-extract failed", err);
+        }
+      }
+    }
+
+    // Merge: deterministic parser wins on fields it set; LLM fills the rest.
+    // For Shape W there's only the LLM result; for A/B/C/D the deterministic
+    // result is the primary and LLM enriches.
+    const mergedFields = mergeParserAndLlmFields(
+      parseResult?.fields,
+      llmResult?.fields,
+    );
+
+    const finalShape = parseResult?.shape ?? detectedShape ?? "W";
+
     const { id, merged } = await upsertCanonicalEvent({
       name,
       eventDate,
       organization,
       eventType,
       sourceFile,
-      parsedFields: parseResult?.fields,
+      parsedFields: mergedFields,
     });
 
     return jsonResponse({
@@ -405,12 +493,23 @@ Deno.serve(async (req) => {
       merged,
       sourceFile,
       extractor_version: EXTRACTOR_VERSION,
-      cut: 2,
-      shape: parseResult?.shape ?? sourceFile.detected_shape ?? null,
-      confidence: parseResult?.confidence ?? null,
+      cut: 3,
+      shape: finalShape,
+      confidence: parseResult?.confidence ?? (llmResult?.confidence ?? null),
       is_blank_starter: parseResult?.is_blank_starter ?? false,
-      warnings: parseResult?.warnings ?? [],
-      fields_extracted: parseResult ? Object.keys(parseResult.fields).length : 0,
+      llm_ran: llmRan,
+      llm_skipped_reason: llmSkipped
+        ? "skip_llm=true"
+        : isBlankStarter
+        ? "blank-starter"
+        : !text.trim()
+        ? "no-text"
+        : null,
+      warnings: [
+        ...(parseResult?.warnings ?? []),
+        ...(llmResult?.warnings ?? []),
+      ],
+      fields_extracted: mergedFields ? Object.keys(mergedFields).length : 0,
     });
   } catch (err) {
     return jsonResponse(
