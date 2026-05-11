@@ -159,14 +159,20 @@ function renderEventDetailsBlock(event: CanonicalEvent): string {
 
 const POC_ROLE_PATTERN = /poc|point of contact|day-of|salesperson|client lead|sales/i;
 const COORD_ROLE_PATTERN = /coordinator|bandleader|md|music director|production manager|director/i;
+const PROJECT_LEAD_PATTERN = /project lead|band lead|music lead/i;
 
 function isPocLike(p: PersonnelEntry): boolean {
   return POC_ROLE_PATTERN.test(p.role || "");
 }
 
 function isCoordinatorLike(p: PersonnelEntry): boolean {
-  return COORD_ROLE_PATTERN.test(p.role || "");
+  return COORD_ROLE_PATTERN.test(p.role || "") || PROJECT_LEAD_PATTERN.test(p.role || "");
 }
+
+const ORG_PROJECT_LEAD_DEFAULTS: Record<string, string> = {
+  harborline: "Josh Miller",
+  tsb: "Tom Starr",
+};
 
 function renderPersonBlock(p: PersonnelEntry): string {
   const parts: string[] = [];
@@ -176,7 +182,7 @@ function renderPersonBlock(p: PersonnelEntry): string {
   return parts.join("");
 }
 
-function renderContactBlocks(personnel: PersonnelEntry[]): string {
+function renderContactBlocks(personnel: PersonnelEntry[], organization?: string): string {
   const blocks: string[] = [];
 
   const pocs = personnel.filter(isPocLike);
@@ -184,10 +190,19 @@ function renderContactBlocks(personnel: PersonnelEntry[]): string {
     blocks.push(`<div class="xp-h1">Contact Person</div>${pocs.map(renderPersonBlock).join("")}`);
   }
 
-  // Coordinator: anyone with a coordinator-like role (may overlap with POCs)
+  // Coordinator: anyone with a coordinator-like or project-lead role.
   const coords = personnel.filter(isCoordinatorLike);
   if (coords.length > 0) {
     blocks.push(`<div class="xp-h1">Coordinator &amp; Point of Contact</div>${coords.map(renderPersonBlock).join("")}`);
+  } else {
+    // Org-aware default: when no coordinator/project-lead is named for
+    // Harborline or TSB, fall back to Josh / Tom. Mirrors v1 behavior.
+    const orgKey = (organization || "").toLowerCase();
+    const defaultLead = ORG_PROJECT_LEAD_DEFAULTS[orgKey];
+    if (defaultLead) {
+      const fallback: PersonnelEntry = { role: "Project Lead", name: defaultLead };
+      blocks.push(`<div class="xp-h1">Coordinator &amp; Point of Contact</div>${renderPersonBlock(fallback)}`);
+    }
   }
 
   return blocks.join("");
@@ -338,7 +353,7 @@ function renderArrivalProse(event: CanonicalEvent): string {
 export function renderOutputXPrime(event: CanonicalEvent): string {
   const headerBlock = renderHeaderBlock(event);
   const eventDetails = renderEventDetailsBlock(event);
-  const contacts = renderContactBlocks(event.personnel || []);
+  const contacts = renderContactBlocks(event.personnel || [], event.organization);
   const clientBlock = renderClientBlock(event);
   const timelineBlock = renderTimelineBlock(event.timeline || []);
   const teammatesLine = renderTeammatesLine(event.personnel || []);

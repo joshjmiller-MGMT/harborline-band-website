@@ -110,4 +110,4 @@ export type CanonicalEvent = {
   extractor_version?: string;
 };
 
-export type OutputType = "X" | "X-prime" | "Z";
+export type OutputType = "X" | "X-prime" | "Z" | "C-client";
