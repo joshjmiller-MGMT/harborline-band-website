@@ -255,6 +255,30 @@ Deno.serve(async (req) => {
 
     if (!res.ok) {
       const errText = await res.text();
+
+      // Detect "Drive API not enabled in this Cloud project" (one-click fix in
+      // the Cloud Console). Surface it as a structured signal with the enable
+      // URL so the dashboard can render a single Enable button instead of a
+      // raw JSON dump.
+      if (res.status === 403 && /has not been used in project|drive\.googleapis\.com/i.test(errText)) {
+        const projectMatch = errText.match(/project (\d+)/);
+        const projectId = projectMatch ? projectMatch[1] : null;
+        const enableUrl = projectId
+          ? `https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=${projectId}`
+          : "https://console.developers.google.com/apis/api/drive.googleapis.com/overview";
+        return jsonResponse(
+          {
+            drive_query: driveQuery,
+            files: [],
+            error: "drive_api_not_enabled",
+            project_id: projectId,
+            enable_url: enableUrl,
+            message: "Google Drive API is not enabled in this Cloud project. Enable it once in the Cloud Console, wait ~1 minute, then retry.",
+          },
+          412,
+        );
+      }
+
       return jsonResponse(
         {
           drive_query: driveQuery,

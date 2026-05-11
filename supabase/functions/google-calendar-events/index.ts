@@ -136,7 +136,15 @@ Deno.serve(async (req) => {
             return;
           }
           const calendars = (calList.items || []).filter((c: any) => c.selected !== false);
-          accounts.push({ email: row.account_email, calendars: calendars.length });
+          const scopeStr = String(row.scope || "");
+          const driveScopeGranted =
+            scopeStr.includes("drive.readonly") &&
+            scopeStr.includes("drive.metadata.readonly");
+          accounts.push({
+            email: row.account_email,
+            calendars: calendars.length,
+            driveScopeGranted,
+          });
 
           await Promise.all(
             calendars.map(async (cal: any) => {
