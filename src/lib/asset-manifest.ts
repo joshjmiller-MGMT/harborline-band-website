@@ -91,20 +91,6 @@ export const ASSET_MANIFEST: Record<string, AssetSources> = {
     "w1200": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/derivatives/w1200/band/live-performance-1.webp",
     "w2000": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/derivatives/w2000/band/live-performance-1.webp"
   },
-  "band/live-performance-2": {
-    "original": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/band/live-performance-2.jpg",
-    "w320": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/derivatives/w320/band/live-performance-2.webp",
-    "w600": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/derivatives/w600/band/live-performance-2.webp",
-    "w1200": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/derivatives/w1200/band/live-performance-2.webp",
-    "w2000": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/derivatives/w2000/band/live-performance-2.webp"
-  },
-  "band/live-performance-3": {
-    "original": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/band/live-performance-3.jpg",
-    "w320": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/derivatives/w320/band/live-performance-3.webp",
-    "w600": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/derivatives/w600/band/live-performance-3.webp",
-    "w1200": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/derivatives/w1200/band/live-performance-3.webp",
-    "w2000": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/derivatives/w2000/band/live-performance-3.webp"
-  },
   "band/member-1": {
     "original": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/band/member-1.jpg",
     "w320": "https://mbqyznttpvebahgygsbx.supabase.co/storage/v1/object/public/visual-assets/public-site/derivatives/w320/band/member-1.webp",

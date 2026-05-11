@@ -62,7 +62,6 @@ import SchedulePage from "./pages/Schedule";
 import { TeamAuthProvider } from "./hooks/useTeamAuth";
 import TeamLogin from "./pages/team/TeamLogin";
 import TeamSongs from "./pages/team/TeamSongs";
-import TeamGallery from "./pages/team/TeamGallery";
 import TeamScheduler from "./pages/team/TeamScheduler";
 import TeamResources from "./pages/team/TeamResources";
 import TeamRunOfShow from "./pages/team/TeamRunOfShow";
@@ -142,7 +141,6 @@ const App = () => (
               {/* Team Portal */}
               <Route path="/team/login" element={<TeamLogin />} />
               <Route path="/team/songs" element={<TeamSongs />} />
-              <Route path="/team/gallery" element={<TeamGallery />} />
               <Route path="/team/scheduler" element={<TeamScheduler />} />
               <Route path="/team/resources" element={<TeamResources />} />
               <Route path="/team/run-of-show" element={<TeamRunOfShow />} />

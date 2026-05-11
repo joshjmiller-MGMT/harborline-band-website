@@ -1,0 +1,732 @@
+{
+  "generated_at": "2026-05-11T19:13:39.590Z",
+  "manifest_path": "src/lib/asset-manifest.ts",
+  "total_slugs": 62,
+  "referenced": 60,
+  "orphans": 2,
+  "total_refs": 120,
+  "slugs": {
+    "band-hero": [
+      {
+        "file": "src/components/Hero.tsx",
+        "line": 9,
+        "snippet": "<OptimizedImage src=\"band-hero\" alt=\"Harborline performing live\" className=\"w-full h-full object-cover\" />"
+      },
+      {
+        "file": "src/components/PageHero.tsx",
+        "line": 18,
+        "snippet": "src=\"band-hero\""
+      },
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 37,
+        "snippet": "{ src: \"band-hero\", alt: \"Harborline hero band image\", category: \"Band\" },"
+      }
+    ],
+    "band/group-laughing": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 27,
+        "snippet": "{ src: \"band/group-laughing\", alt: \"Harborline band group photo - candid laughing moment\", category: \"Band\" },"
+      }
+    ],
+    "band/group-portrait": [
+      {
+        "file": "src/components/Gallery.tsx",
+        "line": 9,
+        "snippet": "{ src: \"band/group-portrait\", alt: \"Harborline band official group portrait\" },"
+      },
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 28,
+        "snippet": "{ src: \"band/group-portrait\", alt: \"Harborline band official group portrait\", category: \"Band\" },"
+      }
+    ],
+    "band/group-waterfront-1": [
+      {
+        "file": "src/components/About.tsx",
+        "line": 30,
+        "snippet": "src=\"band/group-waterfront-1\""
+      },
+      {
+        "file": "src/components/Gallery.tsx",
+        "line": 6,
+        "snippet": "{ src: \"band/group-waterfront-1\", alt: \"Harborline band group photo by the water\" },"
+      },
+      {
+        "file": "src/pages/About.tsx",
+        "line": 40,
+        "snippet": "src=\"band/group-waterfront-1\""
+      },
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 17,
+        "snippet": "{ src: \"band/group-waterfront-1\", alt: \"Full band group photo by the water - everyone smiling\", category: \"Band\" },"
+      }
+    ],
+    "band/group-waterfront-2": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 18,
+        "snippet": "{ src: \"band/group-waterfront-2\", alt: \"Candid band moment with vocalist featured\", category: \"Band\" },"
+      },
+      {
+        "file": "src/pages/services/Weddings.tsx",
+        "line": 105,
+        "snippet": "src=\"band/group-waterfront-2\""
+      }
+    ],
+    "band/group-waterfront-3": [
+      {
+        "file": "src/pages/About.tsx",
+        "line": 45,
+        "snippet": "src=\"band/group-waterfront-3\""
+      },
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 19,
+        "snippet": "{ src: \"band/group-waterfront-3\", alt: \"Fun band photo with peace sign\", category: \"Band\" },"
+      }
+    ],
+    "band/group-waterfront-4": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 20,
+        "snippet": "{ src: \"band/group-waterfront-4\", alt: \"Band sharing a candid moment by the bay\", category: \"Band\" },"
+      }
+    ],
+    "band/jazz-trio-1": [
+      {
+        "file": "src/components/Gallery.tsx",
+        "line": 8,
+        "snippet": "{ src: \"band/jazz-trio-1\", alt: \"Jazz trio performing under tent\" },"
+      },
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 22,
+        "snippet": "{ src: \"band/jazz-trio-1\", alt: \"Jazz trio performing under white tent - piano, drums, upright bass\", category: \"Band\" },"
+      },
+      {
+        "file": "src/pages/ensembles/JazzQuartet.tsx",
+        "line": 108,
+        "snippet": "src=\"band/jazz-trio-1\""
+      },
+      {
+        "file": "src/pages/ensembles/PianoTrio.tsx",
+        "line": 108,
+        "snippet": "src=\"band/jazz-trio-1\""
+      },
+      {
+        "file": "src/pages/services/Weddings.tsx",
+        "line": 110,
+        "snippet": "src=\"band/jazz-trio-1\""
+      }
+    ],
+    "band/jazz-trio-2": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 23,
+        "snippet": "{ src: \"band/jazz-trio-2\", alt: \"Jazz trio in action - intimate performance\", category: \"Band\" },"
+      },
+      {
+        "file": "src/pages/ensembles/JazzQuartet.tsx",
+        "line": 113,
+        "snippet": "src=\"band/jazz-trio-2\""
+      },
+      {
+        "file": "src/pages/ensembles/PianoTrio.tsx",
+        "line": 113,
+        "snippet": "src=\"band/jazz-trio-2\""
+      }
+    ],
+    "band/live-dj-sax": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 24,
+        "snippet": "{ src: \"band/live-dj-sax\", alt: \"DJ and saxophone player performing together\", category: \"Band\" },"
+      },
+      {
+        "file": "src/pages/ensembles/FullBand.tsx",
+        "line": 107,
+        "snippet": "src=\"band/live-dj-sax\""
+      }
+    ],
+    "band/live-performance-1": [
+      {
+        "file": "src/components/Gallery.tsx",
+        "line": 7,
+        "snippet": "{ src: \"band/live-performance-1\", alt: \"Live performance - drums and saxophone\" },"
+      },
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 29,
+        "snippet": "{ src: \"band/live-performance-1\", alt: \"Live performance - drums and saxophone\", category: \"Band\" },"
+      }
+    ],
+    "band/live-performance-2": [],
+    "band/live-performance-3": [],
+    "band/member-1": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 56,
+        "snippet": "{ src: \"band/member-1\", alt: \"Band member portrait\", player: 6 },"
+      }
+    ],
+    "band/member-2": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 57,
+        "snippet": "{ src: \"band/member-2\", alt: \"Band member portrait\", player: 7 },"
+      }
+    ],
+    "band/member-3": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 58,
+        "snippet": "{ src: \"band/member-3\", alt: \"Band member portrait\", player: 8 },"
+      }
+    ],
+    "band/member-4": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 59,
+        "snippet": "{ src: \"band/member-4\", alt: \"Band member portrait\", player: 9 },"
+      }
+    ],
+    "band/member-5": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 60,
+        "snippet": "{ src: \"band/member-5\", alt: \"Band member portrait\", player: 10 },"
+      }
+    ],
+    "band/member-6": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 61,
+        "snippet": "{ src: \"band/member-6\", alt: \"Band member portrait\", player: 11 },"
+      }
+    ],
+    "band/portrait-player1-a": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 43,
+        "snippet": "{ src: \"band/portrait-player1-a\", alt: \"Band member portrait - serious\", player: 1 },"
+      }
+    ],
+    "band/portrait-player1-b": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 44,
+        "snippet": "{ src: \"band/portrait-player1-b\", alt: \"Band member portrait - smiling\", player: 1 },"
+      }
+    ],
+    "band/portrait-player2-a": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 46,
+        "snippet": "{ src: \"band/portrait-player2-a\", alt: \"Band member portrait - vocalist\", player: 2 },"
+      }
+    ],
+    "band/portrait-player3-a": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 48,
+        "snippet": "{ src: \"band/portrait-player3-a\", alt: \"Band member portrait - guitarist\", player: 3 },"
+      }
+    ],
+    "band/portrait-player4-a": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 50,
+        "snippet": "{ src: \"band/portrait-player4-a\", alt: \"Band member portrait - smiling\", player: 4 },"
+      }
+    ],
+    "band/portrait-player4-b": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 51,
+        "snippet": "{ src: \"band/portrait-player4-b\", alt: \"Band member portrait - serious\", player: 4 },"
+      }
+    ],
+    "band/portrait-player5-a": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 53,
+        "snippet": "{ src: \"band/portrait-player5-a\", alt: \"Band member portrait - smiling\", player: 5 },"
+      }
+    ],
+    "band/portrait-player5-b": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 54,
+        "snippet": "{ src: \"band/portrait-player5-b\", alt: \"Band member portrait - serious\", player: 5 },"
+      }
+    ],
+    "band/setup-tent": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 30,
+        "snippet": "{ src: \"band/setup-tent\", alt: \"Professional DJ and sound setup in white tent\", category: \"Band\" },"
+      }
+    ],
+    "band/setup-waterfront": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 31,
+        "snippet": "{ src: \"band/setup-waterfront\", alt: \"Waterfront keyboard setup with bay view\", category: \"Band\" },"
+      }
+    ],
+    "band/special-event-dancer": [
+      {
+        "file": "src/components/Gallery.tsx",
+        "line": 10,
+        "snippet": "{ src: \"band/special-event-dancer\", alt: \"Special event with ribbon dancer and live band\" },"
+      },
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 25,
+        "snippet": "{ src: \"band/special-event-dancer\", alt: \"Special event with ribbon dancer and live band\", category: \"Band\" },"
+      },
+      {
+        "file": "src/pages/ensembles/FullBand.tsx",
+        "line": 112,
+        "snippet": "src=\"band/special-event-dancer\""
+      }
+    ],
+    "gallery-1": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 32,
+        "snippet": "{ src: \"gallery-1\", alt: \"Harborline performing at a corporate event\", category: \"Band\" },"
+      },
+      {
+        "file": "src/pages/ensembles/SoloPerformer.tsx",
+        "line": 109,
+        "snippet": "src=\"gallery-1\""
+      },
+      {
+        "file": "src/pages/services/HolidayParties.tsx",
+        "line": 105,
+        "snippet": "src=\"gallery-1\""
+      }
+    ],
+    "gallery-2": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 33,
+        "snippet": "{ src: \"gallery-2\", alt: \"Band members at an outdoor celebration\", category: \"Band\" },"
+      },
+      {
+        "file": "src/pages/ensembles/AcousticDuo.tsx",
+        "line": 108,
+        "snippet": "src=\"gallery-2\""
+      },
+      {
+        "file": "src/pages/ensembles/SoloPerformer.tsx",
+        "line": 114,
+        "snippet": "src=\"gallery-2\""
+      },
+      {
+        "file": "src/pages/services/Anniversaries.tsx",
+        "line": 106,
+        "snippet": "src=\"gallery-2\""
+      }
+    ],
+    "gallery-3": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 34,
+        "snippet": "{ src: \"gallery-3\", alt: \"Setup for an elegant waterfront event\", category: \"Band\" },"
+      },
+      {
+        "file": "src/pages/ensembles/AcousticDuo.tsx",
+        "line": 113,
+        "snippet": "src=\"gallery-3\""
+      },
+      {
+        "file": "src/pages/services/Anniversaries.tsx",
+        "line": 111,
+        "snippet": "src=\"gallery-3\""
+      },
+      {
+        "file": "src/pages/services/BirthdayParties.tsx",
+        "line": 105,
+        "snippet": "src=\"gallery-3\""
+      }
+    ],
+    "gallery-4": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 35,
+        "snippet": "{ src: \"gallery-4\", alt: \"The band posing by the Chesapeake Bay\", category: \"Band\" },"
+      },
+      {
+        "file": "src/pages/ensembles/StringEnsemble.tsx",
+        "line": 108,
+        "snippet": "src=\"gallery-4\""
+      },
+      {
+        "file": "src/pages/services/BirthdayParties.tsx",
+        "line": 110,
+        "snippet": "src=\"gallery-4\""
+      },
+      {
+        "file": "src/pages/services/BreweryEvents.tsx",
+        "line": 106,
+        "snippet": "src=\"gallery-4\""
+      }
+    ],
+    "gallery-5": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 36,
+        "snippet": "{ src: \"gallery-5\", alt: \"Keyboardist performing live\", category: \"Band\" },"
+      },
+      {
+        "file": "src/pages/ensembles/StringEnsemble.tsx",
+        "line": 113,
+        "snippet": "src=\"gallery-5\""
+      },
+      {
+        "file": "src/pages/services/BreweryEvents.tsx",
+        "line": 111,
+        "snippet": "src=\"gallery-5\""
+      },
+      {
+        "file": "src/pages/services/HolidayParties.tsx",
+        "line": 110,
+        "snippet": "src=\"gallery-5\""
+      }
+    ],
+    "hero-band": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 38,
+        "snippet": "{ src: \"hero-band\", alt: \"Hero band performance\", category: \"Band\" },"
+      }
+    ],
+    "instagram/ig-1": [
+      {
+        "file": "src/components/InstagramGrid.tsx",
+        "line": 7,
+        "snippet": "{ url: \"https://www.instagram.com/harborline.band/reel/DQKEwAXjC8n/\", thumbnail: \"instagram/ig-1\" },"
+      }
+    ],
+    "instagram/ig-2": [
+      {
+        "file": "src/components/InstagramGrid.tsx",
+        "line": 8,
+        "snippet": "{ url: \"https://www.instagram.com/baltimoresoundentertainment/reel/DN3nioKYj6D/\", thumbnail: \"instagram/ig-2\" },"
+      }
+    ],
+    "instagram/ig-3": [
+      {
+        "file": "src/components/InstagramGrid.tsx",
+        "line": 9,
+        "snippet": "{ url: \"https://www.instagram.com/joshjmillerofficial/reel/DUqps0tEbJ6/\", thumbnail: \"instagram/ig-3\" },"
+      }
+    ],
+    "instagram/ig-4": [
+      {
+        "file": "src/components/InstagramGrid.tsx",
+        "line": 10,
+        "snippet": "{ url: \"https://www.instagram.com/baltimoresoundentertainment/p/DUlckBnjTh3/\", thumbnail: \"instagram/ig-4\" },"
+      }
+    ],
+    "instagram/ig-5": [
+      {
+        "file": "src/components/InstagramGrid.tsx",
+        "line": 11,
+        "snippet": "{ url: \"https://www.instagram.com/harborline.band/reel/DSaXaZ-jV4l/\", thumbnail: \"instagram/ig-5\" },"
+      }
+    ],
+    "instagram/ig-6": [
+      {
+        "file": "src/components/InstagramGrid.tsx",
+        "line": 12,
+        "snippet": "{ url: \"https://www.instagram.com/the.economy.band/reel/DGmQKv5sMJB/\", thumbnail: \"instagram/ig-6\" },"
+      }
+    ],
+    "instagram/ig-7": [
+      {
+        "file": "src/components/InstagramGrid.tsx",
+        "line": 13,
+        "snippet": "{ url: \"https://www.instagram.com/100daysoffiddle/reel/DIjnjrrgjOC/\", thumbnail: \"instagram/ig-7\" },"
+      }
+    ],
+    "instagram/ig-8": [
+      {
+        "file": "src/components/InstagramGrid.tsx",
+        "line": 14,
+        "snippet": "{ url: \"https://www.instagram.com/baltimoresoundentertainment/reel/DLSiBjwM--m/\", thumbnail: \"instagram/ig-8\" },"
+      }
+    ],
+    "venues/avam-1": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 65,
+        "snippet": "{ src: \"venues/avam-1\", alt: \"American Visionary Art Museum\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/WhereWePerform.tsx",
+        "line": 45,
+        "snippet": "image: \"venues/avam-1\","
+      },
+      {
+        "file": "src/pages/venues/AmericanVisionaryArtMuseum.tsx",
+        "line": 34,
+        "snippet": "{ src: \"venues/avam-1\", alt: \"American Visionary Art Museum colorful interior with whimsical art installations\" }"
+      }
+    ],
+    "venues/belvedere-1": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 66,
+        "snippet": "{ src: \"venues/belvedere-1\", alt: \"The Belvedere\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/WhereWePerform.tsx",
+        "line": 31,
+        "snippet": "image: \"venues/belvedere-1\","
+      },
+      {
+        "file": "src/pages/venues/TheBelvedere.tsx",
+        "line": 34,
+        "snippet": "{ src: \"venues/belvedere-1\", alt: \"The Belvedere grand ballroom with chandeliers and wedding reception\" },"
+      }
+    ],
+    "venues/belvedere-2": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 67,
+        "snippet": "{ src: \"venues/belvedere-2\", alt: \"The Belvedere interior\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/venues/TheBelvedere.tsx",
+        "line": 35,
+        "snippet": "{ src: \"venues/belvedere-2\", alt: \"The Belvedere rooftop terrace with panoramic city views at night\" }"
+      }
+    ],
+    "venues/bo-railroad-1": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 68,
+        "snippet": "{ src: \"venues/bo-railroad-1\", alt: \"B&O Railroad Museum\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/venues/BORailroadMuseum.tsx",
+        "line": 34,
+        "snippet": "{ src: \"venues/bo-railroad-1\", alt: \"B&O Railroad Museum historic hall with vintage locomotives and wedding reception\" },"
+      }
+    ],
+    "venues/bo-railroad-2": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 69,
+        "snippet": "{ src: \"venues/bo-railroad-2\", alt: \"B&O Railroad Museum interior\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/venues/BORailroadMuseum.tsx",
+        "line": 35,
+        "snippet": "{ src: \"venues/bo-railroad-2\", alt: \"B&O Railroad Museum roundhouse with domed ceiling and elegant event setup\" }"
+      }
+    ],
+    "venues/cloisters-1": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 70,
+        "snippet": "{ src: \"venues/cloisters-1\", alt: \"Cloisters Castle\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/WhereWePerform.tsx",
+        "line": 52,
+        "snippet": "image: \"venues/cloisters-1\","
+      },
+      {
+        "file": "src/pages/venues/CloistersCastle.tsx",
+        "line": 34,
+        "snippet": "{ src: \"venues/cloisters-1\", alt: \"Cloisters Castle fairytale exterior with towers and garden wedding ceremony\" },"
+      }
+    ],
+    "venues/cloisters-2": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 71,
+        "snippet": "{ src: \"venues/cloisters-2\", alt: \"Cloisters Castle grounds\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/venues/CloistersCastle.tsx",
+        "line": 35,
+        "snippet": "{ src: \"venues/cloisters-2\", alt: \"Cloisters Castle grand hall interior with candlelit wedding reception\" }"
+      }
+    ],
+    "venues/cylburn-1": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 72,
+        "snippet": "{ src: \"venues/cylburn-1\", alt: \"Cylburn Arboretum\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/WhereWePerform.tsx",
+        "line": 59,
+        "snippet": "image: \"venues/cylburn-1\","
+      },
+      {
+        "file": "src/pages/venues/CylburnArboretum.tsx",
+        "line": 34,
+        "snippet": "{ src: \"venues/cylburn-1\", alt: \"Cylburn Arboretum garden wedding ceremony with greenhouse and flowering gardens\" },"
+      }
+    ],
+    "venues/cylburn-2": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 73,
+        "snippet": "{ src: \"venues/cylburn-2\", alt: \"Cylburn Arboretum gardens\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/venues/CylburnArboretum.tsx",
+        "line": 35,
+        "snippet": "{ src: \"venues/cylburn-2\", alt: \"Cylburn Arboretum Victorian mansion with fountain and tented reception\" }"
+      }
+    ],
+    "venues/evergreen-1": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 74,
+        "snippet": "{ src: \"venues/evergreen-1\", alt: \"Evergreen Museum\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/WhereWePerform.tsx",
+        "line": 66,
+        "snippet": "image: \"venues/evergreen-1\","
+      },
+      {
+        "file": "src/pages/venues/EvergreenMuseum.tsx",
+        "line": 34,
+        "snippet": "{ src: \"venues/evergreen-1\", alt: \"Evergreen Museum Victorian mansion with formal gardens and wedding ceremony\" },"
+      }
+    ],
+    "venues/evergreen-2": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 75,
+        "snippet": "{ src: \"venues/evergreen-2\", alt: \"Evergreen Museum interior\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/venues/EvergreenMuseum.tsx",
+        "line": 35,
+        "snippet": "{ src: \"venues/evergreen-2\", alt: \"Evergreen Museum carriage house interior with exposed brick and candlelit reception\" }"
+      }
+    ],
+    "venues/four-seasons-1": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 76,
+        "snippet": "{ src: \"venues/four-seasons-1\", alt: \"Four Seasons Baltimore\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/WhereWePerform.tsx",
+        "line": 38,
+        "snippet": "image: \"venues/four-seasons-1\","
+      },
+      {
+        "file": "src/pages/venues/FourSeasonsBaltimore.tsx",
+        "line": 34,
+        "snippet": "{ src: \"venues/four-seasons-1\", alt: \"Four Seasons Baltimore ballroom with crystal chandeliers and harbor views\" },"
+      }
+    ],
+    "venues/four-seasons-2": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 77,
+        "snippet": "{ src: \"venues/four-seasons-2\", alt: \"Four Seasons Baltimore ballroom\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/venues/FourSeasonsBaltimore.tsx",
+        "line": 35,
+        "snippet": "{ src: \"venues/four-seasons-2\", alt: \"Four Seasons Baltimore waterfront terrace ceremony at sunset\" }"
+      }
+    ],
+    "venues/legg-mason-1": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 78,
+        "snippet": "{ src: \"venues/legg-mason-1\", alt: \"Legg Mason Tower\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/venues/LeggMasonTower.tsx",
+        "line": 34,
+        "snippet": "{ src: \"venues/legg-mason-1\", alt: \"Legg Mason Tower penthouse event space with panoramic city views at night\" }"
+      }
+    ],
+    "venues/peabody-1": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 79,
+        "snippet": "{ src: \"venues/peabody-1\", alt: \"George Peabody Library\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/WhereWePerform.tsx",
+        "line": 24,
+        "snippet": "image: \"venues/peabody-1\","
+      },
+      {
+        "file": "src/pages/venues/GeorgePeabodyLibrary.tsx",
+        "line": 34,
+        "snippet": "{ src: \"venues/peabody-1\", alt: \"George Peabody Library grand atrium with ornate balconies and wedding reception\" },"
+      }
+    ],
+    "venues/peabody-2": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 80,
+        "snippet": "{ src: \"venues/peabody-2\", alt: \"George Peabody Library interior\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/venues/GeorgePeabodyLibrary.tsx",
+        "line": 35,
+        "snippet": "{ src: \"venues/peabody-2\", alt: \"George Peabody Library wedding ceremony with marble floors and book-lined walls\" }"
+      }
+    ],
+    "venues/pendry-1": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 81,
+        "snippet": "{ src: \"venues/pendry-1\", alt: \"Pendry Baltimore\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/WhereWePerform.tsx",
+        "line": 17,
+        "snippet": "image: \"venues/pendry-1\","
+      },
+      {
+        "file": "src/pages/venues/PendryBaltimore.tsx",
+        "line": 34,
+        "snippet": "{ src: \"venues/pendry-1\", alt: \"The Pendry Baltimore elegant ballroom with arched ceilings and harbor views\" },"
+      },
+      {
+        "file": "src/pages/venues/SagamorePendry.tsx",
+        "line": 34,
+        "snippet": "{ src: \"venues/pendry-1\", alt: \"Sagamore Pendry elegant ballroom with French Revival architecture\" },"
+      }
+    ],
+    "venues/pendry-2": [
+      {
+        "file": "src/pages/Gallery.tsx",
+        "line": 82,
+        "snippet": "{ src: \"venues/pendry-2\", alt: \"Pendry Baltimore event space\", category: \"Venue\" },"
+      },
+      {
+        "file": "src/pages/venues/PendryBaltimore.tsx",
+        "line": 35,
+        "snippet": "{ src: \"venues/pendry-2\", alt: \"The Pendry Baltimore waterfront pier wedding ceremony at sunset\" }"
+      },
+      {
+        "file": "src/pages/venues/SagamorePendry.tsx",
+        "line": 35,
+        "snippet": "{ src: \"venues/pendry-2\", alt: \"Sagamore Pendry waterfront pier ceremony at golden hour\" }"
+      }
+    ]
+  }
+}

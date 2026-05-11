@@ -27,7 +27,7 @@ import type {
   Shape,
 } from "./canonical-event-types.ts";
 
-const EXTRACTOR_VERSION = "v2.4-cut6-drive-fetch";
+const EXTRACTOR_VERSION = "v2.5-cut6-array-dedup";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -394,6 +394,18 @@ function mergeFields(
     merged[k] = combined;
   }
 
+  // Array merge with dedup. Cross-source ingestion (multiple Drive files for
+  // one event) used to concat blindly, producing duplicate personnel/timeline/
+  // vendor rows when the same entities appeared in both sources. Each array
+  // type now has its own identity key:
+  //   personnel    → lower(name) + lower(role)
+  //   vendors      → lower(company) + lower(type)
+  //   timeline     → time + lower(description trimmed to 60 chars)
+  //   song_sections→ lower(title)  (sections themselves; songs inside merge separately)
+  // For song_sections, when a section title matches, songs within are also
+  // deduped by lower(title) + lower(artist). LLM near-duplicates with different
+  // spellings will still slip through — that's a known limitation; the v2
+  // taxonomy "still-open" list captures entity-resolution as a future cut.
   const arrayKeys: (keyof CanonicalEventFields)[] = [
     "personnel", "vendors", "timeline", "song_sections",
   ];
@@ -401,10 +413,61 @@ function mergeFields(
     const incoming = next[k] as unknown[] | undefined;
     if (!incoming || incoming.length === 0) continue;
     const existing = (merged[k] as unknown[] | undefined) || [];
-    merged[k] = [...existing, ...incoming];
+    merged[k] = mergeArrayDedup(k, existing, incoming);
   }
 
   return merged;
+}
+
+function arrayItemKey(arrayName: string, item: unknown): string {
+  if (!item || typeof item !== "object") return JSON.stringify(item);
+  const it = item as Record<string, unknown>;
+  const lc = (v: unknown) => String(v ?? "").trim().toLowerCase();
+  switch (arrayName) {
+    case "personnel":
+      return `${lc(it.name)}|${lc(it.role)}`;
+    case "vendors":
+      return `${lc(it.company)}|${lc(it.type)}`;
+    case "timeline":
+      return `${lc(it.time)}|${lc(it.description).slice(0, 60)}`;
+    case "song_sections":
+      return lc(it.title);
+    default:
+      return JSON.stringify(item);
+  }
+}
+
+function mergeArrayDedup(
+  arrayName: string,
+  existing: unknown[],
+  incoming: unknown[],
+): unknown[] {
+  const seen = new Map<string, unknown>();
+  // Existing wins on identity collision — deterministic parser already
+  // populated these; LLM enrichment for the same entity shouldn't clobber.
+  for (const item of existing) seen.set(arrayItemKey(arrayName, item), item);
+  for (const item of incoming) {
+    const key = arrayItemKey(arrayName, item);
+    if (!seen.has(key)) {
+      seen.set(key, item);
+    } else if (arrayName === "song_sections") {
+      // Same section title — merge songs within the section by song key.
+      const existingSection = seen.get(key) as Record<string, unknown>;
+      const incomingSection = item as Record<string, unknown>;
+      const exSongs = Array.isArray(existingSection.songs) ? existingSection.songs as unknown[] : [];
+      const inSongs = Array.isArray(incomingSection.songs) ? incomingSection.songs as unknown[] : [];
+      const songKey = (s: unknown): string => {
+        if (!s || typeof s !== "object") return JSON.stringify(s);
+        const so = s as Record<string, unknown>;
+        return `${String(so.title ?? "").trim().toLowerCase()}|${String(so.artist ?? "").trim().toLowerCase()}`;
+      };
+      const songSeen = new Map<string, unknown>();
+      for (const s of exSongs) songSeen.set(songKey(s), s);
+      for (const s of inSongs) if (!songSeen.has(songKey(s))) songSeen.set(songKey(s), s);
+      existingSection.songs = Array.from(songSeen.values());
+    }
+  }
+  return Array.from(seen.values());
 }
 
 async function upsertCanonicalEvent(opts: {
