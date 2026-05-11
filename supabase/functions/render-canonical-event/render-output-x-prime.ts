@@ -19,6 +19,7 @@ import {
   escapeHtml,
   formatCoupleName,
   formatLongDate,
+  renderBrandCirclesHeader,
   renderDetailRow,
 } from "./render-shared.ts";
 
@@ -130,6 +131,7 @@ export function renderOutputXPrime(event: CanonicalEvent): string {
 <body>
   <div class="page">
     <div class="header">
+      ${renderBrandCirclesHeader(event.organization || "harborline")}
       <h1 style="font-size:24px;font-weight:700;letter-spacing:0.02em;">Harborline</h1>
       <p style="color:#666;font-size:13px;margin-top:4px;">Musicians Run of Show</p>
     </div>

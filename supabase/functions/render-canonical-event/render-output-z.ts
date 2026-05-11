@@ -30,6 +30,7 @@ import {
   escapeHtml,
   formatCoupleName,
   formatLongDate,
+  renderBrandCirclesHeader,
 } from "./render-shared.ts";
 
 const Z_STYLES = `
@@ -63,6 +64,7 @@ function renderEventHeader(event: CanonicalEvent): string {
   );
   return `
     <div style="text-align:center; margin-bottom:24px;">
+      ${renderBrandCirclesHeader(event.organization)}
       <h1 style="font-size:28px; font-weight:700; letter-spacing:0.02em;">${couple || escapeHtml(event.name)}</h1>
       <p style="color:#666; font-size:13px; margin-top:4px;">${escapeHtml(formatLongDate(event.event_date))} ${titleStr ? `<span style="color:#9CA3AF;">${escapeHtml(titleStr)}</span>` : ""}</p>
     </div>

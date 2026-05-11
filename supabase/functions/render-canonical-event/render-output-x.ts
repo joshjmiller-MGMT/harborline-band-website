@@ -16,6 +16,7 @@ import {
   escapeHtml,
   formatCoupleName,
   formatLongDate,
+  renderBrandCirclesHeader,
   renderDetailRow,
 } from "./render-shared.ts";
 
@@ -128,6 +129,7 @@ export function renderOutputX(event: CanonicalEvent): string {
 <body>
   <div class="page">
     <div class="header">
+      ${renderBrandCirclesHeader(event.organization)}
       <h1 style="font-size:24px;font-weight:700;letter-spacing:0.02em;">Baltimore Sound Entertainment</h1>
       <p style="color:#666;font-size:13px;margin-top:4px;">Musicians Run of Show</p>
     </div>

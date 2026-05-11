@@ -57,3 +57,27 @@ export function renderDetailRow(label: string, value: string | undefined): strin
   if (!value) return "";
   return `<div class="detail-row"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</div>`;
 }
+
+// Venture-aware decorative-circles header. Per Josh 2026-05-11:
+//   Harborline → blue → purple gradient
+//   TSB        → red → orange gradient
+//   BSE / else → no circles (omitted entirely)
+// 5 circles, 14px diameter, sampled across the gradient. Centered above the
+// title block. Canonical brand-visual rule lives at
+// `co-manager/04-brand-voice/visual-brand-language.md`.
+const BRAND_CIRCLES: Record<string, [string, string, string, string, string]> = {
+  harborline: ["#2563eb", "#4f46e5", "#7c3aed", "#9333ea", "#a855f7"], // blue → purple
+  tsb:        ["#dc2626", "#e3501f", "#ea580c", "#f97316", "#fb923c"], // red  → orange
+};
+
+export function renderBrandCirclesHeader(organization?: string): string {
+  const key = (organization || "").toLowerCase().trim();
+  const colors = BRAND_CIRCLES[key];
+  if (!colors) return ""; // BSE + default — no circles
+  const dots = colors
+    .map(
+      (c) => `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${c};margin:0 6px;"></span>`,
+    )
+    .join("");
+  return `<div style="text-align:center;margin:0 0 18px 0;">${dots}</div>`;
+}

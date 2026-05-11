@@ -28,3 +28,4 @@ supabase/.branches/
 *.sln
 *.sw?
 PREVIEW-output-z.html
+PREVIEW-z-*.html
