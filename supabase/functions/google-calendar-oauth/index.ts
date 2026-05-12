@@ -18,6 +18,11 @@ const SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/drive.metadata.readonly",
   "https://www.googleapis.com/auth/drive.readonly",
+  // P14 (2026-05-12): drive.file = write access to files created by the app.
+  // Used by scripts/chart-library-drive-sync.mjs to push chart-library/output/
+  // into a Harborline/chart-library/ folder under the connected Drive. Safer
+  // than full `drive` scope — we can only touch files we created.
+  "https://www.googleapis.com/auth/drive.file",
   "https://www.googleapis.com/auth/userinfo.email",
 ].join(" ");
 
