@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table } from "lucide-react";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table, Search, Hash } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -213,6 +213,15 @@ interface ParsedEventData {
   songSections: { title: string; time: string; songs: any[] }[];
 }
 
+interface DjepMatch {
+  djep_id: string;
+  title: string;
+  event_date: string | null;
+  fields: { label: string; value: string }[];
+  source_url: string;
+  match_score: number;
+}
+
 const imageToBase64 = (src: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -241,6 +250,15 @@ export default function RunOfShowGenerator() {
   const [organization, setOrganization] = useState<OrgKey>("harborline");
   const [manualOverrides, setManualOverrides] = useState("");
   const manualOverridesRef = useRef<HTMLTextAreaElement>(null);
+
+  // DJEP lookup state
+  const [djepMode, setDjepMode] = useState<"search" | "id">("search");
+  const [djepName, setDjepName] = useState("");
+  const [djepDate, setDjepDate] = useState("");
+  const [djepIdInput, setDjepIdInput] = useState("");
+  const [djepLoading, setDjepLoading] = useState(false);
+  const [djepMatches, setDjepMatches] = useState<DjepMatch[] | null>(null);
+  const [djepNote, setDjepNote] = useState<string | null>(null);
 
   const { uploadToDrive, uploading: driveUploading } = useGoogleDriveUpload();
   const currentLogoText = ORG_INFO[organization].logoText;
@@ -311,6 +329,141 @@ export default function RunOfShowGenerator() {
       value: merged[f.key] || "",
       found: !!merged[f.key],
     }));
+  };
+
+  // DJEP URLs all share one root, but a per-event link Josh pastes in may carry
+  // the eventId as a query param (`event=`, `id=`, `eventid=`). If the user
+  // just types or pastes a bare number, treat that as the id directly.
+  const extractDjepEventId = (raw: string): string => {
+    const trimmed = raw.trim();
+    if (!trimmed) return "";
+    if (/^\d+$/.test(trimmed)) return trimmed;
+    try {
+      const url = new URL(trimmed);
+      for (const key of ["event", "eventid", "event_id", "id"]) {
+        const v = url.searchParams.get(key);
+        if (v && /^\d+$/.test(v)) return v;
+      }
+    } catch {
+      // not a URL — fall through
+    }
+    const m = trimmed.match(/(\d{3,})/);
+    return m ? m[1] : trimmed;
+  };
+
+  const runDjepLookup = async () => {
+    const payload: { name?: string; date?: string; eventId?: string } = {};
+    if (djepMode === "search") {
+      if (!djepName.trim() && !djepDate.trim()) {
+        toast({
+          title: "Add a name or date",
+          description: "Type at least an event name or pick a date to search DJEP.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (djepName.trim()) payload.name = djepName.trim();
+      if (djepDate.trim()) payload.date = djepDate.trim();
+      // edge function requires `name` when there's no eventId; if Josh only
+      // typed a date, send a wildcard token so server-side validation passes.
+      if (!payload.name) payload.name = "_";
+    } else {
+      const id = extractDjepEventId(djepIdInput);
+      if (!id) {
+        toast({
+          title: "Missing Event ID",
+          description: "Paste a DJEP Event ID or URL containing one.",
+          variant: "destructive",
+        });
+        return;
+      }
+      payload.eventId = id;
+    }
+
+    setDjepLoading(true);
+    setDjepMatches(null);
+    setDjepNote(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("djep-event-lookup", { body: payload });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const matches: DjepMatch[] = Array.isArray(data?.matches) ? data.matches : [];
+      setDjepMatches(matches);
+      if (data?.note) setDjepNote(String(data.note));
+      if (matches.length === 0) {
+        toast({
+          title: "No DJEP matches",
+          description: data?.note || "Try different terms or refresh the DJEP cache.",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "DJEP lookup failed",
+        description: err.message || "Could not reach DJEP cache.",
+        variant: "destructive",
+      });
+    } finally {
+      setDjepLoading(false);
+    }
+  };
+
+  // Translate a DJEP cache match into the (headers, rows) shape v1's
+  // generate-run-of-show already understands. Labels get a trailing colon so
+  // parseSheetToEvent picks them up via its `cell.endsWith(':') && nextCell`
+  // branch. We also synthesize a Client + Event Name from `match.title`
+  // ("<next action> · <client>") because DJEP's SALES-MILLER scrape doesn't
+  // store a dedicated event-name field.
+  const djepMatchToSheetData = (match: DjepMatch): SheetData => {
+    const rows: string[][] = [];
+    const parts = match.title.split(" · ");
+    const client = parts.length >= 2 ? parts.slice(1).join(" · ").trim() : match.title.trim();
+    if (client) {
+      rows.push(["Event Name:", client]);
+      rows.push(["Client:", client]);
+    }
+    for (const f of match.fields) {
+      const label = f.label.trim();
+      const value = (f.value || "").trim();
+      if (!label || !value) continue;
+      // Skip Status / Next Action / Next Action Date — those describe the
+      // lead pipeline, not the run-of-show. They live in DJEP for sales ops,
+      // not document generation. Event ID is kept for traceability.
+      if (/^(status|next action|next action date)$/i.test(label)) continue;
+      rows.push([`${label}:`, value]);
+    }
+    return {
+      headers: ["Field", "Value"],
+      rows,
+      sheetTitle: `DJEP — ${client || match.djep_id}`,
+    };
+  };
+
+  const applyDjepMatch = async (match: DjepMatch) => {
+    setLoading(true);
+    setParsedData(null);
+    setSourceType("DJEP");
+    setInputUrl("");
+    try {
+      const synthesized = djepMatchToSheetData(match);
+      setSheetData(synthesized);
+
+      const { data: genData, error: genError } = await supabase.functions.invoke(
+        "generate-run-of-show",
+        { body: { sheetData: synthesized, template, format: "html", logos: logosBase64, organization } },
+      );
+      if (!genError && genData?.parsedData) {
+        setParsedData(genData.parsedData);
+      }
+      toast({ title: "DJEP event loaded", description: synthesized.sheetTitle });
+    } catch (err: any) {
+      toast({
+        title: "Failed to apply DJEP match",
+        description: err.message || "Something went wrong loading that event.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchData = async () => {
@@ -790,6 +943,112 @@ export default function RunOfShowGenerator() {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Optional: Import from DJEP (alternative to Step 1) */}
+      <Card className="mb-6 bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
+            <span className="text-muted-foreground">or</span> Import from DJEP
+          </CardTitle>
+          <CardDescription>
+            Pull an event from the DJEP SALES-MILLER cache by name + date, or by Event ID / URL.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2 mb-3">
+            <Button
+              type="button"
+              variant={djepMode === "search" ? "default" : "outline"}
+              size="sm"
+              onClick={() => { setDjepMode("search"); setDjepMatches(null); setDjepNote(null); }}
+            >
+              <Search className="w-3.5 h-3.5 mr-1.5" /> Search
+            </Button>
+            <Button
+              type="button"
+              variant={djepMode === "id" ? "default" : "outline"}
+              size="sm"
+              onClick={() => { setDjepMode("id"); setDjepMatches(null); setDjepNote(null); }}
+            >
+              <Hash className="w-3.5 h-3.5 mr-1.5" /> Event ID / URL
+            </Button>
+          </div>
+
+          {djepMode === "search" ? (
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                placeholder="Event or client name (e.g. Hoffman)"
+                value={djepName}
+                onChange={(e) => setDjepName(e.target.value)}
+                className="flex-1 bg-secondary/50 border-border"
+              />
+              <Input
+                type="date"
+                value={djepDate}
+                onChange={(e) => setDjepDate(e.target.value)}
+                className="sm:w-44 bg-secondary/50 border-border"
+              />
+              <Button onClick={runDjepLookup} disabled={djepLoading}>
+                {djepLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {djepLoading ? "Searching..." : "Search DJEP"}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                placeholder="DJEP Event ID or paste DJEP URL"
+                value={djepIdInput}
+                onChange={(e) => setDjepIdInput(e.target.value)}
+                className="flex-1 bg-secondary/50 border-border"
+              />
+              <Button onClick={runDjepLookup} disabled={djepLoading}>
+                {djepLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Hash className="w-4 h-4" />}
+                {djepLoading ? "Fetching..." : "Fetch"}
+              </Button>
+            </div>
+          )}
+
+          {djepNote && (
+            <p className="text-xs text-amber-500 mt-2 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" /> {djepNote}
+            </p>
+          )}
+
+          {djepMatches && djepMatches.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                {djepMatches.length} match{djepMatches.length !== 1 ? "es" : ""} — click to load
+              </p>
+              {djepMatches.map((m) => {
+                const eventDateField = m.fields.find((f) => f.label.toLowerCase() === "event date");
+                const venueField = m.fields.find((f) => f.label.toLowerCase() === "venue");
+                return (
+                  <button
+                    key={m.djep_id}
+                    onClick={() => applyDjepMatch(m)}
+                    disabled={loading}
+                    className="w-full text-left p-3 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/60 hover:border-muted-foreground/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm text-foreground font-medium truncate">{m.title}</p>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
+                          {eventDateField && <span>Event: {eventDateField.value}</span>}
+                          {venueField && <span>Venue: {venueField.value}</span>}
+                          <span className="opacity-70">{m.djep_id}</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] uppercase font-semibold text-muted-foreground shrink-0">
+                        {Math.round(m.match_score * 100)}%
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </CardContent>
