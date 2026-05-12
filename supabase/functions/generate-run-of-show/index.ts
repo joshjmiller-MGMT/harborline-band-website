@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { sheetData, template, format, logos, overrides, requiredFields, organization } = await req.json();
+    const { sheetData, template, format, logos, overrides, requiredFields, organization, preMergedEvent } = await req.json();
 
     if (!template || !format) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -102,7 +102,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    const eventData = parseSheetToEvent(sheetData || { headers: [], rows: [], sheetTitle: 'Untitled' });
+    // P7: when the client has already merged multiple sources into one event,
+    // skip parse and use it directly. Single-source flow still goes through
+    // parseSheetToEvent.
+    const eventData: EventData = preMergedEvent
+      ? {
+          eventName: String(preMergedEvent.eventName || ''),
+          details: (preMergedEvent.details && typeof preMergedEvent.details === 'object') ? preMergedEvent.details : {},
+          personnel: Array.isArray(preMergedEvent.personnel) ? preMergedEvent.personnel : [],
+          timeline: Array.isArray(preMergedEvent.timeline) ? preMergedEvent.timeline : [],
+          songSections: Array.isArray(preMergedEvent.songSections) ? preMergedEvent.songSections : [],
+        }
+      : parseSheetToEvent(sheetData || { headers: [], rows: [], sheetTitle: 'Untitled' });
     
     // Organization-specific defaults for project lead and musician POS
     if (!eventData.details['project lead'] && !eventData.details['bandleader']) {
