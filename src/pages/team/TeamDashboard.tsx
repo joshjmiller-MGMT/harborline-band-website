@@ -2,7 +2,6 @@ import TeamLayout from "@/components/TeamLayout";
 import AvailabilityCheckerWidget from "@/components/dashboard/AvailabilityCheckerWidget";
 import ClaudeLogWidget from "@/components/dashboard/ClaudeLogWidget";
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
-import PostingTimesWidget from "@/components/dashboard/PostingTimesWidget";
 import SmartTaskWidget from "@/components/dashboard/SmartTaskWidget";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
 import { LayoutDashboard } from "lucide-react";
@@ -23,7 +22,6 @@ export default function TeamDashboard() {
           <NeedsActionWidget />
           <SmartTaskWidget />
           <UnifiedCalendarWidget />
-          <PostingTimesWidget />
           <ClaudeLogWidget />
         </div>
       </div>
