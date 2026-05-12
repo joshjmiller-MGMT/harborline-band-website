@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, Search, Sparkles, Trash2, Loader2, X, Check } from "lucide-react";
+import { ImagePlus, Search, Sparkles, Trash2, Loader2, X, Check, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -98,6 +98,69 @@ function buildAiPrefixedTags(asset: VisualAsset): string[] {
 
 function publicUrl(storagePath: string): string {
   return `${SUPABASE_URL}/storage/v1/object/public/visual-assets/${storagePath}`;
+}
+
+// Section IDs mirror the public Gallery's section layout (Band Photos / Member
+// Portraits / Venue Photos), then DB-only sections (Instagram, Shoots, Logos,
+// Other) cover the rest of the library. Order here drives render order + nav order.
+type SectionId =
+  | "band"
+  | "members"
+  | "venues"
+  | "instagram"
+  | "shoots"
+  | "logos"
+  | "other";
+
+const SECTIONS: { id: SectionId; label: string; hint: string }[] = [
+  { id: "band", label: "Band Photos", hint: "Group shots, performances, candid moments" },
+  { id: "members", label: "Member Portraits", hint: "Individual headshots and player portraits" },
+  { id: "venues", label: "Venue Photos", hint: "Venues and locations" },
+  { id: "instagram", label: "Instagram & Social", hint: "Pulled from social feeds" },
+  { id: "shoots", label: "Shoots & Uploads", hint: "Recent uploads, awaiting tagging or sorting" },
+  { id: "logos", label: "Logos & Branding", hint: "Most logos are code-bundled — only DB-stored logo files appear here" },
+  { id: "other", label: "Other / Uncategorized", hint: "Doesn't fit a section above" },
+];
+
+// Derive a section for an asset. Priority:
+//   1. ai_suggested_kind (post-P9 tags are most reliable)
+//   2. Folder path (deterministic for the public-site/* tree)
+//   3. Filename heuristics (member-*/portrait-* under public-site/band)
+// Falls back to "other" if nothing matches.
+function deriveSection(asset: VisualAsset): SectionId {
+  const kind = asset.ai_suggested_kind?.toLowerCase() ?? null;
+  if (kind) {
+    if (kind === "headshot") return "members";
+    if (kind === "venue-photo") return "venues";
+    if (kind === "logo") return "logos";
+    if (
+      kind === "live-performance" ||
+      kind === "press-shot" ||
+      kind === "behind-the-scenes" ||
+      kind === "rehearsal" ||
+      kind === "event-photo" ||
+      kind === "promo"
+    )
+      return "band";
+    // studio / screenshot / other → fall through to folder heuristics
+  }
+
+  const folder = asset.folder ?? "";
+  const filename = asset.filename?.toLowerCase() ?? "";
+
+  if (folder.startsWith("public-site/venues")) return "venues";
+  if (folder.startsWith("public-site/instagram")) return "instagram";
+  if (folder.startsWith("shoots/")) return "shoots";
+  if (folder === "public-site/band") {
+    if (filename.startsWith("portrait-") || filename.startsWith("member-")) return "members";
+    return "band";
+  }
+  if (folder === "public-site") {
+    if (filename.startsWith("logo")) return "logos";
+    return "band"; // gallery-*, band-hero, hero-band etc.
+  }
+
+  return "other";
 }
 
 function fmtBytes(b: number | null): string {
@@ -192,6 +255,24 @@ export default function TeamVisualAssets() {
       return true;
     });
   }, [assets, search, ventureFilter, rightsFilter]);
+
+  // Group filtered assets by section. Sections render in SECTIONS order; empty
+  // sections are dropped from the page (and from the nav).
+  const bySection = useMemo(() => {
+    const map = new Map<SectionId, VisualAsset[]>();
+    for (const s of SECTIONS) map.set(s.id, []);
+    for (const a of filtered) map.get(deriveSection(a))!.push(a);
+    return map;
+  }, [filtered]);
+
+  // Coarse parity check: assets in public-site/* that match the storage layout
+  // the public /gallery sources from. Tells Josh at a glance whether the library
+  // is a complete superset of what the public site renders.
+  const parity = useMemo(() => {
+    const totalPublic = assets.filter((a) => a.folder.startsWith("public-site")).length;
+    const totalLib = assets.length;
+    return { totalPublic, totalLib };
+  }, [assets]);
 
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -362,11 +443,64 @@ export default function TeamVisualAssets() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {filtered.map((a) => (
-              <AssetTile key={a.id} asset={a} onClick={() => setSelected(a)} />
-            ))}
-          </div>
+          <>
+            {/* Parity callout — surfaces redundancy of public /gallery vs. this library */}
+            <div className="mb-5 flex gap-2 items-start text-xs text-muted-foreground border border-border rounded-md p-3 bg-muted/30">
+              <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-primary" />
+              <div>
+                <span className="text-foreground font-medium">Library mirrors public /gallery.</span>{" "}
+                {parity.totalPublic} of {parity.totalLib} assets are sourced under{" "}
+                <code className="text-[10px] bg-muted px-1 rounded">public-site/</code> — these
+                back the public Gallery page. Logos (6) are code-bundled and not in this library.
+                The public /gallery may be redundant once parity is confirmed visually — flag for
+                Josh, don't delete here.
+              </div>
+            </div>
+
+            {/* Section nav — anchor chips with counts; empty sections hidden */}
+            <div className="mb-6 flex flex-wrap gap-2">
+              {SECTIONS.map((s) => {
+                const count = bySection.get(s.id)?.length ?? 0;
+                if (count === 0) return null;
+                return (
+                  <a
+                    key={s.id}
+                    href={`#section-${s.id}`}
+                    className="text-xs px-3 py-1.5 rounded-full border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                  >
+                    <span className="font-medium">{s.label}</span>{" "}
+                    <span className="text-muted-foreground">({count})</span>
+                  </a>
+                );
+              })}
+            </div>
+
+            {/* Per-section grids */}
+            <div className="space-y-10">
+              {SECTIONS.map((s) => {
+                const items = bySection.get(s.id) ?? [];
+                if (items.length === 0) return null;
+                return (
+                  <section key={s.id} id={`section-${s.id}`} className="scroll-mt-20">
+                    <div className="mb-3 flex items-baseline justify-between border-b border-border pb-2">
+                      <div>
+                        <h2 className="font-display text-xl tracking-wide-custom text-foreground">
+                          {s.label}
+                        </h2>
+                        <p className="text-xs text-muted-foreground mt-0.5">{s.hint}</p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{items.length}</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                      {items.map((a) => (
+                        <AssetTile key={a.id} asset={a} onClick={() => setSelected(a)} />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {selected && (
