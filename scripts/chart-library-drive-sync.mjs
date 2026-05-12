@@ -53,8 +53,14 @@ const LIMIT = ENV.LIMIT ? parseInt(ENV.LIMIT, 10) : null;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY)
   die("Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY");
-if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET)
-  die("Missing GOOGLE_CALENDAR_CLIENT_ID / GOOGLE_CALENDAR_CLIENT_SECRET");
+if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+  console.warn(
+    "⚠ Missing GOOGLE_CALENDAR_CLIENT_ID / GOOGLE_CALENDAR_CLIENT_SECRET. " +
+      "Refresh-on-401 disabled. Run will fail if the OAuth access token " +
+      "expires mid-upload. Token expiry is logged below — make sure there's " +
+      "enough headroom for the full run."
+  );
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -297,6 +303,13 @@ async function loadOAuthRow() {
 }
 
 async function refreshAccessToken(row) {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    throw new Error(
+      "Access token expired mid-run and GOOGLE_CALENDAR_CLIENT_ID/SECRET " +
+        "not provided. Set them and re-run; idempotent skip will resume " +
+        "from where this run died."
+    );
+  }
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
