@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table, Search, Hash, Sparkles, ArrowRight, X, Check } from "lucide-react";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table, Search, Hash, Sparkles, ArrowRight, X, Check, Plus, Trash2, Layers, ArrowDownLeft } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -213,6 +213,27 @@ interface ParsedEventData {
   songSections: { title: string; time: string; songs: any[] }[];
 }
 
+// P7 multi-source fusion: each ingest (URL, DJEP) becomes a Source. The
+// review panel + export operate on a client-side merge of all sources
+// (first-source-wins for scalars/details; dedup-merge for arrays), with
+// per-field overrides letting Josh pick a later source's value when the
+// default ordering loses information.
+type SourceKind = "url" | "djep";
+
+interface Source {
+  id: string;
+  kind: SourceKind;
+  label: string; // "Drive Sheet — Hoffman ROS", "DJEP — Smith Wedding", "CSV — payroll.csv", etc.
+  sheetData: SheetData;
+  parsedData: ParsedEventData | null;
+}
+
+interface MergedEvent extends ParsedEventData {
+  // Maps detail-key (or "eventName") → source.id that supplied the active value.
+  // Used to render provenance pills + the "use Source N value" override link.
+  provenance: Record<string, string>;
+}
+
 interface DjepMatch {
   djep_id: string;
   title: string;
@@ -229,6 +250,146 @@ interface AutocorrectCorrection {
   corrected_label: string;
   corrected_value: string;
   reason: string;
+}
+
+// P7: merge N parsed sources into one event view.
+// Scalars + details: first source that has a non-empty value wins, unless
+//   fieldOverrides[key] points to a specific source.id. Mirrors the
+//   "deterministic-parser wins, enrichment fills nulls" rule from v2's
+//   ingest-event mergeFields() — the existing precedent for fusion.
+// personnel/timeline/songSections: dedup-merge across sources using the
+//   same identity keys v2 uses (name+role, time+desc, section title +
+//   song title+artist).
+function mergeSources(
+  sources: Source[],
+  fieldOverrides: Record<string, string>,
+): MergedEvent {
+  const merged: MergedEvent = {
+    eventName: "",
+    details: {},
+    personnel: [],
+    timeline: [],
+    songSections: [],
+    provenance: {},
+  };
+  if (sources.length === 0) return merged;
+
+  const pickEventName = () => {
+    const overrideId = fieldOverrides["eventName"];
+    if (overrideId) {
+      const s = sources.find((src) => src.id === overrideId);
+      if (s?.parsedData?.eventName) {
+        merged.eventName = s.parsedData.eventName;
+        merged.provenance["eventName"] = s.id;
+        return;
+      }
+    }
+    for (const s of sources) {
+      if (s.parsedData?.eventName) {
+        merged.eventName = s.parsedData.eventName;
+        merged.provenance["eventName"] = s.id;
+        return;
+      }
+    }
+  };
+  pickEventName();
+
+  const allDetailKeys = new Set<string>();
+  for (const s of sources) {
+    if (!s.parsedData) continue;
+    for (const k of Object.keys(s.parsedData.details)) allDetailKeys.add(k);
+  }
+  for (const key of allDetailKeys) {
+    const overrideId = fieldOverrides[key];
+    if (overrideId) {
+      const s = sources.find((src) => src.id === overrideId);
+      const v = s?.parsedData?.details[key];
+      if (v) {
+        merged.details[key] = v;
+        merged.provenance[key] = s.id;
+        continue;
+      }
+    }
+    for (const s of sources) {
+      const v = s.parsedData?.details[key];
+      if (v) {
+        merged.details[key] = v;
+        merged.provenance[key] = s.id;
+        break;
+      }
+    }
+  }
+
+  const personnelKey = (p: { role: string; name: string }) =>
+    `${(p.name || "").toLowerCase().trim()}|${(p.role || "").toLowerCase().trim()}`;
+  const personnelSeen = new Set<string>();
+  for (const s of sources) {
+    for (const p of s.parsedData?.personnel || []) {
+      const k = personnelKey(p);
+      if (!personnelSeen.has(k)) {
+        personnelSeen.add(k);
+        merged.personnel.push(p);
+      }
+    }
+  }
+
+  const timelineKey = (t: { time: string; description: string }) =>
+    `${(t.time || "").trim()}|${(t.description || "").toLowerCase().trim().slice(0, 60)}`;
+  const timelineSeen = new Set<string>();
+  for (const s of sources) {
+    for (const t of s.parsedData?.timeline || []) {
+      const k = timelineKey(t);
+      if (!timelineSeen.has(k)) {
+        timelineSeen.add(k);
+        merged.timeline.push(t);
+      }
+    }
+  }
+
+  // Sections dedup by lower(title); songs within a section dedup by lower(title)+lower(artist).
+  // First source to introduce a section sets its `time`. Songs from later sources append in order.
+  const sectionMap = new Map<
+    string,
+    { title: string; time: string; songs: any[]; songKeys: Set<string> }
+  >();
+  for (const s of sources) {
+    for (const sec of s.parsedData?.songSections || []) {
+      const k = (sec.title || "").toLowerCase().trim();
+      let entry = sectionMap.get(k);
+      if (!entry) {
+        entry = { title: sec.title, time: sec.time, songs: [], songKeys: new Set() };
+        sectionMap.set(k, entry);
+      }
+      for (const song of sec.songs || []) {
+        const songK = `${String(song.title || "").toLowerCase().trim()}|${String(song.artist || "").toLowerCase().trim()}`;
+        if (!entry.songKeys.has(songK)) {
+          entry.songKeys.add(songK);
+          entry.songs.push(song);
+        }
+      }
+    }
+  }
+  merged.songSections = Array.from(sectionMap.values()).map(({ songKeys: _drop, ...rest }) => rest);
+
+  return merged;
+}
+
+// Which other sources also have a non-empty value for this field but lost
+// the first-wins tiebreak? Used to render the "↓ use Source N value" link.
+function competingSourcesForField(
+  sources: Source[],
+  fieldKey: string,
+  winningSourceId: string | undefined,
+): { source: Source; value: string }[] {
+  const out: { source: Source; value: string }[] = [];
+  for (const s of sources) {
+    if (s.id === winningSourceId) continue;
+    const v = fieldKey === "eventName"
+      ? s.parsedData?.eventName
+      : s.parsedData?.details?.[fieldKey];
+    if (v && v.trim()) out.push({ source: s, value: v });
+  }
+  return out;
 }
 
 const imageToBase64 = (src: string): Promise<string> => {
@@ -251,14 +412,21 @@ export default function RunOfShowGenerator() {
   const [inputUrl, setInputUrl] = useState("");
   const [template, setTemplate] = useState<TemplateType>("party-runsheet");
   const [loading, setLoading] = useState(false);
-  const [sheetData, setSheetData] = useState<SheetData | null>(null);
-  const [parsedData, setParsedData] = useState<ParsedEventData | null>(null);
+  // P7: sources is the canonical multi-source state. The review panel + export
+  // merge across all entries here. fieldOverrides lets Josh pick a non-first
+  // source's value for a specific field when first-wins gives the wrong value.
+  const [sources, setSources] = useState<Source[]>([]);
+  const [fieldOverrides, setFieldOverrides] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
-  const [sourceType, setSourceType] = useState<string>("");
   const [logosBase64, setLogosBase64] = useState<{ circle: string; text: string } | null>(null);
   const [organization, setOrganization] = useState<OrgKey>("harborline");
   const [manualOverrides, setManualOverrides] = useState("");
   const manualOverridesRef = useRef<HTMLTextAreaElement>(null);
+
+  const mergedEvent: MergedEvent = useMemo(
+    () => mergeSources(sources, fieldOverrides),
+    [sources, fieldOverrides],
+  );
 
   // Autocorrect state (P6)
   const [autocorrectLoading, setAutocorrectLoading] = useState(false);
@@ -313,9 +481,11 @@ export default function RunOfShowGenerator() {
     return overrides;
   };
 
-  // Get merged details (parsed + overrides)
+  // Get merged details (multi-source merged → details + manual overrides + org defaults).
+  // P7: pulls from mergedEvent.details (first-wins across N sources) rather than a
+  // single parsedData. Manual-overrides textarea + org defaults still layer on top.
   const getMergedDetails = (): Record<string, string> => {
-    const base = normalizeDetails(parsedData?.details || {});
+    const base = normalizeDetails(mergedEvent.details);
     const overrides = parseManualOverrides();
     const merged = { ...base, ...overrides };
 
@@ -453,21 +623,25 @@ export default function RunOfShowGenerator() {
 
   const applyDjepMatch = async (match: DjepMatch) => {
     setLoading(true);
-    setParsedData(null);
-    setSourceType("DJEP");
-    setInputUrl("");
     try {
       const synthesized = djepMatchToSheetData(match);
-      setSheetData(synthesized);
 
       const { data: genData, error: genError } = await supabase.functions.invoke(
         "generate-run-of-show",
         { body: { sheetData: synthesized, template, format: "html", logos: logosBase64, organization } },
       );
-      if (!genError && genData?.parsedData) {
-        setParsedData(genData.parsedData);
-      }
-      toast({ title: "DJEP event loaded", description: synthesized.sheetTitle });
+      if (genError) throw genError;
+      if (genData?.error) throw new Error(genData.error);
+
+      const newSource: Source = {
+        id: `djep-${match.djep_id}-${Date.now()}`,
+        kind: "djep",
+        label: synthesized.sheetTitle,
+        sheetData: synthesized,
+        parsedData: genData?.parsedData || null,
+      };
+      setSources((prev) => [...prev, newSource]);
+      toast({ title: "DJEP event added", description: synthesized.sheetTitle });
     } catch (err: any) {
       toast({
         title: "Failed to apply DJEP match",
@@ -484,35 +658,40 @@ export default function RunOfShowGenerator() {
       toast({ title: "Missing URL", description: "Please paste a URL to import.", variant: "destructive" });
       return;
     }
+    const submittedUrl = inputUrl;
 
     setLoading(true);
-    setParsedData(null);
-    setSourceType(detectUrlType(inputUrl));
     try {
-      const isSheet = inputUrl.includes('docs.google.com/spreadsheets');
-      const sheetIdMatch = inputUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      const isSheet = submittedUrl.includes('docs.google.com/spreadsheets');
+      const sheetIdMatch = submittedUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
 
       const { data, error } = await supabase.functions.invoke("fetch-google-sheet", {
         body: isSheet && sheetIdMatch
-          ? { sheetId: sheetIdMatch[1], url: inputUrl }
-          : { url: inputUrl },
+          ? { sheetId: sheetIdMatch[1], url: submittedUrl }
+          : { url: submittedUrl },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setSheetData(data);
-      setSourceType(data.sourceType || detectUrlType(inputUrl));
-
       const { data: genData, error: genError } = await supabase.functions.invoke("generate-run-of-show", {
         body: { sheetData: data, template, format: "html", logos: logosBase64, organization },
       });
+      if (genError) throw genError;
+      if (genData?.error) throw new Error(genData.error);
 
-      if (!genError && genData?.parsedData) {
-        setParsedData(genData.parsedData);
-      }
+      const detected = data?.sourceType || detectUrlType(submittedUrl);
+      const newSource: Source = {
+        id: `url-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        kind: "url",
+        label: data?.sheetTitle ? `${detected} — ${data.sheetTitle}` : detected,
+        sheetData: data,
+        parsedData: genData?.parsedData || null,
+      };
+      setSources((prev) => [...prev, newSource]);
+      setInputUrl("");
 
-      toast({ title: "Data loaded", description: `Imported from ${detectUrlType(inputUrl)}.` });
+      toast({ title: "Source added", description: `Imported from ${detected}.` });
     } catch (err: any) {
       toast({
         title: "Failed to fetch",
@@ -522,6 +701,64 @@ export default function RunOfShowGenerator() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const removeSource = (id: string) => {
+    setSources((prev) => prev.filter((s) => s.id !== id));
+    // Drop overrides that pointed at the removed source.
+    setFieldOverrides((prev) => {
+      const next: Record<string, string> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        if (v !== id) next[k] = v;
+      }
+      return next;
+    });
+  };
+
+  const setFieldOverride = (fieldKey: string, sourceId: string | null) => {
+    setFieldOverrides((prev) => {
+      const next = { ...prev };
+      if (sourceId === null) delete next[fieldKey];
+      else next[fieldKey] = sourceId;
+      return next;
+    });
+  };
+
+  // P7: pack the request body for generate-run-of-show. With 1 source we keep
+  // the original single-source path (so the edge function still parses + we
+  // get the run_of_show row upsert side-effect that's keyed on the parsed
+  // event). With 2+ sources we send preMergedEvent so the edge function
+  // skips parse and renders the client-merged event directly.
+  const buildExportBody = (opts: {
+    sources: Source[];
+    mergedEvent: MergedEvent;
+    template: TemplateType;
+    logos: { circle: string; text: string } | null;
+    overrides: Record<string, string>;
+    organization: OrgKey;
+    requiredFields: { label: string; key: string }[];
+  }) => {
+    const baseBody = {
+      template: opts.template,
+      format: "html" as const,
+      logos: opts.logos,
+      overrides: opts.overrides,
+      organization: opts.organization,
+      requiredFields: opts.requiredFields,
+    };
+    if (opts.sources.length <= 1) {
+      const sheetData = opts.sources[0]?.sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
+      return { ...baseBody, sheetData };
+    }
+    // Strip provenance — the edge function only knows the EventData shape.
+    const { provenance: _drop, ...eventData } = opts.mergedEvent;
+    return {
+      ...baseBody,
+      // Empty sheetData satisfies any defensive validation; preMergedEvent is
+      // the load-bearing field.
+      sheetData: { headers: [], rows: [], sheetTitle: opts.sources.map((s) => s.label).join(" + ") },
+      preMergedEvent: eventData,
+    };
   };
 
   const buildWrappedHtml = (html: string, title: string, mode: "preview" | "print") => {
@@ -606,25 +843,28 @@ export default function RunOfShowGenerator() {
     setGenerating(true);
     try {
       const overrides = parseManualOverrides();
-      const mergedSheetData = sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
+      // P7: when 2+ sources, send the client-side merged event directly so the
+      // edge function skips parsing and just renders. With 1 source, fall back
+      // to the original single-source path for full backward-compat.
+      const exportBody = buildExportBody({
+        sources,
+        mergedEvent,
+        template,
+        logos: logosBase64,
+        overrides,
+        organization,
+        requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
+      });
 
       if (mode === "docx") {
         const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
-          body: {
-            sheetData: mergedSheetData,
-            template,
-            format: "html",
-            logos: logosBase64,
-            overrides,
-            organization,
-            requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
-          },
+          body: exportBody,
         });
 
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
-        const eventData = data?.parsedData || parsedData;
+        const eventData = data?.parsedData || (sources.length > 0 ? mergedEvent : null);
         if (!eventData) throw new Error("No parsed data available for DOCX export.");
 
         if (overrides && typeof overrides === "object") {
@@ -648,15 +888,7 @@ export default function RunOfShowGenerator() {
       }
 
       const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
-        body: {
-          sheetData: mergedSheetData,
-          template,
-          format: "html",
-          logos: logosBase64,
-          overrides,
-          organization,
-          requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
-        },
+        body: exportBody,
       });
 
       if (error) throw error;
@@ -710,24 +942,24 @@ export default function RunOfShowGenerator() {
     setGenerating(true);
     try {
       const overrides = parseManualOverrides();
-      const mergedSheetData = sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
+      const exportBody = buildExportBody({
+        sources,
+        mergedEvent,
+        template,
+        logos: logosBase64,
+        overrides,
+        organization,
+        requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
+      });
 
       const { data, error } = await supabase.functions.invoke("generate-run-of-show", {
-        body: {
-          sheetData: mergedSheetData,
-          template,
-          format: "html",
-          logos: logosBase64,
-          overrides,
-          organization,
-          requiredFields: TEMPLATE_FIELDS[template].map(f => ({ label: f.label, key: f.key })),
-        },
+        body: exportBody,
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const eventData = data?.parsedData || parsedData;
+      const eventData = data?.parsedData || (sources.length > 0 ? mergedEvent : null);
       if (!eventData) throw new Error("No parsed data available for DOCX export.");
 
       if (overrides && typeof overrides === "object") {
@@ -755,7 +987,7 @@ export default function RunOfShowGenerator() {
     }
   };
 
-  const getExportData = () => parsedData || null;
+  const getExportData = (): ParsedEventData | null => (sources.length > 0 ? mergedEvent : null);
 
   const exportAsPlainText = () => {
     const data = getExportData();
@@ -807,10 +1039,11 @@ export default function RunOfShowGenerator() {
     });
   };
 
-  const totalSongs = parsedData?.songSections.reduce((sum, s) => sum + s.songs.length, 0) || 0;
+  const totalSongs = mergedEvent.songSections.reduce((sum, s) => sum + s.songs.length, 0);
   const fieldStatus = getFieldStatus();
   const missingFields = fieldStatus.filter(f => !f.found);
   const foundFields = fieldStatus.filter(f => f.found);
+  const hasAnySource = sources.length > 0;
 
   const focusManualOverrides = () => {
     window.requestAnimationFrame(() => {
@@ -946,100 +1179,101 @@ export default function RunOfShowGenerator() {
           </CardTitle>
           <CardDescription>
             Paste a URL to import — Google Sheets, Google Docs, CSV files, or any public webpage.
+            {hasAnySource && " Add more sources to merge fields across them — first source wins on conflicts; you can override per field below."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-3">
             <Input
-              placeholder="https://docs.google.com/spreadsheets/d/... or any URL"
+              placeholder={hasAnySource ? "Add another source URL…" : "https://docs.google.com/spreadsheets/d/... or any URL"}
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
               className="flex-1 bg-secondary/50 border-border"
             />
             <Button onClick={fetchData} disabled={loading || !inputUrl}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
-              {loading ? "Fetching..." : "Fetch"}
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : hasAnySource ? (
+                <Plus className="w-4 h-4" />
+              ) : (
+                <ExternalLink className="w-4 h-4" />
+              )}
+              {loading ? "Fetching..." : hasAnySource ? "Add source" : "Fetch"}
             </Button>
           </div>
-          {inputUrl && !loading && !sheetData && (
+          {inputUrl && !loading && !hasAnySource && (
             <p className="text-xs text-muted-foreground mt-2">
               Detected: {detectUrlType(inputUrl)}
             </p>
           )}
 
-          {parsedData && (
-            <div className="mt-4 space-y-3">
-              <div className="p-4 rounded-lg bg-secondary/30 border border-border">
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle2 className="w-5 h-5 text-primary" />
-                  <span className="text-foreground font-medium text-sm">
-                    Sheet loaded: {sheetData?.sheetTitle || "Untitled"}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                  {parsedData.eventName && (
-                    <div className="flex items-start gap-2">
-                      <CalendarDays className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div>
-                        <span className="text-muted-foreground text-xs">Event</span>
-                        <p className="text-foreground">{parsedData.eventName}</p>
-                      </div>
-                    </div>
-                  )}
-                  {parsedData.details['venue'] && (
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div>
-                        <span className="text-muted-foreground text-xs">Venue</span>
-                        <p className="text-foreground">{parsedData.details['venue']}</p>
-                      </div>
-                    </div>
-                  )}
-                  {parsedData.details['event date'] && (
-                    <div className="flex items-start gap-2">
-                      <CalendarDays className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div>
-                        <span className="text-muted-foreground text-xs">Date</span>
-                        <p className="text-foreground">{parsedData.details['event date']}</p>
-                      </div>
-                    </div>
-                  )}
-                  {parsedData.details['client'] && (
-                    <div className="flex items-start gap-2">
-                      <Users className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div>
-                        <span className="text-muted-foreground text-xs">Client</span>
-                        <p className="text-foreground">{parsedData.details['client']}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-4 mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-                  {Object.keys(parsedData.details).length > 0 && (
-                    <span>{Object.keys(parsedData.details).length} detail fields</span>
-                  )}
-                  {parsedData.personnel.length > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      {parsedData.personnel.length} personnel
-                    </span>
-                  )}
-                  {parsedData.timeline.length > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {parsedData.timeline.length} timeline events
-                    </span>
-                  )}
-                  {totalSongs > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Music className="w-3 h-3" />
-                      {totalSongs} songs in {parsedData.songSections.length} set{parsedData.songSections.length !== 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
+          {hasAnySource && (
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Layers className="w-3.5 h-3.5" />
+                <span>
+                  {sources.length} source{sources.length !== 1 ? "s" : ""} — fields merged below (first source wins on conflicts)
+                </span>
               </div>
+              {sources.map((src, idx) => {
+                const detailCount = src.parsedData ? Object.keys(src.parsedData.details).length : 0;
+                const personnelCount = src.parsedData?.personnel.length || 0;
+                const timelineCount = src.parsedData?.timeline.length || 0;
+                const songCount = (src.parsedData?.songSections || []).reduce((sum, s) => sum + s.songs.length, 0);
+                return (
+                  <div
+                    key={src.id}
+                    className="p-3 rounded-lg bg-secondary/30 border border-border flex items-start gap-3"
+                  >
+                    <div className="text-[10px] font-semibold uppercase tracking-wide bg-primary/15 text-primary px-1.5 py-0.5 rounded shrink-0 mt-0.5">
+                      Source {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 text-sm">
+                        {src.kind === "djep" ? (
+                          <Hash className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        ) : (
+                          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        )}
+                        <span className="text-foreground font-medium truncate">{src.label}</span>
+                      </div>
+                      {src.parsedData && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[11px] text-muted-foreground">
+                          {detailCount > 0 && <span>{detailCount} fields</span>}
+                          {personnelCount > 0 && (
+                            <span className="flex items-center gap-0.5">
+                              <Users className="w-3 h-3" /> {personnelCount}
+                            </span>
+                          )}
+                          {timelineCount > 0 && (
+                            <span className="flex items-center gap-0.5">
+                              <Clock className="w-3 h-3" /> {timelineCount}
+                            </span>
+                          )}
+                          {songCount > 0 && (
+                            <span className="flex items-center gap-0.5">
+                              <Music className="w-3 h-3" /> {songCount}
+                            </span>
+                          )}
+                          {src.parsedData.eventName && (
+                            <span className="truncate">"{src.parsedData.eventName}"</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      aria-label={`Remove source ${idx + 1}`}
+                      onClick={() => removeSource(src.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -1226,28 +1460,80 @@ export default function RunOfShowGenerator() {
         <CardContent className="space-y-4">
           {/* Field status report */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {fieldStatus.map((field) => (
-              <div
-                key={field.key}
-                className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md ${
-                  field.found
-                    ? "bg-primary/5 text-foreground"
-                    : "bg-destructive/5 text-muted-foreground"
-                }`}
-              >
-                {field.found ? (
-                  <CircleCheck className="w-3.5 h-3.5 text-primary shrink-0" />
-                ) : (
-                  <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
-                )}
-                <span className="font-medium text-xs">{field.label}</span>
-                {field.found && (
-                  <span className="text-xs text-muted-foreground truncate ml-auto max-w-[140px]">
-                    {field.value}
-                  </span>
-                )}
-              </div>
-            ))}
+            {fieldStatus.map((field) => {
+              const manualOverrideMap = parseManualOverrides();
+              const isManual = !!manualOverrideMap[field.key];
+              const winningSourceId = !isManual ? mergedEvent.provenance[field.key] : undefined;
+              const winningSourceIdx = winningSourceId
+                ? sources.findIndex((s) => s.id === winningSourceId)
+                : -1;
+              const competing = !isManual && hasAnySource
+                ? competingSourcesForField(sources, field.key, winningSourceId)
+                : [];
+              const showProvenance = sources.length >= 2 && (isManual || winningSourceId);
+              const isOverridden = !!fieldOverrides[field.key];
+
+              return (
+                <div
+                  key={field.key}
+                  className={`flex flex-col gap-1 text-sm px-3 py-2 rounded-md ${
+                    field.found
+                      ? "bg-primary/5 text-foreground"
+                      : "bg-destructive/5 text-muted-foreground"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {field.found ? (
+                      <CircleCheck className="w-3.5 h-3.5 text-primary shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
+                    )}
+                    <span className="font-medium text-xs">{field.label}</span>
+                    {field.found && (
+                      <span className="text-xs text-muted-foreground truncate ml-auto max-w-[140px]">
+                        {field.value}
+                      </span>
+                    )}
+                  </div>
+                  {showProvenance && (
+                    <div className="flex flex-wrap items-center gap-1.5 pl-5.5 text-[10px]">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary/60 text-muted-foreground uppercase tracking-wide">
+                        {isManual
+                          ? "manual"
+                          : isOverridden
+                            ? `Source ${winningSourceIdx + 1} (override)`
+                            : `Source ${winningSourceIdx + 1}`}
+                      </span>
+                      {!isManual && isOverridden && (
+                        <button
+                          type="button"
+                          className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                          onClick={() => setFieldOverride(field.key, null)}
+                          aria-label={`Reset ${field.label} to first-source-wins`}
+                        >
+                          reset
+                        </button>
+                      )}
+                      {!isManual && competing.map(({ source: cs, value: cv }) => {
+                        const csIdx = sources.findIndex((s) => s.id === cs.id);
+                        return (
+                          <button
+                            key={cs.id}
+                            type="button"
+                            className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                            onClick={() => setFieldOverride(field.key, cs.id)}
+                            title={`Use Source ${csIdx + 1}: "${cv}"`}
+                          >
+                            <ArrowDownLeft className="w-2.5 h-2.5" />
+                            Source {csIdx + 1}: <span className="font-mono truncate max-w-[100px]">{cv}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Summary */}
@@ -1381,7 +1667,7 @@ export default function RunOfShowGenerator() {
           <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
             <span className="text-primary">5.</span> Export Document
           </CardTitle>
-          {missingFields.length > 0 && !sheetData && (
+          {missingFields.length > 0 && !hasAnySource && (
             <CardDescription className="flex items-center gap-1 text-xs">
               <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground" />
               No data imported — document will have blank fields. You can still export.
