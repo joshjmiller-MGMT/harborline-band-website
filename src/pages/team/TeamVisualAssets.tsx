@@ -61,9 +61,39 @@ interface VisualAsset {
   ai_suggested_tags: string[];
   ai_suggested_alt: string | null;
   ai_suggested_caption: string | null;
+  ai_suggested_kind: string | null;
+  ai_suggested_people_roles: string[];
+  ai_suggested_people_count: string | null;
+  ai_suggested_venue: string | null;
+  ai_suggested_instruments: string[];
+  ai_suggested_location: string | null;
   ai_processed_at: string | null;
   ai_error: string | null;
   uploaded_at: string;
+}
+
+// Flatten the AI-suggested structured taxonomy into prefix-conventioned tags so the
+// existing `tags` array (and the search/filter UI built on it) keeps working unchanged.
+// Mirrors the backend's buildPrefixedTags in tag-visual-asset/index.ts — kept in sync
+// so both auto-apply and manual Apply produce the same tag layout.
+function buildAiPrefixedTags(asset: VisualAsset): string[] {
+  const out: string[] = [];
+  if (asset.ai_suggested_kind) out.push(`kind:${asset.ai_suggested_kind}`);
+  if (asset.ai_suggested_people_count && asset.ai_suggested_people_count !== "none") {
+    out.push(`count:${asset.ai_suggested_people_count}`);
+  }
+  for (const r of asset.ai_suggested_people_roles ?? []) out.push(`role:${r}`);
+  if (asset.ai_suggested_venue) {
+    const slug = asset.ai_suggested_venue
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    if (slug) out.push(`venue:${slug}`);
+  }
+  for (const i of asset.ai_suggested_instruments ?? []) out.push(`instrument:${i}`);
+  if (asset.ai_suggested_location) out.push(`location:${asset.ai_suggested_location}`);
+  for (const tag of asset.ai_suggested_tags ?? []) out.push(tag);
+  return Array.from(new Set(out));
 }
 
 function publicUrl(storagePath: string): string {
@@ -149,6 +179,11 @@ export default function TeamVisualAssets() {
           a.caption ?? "",
           ...a.tags,
           ...a.ai_suggested_tags,
+          a.ai_suggested_kind ?? "",
+          ...(a.ai_suggested_people_roles ?? []),
+          a.ai_suggested_venue ?? "",
+          ...(a.ai_suggested_instruments ?? []),
+          a.ai_suggested_location ?? "",
         ]
           .join(" ")
           .toLowerCase();
@@ -379,16 +414,24 @@ function AssetTile({ asset, onClick }: { asset: VisualAsset; onClick: () => void
           {asset.filename}
         </div>
         <div className="mt-1 flex flex-wrap gap-1">
+          {asset.ai_suggested_kind && (
+            <Badge variant="default" className="text-[9px] px-1.5 py-0">
+              {asset.ai_suggested_kind}
+            </Badge>
+          )}
           {asset.ventures.slice(0, 3).map((v) => (
             <Badge key={v} variant="secondary" className="text-[9px] px-1.5 py-0">
               {v}
             </Badge>
           ))}
-          {asset.tags.slice(0, 2).map((t) => (
-            <Badge key={t} variant="outline" className="text-[9px] px-1.5 py-0">
-              {t}
-            </Badge>
-          ))}
+          {asset.tags
+            .filter((t) => !t.startsWith("kind:") && !t.startsWith("role:") && !t.startsWith("count:") && !t.startsWith("venue:") && !t.startsWith("instrument:") && !t.startsWith("location:"))
+            .slice(0, 2)
+            .map((t) => (
+              <Badge key={t} variant="outline" className="text-[9px] px-1.5 py-0">
+                {t}
+              </Badge>
+            ))}
         </div>
       </div>
     </button>
@@ -474,8 +517,9 @@ function AssetDetailDialog({
   }
 
   async function applyAiSuggestions() {
-    if (asset.ai_suggested_tags.length) {
-      const merged = [...new Set([...tags, ...asset.ai_suggested_tags])];
+    const prefixed = buildAiPrefixedTags(asset);
+    if (prefixed.length) {
+      const merged = [...new Set([...tags, ...prefixed])];
       setTags(merged);
     }
     if (asset.ai_suggested_alt && !altText) setAltText(asset.ai_suggested_alt);
@@ -495,7 +539,14 @@ function AssetDetailDialog({
   }
 
   const aiHasSuggestions =
-    asset.ai_suggested_tags.length > 0 || asset.ai_suggested_alt || asset.ai_suggested_caption;
+    asset.ai_suggested_tags.length > 0 ||
+    asset.ai_suggested_alt ||
+    asset.ai_suggested_caption ||
+    asset.ai_suggested_kind ||
+    (asset.ai_suggested_people_roles?.length ?? 0) > 0 ||
+    asset.ai_suggested_venue ||
+    (asset.ai_suggested_instruments?.length ?? 0) > 0 ||
+    asset.ai_suggested_location;
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -548,6 +599,52 @@ function AssetDetailDialog({
                     <Check className="w-3.5 h-3.5 mr-1" /> Apply
                   </Button>
                 </div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 mb-2 text-xs">
+                  {asset.ai_suggested_kind && (
+                    <div>
+                      <span className="text-muted-foreground">Kind:</span>{" "}
+                      <span className="font-medium">{asset.ai_suggested_kind}</span>
+                    </div>
+                  )}
+                  {asset.ai_suggested_people_count && asset.ai_suggested_people_count !== "none" && (
+                    <div>
+                      <span className="text-muted-foreground">People:</span>{" "}
+                      <span className="font-medium">{asset.ai_suggested_people_count}</span>
+                    </div>
+                  )}
+                  {asset.ai_suggested_venue && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Venue:</span>{" "}
+                      <span className="font-medium">{asset.ai_suggested_venue}</span>
+                    </div>
+                  )}
+                  {asset.ai_suggested_location && (
+                    <div>
+                      <span className="text-muted-foreground">Location:</span>{" "}
+                      <span className="font-medium">{asset.ai_suggested_location}</span>
+                    </div>
+                  )}
+                </div>
+                {(asset.ai_suggested_people_roles?.length ?? 0) > 0 && (
+                  <div className="mb-1.5 flex flex-wrap items-center gap-1 text-xs">
+                    <span className="text-muted-foreground">Roles:</span>
+                    {asset.ai_suggested_people_roles.map((r) => (
+                      <Badge key={r} variant="secondary" className="text-[10px]">
+                        {r}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {(asset.ai_suggested_instruments?.length ?? 0) > 0 && (
+                  <div className="mb-1.5 flex flex-wrap items-center gap-1 text-xs">
+                    <span className="text-muted-foreground">Instruments:</span>
+                    {asset.ai_suggested_instruments.map((i) => (
+                      <Badge key={i} variant="secondary" className="text-[10px]">
+                        {i}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
                 {asset.ai_suggested_alt && (
                   <div className="mb-1.5">
                     <span className="text-muted-foreground">Alt:</span> {asset.ai_suggested_alt}

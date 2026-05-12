@@ -1091,7 +1091,13 @@ export type Database = {
           ai_processed_at: string | null
           ai_suggested_alt: string | null
           ai_suggested_caption: string | null
+          ai_suggested_instruments: string[]
+          ai_suggested_kind: string | null
+          ai_suggested_location: string | null
+          ai_suggested_people_count: string | null
+          ai_suggested_people_roles: string[]
           ai_suggested_tags: string[]
+          ai_suggested_venue: string | null
           alt_text: string | null
           caption: string | null
           created_at: string
@@ -1117,7 +1123,13 @@ export type Database = {
           ai_processed_at?: string | null
           ai_suggested_alt?: string | null
           ai_suggested_caption?: string | null
+          ai_suggested_instruments?: string[]
+          ai_suggested_kind?: string | null
+          ai_suggested_location?: string | null
+          ai_suggested_people_count?: string | null
+          ai_suggested_people_roles?: string[]
           ai_suggested_tags?: string[]
+          ai_suggested_venue?: string | null
           alt_text?: string | null
           caption?: string | null
           created_at?: string
@@ -1143,7 +1155,13 @@ export type Database = {
           ai_processed_at?: string | null
           ai_suggested_alt?: string | null
           ai_suggested_caption?: string | null
+          ai_suggested_instruments?: string[]
+          ai_suggested_kind?: string | null
+          ai_suggested_location?: string | null
+          ai_suggested_people_count?: string | null
+          ai_suggested_people_roles?: string[]
           ai_suggested_tags?: string[]
+          ai_suggested_venue?: string | null
           alt_text?: string | null
           caption?: string | null
           created_at?: string
