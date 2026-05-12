@@ -30,10 +30,12 @@ export type LogisticsField = {
   load_in?: string;
   soundcheck?: string;
   setup_time?: string;
+  start_time?: string;
+  end_time?: string;
   parking?: string;
   green_room?: string;
   entrance?: string;
-  meals?: string;
+  musician_meals?: string;
   audio_reinforcement?: string;
 };
 
@@ -85,6 +87,7 @@ export type PreferencesField = {
   do_not_play?: string[];
   line_dances?: Record<string, "yes" | "no" | "maybe">;
   style_notes?: string;
+  posting_notes?: string;
 };
 
 // What every parser returns. All fields optional — only the parser-of-the-shape
@@ -97,6 +100,7 @@ export type CanonicalEventFields = {
   organization?: string;
   event_type?: string;
   venue_name?: string;
+  ensemble?: string;
 
   client?: ClientField;
   venue?: VenueField;

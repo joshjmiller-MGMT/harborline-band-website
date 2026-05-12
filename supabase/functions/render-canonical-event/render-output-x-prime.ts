@@ -90,6 +90,13 @@ function formatTimeRangeFromTimeline(timeline: TimelineEntry[]): string {
   return first || last || "";
 }
 
+function formatTimeRangeFromLogistics(start?: string, end?: string): string {
+  const s = (start || "").trim();
+  const e = (end || "").trim();
+  if (s && e) return `${s} – ${e}`;
+  return s || e || "";
+}
+
 function formatShortDateSuffix(iso: string): string {
   // ISO YYYY-MM-DD → "3/23" or "3/23/26" for title-suffix use
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -100,7 +107,12 @@ function formatShortDateSuffix(iso: string): string {
 function renderHeaderBlock(event: CanonicalEvent): string {
   const titleDateSuffix = formatShortDateSuffix(event.event_date);
   const title = `${escapeHtml(event.name || "Event")}${titleDateSuffix ? ` - ${titleDateSuffix}` : ""}`;
-  const timeRange = formatTimeRangeFromTimeline(event.timeline || []);
+  // Prefer explicit logistics.start_time/end_time over timeline-first/last; the
+  // timeline can include musician-only slots (load-in, soundcheck) that we
+  // don't want surfaced as the event time-range in the header.
+  const timeRange =
+    formatTimeRangeFromLogistics(event.logistics?.start_time, event.logistics?.end_time) ||
+    formatTimeRangeFromTimeline(event.timeline || []);
   const longDate = formatLongDate(event.event_date);
   const timeHtml = timeRange
     ? `<div class="xp-subhead-time">${escapeHtml(timeRange)}, ${escapeHtml(longDate)}</div>`
@@ -135,7 +147,7 @@ function renderEventDetailsBlock(event: CanonicalEvent): string {
       : titleCase(event.venue.type)
     : "";
   const guestCount = event.guests?.count;
-  const refreshments = event.logistics?.meals;
+  const refreshments = event.logistics?.musician_meals;
 
   const blocks: string[] = [];
   if (eventType) {
@@ -143,6 +155,9 @@ function renderEventDetailsBlock(event: CanonicalEvent): string {
   }
   if (venueType) {
     blocks.push(`<div class="xp-h1">Venue Type</div><div class="xp-bullet">${escapeHtml(venueType)}</div>`);
+  }
+  if (event.ensemble) {
+    blocks.push(`<div class="xp-h1">Ensemble</div><div class="xp-bullet">${escapeHtml(event.ensemble)}</div>`);
   }
   if (guestCount) {
     blocks.push(`<div class="xp-h1">Guest Count</div><div class="xp-bullet">${escapeHtml(String(guestCount))}</div>`);
@@ -152,6 +167,9 @@ function renderEventDetailsBlock(event: CanonicalEvent): string {
   }
   if (event.attire) {
     blocks.push(`<div class="xp-h1">Attire</div><div class="xp-bullet">${escapeHtml(event.attire)}</div>`);
+  }
+  if (event.preferences?.posting_notes) {
+    blocks.push(`<div class="xp-h1">Posting</div><div class="xp-bullet">${escapeHtml(event.preferences.posting_notes)}</div>`);
   }
   if (blocks.length === 0) return "";
   return `<div class="xp-section-label">Event Details</div>${blocks.join("")}`;
@@ -331,19 +349,22 @@ function renderLoadInProse(event: CanonicalEvent): string {
 }
 
 function renderArrivalProse(event: CanonicalEvent): string {
-  // Standard musician-arrival prose. Soundcheck if present, otherwise generic
-  // "20 min before the start of the performance."
+  // Standard musician-arrival prose. Soundcheck if present, otherwise setup,
+  // otherwise explicit start_time, otherwise timeline-first.
   const soundcheck = event.logistics?.soundcheck;
   const setupTime = event.logistics?.setup_time;
+  const startTime = event.logistics?.start_time;
 
   const firstSlot = (event.timeline || [])[0]?.time;
   const arrivalRef = soundcheck
     ? `<strong>soundcheck at ${escapeHtml(soundcheck)}</strong>`
     : setupTime
       ? `<strong>setup at ${escapeHtml(setupTime)}</strong>`
-      : firstSlot
-        ? `<strong>20 minutes before the ${escapeHtml(firstSlot)} start</strong>`
-        : "<strong>ready to play 20 minutes before the performance</strong>";
+      : startTime
+        ? `<strong>20 minutes before the ${escapeHtml(startTime)} start</strong>`
+        : firstSlot
+          ? `<strong>20 minutes before the ${escapeHtml(firstSlot)} start</strong>`
+          : "<strong>ready to play 20 minutes before the performance</strong>";
 
   return `<div class="xp-h2">Arrival Time</div>
     <div class="xp-prose">Musicians — please arrive with enough time to be ready for ${arrivalRef}. Build in buffer for traffic and load-in.</div>

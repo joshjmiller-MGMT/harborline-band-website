@@ -251,6 +251,7 @@ export type Database = {
           contact: Json
           created_at: string
           end_date: string | null
+          ensemble: string | null
           event_date: string
           event_type: string | null
           extracted_at: string
@@ -279,6 +280,7 @@ export type Database = {
           contact?: Json
           created_at?: string
           end_date?: string | null
+          ensemble?: string | null
           event_date: string
           event_type?: string | null
           extracted_at?: string
@@ -307,6 +309,7 @@ export type Database = {
           contact?: Json
           created_at?: string
           end_date?: string | null
+          ensemble?: string | null
           event_date?: string
           event_type?: string | null
           extracted_at?: string
@@ -849,6 +852,7 @@ export type Database = {
       }
       run_of_show: {
         Row: {
+          canonical_event_id: string | null
           created_at: string
           details: Json
           event_date: string
@@ -859,6 +863,7 @@ export type Database = {
           venue: string | null
         }
         Insert: {
+          canonical_event_id?: string | null
           created_at?: string
           details?: Json
           event_date: string
@@ -869,6 +874,7 @@ export type Database = {
           venue?: string | null
         }
         Update: {
+          canonical_event_id?: string | null
           created_at?: string
           details?: Json
           event_date?: string
@@ -878,7 +884,15 @@ export type Database = {
           updated_at?: string
           venue?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "run_of_show_canonical_event_id_fkey"
+            columns: ["canonical_event_id"]
+            isOneToOne: false
+            referencedRelation: "canonical_events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       smart_task_enrichments: {
         Row: {

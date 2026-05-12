@@ -65,20 +65,86 @@ type CanonicalEventRow = {
   organization: string | null;
   event_type: string | null;
   attire: string | null;
+  ensemble: string | null;
   venue: { name?: string; address?: string; type?: "indoor" | "outdoor" | "both" } | null;
   client: { primary?: string; secondary?: string; titles?: string[] } | null;
   contact: { phone?: string; email?: string } | null;
   guests: { count?: number; arrival_time?: string; party_arrival_time?: string } | null;
   logistics: {
-    load_in?: string; soundcheck?: string; setup_time?: string; parking?: string;
-    green_room?: string; entrance?: string; meals?: string; audio_reinforcement?: string;
+    load_in?: string; soundcheck?: string; setup_time?: string;
+    start_time?: string; end_time?: string;
+    parking?: string; green_room?: string; entrance?: string;
+    musician_meals?: string; audio_reinforcement?: string;
   } | null;
   personnel: PersonnelEntry[] | null;
   timeline: TimelineEntry[] | null;
   song_sections: SongSection[] | null;
   vendors: VendorEntry[] | null;
-  preferences: { line_dances?: Record<string, "yes" | "no" | "maybe">; must_play?: string[]; do_not_play?: string[]; style_notes?: string } | null;
+  preferences: {
+    line_dances?: Record<string, "yes" | "no" | "maybe">;
+    must_play?: string[]; do_not_play?: string[];
+    style_notes?: string; posting_notes?: string;
+  } | null;
 };
+
+// v1 surfaces these leadership roles as scalar inputs; v2 stores them inside
+// personnel[]. The inline editor extracts them for editing and writes back on
+// save. Match list mirrors v1's DETAIL_KEY_ALIASES for the same field names.
+type LeadershipRoles = {
+  coordinator: string;
+  project_lead: string;
+  musician_pos: string;
+  salesperson: string;
+  officiant: string;
+  other_staff: string; // comma-separated for multiple
+};
+
+const LEADERSHIP_MATCHERS: Array<[keyof Omit<LeadershipRoles, "other_staff">, RegExp, string]> = [
+  ["coordinator",  /coordinator|day-of|day of|wedding planner|event planner/i,                          "Coordinator"],
+  ["project_lead", /project lead|band lead|music lead|bandleader|band leader/i,                         "Project Lead"],
+  ["musician_pos", /musician pos|musician poc|musician point of contact|on-site poc|on site poc/i,      "Musician POS"],
+  ["salesperson",  /salesperson|sales rep|sales person|account manager|booker/i,                        "Musician Salesperson"],
+  ["officiant",    /officiant/i,                                                                        "Officiant"],
+];
+
+const OTHER_STAFF_PATTERN = /other staff/i;
+
+function extractLeadership(personnel: PersonnelEntry[]): LeadershipRoles {
+  const out: LeadershipRoles = {
+    coordinator: "", project_lead: "", musician_pos: "",
+    salesperson: "", officiant: "", other_staff: "",
+  };
+  for (const [key, regex] of LEADERSHIP_MATCHERS) {
+    const found = personnel.find((p) => regex.test(p.role || ""));
+    if (found) out[key] = found.name;
+  }
+  out.other_staff = personnel
+    .filter((p) => OTHER_STAFF_PATTERN.test(p.role || ""))
+    .map((p) => p.name)
+    .filter(Boolean)
+    .join(", ");
+  return out;
+}
+
+function applyLeadership(personnel: PersonnelEntry[], leadership: LeadershipRoles): PersonnelEntry[] {
+  let next = [...personnel];
+  for (const [key, regex, canonicalRole] of LEADERSHIP_MATCHERS) {
+    const value = leadership[key].trim();
+    if (!value) continue; // blank input leaves personnel[] untouched (don't auto-delete)
+    const idx = next.findIndex((p) => regex.test(p.role || ""));
+    if (idx >= 0) {
+      if (next[idx].name !== value) next[idx] = { ...next[idx], name: value };
+    } else {
+      next.push({ role: canonicalRole, name: value });
+    }
+  }
+  // Other staff is multi-valued — replace all existing "other staff" entries
+  // with the parsed list (comma- or newline-separated).
+  next = next.filter((p) => !OTHER_STAFF_PATTERN.test(p.role || ""));
+  const otherNames = leadership.other_staff.split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
+  for (const name of otherNames) next.push({ role: "Other Staff", name });
+  return next;
+}
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -261,7 +327,7 @@ export default function RunOfShowGeneratorV2() {
   const loadCanonicalRow = async (id: string) => {
     const { data, error } = await supabase
       .from("canonical_events")
-      .select("id, event_date, name, organization, event_type, attire, venue, client, contact, guests, logistics, personnel, timeline, song_sections, vendors, preferences")
+      .select("id, event_date, name, organization, event_type, attire, ensemble, venue, client, contact, guests, logistics, personnel, timeline, song_sections, vendors, preferences")
       .eq("id", id)
       .single();
     if (error) {
@@ -869,29 +935,38 @@ function RequiredFieldsPanel({ row, autoSelected }: { row: CanonicalEventRow; au
 
 function InlineEditor({ row, onSaved }: { row: CanonicalEventRow; onSaved: (row: CanonicalEventRow) => void }) {
   const [draft, setDraft] = useState<CanonicalEventRow>(row);
+  const [leadership, setLeadership] = useState<LeadershipRoles>(() => extractLeadership(row.personnel || []));
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { setDraft(row); }, [row.id]);
+  useEffect(() => {
+    setDraft(row);
+    setLeadership(extractLeadership(row.personnel || []));
+  }, [row.id]);
 
   const set = (patch: Partial<CanonicalEventRow>) => setDraft((d) => ({ ...d, ...patch }));
   const setNested = <K extends keyof CanonicalEventRow>(key: K, patch: Partial<NonNullable<CanonicalEventRow[K]>>) => {
     setDraft((d) => ({ ...d, [key]: { ...(d[key] || {} as object), ...patch } as CanonicalEventRow[K] }));
   };
+  const setLead = (patch: Partial<LeadershipRoles>) => setLeadership((l) => ({ ...l, ...patch }));
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      const nextPersonnel = applyLeadership(row.personnel || [], leadership);
       const updates: Partial<CanonicalEventRow> & { normalized_name?: string } = {
         name: draft.name,
         event_date: draft.event_date,
         organization: draft.organization,
         event_type: draft.event_type,
         attire: draft.attire,
+        ensemble: draft.ensemble,
         venue: draft.venue || {},
         client: draft.client || {},
         contact: draft.contact || {},
         guests: draft.guests || {},
         logistics: draft.logistics || {},
+        personnel: nextPersonnel,
+        preferences: draft.preferences || {},
       };
       if (draft.name) updates.normalized_name = draft.name.trim().toLowerCase();
 
@@ -899,7 +974,7 @@ function InlineEditor({ row, onSaved }: { row: CanonicalEventRow; onSaved: (row:
         .from("canonical_events")
         .update(updates)
         .eq("id", row.id)
-        .select("id, event_date, name, organization, event_type, attire, venue, client, contact, guests, logistics, personnel, timeline, song_sections, vendors, preferences")
+        .select("id, event_date, name, organization, event_type, attire, ensemble, venue, client, contact, guests, logistics, personnel, timeline, song_sections, vendors, preferences")
         .single();
       if (error) throw error;
       onSaved(data as unknown as CanonicalEventRow);
@@ -916,13 +991,14 @@ function InlineEditor({ row, onSaved }: { row: CanonicalEventRow; onSaved: (row:
   const guests = draft.guests || {};
   const logistics = draft.logistics || {};
   const contact = draft.contact || {};
+  const preferences = draft.preferences || {};
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg">Edit fields</CardTitle>
         <CardDescription>
-          Scalar + nested fields are editable here. Personnel, timeline, songs, vendors come from the ingest pipeline — re-ingest a corrected paste to change them.
+          1:1 with v1's input fields. Timeline, songs, vendors come from the ingest pipeline — re-ingest a corrected paste to change them. Leadership-role inputs (Coordinator, Project Lead, etc.) write to personnel[].
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -947,6 +1023,10 @@ function InlineEditor({ row, onSaved }: { row: CanonicalEventRow; onSaved: (row:
           <div>
             <Label>Event type</Label>
             <Input placeholder="wedding / corporate / birthday / …" value={draft.event_type || ""} onChange={(e) => set({ event_type: e.target.value })} />
+          </div>
+          <div className="md:col-span-2">
+            <Label>Ensemble</Label>
+            <Input placeholder="e.g. 6-piece, Trio: piano / bass / drums" value={draft.ensemble || ""} onChange={(e) => set({ ensemble: e.target.value })} />
           </div>
 
           <div className="md:col-span-2 mt-2">
@@ -1015,12 +1095,29 @@ function InlineEditor({ row, onSaved }: { row: CanonicalEventRow; onSaved: (row:
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div><Label>Setup time</Label><Input value={logistics.setup_time || ""} onChange={(e) => setNested("logistics", { setup_time: e.target.value })} /></div>
               <div><Label>Load-in</Label><Input value={logistics.load_in || ""} onChange={(e) => setNested("logistics", { load_in: e.target.value })} /></div>
+              <div><Label>Start time</Label><Input placeholder="e.g. 6:00 PM" value={logistics.start_time || ""} onChange={(e) => setNested("logistics", { start_time: e.target.value })} /></div>
+              <div><Label>End time</Label><Input placeholder="e.g. 11:00 PM" value={logistics.end_time || ""} onChange={(e) => setNested("logistics", { end_time: e.target.value })} /></div>
               <div><Label>Soundcheck</Label><Input value={logistics.soundcheck || ""} onChange={(e) => setNested("logistics", { soundcheck: e.target.value })} /></div>
               <div><Label>Entrance</Label><Input value={logistics.entrance || ""} onChange={(e) => setNested("logistics", { entrance: e.target.value })} /></div>
               <div><Label>Parking</Label><Input value={logistics.parking || ""} onChange={(e) => setNested("logistics", { parking: e.target.value })} /></div>
               <div><Label>Green room</Label><Input value={logistics.green_room || ""} onChange={(e) => setNested("logistics", { green_room: e.target.value })} /></div>
-              <div><Label>Meals / refreshments</Label><Input value={logistics.meals || ""} onChange={(e) => setNested("logistics", { meals: e.target.value })} /></div>
+              <div><Label>Musician food &amp; bev</Label><Input value={logistics.musician_meals || ""} onChange={(e) => setNested("logistics", { musician_meals: e.target.value })} /></div>
               <div><Label>Audio reinforcement</Label><Input value={logistics.audio_reinforcement || ""} onChange={(e) => setNested("logistics", { audio_reinforcement: e.target.value })} /></div>
+            </div>
+          </div>
+
+          <div className="md:col-span-2 mt-2">
+            <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Leadership &amp; staff</h3>
+            <p className="text-xs text-muted-foreground mb-2">
+              These write to personnel[]. Match is by role name — first matching entry gets its name updated, otherwise a new entry is appended. Blank inputs leave personnel[] untouched.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><Label>Coordinator</Label><Input value={leadership.coordinator} onChange={(e) => setLead({ coordinator: e.target.value })} /></div>
+              <div><Label>Project Lead</Label><Input value={leadership.project_lead} onChange={(e) => setLead({ project_lead: e.target.value })} /></div>
+              <div><Label>Musician POS</Label><Input value={leadership.musician_pos} onChange={(e) => setLead({ musician_pos: e.target.value })} /></div>
+              <div><Label>Musician Salesperson</Label><Input value={leadership.salesperson} onChange={(e) => setLead({ salesperson: e.target.value })} /></div>
+              <div><Label>Officiant</Label><Input value={leadership.officiant} onChange={(e) => setLead({ officiant: e.target.value })} /></div>
+              <div><Label>Other staff members</Label><Input placeholder="comma-separated" value={leadership.other_staff} onChange={(e) => setLead({ other_staff: e.target.value })} /></div>
             </div>
           </div>
 
@@ -1031,10 +1128,23 @@ function InlineEditor({ row, onSaved }: { row: CanonicalEventRow; onSaved: (row:
               <div><Label>Email</Label><Input value={contact.email || ""} onChange={(e) => setNested("contact", { email: e.target.value })} /></div>
             </div>
           </div>
+
+          <div className="md:col-span-2 mt-2">
+            <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Preferences</h3>
+            <div>
+              <Label>Posting notes</Label>
+              <Textarea
+                placeholder="e.g. couple OK with social posts. No photos of guests during ceremony."
+                value={preferences.posting_notes || ""}
+                onChange={(e) => setNested("preferences", { posting_notes: e.target.value })}
+                className="min-h-[72px]"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="mt-4 flex items-center justify-end gap-2">
-          <Button variant="ghost" onClick={() => setDraft(row)} disabled={saving}>Reset</Button>
+          <Button variant="ghost" onClick={() => { setDraft(row); setLeadership(extractLeadership(row.personnel || [])); }} disabled={saving}>Reset</Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             Save edits

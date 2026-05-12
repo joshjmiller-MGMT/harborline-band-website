@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
     const { data: row, error: selErr } = await supabase
       .from("canonical_events")
       .select(
-        "id, event_date, end_date, name, organization, event_type, venue_name, " +
+        "id, event_date, end_date, name, organization, event_type, venue_name, ensemble, " +
         "client, venue, contact, guests, attire, logistics, personnel, vendors, " +
         "timeline, song_sections, preferences, source_files, extractor_version, " +
         "last_rendered_outputs",

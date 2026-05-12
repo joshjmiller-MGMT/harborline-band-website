@@ -105,15 +105,17 @@ function describeEnsemble(personnel: PersonnelEntry[]): string {
   return `${sizeWord}: ${unique.join(" / ")}`;
 }
 
-function renderEnsembleSection(personnel: PersonnelEntry[], organization?: string): string {
-  const ensemble = describeEnsemble(personnel);
+function renderEnsembleSection(event: CanonicalEvent): string {
+  // Prefer the explicit ensemble override on the canonical row; fall back to
+  // the personnel-count inference for events that haven't set it.
+  const ensemble = (event.ensemble || "").trim() || describeEnsemble(event.personnel || []);
   if (!ensemble) return "";
   return `
     <div class="cc-section">
       <div class="cc-section-label">Your Music</div>
       <div class="cc-section-body">
         <div class="cc-row"><span class="cc-row-label">Ensemble:</span> ${escapeHtml(ensemble)}</div>
-        <div class="cc-row"><span class="cc-row-label">Provided by:</span> ${escapeHtml(brandLabel(organization))}</div>
+        <div class="cc-row"><span class="cc-row-label">Provided by:</span> ${escapeHtml(brandLabel(event.organization))}</div>
       </div>
     </div>
   `;
@@ -241,7 +243,7 @@ export function renderOutputCClient(event: CanonicalEvent): string {
     ${venueAddr ? `<div class="cc-venue cc-venue-addr">${escapeHtml(venueAddr)}</div>` : ""}
 
     ${renderEventDetailsSection(event)}
-    ${renderEnsembleSection(event.personnel || [], event.organization)}
+    ${renderEnsembleSection(event)}
     ${renderPointsOfContactSection(event.personnel || [])}
     ${renderTimelineSection(event.timeline || [])}
     ${renderSongSelectionsSection(event.song_sections || [])}
