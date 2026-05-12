@@ -334,6 +334,96 @@ export type Database = {
         }
         Relationships: []
       }
+      chart_index: {
+        Row: {
+          composer: string | null
+          created_at: string
+          difficulty: string | null
+          drive_account_email: string | null
+          drive_id: string | null
+          drive_uploaded_at: string | null
+          drive_web_view_link: string | null
+          duration: string | null
+          file_size: number | null
+          filename: string
+          folder_path: string
+          genre: string | null
+          id: string
+          ireal_pro: string[]
+          key_signature: string | null
+          keywords: string | null
+          last_synced_at: string
+          metadata_csv_row: Json | null
+          rating: string | null
+          reference: string | null
+          search_tsv: unknown
+          setlists: string[]
+          sha256: string | null
+          tags: string[]
+          time_signature: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          composer?: string | null
+          created_at?: string
+          difficulty?: string | null
+          drive_account_email?: string | null
+          drive_id?: string | null
+          drive_uploaded_at?: string | null
+          drive_web_view_link?: string | null
+          duration?: string | null
+          file_size?: number | null
+          filename: string
+          folder_path: string
+          genre?: string | null
+          id?: string
+          ireal_pro?: string[]
+          key_signature?: string | null
+          keywords?: string | null
+          last_synced_at?: string
+          metadata_csv_row?: Json | null
+          rating?: string | null
+          reference?: string | null
+          search_tsv?: unknown
+          setlists?: string[]
+          sha256?: string | null
+          tags?: string[]
+          time_signature?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          composer?: string | null
+          created_at?: string
+          difficulty?: string | null
+          drive_account_email?: string | null
+          drive_id?: string | null
+          drive_uploaded_at?: string | null
+          drive_web_view_link?: string | null
+          duration?: string | null
+          file_size?: number | null
+          filename?: string
+          folder_path?: string
+          genre?: string | null
+          id?: string
+          ireal_pro?: string[]
+          key_signature?: string | null
+          keywords?: string | null
+          last_synced_at?: string
+          metadata_csv_row?: Json | null
+          rating?: string | null
+          reference?: string | null
+          search_tsv?: unknown
+          setlists?: string[]
+          sha256?: string | null
+          tags?: string[]
+          time_signature?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       claude_log: {
         Row: {
           context: string
@@ -1205,7 +1295,7 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           source_session?: string | null
-          title: string
+          title?: string
         }
         Update: {
           detail?: string | null
@@ -1225,6 +1315,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      chart_index_build_tsv: {
+        Args: {
+          p_composer: string
+          p_filename: string
+          p_genre: string
+          p_ireal_pro: string[]
+          p_keywords: string
+          p_reference: string
+          p_setlists: string[]
+          p_tags: string[]
+          p_title: string
+        }
+        Returns: unknown
+      }
       cleanup_old_posting_times_sources: { Args: never; Returns: undefined }
       trigger_availability_prefetch: { Args: never; Returns: undefined }
       trigger_posting_times_refresh: { Args: never; Returns: number }
