@@ -112,7 +112,10 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const name = typeof body?.name === "string" ? body.name.trim() : "";
     const date = typeof body?.date === "string" ? body.date.trim() : "";
-    if (!name) return jsonResponse({ error: "name required" }, 400);
+    const eventId = typeof body?.eventId === "string" ? body.eventId.trim() : "";
+    if (!name && !eventId) {
+      return jsonResponse({ error: "name or eventId required" }, 400);
+    }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
@@ -137,6 +140,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    // eventId mode — direct cache scan. Matches both the synthetic event.id
+    // (`djep-<eventId>`) and the "Event ID" field value embedded in each row.
+    if (eventId) {
+      const idNorm = eventId.toLowerCase();
+      const idHits = events.filter((e) => {
+        if (e.id.toLowerCase() === idNorm) return true;
+        if (e.id.toLowerCase() === `djep-${idNorm}`) return true;
+        const idField = e.fields.find((f) => f.label.toLowerCase() === "event id");
+        if (idField && idField.value.trim().toLowerCase() === idNorm) return true;
+        return false;
+      });
+      const matches = idHits.slice(0, 10).map((event) => ({
+        djep_id: event.id,
+        title: event.title,
+        event_date: parseDateToISO(event.start),
+        fields: event.fields,
+        source_url: event.itemUrl,
+        match_score: 1,
+      }));
+      return jsonResponse({
+        matches,
+        total_in_cache: events.length,
+        cache_refreshed_at: (data as { refreshed_at?: string } | null)?.refreshed_at ?? null,
+        mode: "eventId",
+      });
+    }
+
     const nameTokens = normalize(name).split(" ").filter((t) => t.length >= 2);
     const isoDate = parseDateToISO(date);
 
@@ -158,6 +188,7 @@ Deno.serve(async (req) => {
       matches,
       total_in_cache: events.length,
       cache_refreshed_at: (data as { refreshed_at?: string } | null)?.refreshed_at ?? null,
+      mode: "search",
     });
   } catch (err) {
     return jsonResponse(
