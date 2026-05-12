@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, Search, Sparkles, Trash2, Loader2, X, Check, Info } from "lucide-react";
+import { ImagePlus, Search, Sparkles, Trash2, Loader2, X, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -265,15 +265,6 @@ export default function TeamVisualAssets() {
     return map;
   }, [filtered]);
 
-  // Coarse parity check: assets in public-site/* that match the storage layout
-  // the public /gallery sources from. Tells Josh at a glance whether the library
-  // is a complete superset of what the public site renders.
-  const parity = useMemo(() => {
-    const totalPublic = assets.filter((a) => a.folder.startsWith("public-site")).length;
-    const totalLib = assets.length;
-    return { totalPublic, totalLib };
-  }, [assets]);
-
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
     const folder = (folderInput || "uploads").replace(/^\/+|\/+$/g, "");
@@ -444,19 +435,6 @@ export default function TeamVisualAssets() {
           </div>
         ) : (
           <>
-            {/* Parity callout — surfaces redundancy of public /gallery vs. this library */}
-            <div className="mb-5 flex gap-2 items-start text-xs text-muted-foreground border border-border rounded-md p-3 bg-muted/30">
-              <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-primary" />
-              <div>
-                <span className="text-foreground font-medium">Library mirrors public /gallery.</span>{" "}
-                {parity.totalPublic} of {parity.totalLib} assets are sourced under{" "}
-                <code className="text-[10px] bg-muted px-1 rounded">public-site/</code> — these
-                back the public Gallery page. Logos (6) are code-bundled and not in this library.
-                The public /gallery may be redundant once parity is confirmed visually — flag for
-                Josh, don't delete here.
-              </div>
-            </div>
-
             {/* Section nav — anchor chips with counts; empty sections hidden */}
             <div className="mb-6 flex flex-wrap gap-2">
               {SECTIONS.map((s) => {
