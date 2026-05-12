@@ -65,7 +65,6 @@ import TeamSongs from "./pages/team/TeamSongs";
 import TeamScheduler from "./pages/team/TeamScheduler";
 import TeamResources from "./pages/team/TeamResources";
 import TeamRunOfShow from "./pages/team/TeamRunOfShow";
-import TeamRunOfShowV2 from "./pages/team/TeamRunOfShowV2";
 import TeamDashboard from "./pages/team/TeamDashboard";
 import TeamPractice from "./pages/team/TeamPractice";
 import TeamSocial from "./pages/team/TeamSocial";
@@ -144,7 +143,6 @@ const App = () => (
               <Route path="/team/scheduler" element={<TeamScheduler />} />
               <Route path="/team/resources" element={<TeamResources />} />
               <Route path="/team/run-of-show" element={<TeamRunOfShow />} />
-              <Route path="/team/run-of-show-v2" element={<TeamRunOfShowV2 />} />
               <Route path="/team/dashboard" element={<TeamDashboard />} />
               <Route path="/team/practice" element={<TeamPractice />} />
               <Route path="/team/social" element={<TeamSocial />} />
