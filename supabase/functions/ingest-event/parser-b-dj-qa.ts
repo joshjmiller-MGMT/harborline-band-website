@@ -176,7 +176,7 @@ export function parseShapeB(text: string, sourceFilename?: string): ParseResult 
   const djAttire = grab("dj attire preference");
   if (djAttire) fields.attire = djAttire;
   const meal = grab("will the dj be provided a meal");
-  if (meal) fields.logistics!.meals = meal;
+  if (meal) fields.logistics!.musician_meals = meal;
 
   // ── Ceremony Information ─────────────────────────────────────────────
   const ceremonySongs: { title: string }[] = [];

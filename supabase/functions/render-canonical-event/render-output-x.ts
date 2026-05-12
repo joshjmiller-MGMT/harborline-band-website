@@ -95,14 +95,18 @@ export function renderOutputX(event: CanonicalEvent): string {
   const venueHtml = renderDetailRow("Venue", event.venue?.name);
   const venueAddrHtml = renderDetailRow("Venue Address", event.venue?.address);
   const venueTypeHtml = renderDetailRow("Venue Type", event.venue?.type);
+  const ensembleHtml = renderDetailRow("Ensemble", event.ensemble);
   const guestsHtml = event.guests?.count
     ? renderDetailRow("Guest Count", String(event.guests.count))
     : "";
   const attireHtml = renderDetailRow("Attire", event.attire);
-  const loadInHtml = renderDetailRow("Load-In", event.logistics?.load_in);
   const setupTimeHtml = renderDetailRow("Setup Time", event.logistics?.setup_time);
+  const loadInHtml = renderDetailRow("Load-In", event.logistics?.load_in);
+  const startTimeHtml = renderDetailRow("Start Time", event.logistics?.start_time);
+  const endTimeHtml = renderDetailRow("End Time", event.logistics?.end_time);
   const audioHtml = renderDetailRow("Audio Reinforcement", event.logistics?.audio_reinforcement);
-  const mealsHtml = renderDetailRow("Musician Food & Bev", event.logistics?.meals);
+  const mealsHtml = renderDetailRow("Musician Food & Bev", event.logistics?.musician_meals);
+  const postingHtml = renderDetailRow("Posting", event.preferences?.posting_notes);
 
   const personnelHtml = renderPersonnel(event.personnel || []);
 
@@ -142,12 +146,16 @@ export function renderOutputX(event: CanonicalEvent): string {
     ${venueHtml}
     ${venueAddrHtml}
     ${venueTypeHtml}
+    ${ensembleHtml}
     ${guestsHtml}
     ${attireHtml}
-    ${loadInHtml}
     ${setupTimeHtml}
+    ${loadInHtml}
+    ${startTimeHtml}
+    ${endTimeHtml}
     ${audioHtml}
     ${mealsHtml}
+    ${postingHtml}
 
     ${personnelHtml ? `<div style="margin-top:16px;">${personnelHtml}</div>` : ""}
 
