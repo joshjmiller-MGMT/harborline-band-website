@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table, Search, Hash } from "lucide-react";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table, Search, Hash, Sparkles, ArrowRight, X, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -222,6 +222,15 @@ interface DjepMatch {
   match_score: number;
 }
 
+interface AutocorrectCorrection {
+  line_index: number;
+  original_label: string;
+  original_value: string;
+  corrected_label: string;
+  corrected_value: string;
+  reason: string;
+}
+
 const imageToBase64 = (src: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -250,6 +259,10 @@ export default function RunOfShowGenerator() {
   const [organization, setOrganization] = useState<OrgKey>("harborline");
   const [manualOverrides, setManualOverrides] = useState("");
   const manualOverridesRef = useRef<HTMLTextAreaElement>(null);
+
+  // Autocorrect state (P6)
+  const [autocorrectLoading, setAutocorrectLoading] = useState(false);
+  const [autocorrectSuggestions, setAutocorrectSuggestions] = useState<AutocorrectCorrection[] | null>(null);
 
   // DJEP lookup state
   const [djepMode, setDjepMode] = useState<"search" | "id">("search");
@@ -830,6 +843,90 @@ export default function RunOfShowGenerator() {
     focusManualOverrides();
   };
 
+  // P6: LLM autocorrect for the manual-overrides textarea.
+  // Rewrites a single line at a given index without disturbing other lines,
+  // so applying one suggestion doesn't invalidate the others' line_index.
+  const replaceLineAt = (text: string, idx: number, replacement: string): string => {
+    const lines = text.split("\n");
+    if (idx < 0 || idx >= lines.length) return text;
+    lines[idx] = replacement;
+    return lines.join("\n");
+  };
+
+  const runAutocorrect = async () => {
+    if (!manualOverrides.trim()) {
+      toast({
+        title: "Nothing to clean up",
+        description: "Add some manual entries first.",
+      });
+      return;
+    }
+    setAutocorrectLoading(true);
+    setAutocorrectSuggestions(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("manual-overrides-autocorrect", {
+        body: {
+          overrides: manualOverrides,
+          template_fields: TEMPLATE_FIELDS[template],
+          template_label: template,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const corrections: AutocorrectCorrection[] = Array.isArray(data?.corrections) ? data.corrections : [];
+      if (corrections.length === 0) {
+        toast({
+          title: "Looks clean",
+          description: "No fixes suggested for your manual entries.",
+        });
+        setAutocorrectSuggestions(null);
+        return;
+      }
+      setAutocorrectSuggestions(corrections);
+    } catch (err: any) {
+      console.error("autocorrect failed", err);
+      toast({
+        title: "Autocorrect failed",
+        description: err?.message || "Could not reach the autocorrect service.",
+        variant: "destructive",
+      });
+    } finally {
+      setAutocorrectLoading(false);
+    }
+  };
+
+  const applyCorrection = (correction: AutocorrectCorrection) => {
+    const replacement = `${correction.corrected_label}: ${correction.corrected_value}`;
+    setManualOverrides((prev) => replaceLineAt(prev, correction.line_index, replacement));
+    setAutocorrectSuggestions((prev) => {
+      if (!prev) return prev;
+      const next = prev.filter((c) => c.line_index !== correction.line_index);
+      return next.length === 0 ? null : next;
+    });
+  };
+
+  const applyAllCorrections = () => {
+    if (!autocorrectSuggestions || autocorrectSuggestions.length === 0) return;
+    setManualOverrides((prev) => {
+      let next = prev;
+      for (const c of autocorrectSuggestions) {
+        next = replaceLineAt(next, c.line_index, `${c.corrected_label}: ${c.corrected_value}`);
+      }
+      return next;
+    });
+    setAutocorrectSuggestions(null);
+  };
+
+  const dismissCorrection = (lineIndex: number) => {
+    setAutocorrectSuggestions((prev) => {
+      if (!prev) return prev;
+      const next = prev.filter((c) => c.line_index !== lineIndex);
+      return next.length === 0 ? null : next;
+    });
+  };
+
+  const dismissAllCorrections = () => setAutocorrectSuggestions(null);
+
   return (
     <div className="container mx-auto px-6 py-10 max-w-4xl">
       <div className="mb-8">
@@ -1176,11 +1273,27 @@ export default function RunOfShowGenerator() {
 
           {/* Manual overrides */}
           <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">
-              Add or override fields manually
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-sm font-medium text-foreground">
+                Add or override fields manually
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={runAutocorrect}
+                disabled={autocorrectLoading || !manualOverrides.trim()}
+              >
+                {autocorrectLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                Clean up entries
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground mb-2">
-              Enter one field per line as <code className="bg-secondary/50 px-1 py-0.5 rounded text-[11px]">Label: Value</code>. 
+              Enter one field per line as <code className="bg-secondary/50 px-1 py-0.5 rounded text-[11px]">Label: Value</code>.
               {missingFields.length > 0 && (
                 <> Missing: {missingFields.map(f => f.label).join(", ")}</>
               )}
@@ -1189,9 +1302,75 @@ export default function RunOfShowGenerator() {
               ref={manualOverridesRef}
               placeholder={`Event Name: Smith Wedding\nVenue: Baltimore Country Club\nEvent Date: April 24, 2026\nClient: John Smith`}
               value={manualOverrides}
-              onChange={(e) => setManualOverrides(e.target.value)}
+              onChange={(e) => {
+                setManualOverrides(e.target.value);
+                // Pending corrections reference line indices that may shift on edit.
+                if (autocorrectSuggestions) setAutocorrectSuggestions(null);
+              }}
               className="bg-secondary/50 border-border font-mono text-sm min-h-[100px]"
             />
+
+            {autocorrectSuggestions && autocorrectSuggestions.length > 0 && (
+              <div className="mt-3 border border-border rounded-md bg-secondary/30">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                    <span className="font-medium">
+                      {autocorrectSuggestions.length} suggested {autocorrectSuggestions.length === 1 ? "fix" : "fixes"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="ghost" size="sm" onClick={dismissAllCorrections}>
+                      Dismiss all
+                    </Button>
+                    <Button type="button" variant="default" size="sm" onClick={applyAllCorrections}>
+                      <Check className="w-3.5 h-3.5 mr-1.5" />
+                      Apply all
+                    </Button>
+                  </div>
+                </div>
+                <ul className="divide-y divide-border">
+                  {autocorrectSuggestions.map((c) => (
+                    <li key={c.line_index} className="px-3 py-2 flex items-center gap-3">
+                      <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-1 font-mono text-xs">
+                        <span className="text-muted-foreground line-through truncate">
+                          {c.original_label}: {c.original_value}
+                        </span>
+                        <ArrowRight className="hidden sm:block w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-foreground truncate">
+                          {c.corrected_label}: {c.corrected_value}
+                        </span>
+                      </div>
+                      <span className="hidden md:inline text-[10px] uppercase tracking-wide text-muted-foreground whitespace-nowrap">
+                        {c.reason}
+                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          aria-label="Dismiss this suggestion"
+                          onClick={() => dismissCorrection(c.line_index)}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          aria-label="Apply this suggestion"
+                          onClick={() => applyCorrection(c)}
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
