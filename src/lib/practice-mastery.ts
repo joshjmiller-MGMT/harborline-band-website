@@ -157,13 +157,20 @@ export const KIND_OPTIONS: PracticeItemKind[] = [
 ];
 
 // Category strings used by PracticeTimerWidget segments → kind we should pull
-// recommendations from. Strings outside this map are technique-y (Chords, Scales,
-// Technical, Patterns, Arrangements, Original, Rehearsal, Gigs, Other) and don't
-// get recommendation auto-fill.
+// recommendations + datalist suggestions from. Strings outside this map (Rehearsal,
+// Gigs, Other) are free-text contexts and don't filter — they show every item.
+// Originals are songs you wrote; Arrangements falls into the `other` bucket until
+// it earns its own kind.
 export const SEGMENT_CATEGORY_TO_KIND: Record<string, PracticeItemKind> = {
+  Chords: "chord",
+  Scales: "technique",
+  Technical: "technique",
+  Patterns: "device",
   Lines: "line",
   Songs: "song",
   Transcriptions: "transcription",
+  Arrangements: "other",
+  Original: "song",
 };
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
