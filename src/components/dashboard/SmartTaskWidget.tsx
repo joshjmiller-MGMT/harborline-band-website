@@ -19,6 +19,10 @@ type SmartShape = {
   due_date: string | null;
 };
 
+type TrelloLabelLite = { name: string; color: string | null };
+type TrelloChecklistOpen = { name: string; items: string[] };
+type TrelloCommentLite = { text: string; date: string };
+
 type TrelloCard = {
   id: string;
   name: string;
@@ -26,7 +30,36 @@ type TrelloCard = {
   due: string | null;
   url: string;
   list_id: string;
+  list_name?: string | null;
+  labels?: TrelloLabelLite[];
+  checklists_open?: TrelloChecklistOpen[];
+  recent_comments?: TrelloCommentLite[];
+  date_last_activity?: string;
+  age_days?: number;
 };
+
+type CardContext = {
+  list: string | null;
+  labels: string[];
+  checklist_open: string[];
+  recent_comments: string[];
+  age_days: number;
+  due: string | null;
+};
+
+function buildCardContext(card: TrelloCard): CardContext {
+  const flatChecklist = (card.checklists_open || []).flatMap((cl) =>
+    cl.items.map((item) => (cl.name ? `[${cl.name}] ${item}` : item)),
+  );
+  return {
+    list: card.list_name ?? null,
+    labels: (card.labels || []).map((l) => l.name),
+    checklist_open: flatChecklist,
+    recent_comments: (card.recent_comments || []).map((c) => c.text),
+    age_days: card.age_days ?? 0,
+    due: card.due,
+  };
+}
 
 type TrelloPoll = {
   board?: { id: string; name: string };
@@ -101,9 +134,9 @@ export default function SmartTaskWidget() {
     setWorking(true);
     setSmart(null);
     try {
-      const { data, error } = await supabase.functions.invoke("smart-task-rewrite", {
-        body: { input: input.trim() },
-      });
+      const body: { input: string; card_context?: CardContext } = { input: input.trim() };
+      if (activeCard) body.card_context = buildCardContext(activeCard);
+      const { data, error } = await supabase.functions.invoke("smart-task-rewrite", { body });
       if (error) throw error;
       const result = (data as { smart?: SmartShape })?.smart;
       if (!result) throw new Error("Empty response");
@@ -274,6 +307,7 @@ export default function SmartTaskWidget() {
               </Button>
             )}
           </div>
+          {activeCard && <CardContextPreview card={activeCard} />}
         </div>
 
         {!smart && (
@@ -401,9 +435,14 @@ function TrelloInbox({
       )}
 
       {cards.length > 0 && (
-        <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+        <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
           {cards.map((c) => {
             const isActive = c.id === activeCardId;
+            const checklistCount = (c.checklists_open || []).reduce(
+              (sum, cl) => sum + cl.items.length,
+              0,
+            );
+            const commentCount = (c.recent_comments || []).length;
             return (
               <div
                 key={c.id}
@@ -416,14 +455,30 @@ function TrelloInbox({
                 <button
                   onClick={() => onPick(c)}
                   disabled={disabled}
-                  className="flex-1 text-left disabled:opacity-50"
+                  className="flex-1 text-left disabled:opacity-50 min-w-0"
                 >
                   <p className="font-medium truncate">{c.name}</p>
-                  {c.due && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      Due {c.due.slice(0, 10)}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-muted-foreground flex-wrap">
+                    {c.list_name && (
+                      <span className="px-1 py-px rounded bg-muted/60 font-medium">
+                        {c.list_name}
+                      </span>
+                    )}
+                    {(c.labels || []).slice(0, 3).map((l) => (
+                      <span
+                        key={l.name}
+                        className="px-1 py-px rounded bg-muted/40"
+                      >
+                        {l.name}
+                      </span>
+                    ))}
+                    {c.due && <span>· due {c.due.slice(0, 10)}</span>}
+                    {checklistCount > 0 && <span>· ☐ {checklistCount}</span>}
+                    {commentCount > 0 && <span>· 💬 {commentCount}</span>}
+                    {typeof c.age_days === "number" && c.age_days >= 30 && (
+                      <span>· {c.age_days}d old</span>
+                    )}
+                  </div>
                 </button>
                 <a
                   href={c.url}
@@ -440,6 +495,76 @@ function TrelloInbox({
         </div>
       )}
     </div>
+  );
+}
+
+function CardContextPreview({ card }: { card: TrelloCard }) {
+  const checklistItems = (card.checklists_open || []).flatMap((cl) =>
+    cl.items.map((item) => (cl.name ? `${cl.name}: ${item}` : item)),
+  );
+  const commentTexts = (card.recent_comments || []).map((c) => c.text);
+  const hasContext =
+    card.list_name ||
+    (card.labels && card.labels.length > 0) ||
+    checklistItems.length > 0 ||
+    commentTexts.length > 0 ||
+    (typeof card.age_days === "number" && card.age_days >= 7);
+  if (!hasContext) return null;
+
+  return (
+    <details className="mt-2 rounded border border-border bg-muted/30 px-2 py-1.5 text-xs">
+      <summary className="cursor-pointer text-muted-foreground hover:text-foreground select-none">
+        Card context sent to Claude
+        {card.list_name && (
+          <span className="ml-1.5 px-1 py-px rounded bg-muted/60 text-[10px] font-medium">
+            {card.list_name}
+          </span>
+        )}
+        {checklistItems.length > 0 && (
+          <span className="ml-1 text-[10px]">· ☐ {checklistItems.length}</span>
+        )}
+        {commentTexts.length > 0 && (
+          <span className="ml-1 text-[10px]">· 💬 {commentTexts.length}</span>
+        )}
+      </summary>
+      <div className="mt-1.5 space-y-1 text-[11px] text-muted-foreground">
+        {card.list_name && (
+          <p>
+            <span className="text-foreground">Bucket:</span> {card.list_name}
+          </p>
+        )}
+        {card.labels && card.labels.length > 0 && (
+          <p>
+            <span className="text-foreground">Labels:</span> {card.labels.map((l) => l.name).join(", ")}
+          </p>
+        )}
+        {typeof card.age_days === "number" && card.age_days >= 7 && (
+          <p>
+            <span className="text-foreground">Age:</span> {card.age_days} days since last activity
+          </p>
+        )}
+        {checklistItems.length > 0 && (
+          <div>
+            <p className="text-foreground">Open checklist:</p>
+            <ul className="ml-3 list-disc">
+              {checklistItems.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {commentTexts.length > 0 && (
+          <div>
+            <p className="text-foreground">Recent comments:</p>
+            <ul className="ml-3 list-disc">
+              {commentTexts.map((c, i) => (
+                <li key={i} className="italic">"{c}"</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </details>
   );
 }
 
