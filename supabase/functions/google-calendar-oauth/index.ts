@@ -131,41 +131,89 @@ Deno.serve(async (req) => {
       const FRONTEND_ORIGIN = Deno.env.get("FRONTEND_ORIGIN") || "https://harborlineband.com";
       const returnPath = stateReturn && stateReturn.startsWith("/") ? stateReturn : "/team/dashboard";
       const returnUrl = `${FRONTEND_ORIGIN}${returnPath}?google_connected=1`;
+      const returnUrlJson = JSON.stringify(returnUrl);
+      const accountEmail = (userInfo.email || "").replace(/[<>"&]/g, "");
+      // Polished popup. Fires immediately on load:
+      //   1. If we have an opener: postMessage to refresh the dashboard, then window.close()
+      //   2. If close is blocked, fall through to redirect (50ms)
+      //   3. If no opener: full-page redirect right away
+      //   4. If JS is blocked entirely: meta-refresh fires at 2s
+      // The page itself is on-brand dark + centered card so the brief flash before
+      // close is intentional UX, not a raw-HTML blip.
       const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Connected</title>
-  <meta http-equiv="refresh" content="3; url=${returnUrl}">
+  <title>Connected · Harborline</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="2; url=${returnUrl}">
   <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 48px 32px; background: #0a0a0a; color: #fafafa; }
-    .wrap { max-width: 420px; margin: 0 auto; }
-    .check { color: #10b981; font-size: 28px; font-weight: 600; margin: 0 0 8px; }
-    p { color: #a1a1aa; font-size: 14px; line-height: 1.5; margin: 0 0 16px; }
-    a { color: #60a5fa; }
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0a; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: #fafafa;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px;
+    }
+    .card {
+      max-width: 380px; width: 100%;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 32px 28px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    }
+    .ring {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.35);
+      margin: 0 auto 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ring svg { width: 28px; height: 28px; color: #10b981; }
+    h1 {
+      font-size: 18px; font-weight: 600; margin: 0 0 6px;
+      letter-spacing: -0.01em;
+    }
+    .email {
+      color: #a1a1aa; font-size: 13px; margin: 0 0 16px;
+      word-break: break-all;
+    }
+    .hint { color: #71717a; font-size: 12px; margin: 0; }
+    .hint a { color: #60a5fa; text-decoration: none; }
+    .hint a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <p class="check">Connected ✓</p>
-    <p>You can close this window.</p>
-    <p><a href="${returnUrl}">Return to the dashboard</a> if it doesn't return on its own.</p>
+  <div class="card" role="status" aria-live="polite">
+    <div class="ring" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <h1>Connected</h1>
+    ${accountEmail ? `<p class="email">${accountEmail}</p>` : ""}
+    <p class="hint">Closing window… or <a href="${returnUrl}">return manually</a>.</p>
   </div>
   <script>
     (function () {
+      var returnUrl = ${returnUrlJson};
+      function go() { try { window.location.replace(returnUrl); } catch (_) {} }
       try {
         var hasOpener = window.opener && !window.opener.closed;
         if (hasOpener) {
           try { window.opener.postMessage({ type: "google_oauth_complete" }, "*"); } catch (_) {}
           window.close();
-          // If close was blocked (some browsers refuse for non-script-opened windows), fall through to redirect after a short delay.
-          setTimeout(function () { window.location.replace(${JSON.stringify(returnUrl)}); }, 800);
+          // Closing a non-script-opened window can be blocked. Quick fallback to redirect.
+          setTimeout(go, 50);
         } else {
-          window.location.replace(${JSON.stringify(returnUrl)});
+          go();
         }
-      } catch (_) {
-        try { window.location.replace(${JSON.stringify(returnUrl)}); } catch (_) {}
-      }
+      } catch (_) { go(); }
     })();
   </script>
 </body>
