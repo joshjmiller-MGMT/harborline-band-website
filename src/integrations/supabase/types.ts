@@ -428,6 +428,7 @@ export type Database = {
         Row: {
           cache_key: string
           created_at: string
+          event_details: Json
           events: Json
           expires_at: string
           id: string
@@ -438,6 +439,7 @@ export type Database = {
         Insert: {
           cache_key: string
           created_at?: string
+          event_details?: Json
           events?: Json
           expires_at: string
           id?: string
@@ -448,6 +450,7 @@ export type Database = {
         Update: {
           cache_key?: string
           created_at?: string
+          event_details?: Json
           events?: Json
           expires_at?: string
           id?: string
