@@ -38,6 +38,7 @@ type DjepEvent = {
   color: string;
   fields: { label: string; value: string }[];
   itemUrl: string;
+  eventUrl?: string;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -233,6 +234,19 @@ function stripTags(s: string): string {
   return decodeHtmlEntities(s.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 }
 
+// Extract the first href in a raw cell HTML snippet, resolved against DJEP_URL.
+function extractHref(cellHtml: string): string | undefined {
+  const m = cellHtml.match(/href\s*=\s*["']([^"']+)["']/i);
+  if (!m) return undefined;
+  const raw = decodeHtmlEntities(m[1].trim());
+  if (!raw || raw.startsWith("#") || raw.toLowerCase().startsWith("javascript:")) return undefined;
+  try {
+    return new URL(raw, DJEP_URL).href;
+  } catch {
+    return undefined;
+  }
+}
+
 function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } {
   // DJEP nests tables, so extracting <table>...</table> blocks is unreliable.
   // Scan ALL <tr> rows, find the one whose cells match the events-list header,
@@ -240,9 +254,15 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
   const allRows = [...html.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map((m) => m[0]);
   if (!allRows.length) return { events: [], debug: { reason: "no-rows" } };
 
-  const rowCells = allRows.map((r) =>
-    [...r.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) => stripTags(m[1]))
-  );
+  // Parallel arrays: stripped text per cell, and raw inner HTML per cell.
+  // The raw HTML lets us pull href= out of cells like "Open in New Tab".
+  const rowCells: string[][] = [];
+  const rowCellsHtml: string[][] = [];
+  for (const r of allRows) {
+    const matches = [...r.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)];
+    rowCells.push(matches.map((m) => stripTags(m[1])));
+    rowCellsHtml.push(matches.map((m) => m[1]));
+  }
 
   // Find header row: cells include "Event Date", "Client", "Next Action Date".
   let headerIdx = -1;
@@ -268,17 +288,24 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     };
   }
 
-  const headerCells = rowCells[headerIdx].map((c) => c.toLowerCase());
+  // Preserve original-cased headers for label output; keep lowercase variant for matching.
+  const headerCellsRaw = rowCells[headerIdx];
+  const headerCells = headerCellsRaw.map((c) => c.toLowerCase());
   const expectedLen = headerCells.length;
-  const dataRows = rowCells.slice(headerIdx + 1).filter((cs) => cs.length === expectedLen);
+  // Keep parallel HTML for data rows alongside the text cells.
+  const dataRowsPairs: { cells: string[]; cellsHtml: string[] }[] = [];
+  for (let i = headerIdx + 1; i < rowCells.length; i++) {
+    if (rowCells[i].length !== expectedLen) continue;
+    dataRowsPairs.push({ cells: rowCells[i], cellsHtml: rowCellsHtml[i] });
+  }
   const debug = {
     headerIdx,
     expectedLen,
     totalRows: allRows.length,
-    dataRowCount: dataRows.length,
+    dataRowCount: dataRowsPairs.length,
     headers: headerCells,
   };
-  if (!dataRows.length) return { events: [], debug: { ...debug, reason: "no-data-rows" } };
+  if (!dataRowsPairs.length) return { events: [], debug: { ...debug, reason: "no-data-rows" } };
 
   const colIdx = (...names: string[]): number => {
     for (const n of names) {
@@ -296,12 +323,20 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     eventType: colIdx("event type", "type"),
     venue: colIdx("venue", "location"),
     salesperson: colIdx("salesperson", "sales"),
-    eventId: colIdx("event id", "id"),
+    eventId: colIdx("event id"),
+    openInNewTab: colIdx("open in new tab"),
   };
+  // Columns whose values are already covered by a known field above — skip in the
+  // generic "all other columns" pass to avoid duplicate entries.
+  const handled = new Set<number>([
+    idx.eventDate, idx.client, idx.status, idx.nextAction, idx.nextActionDate,
+    idx.eventType, idx.venue, idx.salesperson, idx.eventId, idx.openInNewTab,
+  ].filter((n) => n >= 0));
 
   const events: DjepEvent[] = [];
-  for (const cells of dataRows) {
+  for (const { cells, cellsHtml } of dataRowsPairs) {
     const get = (j: number) => (j >= 0 && j < cells.length ? cells[j] : "");
+    const getHtml = (j: number) => (j >= 0 && j < cellsHtml.length ? cellsHtml[j] : "");
 
     const nextActionDateRaw = get(idx.nextActionDate).trim();
     const eventDateRaw = get(idx.eventDate).trim();
@@ -327,7 +362,6 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     // Salesperson filter is already applied server-side via the SALES-MILLER URL.
 
     const title = action ? `${action} · ${client}` : client;
-    const startISO = parsed.toISOString();
     const fields: { label: string; value: string }[] = [];
     if (status) fields.push({ label: "Status", value: status });
     if (action) fields.push({ label: "Next Action", value: action });
@@ -337,6 +371,43 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     if (venue) fields.push({ label: "Venue", value: venue });
     if (salesperson) fields.push({ label: "Salesperson", value: salesperson });
     if (eventId) fields.push({ label: "Event ID", value: eventId });
+
+    // Capture every remaining non-empty column with its original-cased header
+    // as the label. This is what closes the bulk of the "DJEP fields are filled
+    // in but missed by the scraper" gap (P17): the queue already returns 21
+    // columns (Package, Start-End Time, Assigned Employees, Setup Time, Start
+    // Time, End Time, Addons, Total Fee, Balance Due, Date Booked, TSB or BSE,
+    // …) and previously we threw all of them away.
+    for (let i = 0; i < cells.length; i++) {
+      if (handled.has(i)) continue;
+      const val = cells[i].trim();
+      if (!val) continue;
+      const label = (headerCellsRaw[i] ?? `Column ${i}`).trim();
+      if (!label) continue;
+      fields.push({ label, value: val });
+    }
+
+    // Per-event detail URL. DJEP's standard convention is
+    // events_edit.asp?eventid=<numeric>; when we have a numeric event ID
+    // we construct it directly (most reliable, survives onclick="window.open"
+    // patterns in the queue's "Open in New Tab" column where there's no real
+    // href to extract). Otherwise fall back to scraping a href out of either
+    // the "Open in New Tab" cell or the Client cell.
+    // Per-event detail URL. DJEP's queue rows link the date/status cells to
+    // events_report.asp?eventid=<numeric> (verified via firstRowSample debug
+    // 2026-05-13). events_edit.asp is the edit-form shell which renders empty
+    // when loaded standalone; events_report.asp is the read-only detail view
+    // that works without the base2.asp iframe wrapper. Prefer the constructed
+    // URL when we have a numeric ID; fall back to the first href we can find
+    // in any cell (most likely the Event Date or Status cell).
+    let eventUrl: string | undefined;
+    if (eventId && /^\d+$/.test(eventId)) {
+      eventUrl = `${DJEP_URL.replace(/base2\.asp$/, "")}events_report.asp?eventid=${eventId}`;
+    }
+    if (!eventUrl) eventUrl = extractHref(getHtml(idx.eventDate));
+    if (!eventUrl) eventUrl = extractHref(getHtml(idx.status));
+    if (!eventUrl) eventUrl = extractHref(getHtml(idx.openInNewTab));
+    if (!eventUrl) eventUrl = extractHref(getHtml(idx.client));
 
     // Use plain YYYY-MM-DD (no time/Z) so the client parses these in local
     // time without UTC midnight drift. End is exclusive (next day) to match
@@ -360,6 +431,7 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
       color: "#10b981",
       fields,
       itemUrl: DJEP_URL,
+      ...(eventUrl ? { eventUrl } : {}),
     });
   }
   return { events, debug: { ...debug, idx, parsedRows: events.length } };
