@@ -505,6 +505,128 @@ export type Database = {
         }
         Relationships: []
       }
+      instrument_classifier_rules: {
+        Row: {
+          active: boolean
+          classify_as: string | null
+          created_at: string
+          default_hours: number | null
+          genre_hint: string | null
+          id: string
+          kind: string
+          match_priority: number
+          notes: string
+          pattern: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          classify_as?: string | null
+          created_at?: string
+          default_hours?: number | null
+          genre_hint?: string | null
+          id?: string
+          kind: string
+          match_priority?: number
+          notes?: string
+          pattern: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          classify_as?: string | null
+          created_at?: string
+          default_hours?: number | null
+          genre_hint?: string | null
+          id?: string
+          kind?: string
+          match_priority?: number
+          notes?: string
+          pattern?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      instrument_event_classifications: {
+        Row: {
+          block_hours: number
+          classified_as: string
+          confidence: string
+          created_at: string
+          estimated_hours: number
+          estimation_source: string
+          event_color_id: string | null
+          event_description: string
+          event_end: string
+          event_start: string
+          event_title: string
+          gcal_account_email: string
+          gcal_calendar_id: string
+          gcal_event_id: string
+          id: string
+          matched_rule_id: string | null
+          matched_rule_pattern: string | null
+          notes: string
+          review_status: string
+          reviewed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          block_hours: number
+          classified_as: string
+          confidence: string
+          created_at?: string
+          estimated_hours: number
+          estimation_source?: string
+          event_color_id?: string | null
+          event_description?: string
+          event_end: string
+          event_start: string
+          event_title: string
+          gcal_account_email: string
+          gcal_calendar_id: string
+          gcal_event_id: string
+          id?: string
+          matched_rule_id?: string | null
+          matched_rule_pattern?: string | null
+          notes?: string
+          review_status?: string
+          reviewed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          block_hours?: number
+          classified_as?: string
+          confidence?: string
+          created_at?: string
+          estimated_hours?: number
+          estimation_source?: string
+          event_color_id?: string | null
+          event_description?: string
+          event_end?: string
+          event_start?: string
+          event_title?: string
+          gcal_account_email?: string
+          gcal_calendar_id?: string
+          gcal_event_id?: string
+          id?: string
+          matched_rule_id?: string | null
+          matched_rule_pattern?: string | null
+          notes?: string
+          review_status?: string
+          reviewed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instrument_event_classifications_matched_rule_id_fkey"
+            columns: ["matched_rule_id"]
+            isOneToOne: false
+            referencedRelation: "instrument_classifier_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monday_calendar_sources: {
         Row: {
           board_id: string
