@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Save, RotateCcw, Loader2, CheckCircle2, Clock, Target, AlertTriangle, Calendar } from "lucide-react";
+import {
+  Sparkles, Save, RotateCcw, Loader2, CheckCircle2, Clock, Target, AlertTriangle, Calendar,
+  Trello, RefreshCw, ExternalLink, Inbox,
+} from "lucide-react";
 
 type SmartShape = {
   revised_title: string;
@@ -16,12 +19,82 @@ type SmartShape = {
   due_date: string | null;
 };
 
+type TrelloCard = {
+  id: string;
+  name: string;
+  desc: string;
+  due: string | null;
+  url: string;
+  list_id: string;
+};
+
+type TrelloPoll = {
+  board?: { id: string; name: string };
+  cards?: TrelloCard[];
+  total_open?: number;
+  pending_count?: number;
+  error?: string;
+  message?: string;
+};
+
+const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+
 export default function SmartTaskWidget() {
   const { toast } = useToast();
   const [input, setInput] = useState("");
   const [smart, setSmart] = useState<SmartShape | null>(null);
   const [working, setWorking] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Source-of-task tracking: when null, the input came from the textarea
+  // (free-form). When set, the input came from a Trello card; saving will
+  // SMART-ify the card and write a calendar event.
+  const [activeCard, setActiveCard] = useState<TrelloCard | null>(null);
+
+  // Trello inbox state
+  const [cards, setCards] = useState<TrelloCard[]>([]);
+  const [trelloLoading, setTrelloLoading] = useState(false);
+  const [trelloError, setTrelloError] = useState<string | null>(null);
+  const [boardName, setBoardName] = useState<string | null>(null);
+
+  const loadTrello = useCallback(async () => {
+    setTrelloLoading(true);
+    setTrelloError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("trello-poll", {
+        body: { action: "poll" },
+      });
+      if (error) throw error;
+      const result = data as TrelloPoll;
+      if (result.error) {
+        setTrelloError(result.message || result.error);
+        setCards([]);
+        setBoardName(null);
+        return;
+      }
+      setCards(result.cards || []);
+      setBoardName(result.board?.name || null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setTrelloError(msg);
+      setCards([]);
+    } finally {
+      setTrelloLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadTrello();
+  }, [loadTrello]);
+
+  function pickCard(card: TrelloCard) {
+    const combined = card.desc?.trim()
+      ? `${card.name}\n\n${card.desc.trim()}`
+      : card.name;
+    setInput(combined);
+    setSmart(null);
+    setActiveCard(card);
+  }
 
   async function rewrite() {
     if (!input.trim()) return;
@@ -43,10 +116,77 @@ export default function SmartTaskWidget() {
     }
   }
 
+  async function createCalendarEvent(s: SmartShape): Promise<{ id: string; htmlLink: string } | null> {
+    if (!s.due_date) return null;
+    const description = [
+      s.definition_of_done && `Definition of done: ${s.definition_of_done}`,
+      s.measure && `Measure: ${s.measure}`,
+      s.blockers && s.blockers !== "None" && `Blockers: ${s.blockers}`,
+      s.effort && `Effort: ${s.effort}`,
+      activeCard?.url && `Trello: ${activeCard.url}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    // The shared edge fn expects ISO timestamps with allDay flag.
+    const startIso = `${s.due_date}T00:00:00.000Z`;
+    const endIso = `${s.due_date}T23:59:59.000Z`;
+
+    try {
+      const res = await fetch(`${FUNCTIONS_BASE}/google-calendar-events?action=create`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          summary: s.revised_title,
+          description,
+          start: startIso,
+          end: endIso,
+          allDay: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+      return { id: data.event?.id, htmlLink: data.event?.htmlLink };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast({
+        title: "Calendar insert failed",
+        description: `${msg} — task still saved.`,
+        variant: "destructive",
+      });
+      return null;
+    }
+  }
+
+  async function markCardSmartified(cardId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase.functions.invoke("trello-poll", {
+        body: { action: "mark-smartified", card_id: cardId },
+      });
+      if (error) throw error;
+      const result = data as { labeled?: boolean; error?: string };
+      if (result.error) throw new Error(result.error);
+      return !!result.labeled;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast({
+        title: "Trello label failed",
+        description: `${msg} — task still saved.`,
+        variant: "destructive",
+      });
+      return false;
+    }
+  }
+
   async function save() {
     if (!smart) return;
     setSaving(true);
     try {
+      const calendarEvent = await createCalendarEvent(smart);
+
       const { error } = await supabase.from("smart_task_enrichments").insert({
         raw_input: input.trim(),
         revised_title: smart.revised_title,
@@ -55,11 +195,26 @@ export default function SmartTaskWidget() {
         blockers: smart.blockers,
         effort: smart.effort,
         due_date: smart.due_date,
+        trello_card_id: activeCard?.id ?? null,
+        trello_card_url: activeCard?.url ?? null,
+        google_calendar_event_id: calendarEvent?.id ?? null,
+        google_calendar_html_link: calendarEvent?.htmlLink ?? null,
       });
       if (error) throw error;
-      toast({ title: "Saved", description: "Task stored in smart_task_enrichments." });
+
+      if (activeCard) {
+        await markCardSmartified(activeCard.id);
+      }
+
+      const parts = ["Saved"];
+      if (calendarEvent) parts.push("calendar event created");
+      if (activeCard) parts.push("Trello card labeled");
+      toast({ title: parts.join(" + "), description: smart.revised_title });
+
       setInput("");
       setSmart(null);
+      setActiveCard(null);
+      if (activeCard) void loadTrello();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       toast({ title: "Couldn't save", description: msg, variant: "destructive" });
@@ -72,6 +227,12 @@ export default function SmartTaskWidget() {
     setSmart(null);
   }
 
+  function clearSource() {
+    setActiveCard(null);
+    setInput("");
+    setSmart(null);
+  }
+
   return (
     <Card className="bg-card/50 border-border">
       <CardHeader className="pb-3">
@@ -81,17 +242,38 @@ export default function SmartTaskWidget() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <TrelloInbox
+          cards={cards}
+          boardName={boardName}
+          loading={trelloLoading}
+          error={trelloError}
+          activeCardId={activeCard?.id ?? null}
+          onPick={pickCard}
+          onRefresh={loadTrello}
+          disabled={working || saving}
+        />
+
         <div>
           <Textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              if (activeCard) setActiveCard(null);
+            }}
             placeholder="e.g. Fix the website, follow up with Pendry, finalize the NJ setlist…"
             className="min-h-[80px] resize-y"
             disabled={working || saving}
           />
-          <p className="text-xs text-muted-foreground mt-1">
-            One task at a time. Claude rewrites it into a SMART version. You confirm before save.
-          </p>
+          <div className="flex items-center justify-between gap-2 mt-1">
+            <p className="text-xs text-muted-foreground">
+              Paste a task or pick one from Trello above. Claude rewrites it into SMART; you confirm before save.
+            </p>
+            {activeCard && (
+              <Button onClick={clearSource} variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                Clear Trello source
+              </Button>
+            )}
+          </div>
         </div>
 
         {!smart && (
@@ -131,6 +313,19 @@ export default function SmartTaskWidget() {
               />
             </div>
 
+            {smart.due_date && (
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                On save: all-day event on {smart.due_date} in your Google Calendar.
+              </p>
+            )}
+            {activeCard && (
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                <Trello className="w-3 h-3" />
+                On save: Trello card labeled ✅ SMART-ified (stays on board).
+              </p>
+            )}
+
             <div className="flex gap-2 pt-2">
               <Button onClick={save} disabled={saving} variant="default" size="sm" className="flex-1">
                 {saving ? (
@@ -151,6 +346,100 @@ export default function SmartTaskWidget() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function TrelloInbox({
+  cards,
+  boardName,
+  loading,
+  error,
+  activeCardId,
+  onPick,
+  onRefresh,
+  disabled,
+}: {
+  cards: TrelloCard[];
+  boardName: string | null;
+  loading: boolean;
+  error: string | null;
+  activeCardId: string | null;
+  onPick: (c: TrelloCard) => void;
+  onRefresh: () => void;
+  disabled: boolean;
+}) {
+  // Hide entirely if Trello isn't configured / no board found AND no error to show.
+  if (!loading && !error && cards.length === 0 && !boardName) return null;
+
+  return (
+    <div className="rounded-lg border border-border bg-background/40 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+          <Inbox className="w-3.5 h-3.5" />
+          <span>Trello inbox{boardName ? ` · ${boardName}` : ""}</span>
+          {!loading && cards.length > 0 && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 h-4">{cards.length}</Badge>
+          )}
+        </div>
+        <Button onClick={onRefresh} disabled={loading || disabled} variant="ghost" size="sm" className="h-6 px-2">
+          {loading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="w-3.5 h-3.5" />
+          )}
+        </Button>
+      </div>
+
+      {error && (
+        <p className="text-xs text-destructive">{error}</p>
+      )}
+
+      {!error && !loading && cards.length === 0 && (
+        <p className="text-xs text-muted-foreground italic">
+          Nothing pending. All cards on this board are SMART-ified.
+        </p>
+      )}
+
+      {cards.length > 0 && (
+        <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+          {cards.map((c) => {
+            const isActive = c.id === activeCardId;
+            return (
+              <div
+                key={c.id}
+                className={`flex items-start justify-between gap-2 rounded px-2 py-1.5 text-xs transition-colors ${
+                  isActive
+                    ? "bg-primary/10 border border-primary/30"
+                    : "hover:bg-muted/50 border border-transparent"
+                }`}
+              >
+                <button
+                  onClick={() => onPick(c)}
+                  disabled={disabled}
+                  className="flex-1 text-left disabled:opacity-50"
+                >
+                  <p className="font-medium truncate">{c.name}</p>
+                  {c.due && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      Due {c.due.slice(0, 10)}
+                    </p>
+                  )}
+                </button>
+                <a
+                  href={c.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5"
+                  title="Open in Trello"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

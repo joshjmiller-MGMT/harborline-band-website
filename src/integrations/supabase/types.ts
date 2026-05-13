@@ -991,10 +991,14 @@ export type Database = {
           definition_of_done: string | null
           due_date: string | null
           effort: string | null
+          google_calendar_event_id: string | null
+          google_calendar_html_link: string | null
           id: string
           measure: string | null
           raw_input: string
           revised_title: string | null
+          trello_card_id: string | null
+          trello_card_url: string | null
         }
         Insert: {
           blockers?: string | null
@@ -1002,10 +1006,14 @@ export type Database = {
           definition_of_done?: string | null
           due_date?: string | null
           effort?: string | null
+          google_calendar_event_id?: string | null
+          google_calendar_html_link?: string | null
           id?: string
           measure?: string | null
           raw_input: string
           revised_title?: string | null
+          trello_card_id?: string | null
+          trello_card_url?: string | null
         }
         Update: {
           blockers?: string | null
@@ -1013,10 +1021,14 @@ export type Database = {
           definition_of_done?: string | null
           due_date?: string | null
           effort?: string | null
+          google_calendar_event_id?: string | null
+          google_calendar_html_link?: string | null
           id?: string
           measure?: string | null
           raw_input?: string
           revised_title?: string | null
+          trello_card_id?: string | null
+          trello_card_url?: string | null
         }
         Relationships: []
       }
