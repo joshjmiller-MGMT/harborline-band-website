@@ -31,6 +31,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // (Tangerine, Josh's typical rehearsal color, unconfirmed first scan will validate).
 const GREEN_COLOR_IDS = new Set(["10", "2"]);
 const ORANGE_COLOR_IDS = new Set(["6"]);
+// Tomato (11) = canceled; Flamingo (4) = personal/non-work. Both → instant exclude,
+// regardless of what the title says. Higher precedence than any rule.
+const EXCLUDE_COLOR_IDS = new Set(["11", "4"]);
 
 interface Rule {
   id: string;
@@ -110,6 +113,20 @@ function classify(
   rules: Rule[],
 ): ClassificationVerdict {
   const haystack = `${title}\n${description}`.toLowerCase();
+
+  // Pass 0 — color exclude. Tomato/Flamingo events drop out regardless of title.
+  if (colorId && EXCLUDE_COLOR_IDS.has(colorId)) {
+    return {
+      classified_as: "none",
+      confidence: "high",
+      matched_rule_id: null,
+      matched_rule_pattern: null,
+      estimated_hours: 0,
+      estimation_source: colorId === "11"
+        ? "color=tomato — canceled"
+        : "color=flamingo — personal/non-work",
+    };
+  }
 
   // Pass 1 — exclude rules. Highest priority. Single match → 'none'.
   for (const r of rules) {
@@ -328,12 +345,14 @@ Deno.serve(async (req) => {
     }
 
     // Window — default 120 months (~10 years all-time). Body param overrides.
-    let monthsBack = 120;
+    // Default 240mo (~20 years) — Josh's GCal history goes back "literally forever";
+    // let Google Calendar's own retention be the floor, not our cap.
+    let monthsBack = 240;
     if (req.method === "POST") {
       try {
         const body = await req.json();
         if (body && typeof body.months_back === "number") {
-          monthsBack = Math.max(1, Math.min(240, body.months_back));
+          monthsBack = Math.max(1, Math.min(360, body.months_back));
         }
       } catch {
         // body optional

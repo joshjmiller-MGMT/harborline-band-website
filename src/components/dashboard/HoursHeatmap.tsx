@@ -130,7 +130,7 @@ export default function HoursHeatmap() {
     setScanning(true);
     try {
       const { data, error } = await supabase.functions.invoke("instrument-hours-scan", {
-        body: { months_back: 120 },
+        body: { months_back: 240 },
       });
       if (error) throw error;
       toast({
