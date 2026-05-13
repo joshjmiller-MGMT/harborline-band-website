@@ -7,6 +7,7 @@ import MissingDatesWidget from "./MissingDatesWidget";
 import TodaysActionItemsWidget from "./TodaysActionItemsWidget";
 import BookingAgentActionWidget from "./BookingAgentActionWidget";
 import WaitingOnJoshWidget from "./WaitingOnJoshWidget";
+import { StaffingNeedsAction } from "./StaffingWidget";
 
 export default function NeedsActionWidget() {
   const [open, setOpen] = useState(true);
@@ -35,6 +36,7 @@ export default function NeedsActionWidget() {
             <TodaysActionItemsWidget />
             <BookingAgentActionWidget />
             <MissingDatesWidget />
+            <StaffingNeedsAction />
             {/* More action items can be slotted in here as they come up. */}
           </CardContent>
         </CollapsibleContent>
