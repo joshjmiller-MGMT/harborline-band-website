@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,33 +13,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ImagePlus, Search, Sparkles, Trash2, Loader2, X, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-
-type Venture = "harborline" | "economy" | "jmj" | "personal" | "bse";
-type Rights = "internal-only" | "client-approved" | "public-ok";
-
-const VENTURE_OPTIONS: { value: Venture; label: string }[] = [
-  { value: "harborline", label: "Harborline" },
-  { value: "economy", label: "Economy" },
-  { value: "jmj", label: "JMJ" },
-  { value: "personal", label: "Personal" },
-  { value: "bse", label: "BSE" },
-];
-
-const RIGHTS_OPTIONS: { value: Rights; label: string }[] = [
-  { value: "internal-only", label: "Internal only" },
-  { value: "client-approved", label: "Client-approved" },
-  { value: "public-ok", label: "Public OK" },
-];
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -55,8 +31,6 @@ interface VisualAsset {
   alt_text: string | null;
   caption: string | null;
   tags: string[];
-  ventures: Venture[];
-  rights: Rights;
   shoot_date: string | null;
   ai_suggested_tags: string[];
   ai_suggested_alt: string | null;
@@ -203,8 +177,7 @@ export default function TeamVisualAssets() {
   const [assets, setAssets] = useState<VisualAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [ventureFilter, setVentureFilter] = useState<"all" | Venture>("all");
-  const [rightsFilter, setRightsFilter] = useState<"all" | Rights>("all");
+  const [filterTag, setFilterTag] = useState<string | null>(null);
   const [folderInput, setFolderInput] = useState("shoots/2026-05-misc");
   const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
   const [selected, setSelected] = useState<VisualAsset | null>(null);
@@ -232,8 +205,9 @@ export default function TeamVisualAssets() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return assets.filter((a) => {
-      if (ventureFilter !== "all" && !a.ventures.includes(ventureFilter)) return false;
-      if (rightsFilter !== "all" && a.rights !== rightsFilter) return false;
+      if (filterTag && !a.tags.includes(filterTag) && a.ai_suggested_kind !== filterTag) {
+        return false;
+      }
       if (q) {
         const hay = [
           a.filename,
@@ -254,7 +228,11 @@ export default function TeamVisualAssets() {
       }
       return true;
     });
-  }, [assets, search, ventureFilter, rightsFilter]);
+  }, [assets, search, filterTag]);
+
+  function toggleTagFilter(tag: string) {
+    setFilterTag((prev) => (prev === tag ? null : tag));
+  }
 
   // Group filtered assets by section. Sections render in SECTIONS order; empty
   // sections are dropped from the page (and from the nav).
@@ -386,32 +364,17 @@ export default function TeamVisualAssets() {
               className="pl-9"
             />
           </div>
-          <Select value={ventureFilter} onValueChange={(v) => setVentureFilter(v as any)}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Venture" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All ventures</SelectItem>
-              {VENTURE_OPTIONS.map((v) => (
-                <SelectItem key={v.value} value={v.value}>
-                  {v.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={rightsFilter} onValueChange={(v) => setRightsFilter(v as any)}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Rights" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All rights</SelectItem>
-              {RIGHTS_OPTIONS.map((r) => (
-                <SelectItem key={r.value} value={r.value}>
-                  {r.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {filterTag && (
+            <button
+              type="button"
+              onClick={() => setFilterTag(null)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-medium hover:bg-primary/15 transition-colors"
+              title="Clear tag filter"
+            >
+              Tag: {filterTag}
+              <X className="w-3 h-3" />
+            </button>
+          )}
           <span className="text-xs text-muted-foreground">
             {filtered.length} of {assets.length}
           </span>
@@ -471,7 +434,13 @@ export default function TeamVisualAssets() {
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                       {items.map((a) => (
-                        <AssetTile key={a.id} asset={a} onClick={() => setSelected(a)} />
+                        <AssetTile
+                          key={a.id}
+                          asset={a}
+                          activeTag={filterTag}
+                          onClick={() => setSelected(a)}
+                          onTagClick={toggleTagFilter}
+                        />
                       ))}
                     </div>
                   </section>
@@ -500,13 +469,43 @@ export default function TeamVisualAssets() {
   );
 }
 
-function AssetTile({ asset, onClick }: { asset: VisualAsset; onClick: () => void }) {
+function AssetTile({
+  asset,
+  activeTag,
+  onClick,
+  onTagClick,
+}: {
+  asset: VisualAsset;
+  activeTag: string | null;
+  onClick: () => void;
+  onTagClick: (tag: string) => void;
+}) {
   const url = publicUrl(asset.storage_path);
   const aiPending = !asset.ai_processed_at && !asset.ai_error;
+
+  function tagChipClass(tag: string, base: string): string {
+    return activeTag === tag
+      ? `${base} ring-1 ring-primary ring-offset-1 ring-offset-card`
+      : base;
+  }
+
+  function handleTagClick(e: MouseEvent, tag: string) {
+    e.stopPropagation();
+    onTagClick(tag);
+  }
+
   return (
-    <button
+    <div
       onClick={onClick}
-      className="group block text-left rounded-lg overflow-hidden border border-border bg-card hover:border-primary/40 transition-colors"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="group block text-left rounded-lg overflow-hidden border border-border bg-card hover:border-primary/40 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
     >
       <div className="aspect-square bg-muted overflow-hidden relative">
         <img
@@ -527,26 +526,32 @@ function AssetTile({ asset, onClick }: { asset: VisualAsset; onClick: () => void
         </div>
         <div className="mt-1 flex flex-wrap gap-1">
           {asset.ai_suggested_kind && (
-            <Badge variant="default" className="text-[9px] px-1.5 py-0">
+            <Badge
+              variant="default"
+              onClick={(e) => handleTagClick(e, asset.ai_suggested_kind!)}
+              className={tagChipClass(asset.ai_suggested_kind, "text-[9px] px-1.5 py-0 cursor-pointer hover:opacity-90")}
+              title={`Filter to ${asset.ai_suggested_kind}`}
+            >
               {asset.ai_suggested_kind}
             </Badge>
           )}
-          {asset.ventures.slice(0, 3).map((v) => (
-            <Badge key={v} variant="secondary" className="text-[9px] px-1.5 py-0">
-              {v}
-            </Badge>
-          ))}
           {asset.tags
             .filter((t) => !t.startsWith("kind:") && !t.startsWith("role:") && !t.startsWith("count:") && !t.startsWith("venue:") && !t.startsWith("instrument:") && !t.startsWith("location:"))
-            .slice(0, 2)
+            .slice(0, 3)
             .map((t) => (
-              <Badge key={t} variant="outline" className="text-[9px] px-1.5 py-0">
+              <Badge
+                key={t}
+                variant="outline"
+                onClick={(e) => handleTagClick(e, t)}
+                className={tagChipClass(t, "text-[9px] px-1.5 py-0 cursor-pointer hover:bg-muted")}
+                title={`Filter to ${t}`}
+              >
                 {t}
               </Badge>
             ))}
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -563,11 +568,9 @@ function AssetDetailDialog({
 }) {
   const [altText, setAltText] = useState(asset.alt_text ?? "");
   const [caption, setCaption] = useState(asset.caption ?? "");
-  const [rights, setRights] = useState<Rights>(asset.rights);
   const [shootDate, setShootDate] = useState(asset.shoot_date ?? "");
   const [tags, setTags] = useState<string[]>(asset.tags);
   const [tagInput, setTagInput] = useState("");
-  const [ventures, setVentures] = useState<Venture[]>(asset.ventures);
   const [saving, setSaving] = useState(false);
   const [retagging, setRetagging] = useState(false);
 
@@ -581,10 +584,6 @@ function AssetDetailDialog({
     setTagInput("");
   }
 
-  function toggleVenture(v: Venture) {
-    setVentures((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
-  }
-
   async function save() {
     setSaving(true);
     const { data, error } = await supabase
@@ -592,10 +591,8 @@ function AssetDetailDialog({
       .update({
         alt_text: altText || null,
         caption: caption || null,
-        rights,
         shoot_date: shootDate || null,
         tags,
-        ventures,
       })
       .eq("id", asset.id)
       .select("*")
@@ -845,53 +842,13 @@ function AssetDetailDialog({
             </div>
 
             <div>
-              <Label>Ventures</Label>
-              <div className="flex flex-wrap gap-2 mt-1.5">
-                {VENTURE_OPTIONS.map((v) => {
-                  const on = ventures.includes(v.value);
-                  return (
-                    <button
-                      key={v.value}
-                      type="button"
-                      onClick={() => toggleVenture(v.value)}
-                      className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                        on
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "border-border text-muted-foreground hover:border-primary/40"
-                      }`}
-                    >
-                      {v.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="rights">Rights</Label>
-                <Select value={rights} onValueChange={(v) => setRights(v as Rights)}>
-                  <SelectTrigger id="rights">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {RIGHTS_OPTIONS.map((r) => (
-                      <SelectItem key={r.value} value={r.value}>
-                        {r.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="shoot">Shoot date</Label>
-                <Input
-                  id="shoot"
-                  type="date"
-                  value={shootDate}
-                  onChange={(e) => setShootDate(e.target.value)}
-                />
-              </div>
+              <Label htmlFor="shoot">Shoot date</Label>
+              <Input
+                id="shoot"
+                type="date"
+                value={shootDate}
+                onChange={(e) => setShootDate(e.target.value)}
+              />
             </div>
           </div>
         </div>
