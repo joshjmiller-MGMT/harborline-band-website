@@ -848,6 +848,42 @@ export default function PracticeTimerWidget() {
     }
 
     toast({ title: "Session logged", description: `${Math.round(totalSec / 60)} minutes practiced.` });
+
+    // P318: mirror to Josh's long-running practice sheet. Fire-and-forget —
+    // sheet is the historical-record mirror; DB is source of truth, so a
+    // failed sheet append does NOT block session-end. Capture sessionId
+    // here because we null it below.
+    const mirroredSessionId = sessionId;
+    supabase.functions
+      .invoke("append-practice-session-row", { body: { session_id: mirroredSessionId } })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("[P318] sheet mirror failed:", error);
+          toast({
+            title: "Sheet sync failed",
+            description: "Portal record saved. Sheet append failed — check console or reconnect Google.",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (data?.ok) {
+          toast({
+            title: "Mirrored to sheet",
+            description: data.row_index ? `Row ${data.row_index} appended.` : "Row appended.",
+          });
+        } else if (data?.error) {
+          console.error("[P318] sheet mirror error:", data);
+          toast({
+            title: data.error === "spreadsheets_scope_not_granted"
+              ? "Reconnect Google for sheet sync"
+              : "Sheet sync failed",
+            description: data.message || data.error,
+            variant: "destructive",
+          });
+        }
+      })
+      .catch((e) => console.error("[P318] sheet mirror exception:", e));
+
     setStopConfirmOpen(false);
     setSessionId(null);
     setSessionStart(null);
