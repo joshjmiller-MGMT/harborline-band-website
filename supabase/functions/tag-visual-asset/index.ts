@@ -11,6 +11,10 @@
 // into the tags array with prefix convention (kind:..., role:..., count:..., venue:...,
 // instrument:..., location:...).
 //
+// P21 (2026-05-13): tool schema also returns a `confidence` signal. Low-confidence
+// suggestions set review_status='needs-review' (the UI surfaces a Review queue chip);
+// high/medium continue current auto-apply-when-empty behavior unchanged.
+//
 // People are intentionally NOT named — we return generic role tags (musician, client,
 // bridal-party, audience, etc.) and a coarse count bucket, to avoid face-recognition
 // hallucination without a real reference set. Named-people recognition is a future phase.
@@ -121,6 +125,11 @@ const TOOL = {
         items: { type: "string", enum: ["harborline", "economy", "jmj", "personal", "bse"] },
         description: "Best-fit ventures for this asset. Empty array if no strong fit.",
       },
+      confidence: {
+        type: "string",
+        enum: ["high", "medium", "low"],
+        description: "Your own confidence in this tagging call as a whole. Use `low` when ANY of these are true: (a) `kind` falls back to `other` or `screenshot` because nothing else fit; (b) `people_roles` includes `unknown`; (c) `venue` is set but you're guessing at the place rather than reading clear cues; (d) the image is genuinely ambiguous between two plausible `kind` values (e.g. press-shot vs. promo, event-photo vs. live-performance); (e) lighting/composition make the subject hard to read. Use `medium` when the call is plausible but you want a human eyeball before it propagates downstream. Use `high` only when the structured fields are unambiguous from what's in frame.",
+      },
     },
     required: [
       "kind",
@@ -133,6 +142,7 @@ const TOOL = {
       "alt_text",
       "caption",
       "ventures",
+      "confidence",
     ],
   },
 };
@@ -151,6 +161,7 @@ Hard rules:
 - Never fabricate venue names — only set \`venue\` if visible signage, architecture, or distinctive features make it obvious.
 - Never invent instruments — only what's clearly visible in frame.
 - Tags should be lowercase, hyphenated multi-word (e.g. \`black-tie\`, \`cocktail-hour\`).
+- Set \`confidence\` honestly — \`low\` routes the asset to a human review queue, which is the right move whenever you fell back to \`other\`/\`screenshot\`, included \`unknown\` in roles, or guessed at a venue. Don't over-claim \`high\`.
 
 Respond ONLY by calling the tag_image tool.`;
 
@@ -165,6 +176,7 @@ interface TagImageOutput {
   alt_text: string;
   caption: string;
   ventures: string[];
+  confidence: "high" | "medium" | "low";
 }
 
 async function callClaudeVision(imageUrl: string, hint: { filename: string; folder: string }): Promise<TagImageOutput> {
@@ -274,11 +286,19 @@ Deno.serve(async (req) => {
       ai_error: null,
     };
 
+    // P21: low-confidence suggestions land in the review queue. High/medium continue
+    // the existing flow (auto-apply to empty rows, surface for manual Apply otherwise).
+    // Note: don't touch review_status for already-reviewed rows on re-run unless the
+    // new call comes back low — Fork A default (re-run resets only if confidence
+    // re-fires low; otherwise sticky reviewed). See current-row read below.
+    const isLowConfidence = tagged.confidence === "low";
+
     // First-pass auto-apply: if the row has no human edits yet (empty tags + no alt + no
     // ventures), fill them in so the gallery doesn't look empty. User can always edit.
+    // Low-confidence suppresses auto-apply — Josh has to Apply from the review queue.
     const { data: current } = await supabase
       .from("visual_assets")
-      .select("tags, alt_text, ventures")
+      .select("tags, alt_text, ventures, review_status")
       .eq("id", assetId)
       .maybeSingle();
     const noHumanEdits =
@@ -286,11 +306,27 @@ Deno.serve(async (req) => {
       (!current.tags || current.tags.length === 0) &&
       !current.alt_text &&
       (!current.ventures || current.ventures.length === 0);
-    if (noHumanEdits) {
+    const autoApplied = noHumanEdits && !isLowConfidence;
+    if (autoApplied) {
       updates.tags = buildPrefixedTags(tagged);
       updates.alt_text = tagged.alt_text;
       updates.ventures = tagged.ventures;
     }
+
+    // review_status transitions (Fork A default — hybrid):
+    //   low + (auto | reviewed | needs-review) → 'needs-review'
+    //   not-low + reviewed → stay 'reviewed' (Josh's prior call is sticky)
+    //   not-low + (auto | needs-review) → 'auto'
+    const priorStatus = current?.review_status ?? "auto";
+    let nextStatus: string;
+    if (isLowConfidence) {
+      nextStatus = "needs-review";
+    } else if (priorStatus === "reviewed") {
+      nextStatus = "reviewed";
+    } else {
+      nextStatus = "auto";
+    }
+    updates.review_status = nextStatus;
 
     const { error: updErr } = await supabase
       .from("visual_assets")
@@ -299,7 +335,14 @@ Deno.serve(async (req) => {
     if (updErr) throw new Error(`update failed: ${updErr.message}`);
 
     return new Response(
-      JSON.stringify({ ok: true, asset_id: assetId, suggestions: tagged, auto_applied: noHumanEdits }),
+      JSON.stringify({
+        ok: true,
+        asset_id: assetId,
+        suggestions: tagged,
+        auto_applied: autoApplied,
+        confidence: tagged.confidence,
+        review_status: nextStatus,
+      }),
       { headers: { ...corsHeaders, "content-type": "application/json" } },
     );
   } catch (e) {

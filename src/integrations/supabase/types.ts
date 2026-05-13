@@ -1147,6 +1147,7 @@ export type Database = {
           height: number | null
           id: string
           mime_type: string | null
+          review_status: string
           rights: string
           shoot_date: string | null
           storage_path: string
@@ -1179,6 +1180,7 @@ export type Database = {
           height?: number | null
           id?: string
           mime_type?: string | null
+          review_status?: string
           rights?: string
           shoot_date?: string | null
           storage_path: string
@@ -1211,6 +1213,7 @@ export type Database = {
           height?: number | null
           id?: string
           mime_type?: string | null
+          review_status?: string
           rights?: string
           shoot_date?: string | null
           storage_path?: string
