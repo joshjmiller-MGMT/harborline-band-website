@@ -216,19 +216,22 @@ export default function TeamPractice() {
 
   const categoryMax = categoryTotals[0]?.minutes || 1;
 
-  // Heatmap spans the earliest session (or 53 weeks back, whichever is older)
-  // up to today. Sized in whole weeks. Capped at 5 years to keep render bounded.
-  const heatmapWeeks = useMemo(() => {
+  // Compact heatmap = last 53 weeks (~1 year). "All time" = span back to the
+  // earliest session, uncapped — the container already overflow-scrolls so a
+  // 5-year history will just be horizontally scrollable.
+  const [heatmapAllTime, setHeatmapAllTime] = useState(false);
+
+  const heatmapAllTimeWeeks = useMemo(() => {
     const earliest = sessions.length
       ? new Date(sessions[sessions.length - 1].started_at)
       : addDays(today, -52 * 7);
     const earliestDay = startOfDay(earliest);
-    const minWeeks = 53;
-    const maxWeeks = 260;
     const daysSpan = Math.ceil((today.getTime() - earliestDay.getTime()) / (1000 * 60 * 60 * 24));
     const computed = Math.ceil(daysSpan / 7) + 1;
-    return Math.max(minWeeks, Math.min(maxWeeks, computed));
+    return Math.max(53, computed);
   }, [sessions, today]);
+
+  const heatmapWeeks = heatmapAllTime ? heatmapAllTimeWeeks : 53;
 
   const heatmap = useMemo(() => {
     const end = today;
@@ -448,9 +451,28 @@ export default function TeamPractice() {
         {/* Heatmap */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Flame className="w-4 h-4 text-primary" /> Practice heatmap · last {heatmapWeeks} weeks
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Flame className="w-4 h-4 text-primary" />
+                Practice heatmap ·{" "}
+                {heatmapAllTime
+                  ? `all time (${Math.round(heatmapAllTimeWeeks / 52 * 10) / 10}y)`
+                  : "last 12 months"}
+              </CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setHeatmapAllTime((v) => !v)}
+                className="h-7 text-xs gap-1"
+                title={
+                  heatmapAllTime
+                    ? "Show last 12 months only"
+                    : "Show the full history (scrolls horizontally)"
+                }
+              >
+                {heatmapAllTime ? "Compact" : "Show all time"}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
