@@ -424,72 +424,6 @@ export type Database = {
         }
         Relationships: []
       }
-      claude_log: {
-        Row: {
-          context: string
-          created_at: string
-          date: string | null
-          files_created: string[]
-          id: string
-          key_decisions: string[]
-          loose_ends: string[]
-          machine: string
-          machine_id: string
-          next_steps: string
-          session_id: string
-          source_type: string
-          summary: string
-          tags: string[]
-          timestamp: string
-          title: string
-          tools_used: string[]
-          topics: string[]
-          type: string
-        }
-        Insert: {
-          context?: string
-          created_at?: string
-          date?: string | null
-          files_created?: string[]
-          id?: string
-          key_decisions?: string[]
-          loose_ends?: string[]
-          machine?: string
-          machine_id?: string
-          next_steps?: string
-          session_id?: string
-          source_type?: string
-          summary: string
-          tags?: string[]
-          timestamp?: string
-          title?: string
-          tools_used?: string[]
-          topics?: string[]
-          type?: string
-        }
-        Update: {
-          context?: string
-          created_at?: string
-          date?: string | null
-          files_created?: string[]
-          id?: string
-          key_decisions?: string[]
-          loose_ends?: string[]
-          machine?: string
-          machine_id?: string
-          next_steps?: string
-          session_id?: string
-          source_type?: string
-          summary?: string
-          tags?: string[]
-          timestamp?: string
-          title?: string
-          tools_used?: string[]
-          topics?: string[]
-          type?: string
-        }
-        Relationships: []
-      }
       djep_events_cache: {
         Row: {
           cache_key: string
@@ -991,10 +925,14 @@ export type Database = {
           definition_of_done: string | null
           due_date: string | null
           effort: string | null
+          google_calendar_event_id: string | null
+          google_calendar_html_link: string | null
           id: string
           measure: string | null
           raw_input: string
           revised_title: string | null
+          trello_card_id: string | null
+          trello_card_url: string | null
         }
         Insert: {
           blockers?: string | null
@@ -1002,10 +940,14 @@ export type Database = {
           definition_of_done?: string | null
           due_date?: string | null
           effort?: string | null
+          google_calendar_event_id?: string | null
+          google_calendar_html_link?: string | null
           id?: string
           measure?: string | null
           raw_input: string
           revised_title?: string | null
+          trello_card_id?: string | null
+          trello_card_url?: string | null
         }
         Update: {
           blockers?: string | null
@@ -1013,10 +955,14 @@ export type Database = {
           definition_of_done?: string | null
           due_date?: string | null
           effort?: string | null
+          google_calendar_event_id?: string | null
+          google_calendar_html_link?: string | null
           id?: string
           measure?: string | null
           raw_input?: string
           revised_title?: string | null
+          trello_card_id?: string | null
+          trello_card_url?: string | null
         }
         Relationships: []
       }
@@ -1295,7 +1241,7 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           source_session?: string | null
-          title?: string
+          title: string
         }
         Update: {
           detail?: string | null

@@ -1,6 +1,5 @@
 import TeamLayout from "@/components/TeamLayout";
 import AvailabilityCheckerWidget from "@/components/dashboard/AvailabilityCheckerWidget";
-import ClaudeLogWidget from "@/components/dashboard/ClaudeLogWidget";
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
 import SmartTaskWidget from "@/components/dashboard/SmartTaskWidget";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
@@ -22,7 +21,6 @@ export default function TeamDashboard() {
           <AvailabilityCheckerWidget />
           <SmartTaskWidget />
           <UnifiedCalendarWidget />
-          <ClaudeLogWidget />
         </div>
       </div>
     </TeamLayout>
