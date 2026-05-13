@@ -11,7 +11,13 @@ const MONDAY_API_TOKEN = Deno.env.get("MONDAY_API_TOKEN");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-async function mondayFetch(query: string) {
+// P308 F7 — accept GraphQL variables alongside the query so callers don't
+// have to string-interpolate user-controlled values into the query body.
+// The original implementation interpolated `findUser` and `inspect` request
+// params directly into a GraphQL string, letting an attacker break out of
+// the string (e.g. `findUser=foo"){...}users{...}#`) to reshape the query
+// against the Monday workspace and exfiltrate roster data.
+async function mondayFetch(query: string, variables?: Record<string, unknown>) {
   const r = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
@@ -19,7 +25,7 @@ async function mondayFetch(query: string) {
       "Content-Type": "application/json",
       "API-Version": "2024-01",
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify(variables ? { query, variables } : { query }),
   });
   return r.json();
 }
@@ -40,20 +46,37 @@ Deno.serve(async (req) => {
 
   try {
     if (usersSearch) {
-      const j = await mondayFetch(`query { users(name: "${usersSearch}") { id name email } }`);
+      const j = await mondayFetch(
+        `query($name: String!) { users(name: $name) { id name email } }`,
+        { name: usersSearch },
+      );
       return new Response(JSON.stringify(j), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (inspectBoard) {
-      const j = await mondayFetch(`query {
-        boards(ids: [${inspectBoard}]) {
-          name
-          columns { id title type }
-          groups { id title }
-        }
-      }`);
+      // Defence-in-depth: parse the board id as a positive integer before
+      // passing it as a variable. Monday's GraphQL types `ID` is permissive
+      // enough that a malformed string would still go through to the API,
+      // but we'd rather 400 early than rely on Monday's parser.
+      const boardId = inspectBoard.match(/^\d+$/) ? inspectBoard : null;
+      if (!boardId) {
+        return new Response(
+          JSON.stringify({ error: "inspect must be a numeric board id" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      const j = await mondayFetch(
+        `query($ids: [ID!]) {
+          boards(ids: $ids) {
+            name
+            columns { id title type }
+            groups { id title }
+          }
+        }`,
+        { ids: [boardId] },
+      );
       return new Response(JSON.stringify(j), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
