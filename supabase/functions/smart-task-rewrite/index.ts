@@ -8,6 +8,8 @@
 // definition-of-done, and comments for blockers — but the "don't invent
 // deadlines" rule still holds.
 //
+
+import { requireOperator } from "../_shared/require-operator.ts";
 // Pattern mirrors social-ai/index.ts: tool_use for guaranteed JSON shape.
 
 const corsHeaders = {
@@ -100,6 +102,9 @@ function formatCardContext(ctx: CardContext): string {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
 
   try {
     const { input, card_context } = await req.json();

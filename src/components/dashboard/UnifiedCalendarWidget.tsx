@@ -522,12 +522,11 @@ export default function UnifiedCalendarWidget() {
     if (!confirm(`Disconnect ${email}? You'll need to re-consent to reconnect (events from this account disappear from the calendar until you do).`)) {
       return;
     }
-    const { error } = await supabase
-      .from("google_calendar_tokens")
-      .delete()
-      .eq("account_email", email);
-    if (error) {
-      toast.error(`Disconnect failed: ${error.message}`);
+    const { data, error } = await supabase.functions.invoke("disconnect-google-account", {
+      body: { account_email: email },
+    });
+    if (error || data?.error) {
+      toast.error(`Disconnect failed: ${error?.message ?? data?.error}`);
       return;
     }
     toast.success(`${email} disconnected`);
@@ -544,9 +543,11 @@ export default function UnifiedCalendarWidget() {
       person_column_id: newSource.person_column_id || null,
       person_id: newSource.person_id || null,
     };
-    const { error } = await supabase.from("monday_calendar_sources").insert(payload);
-    if (error) {
-      toast.error(error.message);
+    const { data, error } = await supabase.functions.invoke("manage-monday-source", {
+      body: { action: "create", payload },
+    });
+    if (error || data?.error) {
+      toast.error(error?.message ?? data?.message ?? data?.error);
       return;
     }
     setNewSource({ board_id: "", date_column_id: "", label: "", color: "#8b5cf6", person_column_id: "", person_id: "", skip_groups: "" });
@@ -557,16 +558,24 @@ export default function UnifiedCalendarWidget() {
 
   const deleteSource = async (id: string) => {
     if (!confirm("Delete this Monday source? Events from this board will disappear from the calendar.")) return;
-    await supabase.from("monday_calendar_sources").delete().eq("id", id);
+    const { data, error } = await supabase.functions.invoke("manage-monday-source", {
+      body: { action: "delete", id },
+    });
+    if (error || data?.error) {
+      toast.error(error?.message ?? data?.message ?? data?.error);
+      return;
+    }
     await loadSources();
     await loadAll();
     toast.success("Source removed");
   };
 
   const updateSource = async (id: string, patch: Partial<MondaySource>) => {
-    const { error } = await supabase.from("monday_calendar_sources").update(patch).eq("id", id);
-    if (error) {
-      toast.error(error.message);
+    const { data, error } = await supabase.functions.invoke("manage-monday-source", {
+      body: { action: "update", id, patch },
+    });
+    if (error || data?.error) {
+      toast.error(error?.message ?? data?.message ?? data?.error);
       return false;
     }
     await loadSources();

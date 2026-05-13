@@ -16,6 +16,7 @@
 // google-calendar-events. On a 401 from Drive, force-refresh once and retry.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireOperator } from "../_shared/require-operator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -187,6 +188,9 @@ async function driveSearch(accessToken: string, query: string, pageSize: number)
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     return jsonResponse({ error: "Google OAuth not configured" }, 500);

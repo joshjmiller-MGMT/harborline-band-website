@@ -1,6 +1,8 @@
 // Social Media AI helper: generates post ideas from a source, or per-platform captions for a post.
 // Ported from Lovable AI gateway to direct Anthropic Messages API (Claude Sonnet 4.6).
 
+import { requireOperator } from "../_shared/require-operator.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -110,6 +112,9 @@ async function callClaude(opts: {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
 
   try {
     const { mode, brandSlug, sourceTitle, sourceDescription, postTitle, postNotes, platforms } =
