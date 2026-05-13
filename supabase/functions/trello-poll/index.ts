@@ -1,8 +1,10 @@
-// P13 — Trello → SMART pipeline.
+// P13 — Trello → SMART pipeline (P21 enriched).
 //
 // Two routes via ?action=:
 //   - poll            → return open cards from Josh's "to-do" board, skipping
 //                       cards that already carry the "✅ SMART-ified" label.
+//                       Each card carries: list name (the "bucket"), labels,
+//                       open checklist items, recent comments, age.
 //   - mark-smartified → ensure the label exists on the board, attach it to a
 //                       given card. Card stays on the board (no archive),
 //                       paper trail preserved.
@@ -24,6 +26,11 @@ const SMART_LABEL_NAME = "✅ SMART-ified";
 const SMART_LABEL_COLOR = "green";
 // Fallback only — used when TRELLO_BOARD_ID is unset. Match-anywhere so "Josh's To Do" hits.
 const BOARD_NAME_MATCH = /to[\s\-_]?do$/i;
+
+// Limits on enriched payload — keep response small and avoid pathological cards.
+const MAX_COMMENTS_PER_CARD = 3;
+const MAX_COMMENT_CHARS = 280;
+const MAX_OPEN_CHECKITEMS_PER_CARD = 8;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -56,6 +63,20 @@ async function trelloPost(path: string, body: Record<string, string>): Promise<R
 
 type TrelloBoard = { id: string; name: string };
 type TrelloLabel = { id: string; name: string; color: string | null };
+type TrelloList = { id: string; name: string };
+type TrelloCheckItem = { id: string; name: string; state: "complete" | "incomplete" };
+type TrelloChecklist = {
+  id: string;
+  name: string;
+  idCard: string;
+  checkItems: TrelloCheckItem[];
+};
+type TrelloAction = {
+  id: string;
+  type: string;
+  date: string;
+  data: { text?: string; card?: { id: string } };
+};
 type TrelloCard = {
   id: string;
   name: string;
@@ -66,6 +87,7 @@ type TrelloCard = {
   idList: string;
   idBoard: string;
   labels: TrelloLabel[];
+  dateLastActivity: string;
 };
 
 async function findBoard(): Promise<{ board: TrelloBoard | null; candidates: TrelloBoard[] }> {
@@ -100,6 +122,19 @@ async function findOrCreateSmartLabel(boardId: string): Promise<TrelloLabel> {
   return await createRes.json();
 }
 
+function daysBetween(iso: string, now: Date): number {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return 0;
+  const ms = now.getTime() - t;
+  return Math.max(0, Math.round(ms / 86_400_000));
+}
+
+function truncate(s: string, max: number): string {
+  const trimmed = s.replace(/\s+/g, " ").trim();
+  if (trimmed.length <= max) return trimmed;
+  return trimmed.slice(0, max - 1).trimEnd() + "…";
+}
+
 async function pollBoard(): Promise<unknown> {
   const { board, candidates } = await findBoard();
   if (!board) {
@@ -116,30 +151,97 @@ async function pollBoard(): Promise<unknown> {
     };
   }
 
-  const cardsRes = await trelloGet(
-    `/boards/${board.id}/cards`,
-    "filter=open&fields=id,name,desc,due,shortUrl,url,idList,idBoard&customFieldItems=false",
-  );
+  // Parallel: cards, lists, checklists, recent comments. All board-scoped — O(1) calls regardless of card count.
+  const [cardsRes, listsRes, checklistsRes, actionsRes] = await Promise.all([
+    trelloGet(
+      `/boards/${board.id}/cards`,
+      "filter=open&fields=id,name,desc,due,shortUrl,url,idList,idBoard,labels,dateLastActivity&customFieldItems=false",
+    ),
+    trelloGet(`/boards/${board.id}/lists`, "filter=open&fields=id,name"),
+    trelloGet(
+      `/boards/${board.id}/checklists`,
+      "fields=id,name,idCard&checkItems=all&checkItem_fields=name,state",
+    ),
+    trelloGet(
+      `/boards/${board.id}/actions`,
+      "filter=commentCard&limit=1000&fields=id,type,date,data",
+    ),
+  ]);
   if (!cardsRes.ok) throw new Error(`Cards fetch failed: ${cardsRes.status}`);
+  if (!listsRes.ok) throw new Error(`Lists fetch failed: ${listsRes.status}`);
+  if (!checklistsRes.ok) throw new Error(`Checklists fetch failed: ${checklistsRes.status}`);
+  if (!actionsRes.ok) throw new Error(`Actions fetch failed: ${actionsRes.status}`);
+
   const allCards: TrelloCard[] = await cardsRes.json();
+  const lists: TrelloList[] = await listsRes.json();
+  const checklists: TrelloChecklist[] = await checklistsRes.json();
+  const actions: TrelloAction[] = await actionsRes.json();
+
+  const listNameById = new Map(lists.map((l) => [l.id, l.name]));
+
+  // Bucket open checkitems by card id, capped per card.
+  const openChecklistsByCard = new Map<string, { name: string; items: string[] }[]>();
+  for (const cl of checklists) {
+    const openItems = (cl.checkItems || [])
+      .filter((i) => i.state === "incomplete")
+      .map((i) => i.name.trim())
+      .filter((n) => n.length > 0);
+    if (openItems.length === 0) continue;
+    const bucket = openChecklistsByCard.get(cl.idCard) || [];
+    bucket.push({
+      name: cl.name,
+      items: openItems.slice(0, MAX_OPEN_CHECKITEMS_PER_CARD),
+    });
+    openChecklistsByCard.set(cl.idCard, bucket);
+  }
+
+  // Bucket recent comments by card id. Trello returns actions newest-first; keep top N.
+  const commentsByCard = new Map<string, { text: string; date: string }[]>();
+  for (const a of actions) {
+    const cardId = a.data?.card?.id;
+    const text = a.data?.text;
+    if (!cardId || !text) continue;
+    const bucket = commentsByCard.get(cardId) || [];
+    if (bucket.length >= MAX_COMMENTS_PER_CARD) continue;
+    bucket.push({ text: truncate(text, MAX_COMMENT_CHARS), date: a.date });
+    commentsByCard.set(cardId, bucket);
+  }
 
   // Per Josh: all lists, skip cards already SMART-ified.
   const pending = allCards.filter(
     (c) => !(c.labels || []).some((l) => l.name === SMART_LABEL_NAME),
   );
 
+  const now = new Date();
+
   return {
     board: { id: board.id, name: board.name },
-    cards: pending.map((c) => ({
-      id: c.id,
-      name: c.name,
-      desc: c.desc,
-      due: c.due,
-      url: c.shortUrl || c.url,
-      list_id: c.idList,
-    })),
+    cards: pending.map((c) => {
+      const listName = listNameById.get(c.idList) || null;
+      const labels = (c.labels || [])
+        .filter((l) => l.name && l.name !== SMART_LABEL_NAME)
+        .map((l) => ({ name: l.name, color: l.color }));
+      const checklists_open = openChecklistsByCard.get(c.id) || [];
+      const recent_comments = commentsByCard.get(c.id) || [];
+      const age_days = daysBetween(c.dateLastActivity, now);
+      return {
+        id: c.id,
+        name: c.name,
+        desc: c.desc,
+        due: c.due,
+        url: c.shortUrl || c.url,
+        list_id: c.idList,
+        list_name: listName,
+        labels,
+        checklists_open,
+        recent_comments,
+        date_last_activity: c.dateLastActivity,
+        age_days,
+      };
+    }),
     total_open: allCards.length,
     pending_count: pending.length,
+    lists: lists.map((l) => ({ id: l.id, name: l.name })),
   };
 }
 
