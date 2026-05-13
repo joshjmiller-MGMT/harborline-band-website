@@ -5,6 +5,7 @@
 // Returns per-account counts + top-3 expanded threads for the
 // NeedsActionWidget on the dashboard.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireOperator } from "../_shared/require-operator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -170,6 +171,10 @@ async function fetchAccount(supabase: any, row: any): Promise<AccountResult> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
+
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: tokenRows } = await supabase

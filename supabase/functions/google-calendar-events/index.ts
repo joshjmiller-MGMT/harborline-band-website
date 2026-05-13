@@ -1,5 +1,6 @@
 // Fetch & create Google Calendar events using stored tokens (multi-account)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireOperator } from "../_shared/require-operator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,6 +41,9 @@ async function ensureFreshToken(supabase: any, row: any): Promise<string> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     return new Response(

@@ -5,6 +5,8 @@
 //
 // Pattern mirrors smart-task-rewrite: tool_use for guaranteed JSON shape.
 
+import { requireOperator } from "../_shared/require-operator.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -106,6 +108,9 @@ interface Body {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
 
   try {
     const body = (await req.json()) as Body;

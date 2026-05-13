@@ -1,6 +1,7 @@
 // Aggregates availability for a given date from Google Calendar, Gmail,
 // Monday.com, and DJEP. Returns a tiered verdict (Confirmed/Tentative/Mention/Clear).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireOperator } from "../_shared/require-operator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -300,6 +301,10 @@ async function checkScheduledSocial(supabase: any, dateStr: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
+
   try {
     const body = await req.json().catch(() => ({}));
     const dateStr: string = body.date;

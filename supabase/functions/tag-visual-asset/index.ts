@@ -20,6 +20,7 @@
 // hallucination without a real reference set. Named-people recognition is a future phase.
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
+import { requireOperator } from "../_shared/require-operator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -224,6 +225,9 @@ async function callClaudeVision(imageUrl: string, hint: { filename: string; fold
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return new Response(JSON.stringify({ error: "Supabase env not configured" }), {

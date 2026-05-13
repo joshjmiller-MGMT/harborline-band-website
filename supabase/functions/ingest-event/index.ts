@@ -15,6 +15,7 @@
 // Response shape: { id, route, sourceFile, merged, shape?, fields?, warnings? }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireOperator } from "../_shared/require-operator.ts";
 import { detectShape } from "./shape-detector.ts";
 import { parseShapeA } from "./parser-a-tsb-narrative.ts";
 import { parseShapeB } from "./parser-b-dj-qa.ts";
@@ -599,6 +600,9 @@ async function upsertCanonicalEvent(opts: {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
 
   try {
     const body = await req.json();

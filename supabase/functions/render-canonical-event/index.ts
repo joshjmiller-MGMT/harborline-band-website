@@ -18,6 +18,7 @@
 // Response: { html, base64, filename, output_type, canonical_event_id }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireOperator } from "../_shared/require-operator.ts";
 import { renderOutputX } from "./render-output-x.ts";
 import { renderOutputXPrime } from "./render-output-x-prime.ts";
 import { renderOutputZ } from "./render-output-z.ts";
@@ -76,6 +77,9 @@ function safeFilename(name: string, outputType: OutputType): string {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
 
   try {
     const body = await req.json();

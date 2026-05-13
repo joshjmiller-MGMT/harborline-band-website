@@ -15,6 +15,7 @@
 // route — name, ISO date, and the field rows DJEP exposes for the event.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireOperator } from "../_shared/require-operator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -359,6 +360,9 @@ async function maybeRefreshCache(supabase: ReturnType<typeof createClient>): Pro
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
 
   try {
     const body = await req.json();

@@ -4,6 +4,7 @@
 // after 18:00 ET, OR an all-day event tagged green = performance) and flags
 // any week where 5+ evenings are busy (i.e. ≤2 evenings free).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireOperator } from "../_shared/require-operator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -150,6 +151,9 @@ function eventEveningReason(ev: RawEvent): { date: string; reason: string } | nu
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
