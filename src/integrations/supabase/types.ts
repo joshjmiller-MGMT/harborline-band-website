@@ -622,6 +622,54 @@ export type Database = {
         }
         Relationships: []
       }
+      practice_items: {
+        Row: {
+          archived_at: string | null
+          artist: string
+          color_level: number
+          color_level_updated_at: string | null
+          created_at: string
+          id: string
+          key: string
+          kind: string
+          last_practiced_at: string | null
+          notes: string
+          times_practiced: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          artist?: string
+          color_level?: number
+          color_level_updated_at?: string | null
+          created_at?: string
+          id?: string
+          key?: string
+          kind: string
+          last_practiced_at?: string | null
+          notes?: string
+          times_practiced?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          artist?: string
+          color_level?: number
+          color_level_updated_at?: string | null
+          created_at?: string
+          id?: string
+          key?: string
+          kind?: string
+          last_practiced_at?: string | null
+          notes?: string
+          times_practiced?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       practice_preset_segments: {
         Row: {
           bpm: number | null

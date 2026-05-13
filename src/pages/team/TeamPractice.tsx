@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
 import PracticeTimerWidget from "@/components/dashboard/PracticeTimerWidget";
-import SongsTrackerWidget from "@/components/dashboard/SongsTrackerWidget";
+import PracticeItemsWidget from "@/components/dashboard/PracticeItemsWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -373,9 +373,9 @@ export default function TeamPractice() {
           <PracticeTimerWidget />
         </div>
 
-        {/* Songs tracker */}
+        {/* Practice library — songs + lines + voicings + etc., color-coded */}
         <div className="mb-6">
-          <SongsTrackerWidget />
+          <PracticeItemsWidget />
         </div>
 
         {/* Stat tiles */}

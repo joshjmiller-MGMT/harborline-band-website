@@ -29,7 +29,20 @@ import {
   VolumeX,
   Hand,
   Maximize2,
+  Minimize2,
+  List,
+  Activity,
+  Disc,
+  Sliders,
 } from "lucide-react";
+import MetronomeWheel from "@/components/dashboard/MetronomeWheel";
+import {
+  colorSpec,
+  recommendItems,
+  SEGMENT_CATEGORY_TO_KIND,
+  type PracticeItem,
+  type PracticeItemKind,
+} from "@/lib/practice-mastery";
 import {
   DndContext,
   closestCenter,
@@ -246,7 +259,7 @@ function SortableRow({
   onChange,
   onRemove,
   running,
-  songs,
+  items,
 }: {
   seg: RuntimeSegment;
   index: number;
@@ -255,8 +268,12 @@ function SortableRow({
   onChange: (patch: Partial<RuntimeSegment>) => void;
   onRemove: () => void;
   running: boolean;
-  songs: { id: string; title: string; artist: string }[];
+  items: PracticeItem[];
 }) {
+  // Datalist source — narrow to the kind that matches this segment's category,
+  // or fall back to all items if the category isn't recommendation-linked.
+  const matchedKind = SEGMENT_CATEGORY_TO_KIND[seg.category];
+  const datalistItems = matchedKind ? items.filter((it) => it.kind === matchedKind) : items;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: seg.key });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -309,8 +326,8 @@ function SortableRow({
                 className="h-7 text-xs"
               />
               <datalist id={`songs-${seg.key}`}>
-                {songs.map((s) => (
-                  <option key={s.id} value={s.artist ? `${s.title} — ${s.artist}` : s.title} />
+                {datalistItems.map((it) => (
+                  <option key={it.id} value={it.artist ? `${it.title} — ${it.artist}` : it.title} />
                 ))}
               </datalist>
             </div>
@@ -371,6 +388,85 @@ function SortableRow({
   );
 }
 
+// ---------- Flow display ----------
+function FlowDisplay({
+  seg,
+  nextSeg,
+  elapsedSec,
+  totalElapsed,
+  totalTarget,
+  sessionStart,
+}: {
+  seg: RuntimeSegment;
+  nextSeg: RuntimeSegment | null;
+  elapsedSec: number;
+  totalElapsed: number;
+  totalTarget: number;
+  sessionStart: Date | null;
+}) {
+  const target = seg.target_minutes * 60;
+  const pct = target > 0 ? Math.min(100, (elapsedSec / target) * 100) : 0;
+  const overtime = elapsedSec > target && target > 0;
+  const remaining = target - elapsedSec;
+  const clockNow = new Date();
+  return (
+    <div className="space-y-3">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">{seg.category}</p>
+          <p className="text-lg font-medium leading-tight truncate max-w-[400px]">
+            {seg.label || <span className="text-muted-foreground italic">(no label)</span>}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            {clockNow.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            {sessionStart && ` · started ${sessionStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            Total {fmt(totalElapsed)} / {fmt(totalTarget)}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-end gap-3 flex-wrap">
+        <div>
+          <p className="font-mono text-6xl md:text-7xl font-bold tabular-nums leading-none">
+            {fmt(elapsedSec)}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Target {seg.target_minutes}m
+            {overtime ? (
+              <span className="ml-2 text-orange-500 font-semibold">
+                +{fmt(elapsedSec - target)} over
+              </span>
+            ) : (
+              <span className="ml-2 text-muted-foreground">
+                {fmt(Math.max(0, remaining))} left
+              </span>
+            )}
+          </p>
+        </div>
+        {seg.bpm && (
+          <div className="ml-auto text-right">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Click</p>
+            <p className="font-mono text-lg">{seg.bpm} BPM</p>
+          </div>
+        )}
+      </div>
+      <Progress value={pct} className="h-2" />
+      {nextSeg && (
+        <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-1">
+          <SkipForward className="w-3 h-3" />
+          <span>Next:</span>
+          <span className="font-medium text-foreground">{nextSeg.category}</span>
+          {nextSeg.label && <span>· {nextSeg.label}</span>}
+          <span>· {nextSeg.target_minutes}m</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---------- Main ----------
 export default function PracticeTimerWidget() {
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -394,15 +490,34 @@ export default function PracticeTimerWidget() {
   const tickRef = useRef<number | null>(null);
   const metro = useMetronome();
   const tap = useTapTempo((b) => metro.setBpm(b));
-  const [songs, setSongs] = useState<{ id: string; title: string; artist: string }[]>([]);
 
-  const loadSongs = async () => {
+  // View mode + metronome display mode, both persisted to localStorage so the
+  // setting sticks across page reloads.
+  const [viewMode, setViewMode] = useState<"rows" | "flow">(() => {
+    if (typeof window === "undefined") return "rows";
+    return (window.localStorage.getItem("practice.viewMode") as "rows" | "flow") || "rows";
+  });
+  const [metroDisplay, setMetroDisplay] = useState<"wheel" | "input">(() => {
+    if (typeof window === "undefined") return "wheel";
+    return (window.localStorage.getItem("practice.metroDisplay") as "wheel" | "input") || "wheel";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") window.localStorage.setItem("practice.viewMode", viewMode);
+  }, [viewMode]);
+  useEffect(() => {
+    if (typeof window !== "undefined") window.localStorage.setItem("practice.metroDisplay", metroDisplay);
+  }, [metroDisplay]);
+
+  const [items, setItems] = useState<PracticeItem[]>([]);
+
+  const loadItems = async () => {
     const { data } = await supabase
-      .from("practice_songs")
-      .select("id, title, artist, status")
-      .order("status")
-      .order("title");
-    setSongs((data as { id: string; title: string; artist: string }[]) || []);
+      .from("practice_items")
+      .select("*")
+      .is("archived_at", null)
+      .order("color_level", { ascending: true })
+      .order("last_practiced_at", { ascending: true, nullsFirst: true });
+    setItems((data as PracticeItem[]) || []);
   };
 
   // Load presets
@@ -441,10 +556,10 @@ export default function PracticeTimerWidget() {
   useEffect(() => {
     loadPresets();
     loadHistory();
-    loadSongs();
+    loadItems();
     const ch = supabase
-      .channel("songs_in_timer")
-      .on("postgres_changes", { event: "*", schema: "public", table: "practice_songs" }, loadSongs)
+      .channel("items_in_timer")
+      .on("postgres_changes", { event: "*", schema: "public", table: "practice_items" }, loadItems)
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
@@ -597,6 +712,31 @@ export default function PracticeTimerWidget() {
     setSegments((prev) => prev.map((s, i) => (i === activeIdx ? { ...s, target_minutes: s.target_minutes + 1 } : s)));
   };
 
+  // Tack-on / subtract on the current segment. Target floor of 1 to keep the
+  // progress bar meaningful.
+  const adjustTarget = (deltaMin: number, idx: number | null = activeIdx) => {
+    if (idx == null) return;
+    setSegments((prev) =>
+      prev.map((s, i) =>
+        i === idx ? { ...s, target_minutes: Math.max(1, s.target_minutes + deltaMin) } : s
+      )
+    );
+  };
+
+  // Jump back to (or forward to) any segment mid-session — preserves the in-session
+  // elapsed of that segment, marks it active, keeps running state.
+  const jumpToSegment = (idx: number) => {
+    if (!sessionId) return;
+    if (idx === activeIdx) return;
+    if (idx < 0 || idx >= segments.length) return;
+    // Save current elapsed into the leaving segment before switching
+    setSegments((prev) =>
+      prev.map((s, i) => (i === activeIdx ? { ...s, actual_seconds: elapsedSec } : s))
+    );
+    setActiveIdx(idx);
+    setElapsedSec(segments[idx].actual_seconds);
+  };
+
   const restartSegment = () => {
     if (activeIdx == null) return;
     setElapsedSec(0);
@@ -641,28 +781,30 @@ export default function PracticeTimerWidget() {
       }))
     );
 
-    // Bump times_practiced for any segment label matching a tracked song
-    const labels = finalSegs
+    // Bump times_practiced + last_practiced_at on any practice_item whose title
+    // matches a played segment's label (case-insensitive, title-only — the user
+    // types "Title — Artist" but we strip the artist tail for the match).
+    const playedLabels = finalSegs
       .filter((s) => s.actual_seconds > 0 && !s.skipped && s.label?.trim())
       .map((s) => s.label.split("—")[0].trim().toLowerCase());
-    const matched = songs.filter((sg) => labels.includes(sg.title.toLowerCase()));
-    if (matched.length) {
-      const { data: current } = await supabase
-        .from("practice_songs")
-        .select("id, times_practiced")
-        .in("id", matched.map((m) => m.id));
-      await Promise.all(
-        (current || []).map((c) =>
-          supabase
-            .from("practice_songs")
-            .update({
-              times_practiced: (c.times_practiced || 0) + 1,
-              last_practiced_at: new Date().toISOString(),
-            })
-            .eq("id", c.id)
-        )
+    if (playedLabels.length) {
+      const matched = items.filter((it) =>
+        playedLabels.includes(it.title.toLowerCase())
       );
-      loadSongs();
+      if (matched.length) {
+        await Promise.all(
+          matched.map((it) =>
+            supabase
+              .from("practice_items")
+              .update({
+                times_practiced: (it.times_practiced || 0) + 1,
+                last_practiced_at: new Date().toISOString(),
+              })
+              .eq("id", it.id)
+          )
+        );
+        loadItems();
+      }
     }
 
     toast({ title: "Session logged", description: `${Math.round(totalSec / 60)} minutes practiced.` });
@@ -770,7 +912,29 @@ export default function PracticeTimerWidget() {
             <Timer className="w-4 h-4 text-primary" /> Practice Timer
           </CardTitle>
           <div className="flex items-center gap-1">
-            <Button size="sm" variant="ghost" onClick={() => setFocusOpen(true)} title="Focus mode">
+            <div className="flex items-center rounded-md border bg-card p-0.5 mr-1">
+              <button
+                type="button"
+                onClick={() => setViewMode("rows")}
+                className={`h-7 px-2 rounded text-xs flex items-center gap-1 transition-colors ${
+                  viewMode === "rows" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Rows view — edit + reorder segments"
+              >
+                <List className="w-3 h-3" /> Rows
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("flow")}
+                className={`h-7 px-2 rounded text-xs flex items-center gap-1 transition-colors ${
+                  viewMode === "flow" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Flow view — focus on current segment"
+              >
+                <Activity className="w-3 h-3" /> Flow
+              </button>
+            </div>
+            <Button size="sm" variant="ghost" onClick={() => setFocusOpen(true)} title="Full-screen focus mode">
               <Maximize2 className="w-4 h-4" />
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setChime((c) => !c)} title={chime ? "Mute chime" : "Enable chime"}>
@@ -827,26 +991,70 @@ export default function PracticeTimerWidget() {
 
         {/* Big timer */}
         <div className="rounded-xl border bg-gradient-to-br from-primary/10 to-transparent p-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                {activeIdx != null ? segments[activeIdx]?.category : "Ready"}
-              </p>
-              <p className="font-mono text-4xl font-bold">{fmt(elapsedSec)}</p>
-              {activeIdx != null && (
-                <p className="text-xs text-muted-foreground">
-                  Segment target {segments[activeIdx]?.target_minutes} min
+          {/* Breadcrumb pill row — surfaces every segment, click to jump back/forward.
+              Visible in both rows + flow views so the navigation is consistent. */}
+          {segments.length > 0 && sessionId && (
+            <div className="flex items-center gap-1 flex-wrap mb-3 pb-3 border-b border-border/50">
+              {segments.map((s, i) => {
+                const isActive = i === activeIdx;
+                const isDone = s.completed;
+                const isSkipped = s.skipped;
+                return (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => jumpToSegment(i)}
+                    className={`h-6 px-2 rounded-full text-[10px] flex items-center gap-1 border transition-all ${
+                      isActive
+                        ? "border-primary bg-primary/15 text-foreground font-medium"
+                        : isDone
+                        ? "border-green-500/40 bg-green-500/10 text-muted-foreground"
+                        : isSkipped
+                        ? "border-muted bg-muted/30 text-muted-foreground line-through"
+                        : "border-border bg-card text-muted-foreground hover:text-foreground"
+                    }`}
+                    title={`${s.category}${s.label ? " · " + s.label : ""} · ${s.target_minutes}m`}
+                  >
+                    <span className="font-mono">{i + 1}</span>
+                    <span className="truncate max-w-[80px]">{s.label || s.category}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {viewMode === "flow" && activeIdx != null ? (
+            <FlowDisplay
+              seg={segments[activeIdx]}
+              nextSeg={segments[activeIdx + 1] ?? null}
+              elapsedSec={elapsedSec}
+              totalElapsed={totalElapsed}
+              totalTarget={totalTarget}
+              sessionStart={sessionStart}
+            />
+          ) : (
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                  {activeIdx != null ? segments[activeIdx]?.category : "Ready"}
                 </p>
-              )}
+                <p className="font-mono text-4xl font-bold">{fmt(elapsedSec)}</p>
+                {activeIdx != null && (
+                  <p className="text-xs text-muted-foreground">
+                    Segment target {segments[activeIdx]?.target_minutes} min
+                    {segments[activeIdx]?.label ? ` · ${segments[activeIdx].label}` : ""}
+                  </p>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total</p>
+                <p className="font-mono text-xl">{fmt(totalElapsed)} / {fmt(totalTarget)}</p>
+                {sessionStart && (
+                  <p className="text-xs text-muted-foreground">Started {sessionStart.toLocaleTimeString()}</p>
+                )}
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Total</p>
-              <p className="font-mono text-xl">{fmt(totalElapsed)} / {fmt(totalTarget)}</p>
-              {sessionStart && (
-                <p className="text-xs text-muted-foreground">Started {sessionStart.toLocaleTimeString()}</p>
-              )}
-            </div>
-          </div>
+          )}
 
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             {!sessionId ? (
@@ -865,7 +1073,6 @@ export default function PracticeTimerWidget() {
                 <Button onClick={() => nextSegment(false)} variant="ghost" size="sm">
                   Skip
                 </Button>
-                <Button onClick={addMinute} variant="ghost" size="sm">+1 min</Button>
                 <Button onClick={restartSegment} variant="ghost" size="sm" className="gap-1">
                   <RotateCcw className="w-3 h-3" /> Restart
                 </Button>
@@ -876,46 +1083,172 @@ export default function PracticeTimerWidget() {
             )}
           </div>
 
-          {/* Metronome */}
-          <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Metronome</span>
-            <Button
-              size="sm"
-              variant={metro.running ? "default" : "outline"}
-              onClick={() => (metro.running ? metro.stop() : metro.start())}
-              className="h-7 gap-1 text-xs"
-            >
-              {metro.running ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-              {metro.running ? "Stop" : "Click"}
-            </Button>
-            <div className="flex items-center gap-1">
-              <Music className="w-3 h-3 text-muted-foreground" />
-              <Input
-                type="number"
-                min={30}
-                max={300}
-                value={metro.bpm}
-                onChange={(e) => metro.setBpm(parseInt(e.target.value || "0") || 0)}
-                className="h-7 w-16 text-xs"
-              />
-              <span className="text-xs text-muted-foreground">BPM</span>
-            </div>
-            <Button size="sm" variant="ghost" onClick={tap} className="h-7 gap-1 text-xs">
-              <Hand className="w-3 h-3" /> Tap
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => metro.setMuted(!metro.muted)}
-              className="h-7 gap-1 text-xs"
-              title={metro.muted ? "Unmute" : "Mute"}
-            >
-              {metro.muted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
-            </Button>
-            {activeIdx != null && segments[activeIdx]?.bpm && (
-              <span className="text-[10px] text-muted-foreground ml-auto">
-                Synced to segment ({segments[activeIdx].bpm} BPM)
+          {/* Tack-on time controls — visible whenever a segment is active */}
+          {activeIdx != null && (
+            <div className="flex items-center gap-1 mt-2">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground mr-1">
+                Adjust segment
               </span>
+              <button
+                type="button"
+                onClick={() => adjustTarget(-5)}
+                className="h-7 px-2 rounded border text-xs hover:bg-muted"
+              >
+                −5m
+              </button>
+              <button
+                type="button"
+                onClick={() => adjustTarget(-1)}
+                className="h-7 px-2 rounded border text-xs hover:bg-muted"
+              >
+                −1m
+              </button>
+              <button
+                type="button"
+                onClick={() => adjustTarget(1)}
+                className="h-7 px-2 rounded border text-xs hover:bg-muted"
+              >
+                +1m
+              </button>
+              <button
+                type="button"
+                onClick={() => adjustTarget(5)}
+                className="h-7 px-2 rounded border text-xs hover:bg-muted"
+              >
+                +5m
+              </button>
+            </div>
+          )}
+
+          {/* Metronome */}
+          <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Metronome
+              </span>
+              <Button
+                size="sm"
+                variant={metro.running ? "default" : "outline"}
+                onClick={() => (metro.running ? metro.stop() : metro.start())}
+                className="h-7 gap-1 text-xs"
+              >
+                {metro.running ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                {metro.running ? "Stop" : "Click"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={tap} className="h-7 gap-1 text-xs">
+                <Hand className="w-3 h-3" /> Tap
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => metro.setMuted(!metro.muted)}
+                className="h-7 gap-1 text-xs"
+                title={metro.muted ? "Unmute" : "Mute"}
+              >
+                {metro.muted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+              </Button>
+              <div className="ml-auto flex items-center rounded-md border bg-card p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setMetroDisplay("wheel")}
+                  className={`h-6 px-2 rounded text-[10px] flex items-center gap-1 transition-colors ${
+                    metroDisplay === "wheel" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Wheel display"
+                >
+                  <Disc className="w-3 h-3" /> Wheel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMetroDisplay("input")}
+                  className={`h-6 px-2 rounded text-[10px] flex items-center gap-1 transition-colors ${
+                    metroDisplay === "input" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="±/input display"
+                >
+                  <Sliders className="w-3 h-3" /> ±
+                </button>
+              </div>
+              {activeIdx != null && segments[activeIdx]?.bpm && (
+                <span className="text-[10px] text-muted-foreground w-full md:w-auto">
+                  Synced to segment ({segments[activeIdx].bpm} BPM)
+                </span>
+              )}
+            </div>
+
+            {metroDisplay === "wheel" ? (
+              <div className="flex justify-center py-2">
+                <MetronomeWheel
+                  bpm={metro.bpm}
+                  onBpmChange={(b) => metro.setBpm(b)}
+                  running={metro.running}
+                  currentBeat={metro.currentBeat}
+                  size={200}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 flex-wrap">
+                <Music className="w-3 h-3 text-muted-foreground" />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => metro.setBpm(Math.max(30, metro.bpm - 5))}
+                  className="h-7 px-2 text-xs"
+                >
+                  −5
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => metro.setBpm(Math.max(30, metro.bpm - 1))}
+                  className="h-7 px-2 text-xs"
+                >
+                  −1
+                </Button>
+                <Input
+                  type="number"
+                  min={30}
+                  max={300}
+                  value={metro.bpm}
+                  onChange={(e) => metro.setBpm(parseInt(e.target.value || "0") || 0)}
+                  className="h-7 w-16 text-xs text-center"
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => metro.setBpm(Math.min(300, metro.bpm + 1))}
+                  className="h-7 px-2 text-xs"
+                >
+                  +1
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => metro.setBpm(Math.min(300, metro.bpm + 5))}
+                  className="h-7 px-2 text-xs"
+                >
+                  +5
+                </Button>
+                <span className="text-xs text-muted-foreground">BPM</span>
+                {/* Inline beat indicator */}
+                <div className="flex items-center gap-1 ml-2">
+                  {[0, 1, 2, 3].map((b) => {
+                    const active = metro.running && metro.currentBeat === b;
+                    return (
+                      <div
+                        key={b}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          active
+                            ? b === 0
+                              ? "bg-primary scale-125"
+                              : "bg-primary/70"
+                            : "bg-muted"
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -936,7 +1269,47 @@ export default function PracticeTimerWidget() {
           />
         </div>
 
-        {/* Segments */}
+        {/* Recommendation slot — only in flow mode, only when there's an active segment whose
+            category maps to a kind and whose label is empty. Surfaces top-3 picks. */}
+        {viewMode === "flow" && activeIdx != null && (() => {
+          const seg = segments[activeIdx];
+          const matchedKind: PracticeItemKind | undefined = SEGMENT_CATEGORY_TO_KIND[seg.category];
+          if (!matchedKind) return null;
+          const top = recommendItems(items, { kind: matchedKind, count: 3 });
+          if (!top.length) return null;
+          return (
+            <div className="rounded-md border bg-card p-3">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
+                Pull suggestions ({matchedKind})
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                {top.map((it) => {
+                  const spec = colorSpec(it.color_level);
+                  const value = it.artist ? `${it.title} — ${it.artist}` : it.title;
+                  return (
+                    <button
+                      key={it.id}
+                      type="button"
+                      onClick={() => updateSeg(activeIdx, { label: value })}
+                      className={`text-left rounded border ${spec.borderTint} bg-card hover:bg-muted/40 p-2 flex items-start gap-2`}
+                    >
+                      <div className={`w-1.5 self-stretch rounded-sm ${spec.swatchBg}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium truncate">{it.title}</div>
+                        {it.artist && (
+                          <div className="text-[10px] text-muted-foreground truncate">{it.artist}</div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Segments — full editor (rows view only) */}
+        {viewMode === "rows" && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Segments — drag to reorder</p>
@@ -963,7 +1336,7 @@ export default function PracticeTimerWidget() {
                       running={running && activeIdx === i}
                       onChange={(patch) => updateSeg(i, patch)}
                       onRemove={() => removeSeg(i)}
-                      songs={songs}
+                      items={items}
                     />
                   </div>
                 ))}
@@ -974,9 +1347,10 @@ export default function PracticeTimerWidget() {
             </SortableContext>
           </DndContext>
           {sessionId && (
-            <p className="text-[10px] text-muted-foreground text-center">Tip: double-click any segment to jump to it.</p>
+            <p className="text-[10px] text-muted-foreground text-center">Tip: double-click any segment to jump to it, or click breadcrumb pills above.</p>
           )}
         </div>
+        )}
       </CardContent>
 
       {/* Focus mode modal — consolidated Timer + Metronome */}
