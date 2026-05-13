@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ImagePlus, Search, Sparkles, Trash2, Loader2, X, Check } from "lucide-react";
+import { ImagePlus, Search, Sparkles, Trash2, Loader2, X, Check, AlertTriangle, SkipForward } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -43,6 +43,7 @@ interface VisualAsset {
   ai_suggested_location: string | null;
   ai_processed_at: string | null;
   ai_error: string | null;
+  review_status: string;
   uploaded_at: string;
 }
 
@@ -179,6 +180,7 @@ export default function TeamVisualAssets() {
   const [search, setSearch] = useState("");
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [sectionFilter, setSectionFilter] = useState<SectionId | null>(null);
+  const [reviewOnly, setReviewOnly] = useState(false);
   const [folderInput, setFolderInput] = useState("shoots/2026-05-misc");
   const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
   const [selected, setSelected] = useState<VisualAsset | null>(null);
@@ -203,9 +205,15 @@ export default function TeamVisualAssets() {
     loadAssets();
   }, []);
 
+  const reviewQueueCount = useMemo(
+    () => assets.filter((a) => a.review_status === "needs-review").length,
+    [assets],
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return assets.filter((a) => {
+      if (reviewOnly && a.review_status !== "needs-review") return false;
       if (filterTag && !a.tags.includes(filterTag) && a.ai_suggested_kind !== filterTag) {
         return false;
       }
@@ -229,7 +237,7 @@ export default function TeamVisualAssets() {
       }
       return true;
     });
-  }, [assets, search, filterTag]);
+  }, [assets, search, filterTag, reviewOnly]);
 
   function toggleTagFilter(tag: string) {
     setFilterTag((prev) => (prev === tag ? null : tag));
@@ -365,6 +373,26 @@ export default function TeamVisualAssets() {
               className="pl-9"
             />
           </div>
+          {reviewQueueCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setReviewOnly((prev) => !prev)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
+                reviewOnly
+                  ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40"
+                  : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/15"
+              }`}
+              title={
+                reviewOnly
+                  ? "Showing only assets queued for review — click to clear"
+                  : `${reviewQueueCount} asset${reviewQueueCount === 1 ? "" : "s"} flagged by AI as low-confidence — click to filter`
+              }
+            >
+              <AlertTriangle className="w-3 h-3" />
+              Review queue ({reviewQueueCount})
+              {reviewOnly && <X className="w-3 h-3" />}
+            </button>
+          )}
           {filterTag && (
             <button
               type="button"
@@ -510,6 +538,7 @@ function AssetTile({
 }) {
   const url = publicUrl(asset.storage_path);
   const aiPending = !asset.ai_processed_at && !asset.ai_error;
+  const needsReview = asset.review_status === "needs-review";
 
   function tagChipClass(tag: string, base: string): string {
     return activeTag === tag
@@ -533,7 +562,11 @@ function AssetTile({
           onClick();
         }
       }}
-      className="group block text-left rounded-lg overflow-hidden border border-border bg-card hover:border-primary/40 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
+      className={`group block text-left rounded-lg overflow-hidden border bg-card transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+        needsReview
+          ? "border-amber-500/50 hover:border-amber-500/70"
+          : "border-border hover:border-primary/40"
+      }`}
     >
       <div className="aspect-square bg-muted overflow-hidden relative">
         <img
@@ -545,6 +578,11 @@ function AssetTile({
         {aiPending && (
           <div className="absolute top-1.5 right-1.5 bg-background/80 backdrop-blur px-1.5 py-0.5 rounded text-[10px] text-muted-foreground flex items-center gap-1">
             <Sparkles className="w-3 h-3" /> tagging…
+          </div>
+        )}
+        {needsReview && !aiPending && (
+          <div className="absolute top-1.5 left-1.5 bg-amber-500/90 text-white px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" /> Review
           </div>
         )}
       </div>
@@ -600,9 +638,11 @@ function AssetDetailDialog({
   const [tags, setTags] = useState<string[]>(asset.tags);
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [skipping, setSkipping] = useState(false);
   const [retagging, setRetagging] = useState(false);
 
   const url = publicUrl(asset.storage_path);
+  const needsReview = asset.review_status === "needs-review";
 
   function addTag(t: string) {
     const clean = t.trim().toLowerCase().replace(/\s+/g, "-");
@@ -614,14 +654,17 @@ function AssetDetailDialog({
 
   async function save() {
     setSaving(true);
+    const patch: Record<string, unknown> = {
+      alt_text: altText || null,
+      caption: caption || null,
+      shoot_date: shootDate || null,
+      tags,
+    };
+    // P21: saving from the review queue is itself the human review — promote to 'reviewed'.
+    if (needsReview) patch.review_status = "reviewed";
     const { data, error } = await supabase
       .from("visual_assets")
-      .update({
-        alt_text: altText || null,
-        caption: caption || null,
-        shoot_date: shootDate || null,
-        tags,
-      })
+      .update(patch)
       .eq("id", asset.id)
       .select("*")
       .single();
@@ -630,7 +673,25 @@ function AssetDetailDialog({
       toast({ title: "Couldn't save", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Saved" });
+    toast({ title: needsReview ? "Saved + cleared from review queue" : "Saved" });
+    onSaved(data as VisualAsset);
+  }
+
+  // P21: queue-only Skip — mark reviewed without applying any tags / saving edits.
+  async function skipReview() {
+    setSkipping(true);
+    const { data, error } = await supabase
+      .from("visual_assets")
+      .update({ review_status: "reviewed" })
+      .eq("id", asset.id)
+      .select("*")
+      .single();
+    setSkipping(false);
+    if (error) {
+      toast({ title: "Couldn't skip", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Skipped — cleared from review queue" });
     onSaved(data as VisualAsset);
   }
 
@@ -726,6 +787,16 @@ function AssetDetailDialog({
           </div>
 
           <div className="space-y-4">
+            {needsReview && (
+              <div className="border border-amber-500/40 bg-amber-500/10 rounded-lg p-3 text-xs flex items-start gap-2 text-amber-700 dark:text-amber-300">
+                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="font-medium">In the review queue.</span> AI flagged
+                  this asset as low-confidence — its tags weren't auto-applied. Edit + Save
+                  (or Skip) to clear it from the queue.
+                </div>
+              </div>
+            )}
             {aiHasSuggestions && (
               <div className="border border-primary/30 bg-primary/5 rounded-lg p-3 text-sm">
                 <div className="flex items-center justify-between mb-2">
@@ -891,6 +962,22 @@ function AssetDetailDialog({
               )}
               Re-run AI
             </Button>
+            {needsReview && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={skipReview}
+                disabled={skipping}
+                title="Mark reviewed without applying any AI tags"
+              >
+                {skipping ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <SkipForward className="w-4 h-4 mr-2" />
+                )}
+                Skip (no tags)
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={deleteAsset} className="text-destructive">
               <Trash2 className="w-4 h-4 mr-2" /> Delete
             </Button>
@@ -901,7 +988,7 @@ function AssetDetailDialog({
             </Button>
             <Button onClick={save} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Save
+              {needsReview ? "Save + mark reviewed" : "Save"}
             </Button>
           </div>
         </DialogFooter>
