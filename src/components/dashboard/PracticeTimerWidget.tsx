@@ -848,6 +848,56 @@ export default function PracticeTimerWidget() {
     }
 
     toast({ title: "Session logged", description: `${Math.round(totalSec / 60)} minutes practiced.` });
+
+    // P318: mirror to Josh's long-running practice sheet. Fire-and-forget —
+    // sheet is the historical-record mirror; DB is source of truth, so a
+    // failed sheet append does NOT block session-end. Capture sessionId
+    // here because we null it below.
+    const mirroredSessionId = sessionId;
+    supabase.functions
+      .invoke("append-practice-session-row", { body: { session_id: mirroredSessionId } })
+      .then(async ({ data, error }) => {
+        // Helper: try to extract the structured error body from the fn's
+        // JSON response. supabase-js stashes the original Response on
+        // error.context for non-2xx; .json() yields our { error, message }
+        // payload. Falls back to error.message if parse fails.
+        const extractErrorBody = async (err: any): Promise<{ code?: string; msg?: string }> => {
+          try {
+            if (err?.context?.json) {
+              const body = await err.context.json();
+              // fn writes `message` for known errors, `detail` for unhandled exceptions.
+              return { code: body?.error, msg: body?.message || body?.detail };
+            }
+          } catch (_) { /* fallthrough */ }
+          return { msg: err?.message };
+        };
+
+        if (error) {
+          const { code, msg } = await extractErrorBody(error);
+          console.error("[P318] sheet mirror failed:", { code, msg, raw: error });
+          const titleByCode: Record<string, string> = {
+            spreadsheets_scope_not_granted: "Reconnect Google for sheet sync",
+            no_google_account_connected: "Connect Google to enable sheet sync",
+            owner_account_not_found: "Practice-sheet owner not connected",
+            sheets_api_error: "Sheets API error",
+            sheets_api_not_enabled: "Enable Sheets API in Google Cloud",
+          };
+          toast({
+            title: code && titleByCode[code] ? titleByCode[code] : "Sheet sync failed",
+            description: msg || code || "Portal record saved. Check console.",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (data?.ok) {
+          toast({
+            title: "Mirrored to sheet",
+            description: data.row_index ? `Row ${data.row_index} appended.` : "Row appended.",
+          });
+        }
+      })
+      .catch((e) => console.error("[P318] sheet mirror exception:", e));
+
     setStopConfirmOpen(false);
     setSessionId(null);
     setSessionStart(null);

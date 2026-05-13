@@ -1599,6 +1599,9 @@ export default function UnifiedCalendarWidget() {
                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-2">
+                Grants read access to Calendar, Gmail, Drive metadata, plus write access to spreadsheets you own (used by practice-session sheet mirror). Existing connections need a one-click re-consent to add the spreadsheet scope.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
                 Need GOOGLE_CALENDAR_CLIENT_ID and GOOGLE_CALENDAR_CLIENT_SECRET configured before connecting.
               </p>
             </section>

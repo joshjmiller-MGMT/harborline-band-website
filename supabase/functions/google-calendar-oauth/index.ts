@@ -23,6 +23,11 @@ const SCOPES = [
   // into a Harborline/chart-library/ folder under the connected Drive. Safer
   // than full `drive` scope — we can only touch files we created.
   "https://www.googleapis.com/auth/drive.file",
+  // P318 (2026-05-13): spreadsheets = write access to user-owned sheets.
+  // Used by `append-practice-session-row` to mirror completed practice
+  // sessions into Josh's long-running practice sheet (`PRACTICE_SHEET_ID`).
+  // Existing tokens lose this scope until Josh re-consents from /team/dashboard.
+  "https://www.googleapis.com/auth/spreadsheets",
   "https://www.googleapis.com/auth/userinfo.email",
 ].join(" ");
 
