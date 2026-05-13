@@ -865,7 +865,8 @@ export default function PracticeTimerWidget() {
           try {
             if (err?.context?.json) {
               const body = await err.context.json();
-              return { code: body?.error, msg: body?.message };
+              // fn writes `message` for known errors, `detail` for unhandled exceptions.
+              return { code: body?.error, msg: body?.message || body?.detail };
             }
           } catch (_) { /* fallthrough */ }
           return { msg: err?.message };
@@ -879,6 +880,7 @@ export default function PracticeTimerWidget() {
             no_google_account_connected: "Connect Google to enable sheet sync",
             owner_account_not_found: "Practice-sheet owner not connected",
             sheets_api_error: "Sheets API error",
+            sheets_api_not_enabled: "Enable Sheets API in Google Cloud",
           };
           toast({
             title: code && titleByCode[code] ? titleByCode[code] : "Sheet sync failed",

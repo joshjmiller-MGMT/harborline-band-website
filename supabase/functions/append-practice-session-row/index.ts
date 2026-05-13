@@ -190,6 +190,20 @@ function buildRow(session: Session, segments: Segment[]): string[] {
   ];
 }
 
+// Surfaces "Sheets API not enabled in this Cloud project" as a structured
+// signal (mirrors drive-search-event's drive_api_not_enabled handling).
+class SheetsApiNotEnabledError extends Error {
+  enableUrl: string;
+  projectId: string | null;
+  constructor(projectId: string | null) {
+    super("Google Sheets API not enabled in this Cloud project.");
+    this.projectId = projectId;
+    this.enableUrl = projectId
+      ? `https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=${projectId}`
+      : "https://console.developers.google.com/apis/api/sheets.googleapis.com/overview";
+  }
+}
+
 // Look up the tab name for gid=0 (the canonical practice-log tab). Done per
 // invocation — it's a cheap metadata call and avoids hardcoding the tab name
 // (Josh has renamed sheets before; this stays resilient to rename).
@@ -200,6 +214,10 @@ async function lookupFirstTabName(accessToken: string, sheetId: string): Promise
   );
   if (!res.ok) {
     const body = await res.text();
+    if (res.status === 403 && /has not been used in project|sheets\.googleapis\.com/i.test(body)) {
+      const projectMatch = body.match(/project (\d+)/);
+      throw new SheetsApiNotEnabledError(projectMatch ? projectMatch[1] : null);
+    }
     throw new Error(`sheets metadata fetch failed: ${res.status} ${body.slice(0, 300)}`);
   }
   const body = await res.json();
@@ -337,6 +355,14 @@ Deno.serve(async (req) => {
       row_preview: row,
     });
   } catch (err) {
+    if (err instanceof SheetsApiNotEnabledError) {
+      return jsonResponse({
+        error: "sheets_api_not_enabled",
+        project_id: err.projectId,
+        enable_url: err.enableUrl,
+        message: "Google Sheets API is not enabled in this Cloud project. Enable it once, wait ~1 minute, then retry.",
+      }, 412);
+    }
     const msg = err instanceof Error ? err.message : String(err);
     return jsonResponse({ error: "unhandled", detail: msg }, 500);
   }
