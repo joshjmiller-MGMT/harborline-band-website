@@ -18,10 +18,12 @@ const corsHeaders = {
 
 const TRELLO_KEY = Deno.env.get("TRELLO_API_KEY");
 const TRELLO_TOKEN = Deno.env.get("TRELLO_API_TOKEN");
+const TRELLO_BOARD_ID = Deno.env.get("TRELLO_BOARD_ID");
 
 const SMART_LABEL_NAME = "✅ SMART-ified";
 const SMART_LABEL_COLOR = "green";
-const BOARD_NAME_MATCH = /^to[\s\-_]?do$/i; // matches "to-do", "to do", "To Do", "todo"
+// Fallback only — used when TRELLO_BOARD_ID is unset. Match-anywhere so "Josh's To Do" hits.
+const BOARD_NAME_MATCH = /to[\s\-_]?do$/i;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -70,6 +72,11 @@ async function findBoard(): Promise<{ board: TrelloBoard | null; candidates: Tre
   const res = await trelloGet("/members/me/boards", "filter=open&fields=id,name");
   if (!res.ok) throw new Error(`Trello boards fetch failed: ${res.status}`);
   const boards: TrelloBoard[] = await res.json();
+  if (TRELLO_BOARD_ID) {
+    const pinned = boards.find((b) => b.id === TRELLO_BOARD_ID);
+    if (pinned) return { board: pinned, candidates: boards };
+    return { board: null, candidates: boards };
+  }
   const matches = boards.filter((b) => BOARD_NAME_MATCH.test(b.name.trim()));
   if (matches.length === 1) return { board: matches[0], candidates: boards };
   return { board: null, candidates: boards };
@@ -96,12 +103,15 @@ async function findOrCreateSmartLabel(boardId: string): Promise<TrelloLabel> {
 async function pollBoard(): Promise<unknown> {
   const { board, candidates } = await findBoard();
   if (!board) {
+    const reason = TRELLO_BOARD_ID
+      ? `TRELLO_BOARD_ID=${TRELLO_BOARD_ID} not among visible boards`
+      : "No board matched /to[ -_]?do$/i";
     return {
       error: "board_not_found",
       message:
         candidates.length === 0
           ? "No open Trello boards visible to this token."
-          : `No board matched /to[ -_]?do/i. Visible boards: ${candidates.map((b) => b.name).join(", ")}`,
+          : `${reason}. Visible boards: ${candidates.map((b) => b.name).join(", ")}`,
       candidates: candidates.map((b) => ({ id: b.id, name: b.name })),
     };
   }
