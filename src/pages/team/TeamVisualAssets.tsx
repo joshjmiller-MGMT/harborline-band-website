@@ -178,6 +178,7 @@ export default function TeamVisualAssets() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterTag, setFilterTag] = useState<string | null>(null);
+  const [sectionFilter, setSectionFilter] = useState<SectionId | null>(null);
   const [folderInput, setFolderInput] = useState("shoots/2026-05-misc");
   const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
   const [selected, setSelected] = useState<VisualAsset | null>(null);
@@ -375,6 +376,17 @@ export default function TeamVisualAssets() {
               <X className="w-3 h-3" />
             </button>
           )}
+          {sectionFilter && (
+            <button
+              type="button"
+              onClick={() => setSectionFilter(null)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-medium hover:bg-primary/15 transition-colors"
+              title="Clear section filter"
+            >
+              Section: {SECTIONS.find((s) => s.id === sectionFilter)?.label ?? sectionFilter}
+              <X className="w-3 h-3" />
+            </button>
+          )}
           <span className="text-xs text-muted-foreground">
             {filtered.length} of {assets.length}
           </span>
@@ -398,31 +410,47 @@ export default function TeamVisualAssets() {
           </div>
         ) : (
           <>
-            {/* Section nav — anchor chips with counts; empty sections hidden */}
+            {/* Section nav — click to filter to a single section (exclusive). Active
+                section gets primary styling. Empty sections hide entirely. */}
             <div className="mb-6 flex flex-wrap gap-2">
               {SECTIONS.map((s) => {
                 const count = bySection.get(s.id)?.length ?? 0;
                 if (count === 0) return null;
+                const active = sectionFilter === s.id;
                 return (
-                  <a
+                  <button
                     key={s.id}
-                    href={`#section-${s.id}`}
-                    className="text-xs px-3 py-1.5 rounded-full border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                    type="button"
+                    onClick={() =>
+                      setSectionFilter((prev) => (prev === s.id ? null : s.id))
+                    }
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card border-border hover:border-primary/40 hover:bg-primary/5"
+                    }`}
                   >
                     <span className="font-medium">{s.label}</span>{" "}
-                    <span className="text-muted-foreground">({count})</span>
-                  </a>
+                    <span
+                      className={active ? "opacity-80" : "text-muted-foreground"}
+                    >
+                      ({count})
+                    </span>
+                  </button>
                 );
               })}
             </div>
 
-            {/* Per-section grids */}
+            {/* Per-section grids — render only the active section if sectionFilter
+                is set; otherwise all non-empty sections. */}
             <div className="space-y-10">
-              {SECTIONS.map((s) => {
+              {SECTIONS.filter((s) =>
+                sectionFilter ? s.id === sectionFilter : true,
+              ).map((s) => {
                 const items = bySection.get(s.id) ?? [];
                 if (items.length === 0) return null;
                 return (
-                  <section key={s.id} id={`section-${s.id}`} className="scroll-mt-20">
+                  <section key={s.id}>
                     <div className="mb-3 flex items-baseline justify-between border-b border-border pb-2">
                       <div>
                         <h2 className="font-display text-xl tracking-wide-custom text-foreground">
