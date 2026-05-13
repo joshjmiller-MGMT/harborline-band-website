@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
 import PracticeTimerWidget from "@/components/dashboard/PracticeTimerWidget";
 import PracticeItemsWidget from "@/components/dashboard/PracticeItemsWidget";
+import HoursHeatmap from "@/components/dashboard/HoursHeatmap";
+import HoursReviewQueueWidget from "@/components/dashboard/HoursReviewQueueWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -379,6 +381,12 @@ export default function TeamPractice() {
         {/* Practice library — songs + lines + voicings + etc., color-coded */}
         <div className="mb-6">
           <PracticeItemsWidget />
+        </div>
+
+        {/* Hours track — instrument-time from calendar + 10k progress + review queue */}
+        <div className="mb-6 space-y-4">
+          <HoursHeatmap />
+          <HoursReviewQueueWidget />
         </div>
 
         {/* Stat tiles */}
