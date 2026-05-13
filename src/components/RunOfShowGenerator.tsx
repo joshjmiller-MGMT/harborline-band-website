@@ -514,26 +514,6 @@ export default function RunOfShowGenerator() {
     }));
   };
 
-  // DJEP URLs all share one root, but a per-event link Josh pastes in may carry
-  // the eventId as a query param (`event=`, `id=`, `eventid=`). If the user
-  // just types or pastes a bare number, treat that as the id directly.
-  const extractDjepEventId = (raw: string): string => {
-    const trimmed = raw.trim();
-    if (!trimmed) return "";
-    if (/^\d+$/.test(trimmed)) return trimmed;
-    try {
-      const url = new URL(trimmed);
-      for (const key of ["event", "eventid", "event_id", "id"]) {
-        const v = url.searchParams.get(key);
-        if (v && /^\d+$/.test(v)) return v;
-      }
-    } catch {
-      // not a URL — fall through
-    }
-    const m = trimmed.match(/(\d{3,})/);
-    return m ? m[1] : trimmed;
-  };
-
   const runDjepLookup = async () => {
     const payload: { name?: string; date?: string; eventId?: string } = {};
     if (djepMode === "search") {
@@ -551,11 +531,11 @@ export default function RunOfShowGenerator() {
       // typed a date, send a wildcard token so server-side validation passes.
       if (!payload.name) payload.name = "_";
     } else {
-      const id = extractDjepEventId(djepIdInput);
+      const id = djepIdInput.replace(/\D/g, "");
       if (!id) {
         toast({
           title: "Missing Event ID",
-          description: "Paste a DJEP Event ID or URL containing one.",
+          description: "Enter a numeric DJEP Event ID.",
           variant: "destructive",
         });
         return;
@@ -567,16 +547,31 @@ export default function RunOfShowGenerator() {
     setDjepMatches(null);
     setDjepNote(null);
     try {
-      const { data, error } = await supabase.functions.invoke("djep-event-lookup", { body: payload });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      // Use fetch directly so we can read the body on a 404 — supabase-js
+      // surfaces non-2xx as FunctionsHttpError without exposing the payload's
+      // `note` field (which carries the helpful cache-miss guidance).
+      const supaUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supaKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const resp = await fetch(`${supaUrl}/functions/v1/djep-event-lookup`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${supaKey}`,
+          "apikey": supaKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json().catch(() => ({} as Record<string, unknown>));
+      if (resp.status >= 500) {
+        throw new Error(typeof data?.error === "string" ? data.error : `DJEP lookup failed (${resp.status})`);
+      }
       const matches: DjepMatch[] = Array.isArray(data?.matches) ? data.matches : [];
       setDjepMatches(matches);
       if (data?.note) setDjepNote(String(data.note));
       if (matches.length === 0) {
         toast({
           title: "No DJEP matches",
-          description: data?.note || "Try different terms or refresh the DJEP cache.",
+          description: String(data?.note || "Try different terms or refresh the DJEP cache."),
         });
       }
     } catch (err: any) {
@@ -1286,7 +1281,7 @@ export default function RunOfShowGenerator() {
             <span className="text-muted-foreground">or</span> Import from DJEP
           </CardTitle>
           <CardDescription>
-            Pull an event from the DJEP SALES-MILLER cache by name + date, or by Event ID / URL.
+            Pull an event from the DJEP SALES-MILLER cache by name + date, or by Event ID.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1305,7 +1300,7 @@ export default function RunOfShowGenerator() {
               size="sm"
               onClick={() => { setDjepMode("id"); setDjepMatches(null); setDjepNote(null); }}
             >
-              <Hash className="w-3.5 h-3.5 mr-1.5" /> Event ID / URL
+              <Hash className="w-3.5 h-3.5 mr-1.5" /> Event ID
             </Button>
           </div>
 
@@ -1331,9 +1326,12 @@ export default function RunOfShowGenerator() {
           ) : (
             <div className="flex flex-col sm:flex-row gap-2">
               <Input
-                placeholder="DJEP Event ID or paste DJEP URL"
+                placeholder="DJEP Event ID (digits only, e.g. 420812)"
                 value={djepIdInput}
                 onChange={(e) => setDjepIdInput(e.target.value)}
+                onBlur={(e) => setDjepIdInput(e.target.value.replace(/\D/g, ""))}
+                inputMode="numeric"
+                pattern="\d+"
                 className="flex-1 bg-secondary/50 border-border"
               />
               <Button onClick={runDjepLookup} disabled={djepLoading}>

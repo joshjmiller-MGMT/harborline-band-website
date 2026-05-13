@@ -141,14 +141,23 @@ Deno.serve(async (req) => {
     }
 
     // eventId mode — direct cache scan. Matches both the synthetic event.id
-    // (`djep-<eventId>`) and the "Event ID" field value embedded in each row.
+    // (`djep-<eventId>`) and any field label that looks like an event-id slot
+    // (variants: "Event ID", "EventID", "Event Id", "ID"). Defensive against
+    // future scrape changes; today's cache rows all use "Event ID" exactly.
     if (eventId) {
       const idNorm = eventId.toLowerCase();
+      const idLabelMatch = (label: string): boolean => {
+        const norm = label.toLowerCase().replace(/[\s_-]+/g, "");
+        return norm === "eventid" || norm === "id";
+      };
       const idHits = events.filter((e) => {
         if (e.id.toLowerCase() === idNorm) return true;
         if (e.id.toLowerCase() === `djep-${idNorm}`) return true;
-        const idField = e.fields.find((f) => f.label.toLowerCase() === "event id");
-        if (idField && idField.value.trim().toLowerCase() === idNorm) return true;
+        for (const f of e.fields) {
+          if (idLabelMatch(f.label) && f.value.trim().toLowerCase() === idNorm) {
+            return true;
+          }
+        }
         return false;
       });
       const matches = idHits.slice(0, 10).map((event) => ({
@@ -159,6 +168,19 @@ Deno.serve(async (req) => {
         source_url: event.itemUrl,
         match_score: 1,
       }));
+      if (matches.length === 0) {
+        // The cache holds Josh's SALES-MILLER queue (a rolling window of
+        // upcoming + recently-actioned leads). Older or out-of-pipeline events
+        // never made it in. Return a 404 with a clear path forward.
+        return jsonResponse({
+          matches: [],
+          total_in_cache: events.length,
+          cache_refreshed_at: (data as { refreshed_at?: string } | null)?.refreshed_at ?? null,
+          mode: "eventId",
+          not_found: "eventId",
+          note: `Event ID ${eventId} isn't in the DJEP cache (${events.length} event${events.length === 1 ? "" : "s"} cached from the SALES-MILLER queue). Try searching by client name + event date instead.`,
+        }, 404);
+      }
       return jsonResponse({
         matches,
         total_in_cache: events.length,
