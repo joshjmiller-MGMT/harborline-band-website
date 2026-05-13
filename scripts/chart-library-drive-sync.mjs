@@ -303,12 +303,40 @@ async function loadOAuthRow() {
 }
 
 async function refreshAccessToken(row) {
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+  // Prefer the server-side refresh edge function — it has the real Google
+  // client secrets in env (Supabase Vault wraps them; the dashboard doesn't
+  // surface the literal values). Fall back to direct Google call ONLY if
+  // local GOOGLE_CLIENT_ID/SECRET are set (legacy path).
+  const edgeUrl = `${SUPABASE_URL}/functions/v1/refresh-google-token`;
+  const res = await fetch(edgeUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ account_email: row.account_email }),
+  });
+  const body = await res.json();
+  if (!res.ok) {
+    if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+      console.warn(
+        `Edge refresh failed (${res.status}); falling back to direct Google call.`,
+      );
+      return await refreshDirectGoogle(row);
+    }
     throw new Error(
-      "Access token expired mid-run and GOOGLE_CALENDAR_CLIENT_ID/SECRET " +
-        "not provided. Set them and re-run; idempotent skip will resume " +
-        "from where this run died."
+      `Refresh failed (${res.status}): ${JSON.stringify(body)}. ` +
+        `Hint: deploy supabase/functions/refresh-google-token if not deployed.`,
     );
+  }
+  row.access_token = body.access_token;
+  row.expires_at = body.expires_at;
+  return body.access_token;
+}
+
+async function refreshDirectGoogle(row) {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    throw new Error("Direct Google refresh requires GOOGLE_CALENDAR_CLIENT_ID/SECRET");
   }
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -321,7 +349,7 @@ async function refreshAccessToken(row) {
     }),
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(`Refresh failed: ${JSON.stringify(body)}`);
+  if (!res.ok) throw new Error(`Direct refresh failed: ${JSON.stringify(body)}`);
   const newExpires = new Date(Date.now() + body.expires_in * 1000).toISOString();
   await supabase
     .from("google_calendar_tokens")
