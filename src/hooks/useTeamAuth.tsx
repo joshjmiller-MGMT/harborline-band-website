@@ -1,36 +1,60 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TeamAuthContext {
   isAuthenticated: boolean;
-  login: (username: string, password: string) => boolean;
-  logout: () => void;
+  isLoading: boolean;
+  session: Session | null;
+  sendMagicLink: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  logout: () => Promise<void>;
 }
 
 const TeamAuthContext = createContext<TeamAuthContext | null>(null);
 
-const CREDENTIALS = { username: "ADMIN", password: "BSE123" };
-
 export function TeamAuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem("team_auth") === "true";
-  });
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = (username: string, password: string) => {
-    if (username === CREDENTIALS.username && password === CREDENTIALS.password) {
-      sessionStorage.setItem("team_auth", "true");
-      setIsAuthenticated(true);
-      return true;
-    }
-    return false;
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setIsLoading(false);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  const sendMagicLink = async (email: string) => {
+    const trimmed = email.trim();
+    if (!trimmed) return { ok: false, error: "Email required" };
+    const { error } = await supabase.auth.signInWithOtp({
+      email: trimmed,
+      options: {
+        emailRedirectTo: `${window.location.origin}/team/dashboard`,
+      },
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
   };
 
-  const logout = () => {
-    sessionStorage.removeItem("team_auth");
-    setIsAuthenticated(false);
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
   return (
-    <TeamAuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <TeamAuthContext.Provider
+      value={{
+        isAuthenticated: !!session,
+        isLoading,
+        session,
+        sendMagicLink,
+        logout,
+      }}
+    >
       {children}
     </TeamAuthContext.Provider>
   );
