@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import {
   Timer,
@@ -486,6 +486,9 @@ export default function PracticeTimerWidget() {
   const [history, setHistory] = useState<SessionRow[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [focusOpen, setFocusOpen] = useState(false);
+  // Confirm dialog before logging a session — replaces silent autolog so a
+  // half-second test run doesn't end up in analytics.
+  const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
 
   const tickRef = useRef<number | null>(null);
   const metro = useMetronome();
@@ -699,12 +702,49 @@ export default function PracticeTimerWidget() {
     );
     const next = activeIdx + 1;
     if (next >= segments.length) {
-      finishSession();
+      // End of session — pause + open confirm dialog instead of silently logging.
+      setRunning(false);
+      setStopConfirmOpen(true);
       return;
     }
     setActiveIdx(next);
     setElapsedSec(segments[next].actual_seconds);
     setRunning(true);
+  };
+
+  // Discard the in-progress session without logging. Removes the `in_progress`
+  // row created at startSession + any segment rows that somehow attached, then
+  // resets local state back to the preset's fresh segments.
+  const discardSession = async () => {
+    setRunning(false);
+    if (sessionId) {
+      await supabase.from("practice_sessions").delete().eq("id", sessionId);
+    }
+    setSessionId(null);
+    setSessionStart(null);
+    setActiveIdx(null);
+    setElapsedSec(0);
+    setSongOfDay("");
+    setSessionNotes("");
+    setStopConfirmOpen(false);
+    if (selectedPresetId) {
+      const segs = presetSegments[selectedPresetId] || [];
+      setSegments(
+        segs.map((s) => ({
+          key: s.id,
+          category: s.category,
+          label: s.label,
+          target_minutes: s.target_minutes,
+          bpm: s.bpm,
+          notes: s.notes,
+          what_practiced: "",
+          actual_seconds: 0,
+          completed: false,
+          skipped: false,
+        }))
+      );
+    }
+    toast({ title: "Session discarded", description: "Nothing was logged." });
   };
 
   const addMinute = () => {
@@ -808,6 +848,7 @@ export default function PracticeTimerWidget() {
     }
 
     toast({ title: "Session logged", description: `${Math.round(totalSec / 60)} minutes practiced.` });
+    setStopConfirmOpen(false);
     setSessionId(null);
     setSessionStart(null);
     setActiveIdx(null);
@@ -1076,8 +1117,16 @@ export default function PracticeTimerWidget() {
                 <Button onClick={restartSegment} variant="ghost" size="sm" className="gap-1">
                   <RotateCcw className="w-3 h-3" /> Restart
                 </Button>
-                <Button onClick={finishSession} variant="destructive" size="sm" className="gap-1 ml-auto">
-                  <StopCircle className="w-4 h-4" /> Stop & Log
+                <Button
+                  onClick={() => {
+                    setRunning(false);
+                    setStopConfirmOpen(true);
+                  }}
+                  variant="destructive"
+                  size="sm"
+                  className="gap-1 ml-auto"
+                >
+                  <StopCircle className="w-4 h-4" /> Stop
                 </Button>
               </>
             )}
@@ -1395,7 +1444,15 @@ export default function PracticeTimerWidget() {
                       <SkipForward className="w-4 h-4" /> Next
                     </Button>
                     <Button onClick={addMinute} variant="ghost" size="sm">+1</Button>
-                    <Button onClick={finishSession} variant="destructive" size="sm" className="gap-1">
+                    <Button
+                      onClick={() => {
+                        setRunning(false);
+                        setStopConfirmOpen(true);
+                      }}
+                      variant="destructive"
+                      size="sm"
+                      className="gap-1"
+                    >
                       <StopCircle className="w-4 h-4" /> Stop
                     </Button>
                   </>
@@ -1464,6 +1521,33 @@ export default function PracticeTimerWidget() {
               )}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stop-confirmation: replaces silent autolog so half-second test runs
+          don't end up in analytics. */}
+      <Dialog open={stopConfirmOpen} onOpenChange={setStopConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Log this session?</DialogTitle>
+            <DialogDescription>
+              You've practiced <span className="font-medium text-foreground">{fmt(totalElapsed)}</span>
+              {segments.filter((s) => s.completed).length > 0 && (
+                <> across <span className="font-medium text-foreground">
+                  {segments.filter((s) => s.completed).length} of {segments.length}
+                </span> segments</>
+              )}.
+              Save it to your history, or discard it (nothing logged).
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={discardSession}>
+              Discard
+            </Button>
+            <Button variant="default" onClick={finishSession} className="gap-1">
+              <StopCircle className="w-4 h-4" /> Save & log
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>
