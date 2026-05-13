@@ -424,72 +424,6 @@ export type Database = {
         }
         Relationships: []
       }
-      claude_log: {
-        Row: {
-          context: string
-          created_at: string
-          date: string | null
-          files_created: string[]
-          id: string
-          key_decisions: string[]
-          loose_ends: string[]
-          machine: string
-          machine_id: string
-          next_steps: string
-          session_id: string
-          source_type: string
-          summary: string
-          tags: string[]
-          timestamp: string
-          title: string
-          tools_used: string[]
-          topics: string[]
-          type: string
-        }
-        Insert: {
-          context?: string
-          created_at?: string
-          date?: string | null
-          files_created?: string[]
-          id?: string
-          key_decisions?: string[]
-          loose_ends?: string[]
-          machine?: string
-          machine_id?: string
-          next_steps?: string
-          session_id?: string
-          source_type?: string
-          summary: string
-          tags?: string[]
-          timestamp?: string
-          title?: string
-          tools_used?: string[]
-          topics?: string[]
-          type?: string
-        }
-        Update: {
-          context?: string
-          created_at?: string
-          date?: string | null
-          files_created?: string[]
-          id?: string
-          key_decisions?: string[]
-          loose_ends?: string[]
-          machine?: string
-          machine_id?: string
-          next_steps?: string
-          session_id?: string
-          source_type?: string
-          summary?: string
-          tags?: string[]
-          timestamp?: string
-          title?: string
-          tools_used?: string[]
-          topics?: string[]
-          type?: string
-        }
-        Relationships: []
-      }
       djep_events_cache: {
         Row: {
           cache_key: string
@@ -1307,7 +1241,7 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           source_session?: string | null
-          title?: string
+          title: string
         }
         Update: {
           detail?: string | null
