@@ -167,9 +167,47 @@ function parseDocText(lines: string[]): { headers: string[]; rows: string[][] } 
 
 // ─── Generic URL Handler ────────────────────────────────────────────────
 
+// P308 F5 — host allowlist. The previous generic path took any caller-supplied
+// URL, prepended `https://` if missing, and ran a server-side fetch. Host and
+// protocol were both user-controlled, so the function could be coerced into
+// fetching cloud metadata endpoints (169.254.169.254), Supabase internal
+// admin URLs, or any other private network resource the runtime could route
+// to. The allowlist restricts outbound fetches to Google document hosts —
+// the only legitimate non-Sheets/Docs URLs this function should ever see.
+const GENERIC_URL_ALLOWED_HOSTS = new Set([
+  'docs.google.com',
+  'drive.google.com',
+  'sheets.google.com',
+]);
+
 async function handleGenericUrl(url: string, corsHeaders: Record<string, string>) {
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
     url = 'https://' + url;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return new Response(JSON.stringify({
+      error: 'Invalid URL.',
+    }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  if (parsed.protocol !== 'https:') {
+    return new Response(JSON.stringify({
+      error: 'Only https:// URLs are supported.',
+    }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  if (!GENERIC_URL_ALLOWED_HOSTS.has(parsed.hostname.toLowerCase())) {
+    return new Response(JSON.stringify({
+      error: `Host ${parsed.hostname} is not on the allowlist. Supported: ${Array.from(GENERIC_URL_ALLOWED_HOSTS).join(', ')}.`,
+    }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
