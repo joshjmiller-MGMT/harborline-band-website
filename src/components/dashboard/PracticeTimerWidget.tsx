@@ -856,12 +856,33 @@ export default function PracticeTimerWidget() {
     const mirroredSessionId = sessionId;
     supabase.functions
       .invoke("append-practice-session-row", { body: { session_id: mirroredSessionId } })
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
+        // Helper: try to extract the structured error body from the fn's
+        // JSON response. supabase-js stashes the original Response on
+        // error.context for non-2xx; .json() yields our { error, message }
+        // payload. Falls back to error.message if parse fails.
+        const extractErrorBody = async (err: any): Promise<{ code?: string; msg?: string }> => {
+          try {
+            if (err?.context?.json) {
+              const body = await err.context.json();
+              return { code: body?.error, msg: body?.message };
+            }
+          } catch (_) { /* fallthrough */ }
+          return { msg: err?.message };
+        };
+
         if (error) {
-          console.error("[P318] sheet mirror failed:", error);
+          const { code, msg } = await extractErrorBody(error);
+          console.error("[P318] sheet mirror failed:", { code, msg, raw: error });
+          const titleByCode: Record<string, string> = {
+            spreadsheets_scope_not_granted: "Reconnect Google for sheet sync",
+            no_google_account_connected: "Connect Google to enable sheet sync",
+            owner_account_not_found: "Practice-sheet owner not connected",
+            sheets_api_error: "Sheets API error",
+          };
           toast({
-            title: "Sheet sync failed",
-            description: "Portal record saved. Sheet append failed — check console or reconnect Google.",
+            title: code && titleByCode[code] ? titleByCode[code] : "Sheet sync failed",
+            description: msg || code || "Portal record saved. Check console.",
             variant: "destructive",
           });
           return;
@@ -870,15 +891,6 @@ export default function PracticeTimerWidget() {
           toast({
             title: "Mirrored to sheet",
             description: data.row_index ? `Row ${data.row_index} appended.` : "Row appended.",
-          });
-        } else if (data?.error) {
-          console.error("[P318] sheet mirror error:", data);
-          toast({
-            title: data.error === "spreadsheets_scope_not_granted"
-              ? "Reconnect Google for sheet sync"
-              : "Sheet sync failed",
-            description: data.message || data.error,
-            variant: "destructive",
           });
         }
       })
