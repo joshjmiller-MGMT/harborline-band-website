@@ -75,9 +75,8 @@ function publicUrl(storagePath: string): string {
   return `${SUPABASE_URL}/storage/v1/object/public/visual-assets/${storagePath}`;
 }
 
-// Section IDs mirror the public Gallery's section layout (Band Photos / Member
-// Portraits / Venue Photos), then DB-only sections (Instagram, Shoots, Logos,
-// Other) cover the rest of the library. Order here drives render order + nav order.
+// Section IDs: Band Photos / Member Portraits / Venue Photos, then DB-only
+// sections (Instagram, Shoots, Logos, Other). Order here drives render order + nav order.
 type SectionId =
   | "band"
   | "members"
