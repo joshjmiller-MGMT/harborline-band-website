@@ -41,11 +41,14 @@ const heatBg = (level: number) => {
   return "bg-amber-500";
 };
 
+type HeatmapKindFilter = "all" | "gig" | "rehearsal";
+
 export default function HoursHeatmap() {
   const [classifications, setClassifications] = useState<InstrumentClassification[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [allTime, setAllTime] = useState(false);
+  const [kindFilter, setKindFilter] = useState<HeatmapKindFilter>("all");
 
   const load = async () => {
     setLoading(true);
@@ -73,7 +76,15 @@ export default function HoursHeatmap() {
     };
   }, []);
 
-  const dailyHours = useMemo(() => aggregateDailyHours(classifications), [classifications]);
+  // Filter the row set for the heatmap when a single-kind view is selected.
+  // The per-kind breakdown grid and the headline goal-progress badge keep
+  // showing the full picture regardless — the filter is just for the squares.
+  const filteredForHeatmap = useMemo(() => {
+    if (kindFilter === "all") return classifications;
+    return classifications.filter((c) => c.classified_as === kindFilter);
+  }, [classifications, kindFilter]);
+
+  const dailyHours = useMemo(() => aggregateDailyHours(filteredForHeatmap), [filteredForHeatmap]);
   const kindTotals = useMemo(() => totalByKind(classifications), [classifications]);
   const grandTotal = kindTotals.gig + kindTotals.rehearsal + kindTotals.practice;
   const pctOfGoal = (grandTotal / TEN_K_HOURS_GOAL) * 100;
@@ -223,7 +234,29 @@ export default function HoursHeatmap() {
           </p>
         )}
         {!loading && classifications.length > 0 && (
-          <div className="overflow-x-auto">
+          <>
+            <div className="mb-2 flex items-center gap-1 text-[10px]">
+              <span className="text-muted-foreground mr-1">Heatmap:</span>
+              {(["all", "gig", "rehearsal"] as HeatmapKindFilter[]).map((k) => {
+                const active = kindFilter === k;
+                const label = k === "all" ? "All" : k === "gig" ? "Gigs" : "Rehearsals";
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setKindFilter(k)}
+                    className={`h-6 px-2 rounded border transition-colors ${
+                      active
+                        ? "bg-amber-500/20 border-amber-500/60 text-foreground"
+                        : "bg-card border-border text-muted-foreground hover:border-amber-500/40 hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="overflow-x-auto">
             <div className="inline-block min-w-full">
               <div className="flex gap-[3px] pl-7 mb-1 text-[10px] text-muted-foreground">
                 {heatmap.map((_, idx) => {
@@ -262,6 +295,7 @@ export default function HoursHeatmap() {
               </div>
             </div>
           </div>
+          </>
         )}
       </CardContent>
     </Card>

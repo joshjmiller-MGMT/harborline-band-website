@@ -403,7 +403,7 @@ Deno.serve(async (req) => {
         const norm = label.toLowerCase().replace(/[\s_-]+/g, "");
         return norm === "eventid" || norm === "id";
       };
-      const idHits = events.filter((e) => {
+      const idHits: DjepEvent[] = events.filter((e) => {
         if (e.id.toLowerCase() === idNorm) return true;
         if (e.id.toLowerCase() === `djep-${idNorm}`) return true;
         for (const f of e.fields) {
@@ -411,6 +411,31 @@ Deno.serve(async (req) => {
         }
         return false;
       });
+
+      // event_details is keyed by numeric event ID and may carry a row even
+      // when the SALES-MILLER queue (events[]) doesn't — e.g. a previously
+      // scraped lead that fell off the queue's filter. Synthesize a stub from
+      // the cached detail so the lookup still returns something usable.
+      if (idHits.length === 0 && eventDetails[eventId]) {
+        const cached = eventDetails[eventId];
+        const findField = (re: RegExp) =>
+          cached.fields.find((f) => re.test(f.label))?.value ?? "";
+        const detailUrl = `${DJEP_BASE}events_report.asp?eventid=${eventId}`;
+        idHits.push({
+          id: `djep-${eventId}`,
+          title: findField(/^(event\s*)?title$|^event\s*name$|^client$/i) ||
+            `DJEP event ${eventId}`,
+          start: findField(/^(event\s*)?date$|^start/i),
+          end: "",
+          allDay: true,
+          source: "djep",
+          sourceLabel: "DJEP",
+          color: "",
+          fields: [],
+          itemUrl: detailUrl,
+          eventUrl: detailUrl,
+        });
+      }
 
       if (idHits.length === 0) {
         return jsonResponse({
