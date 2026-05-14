@@ -12,6 +12,8 @@
 // Auth: TRELLO_API_KEY + TRELLO_API_TOKEN must be set as edge-function secrets
 // in the Supabase dashboard. They are never read from / written to the repo.
 
+import { requireOperator } from "../_shared/require-operator.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -357,6 +359,9 @@ async function markSmartified(cardId: string): Promise<unknown> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
 
   if (!TRELLO_KEY || !TRELLO_TOKEN) {
     return jsonResponse(
