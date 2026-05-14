@@ -22,8 +22,21 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // so "updates-noreply@linkedin.com" gets filtered too.
 const NOREPLY_RE = /noreply@|notifications@|no-reply@|donotreply@/i;
 
+// P305 — hard-coded promo-sender blocklist (Q3 resolution 2026-05-13).
+// category:promotions catches most marketing senders, but legitimate-looking
+// transactional domains (Marriott Bonvoy, hotel chains, etc.) slip through.
+// Extend conservatively — anything added here will not surface even when
+// Gmail's promotions classifier disagrees.
+const PROMO_SENDER_RE =
+  /@bonvoy\.|@email\.marriott\.|@.*\.marriott\.com|^marketing@/i;
+
 const GMAIL_QUERY =
   "is:unread older_than:3d -category:promotions -category:social -label:^smartlabel_personal -in:snoozed -in:spam -in:trash";
+
+// P305 — 1-hour TTL on per-account fetch results. Manual refresh via
+// ?refresh=1 query param busts the cache (wired to the dashboard Refresh
+// button).
+const CACHE_TTL_MS = 60 * 60 * 1000;
 
 async function ensureFreshToken(supabase: any, row: any): Promise<string> {
   const expiresAt = new Date(row.expires_at).getTime();
@@ -128,6 +141,7 @@ async function fetchAccount(supabase: any, row: any): Promise<AccountResult> {
         const headers = det.payload?.headers || [];
         const from = parseHeader(headers, "From");
         if (NOREPLY_RE.test(from)) return null;
+        if (PROMO_SENDER_RE.test(from)) return null;
         const internalDate = Number(det.internalDate || 0);
         return {
           threadId: det.threadId as string,
@@ -169,6 +183,42 @@ async function fetchAccount(supabase: any, row: any): Promise<AccountResult> {
   }
 }
 
+async function getCachedOrFetch(
+  supabase: any,
+  row: any,
+  forceRefresh: boolean,
+): Promise<AccountResult> {
+  if (!forceRefresh) {
+    const { data: cached } = await supabase
+      .from("gmail_needs_action_cache")
+      .select("payload, expires_at")
+      .eq("account_email", row.account_email)
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+    if (cached?.payload) return cached.payload as AccountResult;
+  }
+
+  const result = await fetchAccount(supabase, row);
+
+  // Only cache successful results — transient errors / needsReconnect rows
+  // shouldn't be sticky for an hour.
+  if (!result.error && !result.needsReconnect) {
+    const now = new Date();
+    const expires = new Date(now.getTime() + CACHE_TTL_MS);
+    await supabase.from("gmail_needs_action_cache").upsert(
+      {
+        account_email: row.account_email,
+        payload: result,
+        fetched_at: now.toISOString(),
+        expires_at: expires.toISOString(),
+      },
+      { onConflict: "account_email" },
+    );
+  }
+
+  return result;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -177,6 +227,9 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const forceRefresh =
+      new URL(req.url).searchParams.get("refresh") === "1";
+
     const { data: tokenRows } = await supabase
       .from("google_calendar_tokens")
       .select("*")
@@ -190,7 +243,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    const accounts = await Promise.all(tokenRows.map((row: any) => fetchAccount(supabase, row)));
+    const accounts = await Promise.all(
+      tokenRows.map((row: any) => getCachedOrFetch(supabase, row, forceRefresh)),
+    );
     return new Response(
       JSON.stringify({ connected: true, accounts }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
