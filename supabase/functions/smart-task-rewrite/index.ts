@@ -70,13 +70,15 @@ When card_context is provided (from a Trello card), use it as additional signal 
 - Open checklist items, when present, are usually the literal definition_of_done — summarize them faithfully rather than paraphrasing them away. The measure can be "all N checklist items checked off" when that fits.
 - Recent comments often surface blockers ("waiting on X", "stuck because Y"). Use them. If a comment contradicts the title (e.g. title says "buy ticket" but a comment says "already bought"), surface that in blockers.
 - A high age_days on a card sitting in an active bucket suggests it's been deferred — note that as a blocker only if the comments or text imply why.
-- Labels are free-form tags Josh applies; treat them as context only.`;
+- Labels are free-form tags Josh applies; treat them as context only.
+- Custom fields are board-defined key/value annotations (e.g. "Priority: P1", "Venue: Pendry"). Treat them as additional signal alongside labels — useful for measure / blockers / context, never as the sole source of a due_date.`;
 
 type CardContext = {
   list?: string | null;
   labels?: string[];
   checklist_open?: string[];
   recent_comments?: string[];
+  custom_fields?: { name: string; value: string }[];
   age_days?: number | null;
   due?: string | null;
 };
@@ -96,6 +98,10 @@ function formatCardContext(ctx: CardContext): string {
   if (ctx.recent_comments && ctx.recent_comments.length > 0) {
     lines.push(`- Recent comments (most recent first):`);
     for (const c of ctx.recent_comments) lines.push(`    > ${c}`);
+  }
+  if (ctx.custom_fields && ctx.custom_fields.length > 0) {
+    lines.push(`- Custom fields:`);
+    for (const f of ctx.custom_fields) lines.push(`    • ${f.name}: ${f.value}`);
   }
   return lines.length > 2 ? lines.join("\n") : "";
 }

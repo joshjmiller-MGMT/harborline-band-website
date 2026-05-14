@@ -22,6 +22,7 @@ type SmartShape = {
 type TrelloLabelLite = { name: string; color: string | null };
 type TrelloChecklistOpen = { name: string; items: string[] };
 type TrelloCommentLite = { text: string; date: string };
+type TrelloCustomFieldLite = { name: string; value: string };
 
 type TrelloCard = {
   id: string;
@@ -34,6 +35,7 @@ type TrelloCard = {
   labels?: TrelloLabelLite[];
   checklists_open?: TrelloChecklistOpen[];
   recent_comments?: TrelloCommentLite[];
+  custom_fields?: TrelloCustomFieldLite[];
   date_last_activity?: string;
   age_days?: number;
 };
@@ -43,6 +45,7 @@ type CardContext = {
   labels: string[];
   checklist_open: string[];
   recent_comments: string[];
+  custom_fields: TrelloCustomFieldLite[];
   age_days: number;
   due: string | null;
 };
@@ -56,6 +59,7 @@ function buildCardContext(card: TrelloCard): CardContext {
     labels: (card.labels || []).map((l) => l.name),
     checklist_open: flatChecklist,
     recent_comments: (card.recent_comments || []).map((c) => c.text),
+    custom_fields: card.custom_fields || [],
     age_days: card.age_days ?? 0,
     due: card.due,
   };
@@ -503,11 +507,13 @@ function CardContextPreview({ card }: { card: TrelloCard }) {
     cl.items.map((item) => (cl.name ? `${cl.name}: ${item}` : item)),
   );
   const commentTexts = (card.recent_comments || []).map((c) => c.text);
+  const customFields = card.custom_fields || [];
   const hasContext =
     card.list_name ||
     (card.labels && card.labels.length > 0) ||
     checklistItems.length > 0 ||
     commentTexts.length > 0 ||
+    customFields.length > 0 ||
     (typeof card.age_days === "number" && card.age_days >= 7);
   if (!hasContext) return null;
 
@@ -525,6 +531,9 @@ function CardContextPreview({ card }: { card: TrelloCard }) {
         )}
         {commentTexts.length > 0 && (
           <span className="ml-1 text-[10px]">· 💬 {commentTexts.length}</span>
+        )}
+        {customFields.length > 0 && (
+          <span className="ml-1 text-[10px]">· ⚙ {customFields.length}</span>
         )}
       </summary>
       <div className="mt-1.5 space-y-1 text-[11px] text-muted-foreground">
@@ -559,6 +568,18 @@ function CardContextPreview({ card }: { card: TrelloCard }) {
             <ul className="ml-3 list-disc">
               {commentTexts.map((c, i) => (
                 <li key={i} className="italic">"{c}"</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {customFields.length > 0 && (
+          <div>
+            <p className="text-foreground">Custom fields:</p>
+            <ul className="ml-3 list-disc">
+              {customFields.map((f, i) => (
+                <li key={i}>
+                  <span className="text-foreground">{f.name}:</span> {f.value}
+                </li>
               ))}
             </ul>
           </div>
