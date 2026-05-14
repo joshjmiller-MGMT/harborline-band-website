@@ -286,7 +286,17 @@ export default function TeamResources() {
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
+                      <a
+                        href={r.drive_web_view_link || undefined}
+                        target={r.drive_web_view_link ? "_blank" : undefined}
+                        rel={r.drive_web_view_link ? "noopener noreferrer" : undefined}
+                        aria-disabled={!r.drive_web_view_link}
+                        className={
+                          r.drive_web_view_link
+                            ? "flex-1 min-w-0 hover:opacity-80 transition-opacity cursor-pointer"
+                            : "flex-1 min-w-0 pointer-events-none"
+                        }
+                      >
                         <div className="flex items-baseline gap-2 flex-wrap">
                           <h3 className="font-medium text-foreground truncate">
                             {r.title}
@@ -358,7 +368,7 @@ export default function TeamResources() {
                               </Badge>
                             ))}
                         </div>
-                      </div>
+                      </a>
                       <div className="flex-shrink-0">
                         {r.drive_web_view_link ? (
                           <Button variant="outline" size="sm" asChild>
