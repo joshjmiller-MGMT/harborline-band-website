@@ -2,6 +2,7 @@
 // classifies each row as a Reachout or Follow-up based on its Status column,
 // and returns calendar events keyed off the Next Followup Date column.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireOperator } from "../_shared/require-operator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -137,6 +138,9 @@ async function fetchSheetGrid(sheetId: string, gid: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
 
   try {
     // Parse optional ?tab=lead|venue (default: lead)
