@@ -1328,8 +1328,7 @@ export default function RunOfShowGenerator() {
               <Input
                 placeholder="DJEP Event ID (digits only, e.g. 420812)"
                 value={djepIdInput}
-                onChange={(e) => setDjepIdInput(e.target.value)}
-                onBlur={(e) => setDjepIdInput(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) => setDjepIdInput(e.target.value.replace(/\D/g, ""))}
                 inputMode="numeric"
                 pattern="\d+"
                 className="flex-1 bg-secondary/50 border-border"

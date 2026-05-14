@@ -72,11 +72,11 @@ export function EveningAvailabilityNeedsAction({ weeks = 8 }: { weeks?: number }
   if (flagged.length === 0) return null;
 
   return (
-    <div className="border border-destructive/40 rounded-lg p-3 bg-destructive/5">
-      <a
-        href="/team/scheduler"
-        className="flex items-center justify-between gap-2 group"
-      >
+    <a
+      href="/team/scheduler"
+      className="block border border-destructive/40 rounded-lg p-3 bg-destructive/5 group hover:border-destructive/60 transition-colors"
+    >
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <CalendarClock className="w-4 h-4 text-destructive shrink-0" />
           <span className="text-sm font-medium">
@@ -84,7 +84,7 @@ export function EveningAvailabilityNeedsAction({ weeks = 8 }: { weeks?: number }
           </span>
         </div>
         <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-foreground shrink-0" />
-      </a>
+      </div>
       <div className="mt-2 flex flex-wrap gap-1.5 pl-6">
         {flagged.map((w) => {
           const monday = parseISO(`${w.weekStart}T00:00:00`);
@@ -102,6 +102,6 @@ export function EveningAvailabilityNeedsAction({ weeks = 8 }: { weeks?: number }
       <p className="mt-2 pl-6 text-[11px] text-muted-foreground">
         Rule: keep ≥2 evenings free per week (evening = 6PM+).
       </p>
-    </div>
+    </a>
   );
 }
