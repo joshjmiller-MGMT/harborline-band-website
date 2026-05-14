@@ -77,6 +77,27 @@ type TrelloAction = {
   date: string;
   data: { text?: string; card?: { id: string } };
 };
+type TrelloCustomFieldOption = {
+  id: string;
+  value?: { text?: string };
+};
+type TrelloCustomFieldDef = {
+  id: string;
+  name: string;
+  type: "text" | "number" | "date" | "checkbox" | "list" | string;
+  options?: TrelloCustomFieldOption[];
+};
+type TrelloCustomFieldItem = {
+  id: string;
+  idCustomField: string;
+  idValue?: string | null;
+  value?: {
+    text?: string;
+    number?: string;
+    date?: string;
+    checked?: string;
+  } | null;
+};
 type TrelloCard = {
   id: string;
   name: string;
@@ -88,6 +109,7 @@ type TrelloCard = {
   idBoard: string;
   labels: TrelloLabel[];
   dateLastActivity: string;
+  customFieldItems?: TrelloCustomFieldItem[];
 };
 
 async function findBoard(): Promise<{ board: TrelloBoard | null; candidates: TrelloBoard[] }> {
@@ -135,6 +157,43 @@ function truncate(s: string, max: number): string {
   return trimmed.slice(0, max - 1).trimEnd() + "…";
 }
 
+function renderCustomFieldValue(
+  def: TrelloCustomFieldDef,
+  item: TrelloCustomFieldItem,
+): string | null {
+  // Dropdown: resolve idValue against definition options.
+  if (def.type === "list") {
+    if (!item.idValue) return null;
+    const opt = (def.options || []).find((o) => o.id === item.idValue);
+    const text = opt?.value?.text?.trim();
+    return text && text.length > 0 ? text : null;
+  }
+  const v = item.value;
+  if (!v) return null;
+  if (def.type === "text") {
+    const s = (v.text ?? "").trim();
+    return s.length > 0 ? s : null;
+  }
+  if (def.type === "number") {
+    const s = (v.number ?? "").trim();
+    return s.length > 0 ? s : null;
+  }
+  if (def.type === "date") {
+    const s = (v.date ?? "").trim();
+    return s.length > 0 ? s : null;
+  }
+  if (def.type === "checkbox") {
+    if (v.checked === "true") return "yes";
+    if (v.checked === "false") return "no";
+    return null;
+  }
+  // Unknown future type: best-effort string from any populated key.
+  const first = [v.text, v.number, v.date, v.checked].find(
+    (x) => typeof x === "string" && x.trim().length > 0,
+  );
+  return first ? first.trim() : null;
+}
+
 async function pollBoard(): Promise<unknown> {
   const { board, candidates } = await findBoard();
   if (!board) {
@@ -151,11 +210,12 @@ async function pollBoard(): Promise<unknown> {
     };
   }
 
-  // Parallel: cards, lists, checklists, recent comments. All board-scoped — O(1) calls regardless of card count.
-  const [cardsRes, listsRes, checklistsRes, actionsRes] = await Promise.all([
+  // Parallel: cards, lists, checklists, recent comments, custom-field defs.
+  // All board-scoped — O(1) calls regardless of card count.
+  const [cardsRes, listsRes, checklistsRes, actionsRes, customFieldsRes] = await Promise.all([
     trelloGet(
       `/boards/${board.id}/cards`,
-      "filter=open&fields=id,name,desc,due,shortUrl,url,idList,idBoard,labels,dateLastActivity&customFieldItems=false",
+      "filter=open&fields=id,name,desc,due,shortUrl,url,idList,idBoard,labels,dateLastActivity&customFieldItems=true",
     ),
     trelloGet(`/boards/${board.id}/lists`, "filter=open&fields=id,name"),
     trelloGet(
@@ -166,16 +226,24 @@ async function pollBoard(): Promise<unknown> {
       `/boards/${board.id}/actions`,
       "filter=commentCard&limit=1000&fields=id,type,date,data",
     ),
+    trelloGet(`/boards/${board.id}/customFields`, ""),
   ]);
   if (!cardsRes.ok) throw new Error(`Cards fetch failed: ${cardsRes.status}`);
   if (!listsRes.ok) throw new Error(`Lists fetch failed: ${listsRes.status}`);
   if (!checklistsRes.ok) throw new Error(`Checklists fetch failed: ${checklistsRes.status}`);
   if (!actionsRes.ok) throw new Error(`Actions fetch failed: ${actionsRes.status}`);
+  // customFields is non-fatal: boards without any defined return [], and we
+  // still want the rest of the payload if Trello errors on this endpoint.
+  const customFieldDefs: TrelloCustomFieldDef[] = customFieldsRes.ok
+    ? await customFieldsRes.json()
+    : [];
 
   const allCards: TrelloCard[] = await cardsRes.json();
   const lists: TrelloList[] = await listsRes.json();
   const checklists: TrelloChecklist[] = await checklistsRes.json();
   const actions: TrelloAction[] = await actionsRes.json();
+
+  const customFieldDefById = new Map(customFieldDefs.map((d) => [d.id, d]));
 
   const listNameById = new Map(lists.map((l) => [l.id, l.name]));
 
@@ -224,6 +292,14 @@ async function pollBoard(): Promise<unknown> {
       const checklists_open = openChecklistsByCard.get(c.id) || [];
       const recent_comments = commentsByCard.get(c.id) || [];
       const age_days = daysBetween(c.dateLastActivity, now);
+      const custom_fields: { name: string; value: string }[] = [];
+      for (const item of c.customFieldItems || []) {
+        const def = customFieldDefById.get(item.idCustomField);
+        if (!def || !def.name) continue;
+        const value = renderCustomFieldValue(def, item);
+        if (value === null) continue;
+        custom_fields.push({ name: def.name, value });
+      }
       return {
         id: c.id,
         name: c.name,
@@ -235,6 +311,7 @@ async function pollBoard(): Promise<unknown> {
         labels,
         checklists_open,
         recent_comments,
+        custom_fields,
         date_last_activity: c.dateLastActivity,
         age_days,
       };
