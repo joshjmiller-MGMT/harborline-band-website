@@ -1,4 +1,4 @@
-import { type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type DragEvent, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ImagePlus, Search, Sparkles, Trash2, Loader2, X, Check, AlertTriangle, SkipForward } from "lucide-react";
+import { ImagePlus, Search, Sparkles, Trash2, Loader2, X, Check, AlertTriangle, SkipForward, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -174,9 +174,15 @@ async function getImageDimensions(file: File): Promise<{ width: number; height: 
   });
 }
 
+// PostgREST defaults max-rows to 1000. The archive has more than that, so the
+// loader pages until exhausted; section counts are only correct once everything
+// is in. Page size matches PostgREST's default cap to minimize round trips.
+const PAGE_SIZE = 1000;
+
 export default function TeamVisualAssets() {
   const [assets, setAssets] = useState<VisualAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState<{ loaded: number } | null>(null);
   const [search, setSearch] = useState("");
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [sectionFilter, setSectionFilter] = useState<SectionId | null>(null);
@@ -184,21 +190,37 @@ export default function TeamVisualAssets() {
   const [folderInput, setFolderInput] = useState("shoots/2026-05-misc");
   const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
   const [selected, setSelected] = useState<VisualAsset | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const dragCounter = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function loadAssets() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("visual_assets")
-      .select("*")
-      .order("uploaded_at", { ascending: false });
-    if (error) {
-      toast({ title: "Couldn't load assets", description: error.message, variant: "destructive" });
-      setLoading(false);
-      return;
+    setLoadProgress({ loaded: 0 });
+    const accumulated: VisualAsset[] = [];
+    let from = 0;
+    while (true) {
+      const to = from + PAGE_SIZE - 1;
+      const { data, error } = await supabase
+        .from("visual_assets")
+        .select("*")
+        .order("uploaded_at", { ascending: false })
+        .range(from, to);
+      if (error) {
+        toast({ title: "Couldn't load assets", description: error.message, variant: "destructive" });
+        setLoading(false);
+        setLoadProgress(null);
+        return;
+      }
+      const batch = (data ?? []) as VisualAsset[];
+      accumulated.push(...batch);
+      setLoadProgress({ loaded: accumulated.length });
+      if (batch.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
     }
-    setAssets((data ?? []) as VisualAsset[]);
+    setAssets(accumulated);
     setLoading(false);
+    setLoadProgress(null);
   }
 
   useEffect(() => {
@@ -321,9 +343,66 @@ export default function TeamVisualAssets() {
     if (fileInput.current) fileInput.current.value = "";
   }
 
+  function handleDragEnter(e: DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current += 1;
+    setDragOver(true);
+  }
+
+  function handleDragOver(e: DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    // preventDefault on dragover is what tells the browser "this is a valid drop
+    // target" — without it, the drop event never fires.
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+  }
+
+  function handleDragLeave(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setDragOver(false);
+    }
+  }
+
+  function handleDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setDragOver(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleUpload(files);
+    }
+  }
+
   return (
     <TeamLayout>
-      <div className="container mx-auto px-6 py-12">
+      <div
+        className="container mx-auto px-6 py-12 relative"
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {dragOver && (
+          <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-[2px] border-4 border-dashed border-primary/60">
+            <div className="bg-card/95 border border-primary rounded-lg px-6 py-4 shadow-lg flex items-center gap-3 text-foreground">
+              <Upload className="w-6 h-6 text-primary" />
+              <div>
+                <div className="font-medium">Drop to upload</div>
+                <div className="text-xs text-muted-foreground">
+                  Files will land in <span className="font-mono">{folderInput || "uploads"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="font-display text-3xl tracking-wide-custom text-foreground">
@@ -423,7 +502,10 @@ export default function TeamVisualAssets() {
         {loading ? (
           <div className="text-center py-20 text-muted-foreground">
             <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-            Loading…
+            Loading
+            {loadProgress && loadProgress.loaded > 0
+              ? ` (${loadProgress.loaded.toLocaleString()})…`
+              : "…"}
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground border border-dashed border-border rounded-lg">

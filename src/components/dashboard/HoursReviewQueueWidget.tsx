@@ -52,6 +52,14 @@ export default function HoursReviewQueueWidget() {
     };
   }, []);
 
+  // Optimistic local dismiss after a successful triage. Realtime postgres_changes
+  // doesn't reliably fire for these updates (publication may not include the
+  // table, or the filter scope changes mid-update), so don't depend on it to
+  // remove the card.
+  const removeRowLocally = (id: string) => {
+    setRows((prev) => prev.filter((x) => x.id !== id));
+  };
+
   const apply = async (r: InstrumentClassification, override?: { kind?: InstrumentKind; hours?: number }) => {
     const patch: Record<string, unknown> = {
       review_status: "reviewed",
@@ -68,6 +76,7 @@ export default function HoursReviewQueueWidget() {
       return;
     }
     setEditingId(null);
+    removeRowLocally(r.id);
     toast({ title: "Marked reviewed", description: r.event_title });
   };
 
@@ -85,6 +94,7 @@ export default function HoursReviewQueueWidget() {
       toast({ title: "Couldn't skip", description: error.message, variant: "destructive" });
       return;
     }
+    removeRowLocally(r.id);
     toast({ title: "Skipped — won't count toward hours" });
   };
 
