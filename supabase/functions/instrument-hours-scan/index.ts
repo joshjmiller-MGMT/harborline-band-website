@@ -38,7 +38,7 @@ const EXCLUDE_COLOR_IDS = new Set(["11", "4"]);
 
 interface Rule {
   id: string;
-  kind: "band" | "keyword" | "venue" | "exclude";
+  kind: "band" | "keyword" | "venue" | "exclude" | "review";
   pattern: string;
   patternLower: string;
   active: boolean;
@@ -127,6 +127,26 @@ function classify(
         ? "color=tomato — canceled"
         : "color=flamingo — personal/non-work",
     };
+  }
+
+  // Pass 0.5 — review rules. Recording-style events Josh wants flagged for the
+  // human review queue rather than silently classified as 'none'. Fires BEFORE
+  // exclude so "Show Debrief, Record Vox, go thru takes" surfaces to triage
+  // instead of being silent-noned by the "debrief" exclude rule. (P323 +
+  // feedback_classifier_review_queue.md 2026-05-14.) Hours seeded from the
+  // block; Josh edits during triage.
+  for (const r of rules) {
+    if (r.kind !== "review" || !r.active) continue;
+    if (haystack.includes(r.patternLower)) {
+      return {
+        classified_as: "unsure",
+        confidence: "low",
+        matched_rule_id: r.id,
+        matched_rule_pattern: r.pattern,
+        estimated_hours: blockHours,
+        estimation_source: `flag-for-review: matched "${r.pattern}" — needs triage`,
+      };
+    }
   }
 
   // Pass 1 — exclude rules. Highest priority. Single match → 'none'.
