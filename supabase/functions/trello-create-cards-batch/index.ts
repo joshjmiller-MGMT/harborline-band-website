@@ -9,6 +9,8 @@
 //
 // Auth: reuses the existing TRELLO_API_KEY + TRELLO_API_TOKEN edge-function secrets.
 
+import { requireOperator } from "../_shared/require-operator.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -98,6 +100,10 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  const denial = await requireOperator(req);
+  if (denial) return denial;
+
   if (req.method !== "POST") {
     return jsonResponse({ error: "POST only" }, 405);
   }
