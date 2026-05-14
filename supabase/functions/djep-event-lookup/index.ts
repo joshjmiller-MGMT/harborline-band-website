@@ -11,6 +11,15 @@
 // additional label/value fields, and persist them under event_details[eventId]
 // so subsequent lookups return the rich row without re-scraping.
 //
+// P307 widening: when the landing-page parse doesn't surface enough "rich-lead"
+// target labels (ceremony/cocktail/music/notes/etc.), walk the additional tab
+// URLs the landing page discovered (Music, Notes, Contract, etc.) in a single
+// Firecrawl call (login session stays warm across navigations) and fuse their
+// fields into the same event_details row. Heuristic-gated (Q4 option b) so a
+// queue lookup that already returns rich landing data doesn't pay the multi-tab
+// cost. Iframe-shell tabs (P17 hit this with events_edit.asp — 6KB shell, no
+// label pairs) are detected and skipped rather than treated as parse errors.
+//
 // Returns the matched event(s) in a shape consumable by ingest-event's djep-scrape
 // route — name, ISO date, and the field rows DJEP exposes for the event.
 
@@ -34,6 +43,31 @@ const DJEP_BASE = "https://baltimoresoundeventmanager.com/dj_event_planner/";
 // pragmatic default — DJEP detail tends to evolve over a lead's lifecycle.
 const DETAIL_TTL_MS = 24 * 60 * 60 * 1000;
 
+// P307 multi-tab walk: heuristic that decides whether to walk discovered tab
+// URLs after the landing page parse. If the landing page surfaces fewer than
+// TARGET_THRESHOLD of these "rich-lead signal" labels, walk the tabs.
+// Patterns match against the parsed field labels (case-insensitive).
+const TARGET_FIELD_PATTERNS: RegExp[] = [
+  /ceremony/i,
+  /cocktail/i,
+  /reception/i,
+  /\bmusic\b|do not play|first dance|playlist/i,
+  /\bnotes?\b|special request|special instruction/i,
+  /package|pricing|quoted/i,
+  /contract|agreement/i,
+  /\bstart\s*time\b|event\s*start/i,
+];
+const TARGET_THRESHOLD = 3;
+// Defensive cap on tabs walked per multi-call. Realistic DJEP detail surfaces
+// 3-7 same-event anchors (Music/Notes/Contract/Edit/etc.); 6 covers the menu
+// without paying for parse-error noise if anchor discovery misbehaves.
+const MAX_TABS_TO_WALK = 6;
+// Iframe-shell detection: P17 saw events_edit.asp return ~6KB with no
+// label-pair markup (it's an outer frame whose iframe content didn't render
+// inside Firecrawl's snapshot). Parse-attempts on this shape yield zero
+// fields; cheaper to detect + skip than to parse + dedupe nothing.
+const IFRAME_SHELL_MAX_BYTES = 10_000;
+
 type DjepEvent = {
   id: string;
   title: string;
@@ -51,9 +85,11 @@ type DjepEvent = {
 type DetailEntry = {
   fields: { label: string; value: string }[];
   scrapedAt: string;
-  source: "djep-detail";
+  source: "djep-detail" | "djep-detail-multi";
   htmlLength?: number;
+  htmlLengthsByTab?: Record<string, number>;
   tabUrls?: string[];
+  skippedTabs?: string[];
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -233,6 +269,44 @@ function parseDetailHtml(html: string, eventId: string): {
   return { fields, tabUrls: [...tabUrls] };
 }
 
+// Count how many of TARGET_FIELD_PATTERNS the parsed fields satisfy. Each
+// pattern can match at most once — we're measuring breadth of rich-lead
+// coverage, not raw label count. Below TARGET_THRESHOLD signals "walk tabs".
+function countTargetCoverage(fields: { label: string; value: string }[]): number {
+  let hits = 0;
+  for (const pat of TARGET_FIELD_PATTERNS) {
+    if (fields.some((f) => pat.test(f.label))) hits += 1;
+  }
+  return hits;
+}
+
+// Iframe-shell: small HTML AND no <td>Label:</td><td>Value</td> pairs anywhere.
+// Both conditions required — a small page that does have label pairs is just a
+// terse detail tab, not a shell. P17 hit this with events_edit.asp.
+function isIframeShell(html: string): boolean {
+  if (html.length >= IFRAME_SHELL_MAX_BYTES) return false;
+  return !/<td[^>]*>[^<]{0,200}[:：]\s*<\/td>\s*<td/i.test(html);
+}
+
+// Merge multiple field bags with first-source-wins per label (case-insensitive).
+// Order of `bags` is precedence order: bags[0] highest, bags[N] lowest. Used to
+// fuse landing-page parse + each tab parse before the queue-vs-detail merge runs.
+function mergeFieldBags(
+  ...bags: { label: string; value: string }[][]
+): { label: string; value: string }[] {
+  const seen = new Set<string>();
+  const out: { label: string; value: string }[] = [];
+  for (const bag of bags) {
+    for (const f of bag) {
+      const key = f.label.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(f);
+    }
+  }
+  return out;
+}
+
 async function firecrawlEventDetail(eventUrl: string): Promise<{ html: string; debug: unknown }> {
   if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY not configured");
   if (!DJEP_USERNAME || !DJEP_PASSWORD) throw new Error("DJEP_USERNAME / DJEP_PASSWORD not configured");
@@ -310,6 +384,112 @@ async function firecrawlEventDetail(eventUrl: string): Promise<{ html: string; d
     debug: {
       htmlLength: html.length,
       actionResults: data?.actions?.javascriptReturns ?? data?.actions?.scripts ?? null,
+    },
+  };
+}
+
+// Single Firecrawl call: login once, then for each tab URL navigate + wait +
+// scrape. The shared login session keeps cookies warm across tabs; if we made
+// one Firecrawl call per tab we'd re-pay the login latency (and re-render
+// base2.asp) each time. Returns html keyed by tabUrl in input order.
+async function firecrawlEventDetailMulti(
+  tabUrls: string[],
+): Promise<{ htmlByTab: Record<string, string>; debug: unknown }> {
+  if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY not configured");
+  if (!DJEP_USERNAME || !DJEP_PASSWORD) {
+    throw new Error("DJEP_USERNAME / DJEP_PASSWORD not configured");
+  }
+  if (tabUrls.length === 0) {
+    throw new Error("firecrawlEventDetailMulti called with no tabUrls");
+  }
+
+  const submitLoginJs = `
+    (() => {
+      try {
+        var u = document.querySelector("input[name='username']");
+        var p = document.querySelector("input[name='password']");
+        if (!u || !p) return { ok: false, reason: 'no-fields' };
+        u.value = ${JSON.stringify(DJEP_USERNAME ?? "")};
+        u.dispatchEvent(new Event('input', { bubbles: true }));
+        p.value = ${JSON.stringify(DJEP_PASSWORD ?? "")};
+        p.dispatchEvent(new Event('input', { bubbles: true }));
+        var form = u.form || document.querySelector("form[name='logonform']") || document.forms[0];
+        if (!form) return { ok: false, reason: 'no-form' };
+        var btn = form.querySelector("input[type='submit'], button[type='submit']");
+        if (btn) { btn.click(); } else { HTMLFormElement.prototype.submit.call(form); }
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: String(e && e.message || e) };
+      }
+    })();
+  `;
+
+  const perTabActions: unknown[] = [];
+  for (const url of tabUrls) {
+    const navJs = `
+      (() => {
+        window.location.href = ${JSON.stringify(url)};
+        return { ok: true, target: ${JSON.stringify(url)} };
+      })();
+    `;
+    perTabActions.push(
+      { type: "executeJavascript", script: navJs },
+      { type: "wait", milliseconds: 5000 },
+      { type: "scrape" },
+    );
+  }
+
+  const body = {
+    url: "https://baltimoresoundeventmanager.com/dj_event_planner/base2.asp",
+    formats: ["html"],
+    onlyMainContent: false,
+    waitFor: 2000,
+    // Total budget = login (~6.5s) + N * (nav 0s + wait 5s + scrape ~3-6s).
+    // Six tabs ≈ 80s. 180s gives ample headroom.
+    timeout: 180000,
+    actions: [
+      { type: "wait", milliseconds: 1500 },
+      { type: "executeJavascript", script: submitLoginJs },
+      { type: "wait", milliseconds: 5000 },
+      ...perTabActions,
+    ],
+  };
+
+  const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(`Firecrawl multi-scrape ${res.status}: ${JSON.stringify(json).slice(0, 600)}`);
+  }
+  const data = json?.data ?? json;
+  const scrapes = data?.actions?.scrapes ?? data?.actions?.scrape ?? [];
+  if (!Array.isArray(scrapes)) {
+    throw new Error(`Firecrawl multi-scrape: unexpected actions.scrapes shape (${typeof scrapes})`);
+  }
+
+  // scrapes[i] corresponds to tabUrls[i] by action order. If Firecrawl returned
+  // fewer scrapes than tabs (timeout truncation), the missing tabs map to "".
+  const htmlByTab: Record<string, string> = {};
+  for (let i = 0; i < tabUrls.length; i++) {
+    const entry = scrapes[i];
+    const html = entry?.html ?? entry?.content ?? "";
+    htmlByTab[tabUrls[i]] = html;
+  }
+
+  return {
+    htmlByTab,
+    debug: {
+      scrapesReturned: scrapes.length,
+      tabsRequested: tabUrls.length,
+      htmlLengthsByTab: Object.fromEntries(
+        Object.entries(htmlByTab).map(([k, v]) => [k, v.length]),
+      ),
     },
   };
 }
@@ -448,11 +628,16 @@ Deno.serve(async (req) => {
         }, 404);
       }
 
-      // P17 — lazy detail-page scrape. Pass `detail:"skip"` to return queue
-      // fields only; pass `detail:"force"` to ignore the cache and re-scrape.
+      // P17 — lazy detail-page scrape. P307 — additional multi-tab walk gated
+      // by a target-field coverage heuristic.
+      //   detail:"skip"        → queue fields only, no Firecrawl
+      //   detail:"force"       → re-scrape landing page; multi-walk if heuristic fires
+      //   detail:"force-multi" → re-scrape landing AND always multi-walk (bypass heuristic)
+      //   (default)            → use cache if fresh, else re-scrape landing + heuristic
       const detailFlag = String(body?.detail ?? "").toLowerCase();
       const wantDetail = detailFlag !== "skip";
-      const forceDetail = detailFlag === "force";
+      const forceDetail = detailFlag === "force" || detailFlag === "force-multi";
+      const forceMulti = detailFlag === "force-multi";
       const detailLog: Record<string, unknown> = {};
       const enrichedHits: typeof idHits = [];
       for (const event of idHits) {
@@ -462,7 +647,13 @@ Deno.serve(async (req) => {
           Date.now() - new Date(cachedDetail.scrapedAt).getTime() < DETAIL_TTL_MS;
 
         let detailFields = cachedDetail?.fields ?? [];
-        let detailSource: "cached" | "fresh" | "skipped" | "error" | "no-url" = cachedDetail ? "cached" : "skipped";
+        let detailSource:
+          | "cached"
+          | "fresh"
+          | "fresh-multi"
+          | "skipped"
+          | "error"
+          | "no-url" = cachedDetail ? "cached" : "skipped";
 
         if (wantDetail && event.eventUrl && (forceDetail || !cachedDetail || !cachedFresh)) {
           if (!FIRECRAWL_API_KEY || !DJEP_USERNAME || !DJEP_PASSWORD) {
@@ -470,22 +661,83 @@ Deno.serve(async (req) => {
             detailLog[eventNumericId] = { skipped: "missing Firecrawl/DJEP env" };
           } else {
             try {
+              // Pass 1: landing page (events_report.asp). Always runs — its
+              // anchor scan also feeds the tabUrls candidate set for pass 2.
               const { html, debug: scrapeDebug } = await firecrawlEventDetail(event.eventUrl);
-              const parsed = parseDetailHtml(html, eventNumericId);
+              const landingParsed = parseDetailHtml(html, eventNumericId);
+              const landingHtmlLength = (scrapeDebug as { htmlLength?: number })?.htmlLength;
+              const targetHits = countTargetCoverage(landingParsed.fields);
+
+              // Pass 2 (heuristic): if landing coverage is thin AND we have
+              // additional tabs to visit, walk them in one Firecrawl call.
+              // Filter out the landing URL itself + cap at MAX_TABS_TO_WALK.
+              const landingNormalized = event.eventUrl.split("#")[0];
+              const candidateTabs = landingParsed.tabUrls.filter(
+                (u) => u.split("#")[0] !== landingNormalized,
+              );
+              const needsMultiWalk = (forceMulti || targetHits < TARGET_THRESHOLD) &&
+                candidateTabs.length > 0;
+              const tabsToWalk = candidateTabs.slice(0, MAX_TABS_TO_WALK);
+
+              let multiDebug: unknown = null;
+              let mergedDetailFields = landingParsed.fields;
+              const htmlLengthsByTab: Record<string, number> = {};
+              const skippedTabs: string[] = [];
+
+              if (needsMultiWalk) {
+                try {
+                  const { htmlByTab, debug } = await firecrawlEventDetailMulti(tabsToWalk);
+                  multiDebug = debug;
+                  const tabFieldBags: { label: string; value: string }[][] = [];
+                  for (const url of tabsToWalk) {
+                    const tabHtml = htmlByTab[url] ?? "";
+                    htmlLengthsByTab[url] = tabHtml.length;
+                    if (!tabHtml || isIframeShell(tabHtml)) {
+                      skippedTabs.push(url);
+                      continue;
+                    }
+                    const parsed = parseDetailHtml(tabHtml, eventNumericId);
+                    tabFieldBags.push(parsed.fields);
+                  }
+                  mergedDetailFields = mergeFieldBags(
+                    landingParsed.fields,
+                    ...tabFieldBags,
+                  );
+                  detailSource = "fresh-multi";
+                } catch (multiErr) {
+                  // Multi-walk failed — fall back to landing-only rather than
+                  // erroring the whole request. The landing fields are still
+                  // valuable; surface the failure in detail_log.
+                  detailSource = "fresh";
+                  detailLog[`${eventNumericId}_multi_error`] =
+                    multiErr instanceof Error ? multiErr.message : String(multiErr);
+                }
+              } else {
+                detailSource = "fresh";
+              }
+
               const entry: DetailEntry = {
-                fields: parsed.fields,
+                fields: mergedDetailFields,
                 scrapedAt: new Date().toISOString(),
-                source: "djep-detail",
-                htmlLength: (scrapeDebug as { htmlLength?: number })?.htmlLength,
-                tabUrls: parsed.tabUrls,
+                source: detailSource === "fresh-multi" ? "djep-detail-multi" : "djep-detail",
+                htmlLength: landingHtmlLength,
+                tabUrls: landingParsed.tabUrls,
+                ...(detailSource === "fresh-multi"
+                  ? { htmlLengthsByTab, skippedTabs }
+                  : {}),
               };
               await persistEventDetail(supabase, eventNumericId, entry);
-              detailFields = parsed.fields;
-              detailSource = "fresh";
+              detailFields = mergedDetailFields;
               detailLog[eventNumericId] = {
-                fields: parsed.fields.length,
-                tabUrls: parsed.tabUrls.length,
-                htmlLength: entry.htmlLength,
+                landing_fields: landingParsed.fields.length,
+                merged_fields: mergedDetailFields.length,
+                target_hits: targetHits,
+                target_threshold: TARGET_THRESHOLD,
+                landing_tab_urls: landingParsed.tabUrls.length,
+                tabs_walked: needsMultiWalk ? tabsToWalk.length : 0,
+                tabs_skipped_shell: skippedTabs.length,
+                landing_html_length: landingHtmlLength,
+                ...(needsMultiWalk ? { multi_debug: multiDebug } : {}),
                 actionResults: (scrapeDebug as { actionResults?: unknown })?.actionResults,
               };
             } catch (e) {
