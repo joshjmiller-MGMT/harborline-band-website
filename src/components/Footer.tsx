@@ -150,11 +150,6 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <a href="/#gallery" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Gallery
-                </a>
-              </li>
-              <li>
                 <a href="/#videos" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Videos
                 </a>
