@@ -36,6 +36,7 @@ interface VisualAsset {
   ai_suggested_alt: string | null;
   ai_suggested_caption: string | null;
   ai_suggested_kind: string | null;
+  ai_suggested_people_names: string[];
   ai_suggested_people_roles: string[];
   ai_suggested_people_count: string | null;
   ai_suggested_venue: string | null;
@@ -56,6 +57,10 @@ function buildAiPrefixedTags(asset: VisualAsset): string[] {
   if (asset.ai_suggested_kind) out.push(`kind:${asset.ai_suggested_kind}`);
   if (asset.ai_suggested_people_count && asset.ai_suggested_people_count !== "none") {
     out.push(`count:${asset.ai_suggested_people_count}`);
+  }
+  for (const n of asset.ai_suggested_people_names ?? []) {
+    const slug = n.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    if (slug) out.push(`person:${slug}`);
   }
   for (const r of asset.ai_suggested_people_roles ?? []) out.push(`role:${r}`);
   if (asset.ai_suggested_venue) {
@@ -247,6 +252,7 @@ export default function TeamVisualAssets() {
           ...a.tags,
           ...a.ai_suggested_tags,
           a.ai_suggested_kind ?? "",
+          ...(a.ai_suggested_people_names ?? []),
           ...(a.ai_suggested_people_roles ?? []),
           a.ai_suggested_venue ?? "",
           ...(a.ai_suggested_instruments ?? []),
@@ -822,6 +828,7 @@ function AssetDetailDialog({
     asset.ai_suggested_alt ||
     asset.ai_suggested_caption ||
     asset.ai_suggested_kind ||
+    (asset.ai_suggested_people_names?.length ?? 0) > 0 ||
     (asset.ai_suggested_people_roles?.length ?? 0) > 0 ||
     asset.ai_suggested_venue ||
     (asset.ai_suggested_instruments?.length ?? 0) > 0 ||
@@ -914,6 +921,16 @@ function AssetDetailDialog({
                     </div>
                   )}
                 </div>
+                {(asset.ai_suggested_people_names?.length ?? 0) > 0 && (
+                  <div className="mb-1.5 flex flex-wrap items-center gap-1 text-xs">
+                    <span className="text-muted-foreground">People:</span>
+                    {asset.ai_suggested_people_names.map((n) => (
+                      <Badge key={n} variant="default" className="text-[10px]">
+                        {n}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
                 {(asset.ai_suggested_people_roles?.length ?? 0) > 0 && (
                   <div className="mb-1.5 flex flex-wrap items-center gap-1 text-xs">
                     <span className="text-muted-foreground">Roles:</span>

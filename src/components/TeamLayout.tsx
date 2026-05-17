@@ -1,6 +1,6 @@
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { useTeamAuth } from "@/hooks/useTeamAuth";
-import { Music, Calendar, FolderOpen, LogOut, FileText, Home, LayoutDashboard, Activity, Share2, Phone, ChevronDown, Briefcase, Images, Palette, Loader2, Kanban } from "lucide-react";
+import { Music, Calendar, FolderOpen, LogOut, FileText, Home, LayoutDashboard, Activity, Share2, Phone, ChevronDown, Briefcase, Images, Palette, Loader2, Kanban, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,7 @@ const managementNav = [
   { name: "Scheduler", href: "/team/scheduler", icon: Calendar, description: "Rehearsal & event scheduling" },
   { name: "Doc Generator", href: "/team/run-of-show", icon: FileText, description: "Run of show & client docs" },
   { name: "Brand Studio", href: "/team/brand-studio", icon: Palette, description: "People, decisions, releases, EPKs across ventures" },
+  { name: "Band Members", href: "/team/band-members", icon: Users, description: "Roster + reference images for visual-asset face recognition" },
 ];
 
 const teamNav = [
