@@ -5,8 +5,15 @@ import { supabase } from "@/integrations/supabase/client";
 interface TeamAuthContext {
   isAuthenticated: boolean;
   isLoading: boolean;
+  isRecovering: boolean;
   session: Session | null;
   sendMagicLink: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  signInWithPassword: (
+    email: string,
+    password: string,
+  ) => Promise<{ ok: boolean; error?: string }>;
+  sendPasswordReset: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  updatePassword: (newPassword: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -15,6 +22,7 @@ const TeamAuthContext = createContext<TeamAuthContext | null>(null);
 export function TeamAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRecovering, setIsRecovering] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -22,8 +30,13 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
+      if (event === "PASSWORD_RECOVERY") {
+        setIsRecovering(true);
+      } else if (event === "SIGNED_OUT") {
+        setIsRecovering(false);
+      }
     });
     return () => data.subscription.unsubscribe();
   }, []);
@@ -41,6 +54,49 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   };
 
+  const signInWithPassword = async (email: string, password: string) => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) return { ok: false, error: "Email required" };
+    if (!password) return { ok: false, error: "Password required" };
+    const { error } = await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password,
+    });
+    if (error) {
+      // Invalid credentials covers both wrong password and no-password-set
+      // (Supabase doesn't distinguish — treat them as the same surface)
+      if (error.message.toLowerCase().includes("invalid")) {
+        return {
+          ok: false,
+          error:
+            "Email or password incorrect. If you haven't set a password yet, use \"Send magic link\" or \"Forgot password\".",
+        };
+      }
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  };
+
+  const sendPasswordReset = async (email: string) => {
+    const trimmed = email.trim();
+    if (!trimmed) return { ok: false, error: "Email required" };
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+      redirectTo: `${window.location.origin}/team/login`,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    if (!newPassword || newPassword.length < 8) {
+      return { ok: false, error: "Password must be at least 8 characters" };
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { ok: false, error: error.message };
+    setIsRecovering(false);
+    return { ok: true };
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
   };
@@ -50,8 +106,12 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
       value={{
         isAuthenticated: !!session,
         isLoading,
+        isRecovering,
         session,
         sendMagicLink,
+        signInWithPassword,
+        sendPasswordReset,
+        updatePassword,
         logout,
       }}
     >
