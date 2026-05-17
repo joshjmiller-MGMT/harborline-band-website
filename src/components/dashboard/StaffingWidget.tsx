@@ -16,6 +16,12 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
+type StaffEntry = {
+  name: string;
+  role: string;
+  pattern: "explicit" | "prose";
+};
+
 type StaffingEvent = {
   id: string;
   accountEmail: string;
@@ -33,6 +39,7 @@ type StaffingEvent = {
   staffed_count: number;
   missing_count: number | null;
   staff_names: string[];
+  staff_entries?: StaffEntry[];
   matched_lines: string[];
 };
 
@@ -126,11 +133,38 @@ function EventRow({ ev }: { ev: StaffingEvent }) {
           </div>
           <div>
             <span className="text-muted-foreground">Staff parsed:</span>{" "}
-            {ev.staff_names.length > 0 ? (
-              <span>{ev.staff_names.join(", ")}</span>
-            ) : (
-              <span className="text-muted-foreground italic">none detected in description</span>
-            )}
+            {(() => {
+              const entries =
+                ev.staff_entries && ev.staff_entries.length > 0
+                  ? ev.staff_entries
+                  : ev.staff_names.map(
+                      (n) => ({ name: n, role: "unknown", pattern: "explicit" as const }),
+                    );
+              if (entries.length === 0) {
+                return (
+                  <span className="text-muted-foreground italic">
+                    none detected in description
+                  </span>
+                );
+              }
+              return (
+                <span>
+                  {entries.map((entry, i) => (
+                    <span key={`${entry.name}-${i}`}>
+                      {i > 0 && ", "}
+                      {entry.pattern === "prose" ? (
+                        <span className="italic text-muted-foreground">
+                          {entry.name}
+                          <span className="text-[10px] ml-1 not-italic">(via prose)</span>
+                        </span>
+                      ) : (
+                        <span>{entry.name}</span>
+                      )}
+                    </span>
+                  ))}
+                </span>
+              );
+            })()}
           </div>
           {ev.matched_lines.length > 0 && (
             <details className="text-muted-foreground">

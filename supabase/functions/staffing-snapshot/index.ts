@@ -201,19 +201,28 @@ type StaffParse = {
   matched_lines: string[];
 };
 
-function parseStaff(description: string): StaffParse {
-  if (!description) return { staff_names: [], matched_lines: [] };
+type StaffEntry = {
+  name: string;
+  role: string;
+  pattern: "explicit" | "prose";
+};
 
+function preprocessDescription(description: string): string[] {
   // Strip HTML — GCal sometimes includes basic <br> / <a> markup.
   const text = description
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
     .replace(/<[^>]+>/g, "");
-
-  const lines = text
+  return text
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
+}
+
+function parseStaff(description: string): StaffParse {
+  if (!description) return { staff_names: [], matched_lines: [] };
+
+  const lines = preprocessDescription(description);
 
   const names = new Set<string>();
   const matched: string[] = [];
@@ -260,6 +269,112 @@ function parseStaff(description: string): StaffParse {
     staff_names: Array.from(names),
     matched_lines: matched,
   };
+}
+
+// Words that capitalize commonly but aren't names. Fallback heuristic.
+const NAME_STOPLIST = new Set([
+  "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
+  "january", "february", "march", "april", "may", "june", "july",
+  "august", "september", "october", "november", "december",
+  "am", "pm", "dj", "md", "mc", "emcee",
+  "with", "and", "but", "the", "a", "an", "or", "for", "on", "in", "at", "to",
+  "ok", "yes", "no", "tba", "tbd",
+  "ceremony", "cocktail", "reception", "dinner", "lunch", "brunch",
+  "confirmed", "booked", "locked", "djing", "hosting", "emceeing",
+]);
+
+const VERB_TO_ROLE: Record<string, string> = {
+  djing: "dj",
+  hosting: "host",
+  emceeing: "mc",
+};
+
+const PRODUCTION_ROLES = new Set(["sound", "lights", "tech", "av"]);
+
+function nameLooksValid(token: string): boolean {
+  const trimmed = token.trim();
+  if (trimmed.length < 2 || trimmed.length > 40) return false;
+  if (/[0-9@:]/.test(trimmed)) return false;
+  // First-word lookup against stoplist — handles "Sunday confirmed" false-positive cleanly.
+  // Stoplist is fallback only; if a real name shares a stoplist word, this rejects them
+  // (acceptable since stoplist is dominated by weekdays/months not human names).
+  const firstWord = trimmed.split(/\s+/)[0].toLowerCase();
+  if (NAME_STOPLIST.has(firstWord)) return false;
+  if (ROLE_TOKENS.includes(firstWord)) return false;
+  return /^[A-Za-z][A-Za-z'\-]*(?:\s+[A-Za-z][A-Za-z'\-]*)*$/.test(trimmed);
+}
+
+function parseStaffProse(description: string): { entries: StaffEntry[]; matched_lines: string[] } {
+  if (!description) return { entries: [], matched_lines: [] };
+  const lines = preprocessDescription(description);
+  const entries: StaffEntry[] = [];
+  const matched = new Set<string>();
+  const seenNames = new Set<string>();
+
+  function addEntry(rawName: string, role: string, line: string) {
+    const clean = stripParenNote(rawName).trim();
+    if (!nameLooksValid(clean)) return;
+    const key = clean.toLowerCase();
+    if (seenNames.has(key)) return;
+    seenNames.add(key);
+    entries.push({ name: clean, role, pattern: "prose" });
+    matched.add(line);
+  }
+
+  for (const line of lines) {
+    // Skip lines that look like explicit "Role: Name" — parseStaff handles those.
+    const colonHead = line.match(/^([A-Za-z][A-Za-z \-/&]{1,30})\s*[:\-–]\s*\S/);
+    if (colonHead) {
+      const keyPart = colonHead[1].trim().toLowerCase();
+      const keyTokens = keyPart.split(/\s+/);
+      const looksLikeRole = keyTokens.some((tok) =>
+        ROLE_TOKENS.includes(tok.replace(/[^a-z]/g, "")),
+      );
+      if (looksLikeRole) continue;
+    }
+
+    // Pattern A: <Name>(, & and)<Name>[, & and <Name>] confirmed|booked|locked
+    // "eddie and sean confirmed", "Colin and Sean Confirmed", "sean and colin confirmed (...)"
+    const confirmRe =
+      /\b([A-Za-z][a-zA-Z'\-]{1,29}(?:\s+[A-Z][a-zA-Z'\-]{1,29})?)\s*(?:,|\band\b|&)\s*([A-Za-z][a-zA-Z'\-]{1,29}(?:\s+[A-Z][a-zA-Z'\-]{1,29})?)(?:\s*(?:,|\band\b|&)\s*([A-Za-z][a-zA-Z'\-]{1,29}(?:\s+[A-Z][a-zA-Z'\-]{1,29})?))?\s+(confirmed|booked|locked)\b/gi;
+    let m: RegExpExecArray | null;
+    while ((m = confirmRe.exec(line)) !== null) {
+      addEntry(m[1], "unknown", line);
+      addEntry(m[2], "unknown", line);
+      if (m[3]) addEntry(m[3], "unknown", line);
+    }
+
+    // Pattern B: <Name> on <role>
+    // "adam haliday on sound"
+    const onRoleRe =
+      /\b([A-Za-z][a-zA-Z'\-]{1,29}(?:\s+[A-Za-z][a-zA-Z'\-]{1,29})?)\s+on\s+([A-Za-z]+)\b/g;
+    while ((m = onRoleRe.exec(line)) !== null) {
+      const candidateRole = m[2].toLowerCase();
+      const role = ROLE_TOKENS.includes(candidateRole)
+        ? candidateRole
+        : (PRODUCTION_ROLES.has(candidateRole) ? candidateRole : "unknown");
+      addEntry(m[1], role, line);
+    }
+
+    // Pattern C: <Name> DJing|hosting|emceeing
+    // "Zach DJing"
+    const verbRoleRe =
+      /\b([A-Z][a-zA-Z'\-]{1,29}(?:\s+[A-Z][a-zA-Z'\-]{1,29})?)\s+(DJing|hosting|emceeing)\b/g;
+    while ((m = verbRoleRe.exec(line)) !== null) {
+      const role = VERB_TO_ROLE[m[2].toLowerCase()] ?? "unknown";
+      addEntry(m[1], role, line);
+    }
+
+    // Pattern D: cocktail-style "with <Name>" before comma/end/and
+    // "cocktail with Tom, Zach DJing" → catches Tom
+    const cocktailRe =
+      /\bwith\s+([A-Z][a-zA-Z'\-]{1,29}(?:\s+[A-Z][a-zA-Z'\-]{1,29})?)(?=\s*(?:,|$|\s+and\s+|\s+&\s+))/g;
+    while ((m = cocktailRe.exec(line)) !== null) {
+      addEntry(m[1], "unknown", line);
+    }
+  }
+
+  return { entries, matched_lines: Array.from(matched) };
 }
 
 Deno.serve(async (req) => {
@@ -362,7 +477,30 @@ Deno.serve(async (req) => {
                 const description = e.description || "";
                 const inference = inferExpectedHeadcount(title);
                 const parsed = parseStaff(description);
-                const staffed_count = parsed.staff_names.length;
+                const proseParsed = parseStaffProse(description);
+
+                // Merge: explicit entries first, then prose entries the explicit pass missed.
+                const staff_entries: StaffEntry[] = parsed.staff_names.map((n) => ({
+                  name: n,
+                  role: "unknown",
+                  pattern: "explicit" as const,
+                }));
+                const seenLower = new Set(staff_entries.map((s) => s.name.toLowerCase()));
+                for (const p of proseParsed.entries) {
+                  if (seenLower.has(p.name.toLowerCase())) continue;
+                  staff_entries.push(p);
+                  seenLower.add(p.name.toLowerCase());
+                }
+
+                // staffed_count counts ONLY explicit entries — prose entries have unknown
+                // role so they can't be trusted for headcount math (5/14 events shorthand).
+                const staffed_count = staff_entries.filter(
+                  (s) => s.pattern === "explicit",
+                ).length;
+                const staff_names = staff_entries.map((s) => s.name);
+                const matched_lines = Array.from(
+                  new Set([...parsed.matched_lines, ...proseParsed.matched_lines]),
+                );
                 const expected = inference.expected;
                 const missing_count =
                   expected === null ? null : Math.max(0, expected - staffed_count);
@@ -384,8 +522,9 @@ Deno.serve(async (req) => {
                   expected_source: inference.source,
                   staffed_count,
                   missing_count,
-                  staff_names: parsed.staff_names,
-                  matched_lines: parsed.matched_lines,
+                  staff_names,
+                  staff_entries,
+                  matched_lines,
                 });
               }
             }),
