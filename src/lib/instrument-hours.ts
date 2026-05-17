@@ -42,6 +42,7 @@ export interface InstrumentClassification {
   estimation_source: string;
   review_status: "auto" | "needs-review" | "reviewed";
   reviewed_at: string | null;
+  last_resampled_at: string | null;
   notes: string;
   created_at: string;
   updated_at: string;

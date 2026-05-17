@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Flame, RefreshCw } from "lucide-react";
+import { Flame, RefreshCw, ShieldCheck } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   aggregateDailyHours,
@@ -43,10 +43,15 @@ const heatBg = (level: number) => {
 
 type HeatmapKindFilter = "all" | "gig" | "rehearsal";
 
+const RESAMPLE_STALE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const RESAMPLE_BATCH = 10;
+
 export default function HoursHeatmap() {
   const [classifications, setClassifications] = useState<InstrumentClassification[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [resampling, setResampling] = useState(false);
+  const [resampleEligibleOnly, setResampleEligibleOnly] = useState(false);
   const [allTime, setAllTime] = useState(false);
   const [kindFilter, setKindFilter] = useState<HeatmapKindFilter>("all");
 
@@ -76,13 +81,30 @@ export default function HoursHeatmap() {
     };
   }, []);
 
+  // Auto rows eligible for resampling: never resampled, or last resampled >30d
+  // ago. Reviewed/needs-review rows are immune — only `auto` rows can drift
+  // without anyone looking. This is the "filter chip" pool.
+  const resampleEligibleIds = useMemo(() => {
+    const cutoff = Date.now() - RESAMPLE_STALE_MS;
+    const ids = new Set<string>();
+    for (const c of classifications) {
+      if (c.review_status !== "auto") continue;
+      if (!c.last_resampled_at || new Date(c.last_resampled_at).getTime() < cutoff) {
+        ids.add(c.id);
+      }
+    }
+    return ids;
+  }, [classifications]);
+
   // Filter the row set for the heatmap when a single-kind view is selected.
   // The per-kind breakdown grid and the headline goal-progress badge keep
   // showing the full picture regardless — the filter is just for the squares.
   const filteredForHeatmap = useMemo(() => {
-    if (kindFilter === "all") return classifications;
-    return classifications.filter((c) => c.classified_as === kindFilter);
-  }, [classifications, kindFilter]);
+    let rows = classifications;
+    if (resampleEligibleOnly) rows = rows.filter((c) => resampleEligibleIds.has(c.id));
+    if (kindFilter !== "all") rows = rows.filter((c) => c.classified_as === kindFilter);
+    return rows;
+  }, [classifications, kindFilter, resampleEligibleOnly, resampleEligibleIds]);
 
   const dailyHours = useMemo(() => aggregateDailyHours(filteredForHeatmap), [filteredForHeatmap]);
   const kindTotals = useMemo(() => totalByKind(classifications), [classifications]);
@@ -137,6 +159,30 @@ export default function HoursHeatmap() {
     return labels;
   }, [heatmap]);
 
+  const resample = async () => {
+    setResampling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("instrument-hours-resample", {
+        body: { oldest: RESAMPLE_BATCH },
+      });
+      if (error) throw error;
+      const n = data?.resampled ?? 0;
+      toast({
+        title: n > 0 ? `${n} event${n === 1 ? "" : "s"} sent to review queue` : "Nothing to resample",
+        description: n > 0 ? "Catching over-extrapolation by spot-checking auto-classified rows." : "All auto rows have been resampled in the last 30 days.",
+      });
+      await load();
+    } catch (e) {
+      toast({
+        title: "Resample failed",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    } finally {
+      setResampling(false);
+    }
+  };
+
   const rescan = async () => {
     setScanning(true);
     try {
@@ -180,6 +226,17 @@ export default function HoursHeatmap() {
               title={allTime ? "Show last 12 months only" : "Show full history (scrolls horizontally)"}
             >
               {allTime ? "Compact" : "Show all time"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={resample}
+              disabled={resampling || resampleEligibleIds.size === 0}
+              className="h-7 text-xs gap-1"
+              title={`Send ${Math.min(RESAMPLE_BATCH, resampleEligibleIds.size)} stale auto-classified events to the review queue for a sanity check`}
+            >
+              <ShieldCheck className={`w-3 h-3 ${resampling ? "animate-pulse" : ""}`} />
+              {resampling ? "Sampling…" : `Resample ${Math.min(RESAMPLE_BATCH, resampleEligibleIds.size)}`}
             </Button>
             <Button
               size="sm"
@@ -235,7 +292,7 @@ export default function HoursHeatmap() {
         )}
         {!loading && classifications.length > 0 && (
           <>
-            <div className="mb-2 flex items-center gap-1 text-[10px]">
+            <div className="mb-2 flex items-center gap-1 flex-wrap text-[10px]">
               <span className="text-muted-foreground mr-1">Heatmap:</span>
               {(["all", "gig", "rehearsal"] as HeatmapKindFilter[]).map((k) => {
                 const active = kindFilter === k;
@@ -255,6 +312,19 @@ export default function HoursHeatmap() {
                   </button>
                 );
               })}
+              <button
+                type="button"
+                onClick={() => setResampleEligibleOnly((v) => !v)}
+                disabled={resampleEligibleIds.size === 0}
+                className={`h-6 px-2 rounded border transition-colors ml-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  resampleEligibleOnly
+                    ? "bg-amber-500/20 border-amber-500/60 text-foreground"
+                    : "bg-card border-border text-muted-foreground hover:border-amber-500/40 hover:text-foreground"
+                }`}
+                title="Show only days containing auto-classified events not resampled in the last 30 days"
+              >
+                Resample-eligible · {resampleEligibleIds.size}
+              </button>
             </div>
             <div className="overflow-x-auto">
             <div className="inline-block min-w-full">
