@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,8 +8,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   Sparkles, Save, RotateCcw, Loader2, CheckCircle2, Clock, Target, AlertTriangle, Calendar,
-  Trello, RefreshCw, ExternalLink, Inbox,
+  Trello, RefreshCw, ExternalLink, Inbox, LayoutGrid,
 } from "lucide-react";
+import {
+  useSmartTaskBoardData,
+  type TrelloCard,
+  type TrelloCustomFieldLite,
+} from "@/hooks/useSmartTaskBoardData";
+import { DEFAULT_VENTURE } from "@/components/board/smartTaskBuckets";
 
 type SmartShape = {
   revised_title: string;
@@ -17,27 +24,6 @@ type SmartShape = {
   blockers: string;
   effort: string;
   due_date: string | null;
-};
-
-type TrelloLabelLite = { name: string; color: string | null };
-type TrelloChecklistOpen = { name: string; items: string[] };
-type TrelloCommentLite = { text: string; date: string };
-type TrelloCustomFieldLite = { name: string; value: string };
-
-type TrelloCard = {
-  id: string;
-  name: string;
-  desc: string;
-  due: string | null;
-  url: string;
-  list_id: string;
-  list_name?: string | null;
-  labels?: TrelloLabelLite[];
-  checklists_open?: TrelloChecklistOpen[];
-  recent_comments?: TrelloCommentLite[];
-  custom_fields?: TrelloCustomFieldLite[];
-  date_last_activity?: string;
-  age_days?: number;
 };
 
 type CardContext = {
@@ -65,15 +51,6 @@ function buildCardContext(card: TrelloCard): CardContext {
   };
 }
 
-type TrelloPoll = {
-  board?: { id: string; name: string };
-  cards?: TrelloCard[];
-  total_open?: number;
-  pending_count?: number;
-  error?: string;
-  message?: string;
-};
-
 const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 export default function SmartTaskWidget() {
@@ -88,41 +65,13 @@ export default function SmartTaskWidget() {
   // SMART-ify the card and write a calendar event.
   const [activeCard, setActiveCard] = useState<TrelloCard | null>(null);
 
-  // Trello inbox state
-  const [cards, setCards] = useState<TrelloCard[]>([]);
-  const [trelloLoading, setTrelloLoading] = useState(false);
-  const [trelloError, setTrelloError] = useState<string | null>(null);
-  const [boardName, setBoardName] = useState<string | null>(null);
-
-  const loadTrello = useCallback(async () => {
-    setTrelloLoading(true);
-    setTrelloError(null);
-    try {
-      const { data, error } = await supabase.functions.invoke("trello-poll", {
-        body: { action: "poll" },
-      });
-      if (error) throw error;
-      const result = data as TrelloPoll;
-      if (result.error) {
-        setTrelloError(result.message || result.error);
-        setCards([]);
-        setBoardName(null);
-        return;
-      }
-      setCards(result.cards || []);
-      setBoardName(result.board?.name || null);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setTrelloError(msg);
-      setCards([]);
-    } finally {
-      setTrelloLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadTrello();
-  }, [loadTrello]);
+  // Trello inbox + SMART rows come from the shared P312 board data layer
+  // so the dashboard widget stays in sync with /team/smart-tasks.
+  const {
+    trello: { cards, boardName, loading: trelloLoading, error: trelloError },
+    refreshTrello: loadTrello,
+    refreshSmartRows,
+  } = useSmartTaskBoardData();
 
   function pickCard(card: TrelloCard) {
     const combined = card.desc?.trim()
@@ -224,6 +173,12 @@ export default function SmartTaskWidget() {
     try {
       const calendarEvent = await createCalendarEvent(smart);
 
+      // P312: stamp defaults so the new row lands on the /team/smart-tasks
+      // board in a sensible spot. board_bucket is "Active" if a calendar
+      // event was created, else "Pending approval". board_venture defaults
+      // to Personal; the board's "Move venture" dropdown reassigns later.
+      const defaultBucket = calendarEvent?.id ? "Active" : "Pending approval";
+
       const { error } = await supabase.from("smart_task_enrichments").insert({
         raw_input: input.trim(),
         revised_title: smart.revised_title,
@@ -236,6 +191,8 @@ export default function SmartTaskWidget() {
         trello_card_url: activeCard?.url ?? null,
         google_calendar_event_id: calendarEvent?.id ?? null,
         google_calendar_html_link: calendarEvent?.htmlLink ?? null,
+        board_bucket: defaultBucket,
+        board_venture: DEFAULT_VENTURE,
       });
       if (error) throw error;
 
@@ -251,6 +208,7 @@ export default function SmartTaskWidget() {
       setInput("");
       setSmart(null);
       setActiveCard(null);
+      void refreshSmartRows();
       if (activeCard) void loadTrello();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -273,10 +231,18 @@ export default function SmartTaskWidget() {
   return (
     <Card className="bg-card/50 border-border">
       <CardHeader className="pb-3">
-        <CardTitle className="font-display text-lg tracking-wide-custom flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-primary" />
-          Make a Task SMART
-        </CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="font-display text-lg tracking-wide-custom flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            Make a Task SMART
+          </CardTitle>
+          <Link
+            to="/team/smart-tasks"
+            className="text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+          >
+            <LayoutGrid className="w-3 h-3" /> Full board
+          </Link>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <TrelloInbox

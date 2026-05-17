@@ -1,6 +1,6 @@
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { useTeamAuth } from "@/hooks/useTeamAuth";
-import { Music, Calendar, FolderOpen, LogOut, FileText, Home, LayoutDashboard, Activity, Share2, Phone, ChevronDown, Briefcase, Images, Palette, Loader2, Kanban, Users } from "lucide-react";
+import { Music, Calendar, FolderOpen, LogOut, FileText, Home, LayoutDashboard, Activity, Share2, Phone, ChevronDown, Briefcase, Images, Palette, Loader2, Kanban, Users, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,7 @@ const managementNav = [
   { name: "Social", href: "/team/social", icon: Share2, description: "Posting times & social manager" },
   { name: "Booking", href: "/team/booking", icon: Phone, description: "Lead pipeline & venue tracker" },
   { name: "Lead Pipeline", href: "/team/booking-pipeline", icon: Kanban, description: "Scrum board — drag leads across buckets" },
+  { name: "SMART Tasks", href: "/team/smart-tasks", icon: Sparkles, description: "Scrum board — Trello inbox → SMART → Active across ventures" },
   { name: "Scheduler", href: "/team/scheduler", icon: Calendar, description: "Rehearsal & event scheduling" },
   { name: "Doc Generator", href: "/team/run-of-show", icon: FileText, description: "Run of show & client docs" },
   { name: "Brand Studio", href: "/team/brand-studio", icon: Palette, description: "People, decisions, releases, EPKs across ventures" },

@@ -67,11 +67,13 @@ import TeamRunOfShow from "./pages/team/TeamRunOfShow";
 import TeamDashboard from "./pages/team/TeamDashboard";
 import TeamPractice from "./pages/team/TeamPractice";
 import TeamSocial from "./pages/team/TeamSocial";
+import TeamSocialHandoff from "./pages/team/TeamSocialHandoff";
 import TeamBooking from "./pages/team/TeamBooking";
 import TeamBookingPipeline from "./pages/team/TeamBookingPipeline";
 import TeamVisualAssets from "./pages/team/TeamVisualAssets";
 import TeamBrandStudio from "./pages/team/TeamBrandStudio";
 import TeamBandMembers from "./pages/team/TeamBandMembers";
+import TeamSmartTasks from "./pages/team/TeamSmartTasks";
 
 const queryClient = new QueryClient();
 
@@ -146,11 +148,13 @@ const App = () => (
               <Route path="/team/dashboard" element={<TeamDashboard />} />
               <Route path="/team/practice" element={<TeamPractice />} />
               <Route path="/team/social" element={<TeamSocial />} />
+              <Route path="/team/social-handoff/:week" element={<TeamSocialHandoff />} />
               <Route path="/team/booking" element={<TeamBooking />} />
               <Route path="/team/booking-pipeline" element={<TeamBookingPipeline />} />
               <Route path="/team/visual-assets" element={<TeamVisualAssets />} />
               <Route path="/team/brand-studio" element={<TeamBrandStudio />} />
               <Route path="/team/band-members" element={<TeamBandMembers />} />
+              <Route path="/team/smart-tasks" element={<TeamSmartTasks />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
