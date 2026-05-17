@@ -78,6 +78,22 @@ function parseDateLoose(value: string): { date: string | null; time: string | nu
   return { date: null, time: null };
 }
 
+// P311 default-bucket derivation. Used when no override exists in
+// booking_pipeline_buckets for a given (sheet_id, row_index). Matches the
+// 6-bucket default lane set in src/components/board/bookingBuckets.ts.
+function deriveBucket(statusLower: string, kind: "reachout" | "followup" | "unknown"): string {
+  const s = statusLower;
+  if (/done|complete|played|cancel|cancelled|passed|dead|lost|archive/.test(s)) return "Done";
+  if (/confirm|booked|signed|deposit|contracted/.test(s)) return "Confirmed";
+  if (/followup\s*2|f2|second\s+followup|no\s+response/.test(s)) return "Followup 2";
+  if (/convo|in\s+progress|talking|negotiat/.test(s)) return "In Convo";
+  if (/awaiting|sent|waiting|pending/.test(s)) return "Awaiting Reply";
+  if (/cold|new|no\s+reply|reach/.test(s)) return "Reach Out";
+  if (kind === "reachout") return "Reach Out";
+  if (kind === "followup") return "Awaiting Reply";
+  return "Reach Out";
+}
+
 function parseCSV(text: string): string[][] {
   const rows: string[][] = [];
   let current = "";
@@ -299,9 +315,20 @@ Deno.serve(async (req) => {
         .filter(Boolean),
     );
 
+    // P311: pull bucket overlay for this sheet so we can stamp every row.
+    const { data: bucketRows } = await supabase
+      .from("booking_pipeline_buckets")
+      .select("row_index, bucket")
+      .eq("sheet_id", c.sheet_id);
+    const bucketOverlay = new Map<number, string>();
+    for (const br of (bucketRows ?? []) as Array<{ row_index: number; bucket: string }>) {
+      bucketOverlay.set(br.row_index, br.bucket);
+    }
+
     const events: any[] = [];
     const reachouts: any[] = [];
     const followups: any[] = [];
+    const rows: any[] = [];
 
     dataRows.forEach((row, i) => {
       if (idx.name < 0) return;
@@ -321,9 +348,12 @@ Deno.serve(async (req) => {
       const nextFollowRaw = idx.nextFollow >= 0 ? row[idx.nextFollow] : "";
       const parsed = parseDateLoose(nextFollowRaw || "");
 
+      const rowIndex = i + 2;
+      const bucket = bucketOverlay.get(rowIndex) ?? deriveBucket(statusLower, kind);
+
       const item = {
         id: `booking-${i}-${name.slice(0, 32).replace(/\s+/g, "-")}`,
-        rowIndex: i + 2,
+        rowIndex,
         name,
         status: statusRaw,
         type: idx.type >= 0 ? row[idx.type] || "" : "",
@@ -333,8 +363,10 @@ Deno.serve(async (req) => {
         nextFollowup: nextFollowRaw,
         nextFollowupDate: parsed.date,
         kind,
+        bucket,
       };
 
+      rows.push(item);
       if (kind === "reachout") reachouts.push(item);
       else if (kind === "followup") followups.push(item);
 
@@ -366,7 +398,9 @@ Deno.serve(async (req) => {
         events,
         reachouts,
         followups,
-        counts: { reachouts: reachouts.length, followups: followups.length, events: events.length },
+        rows,
+        sheetId: c.sheet_id,
+        counts: { reachouts: reachouts.length, followups: followups.length, events: events.length, rows: rows.length },
         sheetUrl,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
