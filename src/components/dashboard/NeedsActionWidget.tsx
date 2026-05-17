@@ -36,11 +36,11 @@ export default function NeedsActionWidget() {
           <CardContent className="space-y-4">
             <WaitingOnJoshWidget />
             <TodaysActionItemsWidget />
-            <BookingAgentActionWidget />
-            <MissingDatesWidget />
             <StaffingNeedsAction />
             <EveningAvailabilityNeedsAction />
             <EmailNeedsAction />
+            <BookingAgentActionWidget />
+            <MissingDatesWidget />
             {/* More action items can be slotted in here as they come up. */}
           </CardContent>
         </CollapsibleContent>
