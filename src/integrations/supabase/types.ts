@@ -564,6 +564,7 @@ export type Database = {
           gcal_calendar_id: string
           gcal_event_id: string
           id: string
+          last_resampled_at: string | null
           matched_rule_id: string | null
           matched_rule_pattern: string | null
           notes: string
@@ -587,6 +588,7 @@ export type Database = {
           gcal_calendar_id: string
           gcal_event_id: string
           id?: string
+          last_resampled_at?: string | null
           matched_rule_id?: string | null
           matched_rule_pattern?: string | null
           notes?: string
@@ -610,6 +612,7 @@ export type Database = {
           gcal_calendar_id?: string
           gcal_event_id?: string
           id?: string
+          last_resampled_at?: string | null
           matched_rule_id?: string | null
           matched_rule_pattern?: string | null
           notes?: string
