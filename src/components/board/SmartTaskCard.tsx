@@ -1,0 +1,154 @@
+import { ExternalLink, Calendar, Target, Clock } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  SMART_VENTURES,
+  type SmartVenture,
+} from "./smartTaskBuckets";
+
+export type SmartTaskCardData = {
+  id: string;
+  columnId: string; // the bucket (e.g. "Pending approval")
+  venture: SmartVenture;
+  source: "smart" | "trello";
+  title: string;
+  bucketLabel: string;
+  ageDays: number | null;
+  dueDate: string | null;
+  definitionOfDone: string | null;
+  measure: string | null;
+  effort: string | null;
+  externalUrl: string | null;
+};
+
+function daysSince(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  const parsed = new Date(dateStr);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const diff = Date.now() - parsed.getTime();
+  if (diff < 0) return null;
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+export function ageFromCreatedAt(createdAt: string): number | null {
+  return daysSince(createdAt);
+}
+
+export function SmartTaskCard({
+  card,
+  onChangeVenture,
+}: {
+  card: SmartTaskCardData;
+  onChangeVenture: (cardId: string, venture: SmartVenture) => void;
+}) {
+  const ventureChangeable = card.source === "smart";
+
+  return (
+    <div className="px-3 py-2.5 space-y-1.5">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-medium text-foreground line-clamp-2 flex-1 min-w-0">
+          {card.title}
+        </p>
+        {card.externalUrl && (
+          <a
+            href={card.externalUrl}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="text-muted-foreground hover:text-foreground flex-shrink-0"
+            aria-label={card.source === "trello" ? "Open in Trello" : "Open calendar event"}
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span
+          className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded ${
+            card.source === "trello"
+              ? "bg-amber-500/15 text-amber-500"
+              : "bg-primary/15 text-primary"
+          }`}
+        >
+          {card.bucketLabel}
+        </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            asChild
+            disabled={!ventureChangeable}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <button
+              className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-border bg-card/60 hover:bg-muted/60 ${
+                ventureChangeable ? "cursor-pointer" : "cursor-not-allowed opacity-70"
+              }`}
+              aria-label={ventureChangeable ? "Change venture" : "Trello inbox cards can't move venture from the board"}
+            >
+              {card.venture}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-wider">
+              Move venture
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {SMART_VENTURES.map((v) => (
+              <DropdownMenuItem
+                key={v}
+                disabled={v === card.venture}
+                onSelect={() => onChangeVenture(card.id, v)}
+                className="text-xs"
+              >
+                {v}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {(card.definitionOfDone || card.measure || card.effort) && (
+        <div className="text-[11px] text-muted-foreground space-y-0.5">
+          {card.definitionOfDone && (
+            <p className="line-clamp-1">DOD: {card.definitionOfDone}</p>
+          )}
+          {card.measure && (
+            <p className="line-clamp-1 inline-flex items-center gap-1">
+              <Target className="w-3 h-3" /> {card.measure}
+            </p>
+          )}
+          {card.effort && (
+            <p className="line-clamp-1 inline-flex items-center gap-1">
+              <Clock className="w-3 h-3" /> {card.effort}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+        {card.dueDate && (
+          <span className="inline-flex items-center gap-1">
+            <Calendar className="w-3 h-3" /> {card.dueDate}
+          </span>
+        )}
+        {card.ageDays !== null && (
+          <span>
+            {card.ageDays === 0 ? "today" : `${card.ageDays}d`}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
