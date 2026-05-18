@@ -5,14 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Home, Loader2 } from "lucide-react";
+import { Home, Loader2, KeyRound, LogIn } from "lucide-react";
 import logo from "@/assets/logo-circle.png";
 
 export default function TeamLogin() {
-  const { isAuthenticated, isLoading, sendMagicLink } = useTeamAuth();
+  const {
+    isAuthenticated,
+    isLoading,
+    isRecovering,
+    signInWithPassword,
+    updatePassword,
+  } = useTeamAuth();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
   if (isLoading) {
@@ -23,23 +30,127 @@ export default function TeamLogin() {
     );
   }
 
+  if (isRecovering) {
+    // Invite-acceptance + admin-triggered reset both land here.
+    const handleSetPassword = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError("");
+      setSubmitting(true);
+      const res = await updatePassword(newPassword);
+      setSubmitting(false);
+      if (!res.ok) setError(res.error ?? "Could not set password");
+    };
+    return (
+      <Shell subtitle="Set your password">
+        <form onSubmit={handleSetPassword} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="new-password" className="text-muted-foreground text-sm">
+              New password
+            </Label>
+            <Input
+              id="new-password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="At least 8 characters"
+              className="bg-secondary border-border"
+              required
+              autoFocus
+            />
+          </div>
+          {error && (
+            <p className="text-destructive text-sm text-center">{error}</p>
+          )}
+          <Button
+            type="submit"
+            variant="hero"
+            className="w-full"
+            disabled={submitting || newPassword.length < 8}
+          >
+            {submitting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <KeyRound className="w-4 h-4 mr-2" />
+            )}
+            Set password
+          </Button>
+        </form>
+      </Shell>
+    );
+  }
+
   if (isAuthenticated) {
     return <Navigate to="/team/dashboard" replace />;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
-    const res = await sendMagicLink(email);
+    const res = await signInWithPassword(email, password);
     setSubmitting(false);
-    if (res.ok) {
-      setSent(true);
-    } else {
-      setError(res.error ?? "Could not send link");
-    }
+    if (!res.ok) setError(res.error ?? "Could not sign in");
   };
 
+  return (
+    <Shell>
+      <form onSubmit={handleSignIn} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-muted-foreground text-sm">
+            Email
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="bg-secondary border-border"
+            required
+            autoFocus
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-muted-foreground text-sm">
+            Password
+          </Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="bg-secondary border-border"
+            required
+          />
+        </div>
+        {error && (
+          <p className="text-destructive text-sm text-center">{error}</p>
+        )}
+        <Button
+          type="submit"
+          variant="hero"
+          className="w-full"
+          disabled={submitting || !email.trim() || !password}
+        >
+          {submitting ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <LogIn className="w-4 h-4 mr-2" />
+          )}
+          Sign in
+        </Button>
+      </form>
+    </Shell>
+  );
+}
+
+function Shell({
+  children,
+  subtitle,
+}: {
+  children: React.ReactNode;
+  subtitle?: string;
+}) {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
       <Link
@@ -57,63 +168,11 @@ export default function TeamLogin() {
           <CardTitle className="font-display text-xl tracking-wide-custom text-foreground">
             Team Portal
           </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {sent ? (
-            <div className="space-y-3 text-center text-sm">
-              <p className="text-foreground">Check your inbox.</p>
-              <p className="text-muted-foreground">
-                A sign-in link is on the way to{" "}
-                <span className="text-foreground">{email}</span>. Click it from
-                this device to finish signing in.
-              </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSent(false);
-                  setEmail("");
-                }}
-              >
-                Use a different email
-              </Button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-muted-foreground text-sm">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="josh@baltimoresound.net"
-                  className="bg-secondary border-border"
-                  required
-                  autoFocus
-                />
-              </div>
-              {error && (
-                <p className="text-destructive text-sm text-center">{error}</p>
-              )}
-              <Button
-                type="submit"
-                variant="hero"
-                className="w-full"
-                disabled={submitting || !email.trim()}
-              >
-                {submitting ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Mail className="w-4 h-4 mr-2" />
-                )}
-                Send magic link
-              </Button>
-            </form>
+          {subtitle && (
+            <p className="text-muted-foreground text-sm">{subtitle}</p>
           )}
-        </CardContent>
+        </CardHeader>
+        <CardContent>{children}</CardContent>
       </Card>
     </div>
   );
