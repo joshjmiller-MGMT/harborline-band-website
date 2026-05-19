@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { operatorAuthHeader } from "@/integrations/supabase/operator-fetch";
 import { toast } from "@/hooks/use-toast";
 import { generateDocx, generateDocxBlob } from "@/utils/docxGenerator";
 import { useGoogleDriveUpload } from "@/hooks/useGoogleDriveUpload";
@@ -549,14 +550,17 @@ export default function RunOfShowGenerator() {
     try {
       // Use fetch directly so we can read the body on a 404 — supabase-js
       // surfaces non-2xx as FunctionsHttpError without exposing the payload's
-      // `note` field (which carries the helpful cache-miss guidance).
+      // `note` field (which carries the helpful cache-miss guidance). P328:
+      // operatorAuthHeader() carries the signed-in operator's JWT — the anon
+      // publishable key gets 403 against djep-event-lookup's requireOperator
+      // gate.
       const supaUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supaKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const auth = await operatorAuthHeader();
       const resp = await fetch(`${supaUrl}/functions/v1/djep-event-lookup`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${supaKey}`,
-          "apikey": supaKey,
+          "Authorization": auth,
+          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),

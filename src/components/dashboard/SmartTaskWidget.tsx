@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { operatorAuthHeader } from "@/integrations/supabase/operator-fetch";
 import { useToast } from "@/hooks/use-toast";
 import {
   Sparkles, Save, RotateCcw, Loader2, CheckCircle2, Clock, Target, AlertTriangle, Calendar,
@@ -122,7 +123,7 @@ export default function SmartTaskWidget() {
       const res = await fetch(`${FUNCTIONS_BASE}/google-calendar-events?action=create`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: await operatorAuthHeader(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

@@ -5,6 +5,7 @@ import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
 import { supabase } from "@/integrations/supabase/client";
+import { operatorAuthHeader } from "@/integrations/supabase/operator-fetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -286,18 +287,19 @@ export default function UnifiedCalendarWidget() {
   const loadAll = async () => {
     setLoading(true);
     try {
+      const auth = await operatorAuthHeader();
       const [gRes, mRes, dRes, bRes] = await Promise.all([
         fetch(`${FUNCTIONS_BASE}/google-calendar-events`, {
-          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+          headers: { Authorization: auth },
         }).then((r) => r.json()),
         fetch(`${FUNCTIONS_BASE}/monday-calendar-events`, {
-          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+          headers: { Authorization: auth },
         }).then((r) => r.json()),
         fetch(`${FUNCTIONS_BASE}/djep-calendar-events`, {
-          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+          headers: { Authorization: auth },
         }).then((r) => r.json()).catch(() => ({ events: [] })),
         fetch(`${FUNCTIONS_BASE}/booking-agent-rows`, {
-          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+          headers: { Authorization: auth },
         }).then((r) => r.json()).catch(() => ({ events: [] })),
       ]);
 
@@ -486,7 +488,7 @@ export default function UnifiedCalendarWidget() {
       });
       if (loginHint) params.set("login_hint", loginHint);
       const res = await fetch(`${FUNCTIONS_BASE}/google-calendar-oauth?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { Authorization: await operatorAuthHeader() },
       });
       const data = await res.json();
       if (data.error) {
@@ -591,7 +593,7 @@ export default function UnifiedCalendarWidget() {
     setDjepLoading(true);
     try {
       const res = await fetch(`${FUNCTIONS_BASE}/djep-calendar-events?refresh=1`, {
-        headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { Authorization: await operatorAuthHeader() },
       });
       const data = await res.json();
       if (data.error) {
@@ -629,7 +631,7 @@ export default function UnifiedCalendarWidget() {
       const res = await fetch(`${FUNCTIONS_BASE}/google-calendar-events?action=create`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: await operatorAuthHeader(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
