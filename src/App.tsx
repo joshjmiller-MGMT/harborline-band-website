@@ -72,6 +72,7 @@ import TeamBooking from "./pages/team/TeamBooking";
 import TeamBookingPipeline from "./pages/team/TeamBookingPipeline";
 import TeamVisualAssets from "./pages/team/TeamVisualAssets";
 import TeamBrandStudio from "./pages/team/TeamBrandStudio";
+import TeamBandMembers from "./pages/team/TeamBandMembers";
 import TeamSmartTasks from "./pages/team/TeamSmartTasks";
 import TeamAdminUsers from "./pages/team/TeamAdminUsers";
 
@@ -153,6 +154,7 @@ const App = () => (
               <Route path="/team/booking-pipeline" element={<TeamBookingPipeline />} />
               <Route path="/team/visual-assets" element={<TeamVisualAssets />} />
               <Route path="/team/brand-studio" element={<TeamBrandStudio />} />
+              <Route path="/team/band-members" element={<TeamBandMembers />} />
               <Route path="/team/smart-tasks" element={<TeamSmartTasks />} />
               <Route path="/team/admin/users" element={<TeamAdminUsers />} />
 

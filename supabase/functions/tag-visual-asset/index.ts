@@ -15,9 +15,14 @@
 // suggestions set review_status='needs-review' (the UI surfaces a Review queue chip);
 // high/medium continue current auto-apply-when-empty behavior unchanged.
 //
-// People are intentionally NOT named — we return generic role tags (musician, client,
-// bridal-party, audience, etc.) and a coarse count bucket, to avoid face-recognition
-// hallucination without a real reference set. Named-people recognition is a future phase.
+// P310 (2026-05-17): named-people recognition. Roster lives in `band_members`
+// (separate table from `brand_collaborators` — see decision record
+// `2026-05-13-round-3-q1-q7b-defaults-confirmed.md` Q5). Each active member
+// with a reference image at `visual-assets/reference-faces/<id>.jpg` is
+// supplied to Claude in a `<people>` block (name + role + base64 reference).
+// The model fills `people_names` strictly from the supplied roster — never
+// free-text. Empty array when no roster match (legacy generic role tagging
+// continues unchanged for non-band-member people).
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 import { requireOperator } from "../_shared/require-operator.ts";
@@ -31,7 +36,19 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
-const TOOL = {
+interface BandMember {
+  id: string;
+  name: string;
+  role: string;
+  reference_image_path: string;
+}
+
+function buildTool(roster: BandMember[]) {
+  const rosterNames = roster.map((m) => m.name);
+  const peopleNamesDescription = rosterNames.length
+    ? `Names of band members from the supplied <people> reference roster who clearly appear in the image. MUST be exactly one of: ${rosterNames.map((n) => `"${n}"`).join(", ")}. Never invent names. Never include people who aren't on the roster (use the generic people_roles field for them). Only list a name if you can match the face against the reference image with high confidence — when in doubt, leave it out.`
+    : "Empty array — no band-member roster supplied for this call.";
+  return {
   name: "tag_image",
   description: "Return structured taxonomy + tags + alt-text + caption + venture hints for the supplied image of a music/band/event-industry asset.",
   input_schema: {
@@ -54,6 +71,11 @@ const TOOL = {
           "other",
         ],
         description: "Single best-fit kind. headshot = portrait of a person, face dominant. press-shot = staged promotional band/artist photo. live-performance = performing on stage with audience or stage lighting context. rehearsal = practicing in a non-performance setting. venue-photo = the venue itself (interior/exterior/setup), people incidental or absent. event-photo = candid event coverage (guests, dancing, ceremony) where the focus is the event rather than the band performing. behind-the-scenes = travel / load-in / green room / hangs. studio = recording or production environment. promo = brand graphic, ad, or marketing asset. logo = wordmark or icon. screenshot = computer screen capture. other = none of the above.",
+      },
+      people_names: {
+        type: "array",
+        items: { type: "string" },
+        description: peopleNamesDescription,
       },
       people_roles: {
         type: "array",
@@ -134,6 +156,7 @@ const TOOL = {
     },
     required: [
       "kind",
+      "people_names",
       "people_roles",
       "people_count",
       "venue",
@@ -146,7 +169,8 @@ const TOOL = {
       "confidence",
     ],
   },
-};
+  };
+}
 
 const SYSTEM_PROMPT = `You are tagging visual assets for Josh Miller's music ventures: Harborline (live wedding/event band, Baltimore), Economy (alt-rock/indie band), Josh Miller Jazz (jazz trio/quartet/quintet), and BSE (Baltimore Sound Entertainment, the live-music umbrella). You're also fine to tag personal headshots and brand-kit graphics.
 
@@ -157,8 +181,12 @@ Goals:
 - Caption can be slightly evocative but stay factual.
 - For ventures, pick all that fit. Most live-show shots will be \`harborline\` and/or \`bse\`. Studio band shots are usually \`economy\` or \`jmj\`. Solo Josh portraits often hit \`personal\`, \`harborline\`, and \`jmj\`.
 
-Hard rules:
-- Never name a specific person except \`josh-miller\` (the operator). If you can't identify someone with certainty, use generic role tags (musician, client, bridal-party, etc.) or \`unknown\`.
+Named people (band members):
+- When a <people> block follows, each entry is a band-member reference (name + role + reference photo). If the target image clearly shows one of those people, include their name in \`people_names\` (exact spelling from the roster). If you're not confident the face matches, leave them out — false positives are worse than misses.
+- \`people_names\` is roster-only: never invent names; never include people who aren't in the supplied <people> block (use the generic \`people_roles\` field for them instead — e.g. clients, audience, vendors).
+- The \`josh-miller\` token in \`people_roles\` is independent of \`people_names\`: if Josh is on the roster, list him by name in \`people_names\` AND keep adding the \`josh-miller\` role token if he's the principal subject of a headshot/solo portrait.
+
+Other hard rules:
 - Never fabricate venue names — only set \`venue\` if visible signage, architecture, or distinctive features make it obvious.
 - Never invent instruments — only what's clearly visible in frame.
 - Tags should be lowercase, hyphenated multi-word (e.g. \`black-tie\`, \`cocktail-hour\`).
@@ -168,6 +196,7 @@ Respond ONLY by calling the tag_image tool.`;
 
 interface TagImageOutput {
   kind: string;
+  people_names: string[];
   people_roles: string[];
   people_count: string;
   venue: string;
@@ -180,12 +209,58 @@ interface TagImageOutput {
   confidence: "high" | "medium" | "low";
 }
 
-async function callClaudeVision(imageUrl: string, hint: { filename: string; folder: string }): Promise<TagImageOutput> {
+interface RosterEntry extends BandMember {
+  reference_base64: string;
+  reference_media_type: string;
+}
+
+async function callClaudeVision(
+  imageUrl: string,
+  hint: { filename: string; folder: string },
+  roster: RosterEntry[],
+): Promise<TagImageOutput> {
   if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
-  const userText =
-    `Tag this image. Filename: \`${hint.filename}\`. Storage folder: \`${hint.folder || "(root)"}\`. ` +
-    `Use the filename + folder as soft hints (e.g. folder \`shoots/2025-08-pendry\` suggests venue=Pendry, year=2025) but don't fabricate details you can't see in the image itself.`;
+  const userContent: any[] = [];
+
+  // Roster reference block: one image + label per band member, then the target.
+  // Ordering matters — Claude binds the names to the preceding reference photos.
+  if (roster.length > 0) {
+    userContent.push({
+      type: "text",
+      text:
+        `<people>\nReference roster — these are the only names you may use in \`people_names\`. ` +
+        `Each entry below is followed by a reference photo of that person. ` +
+        `Match faces against these references; if the target image clearly shows one of them, ` +
+        `list the exact name. If unsure, omit.\n</people>`,
+    });
+    for (const member of roster) {
+      userContent.push({
+        type: "text",
+        text: `Reference — name: "${member.name}" · role: ${member.role}`,
+      });
+      userContent.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: member.reference_media_type,
+          data: member.reference_base64,
+        },
+      });
+    }
+    userContent.push({
+      type: "text",
+      text: "<target>The image below is the asset to tag. Apply the reference roster above when populating `people_names`.</target>",
+    });
+  }
+
+  userContent.push({ type: "image", source: { type: "url", url: imageUrl } });
+  userContent.push({
+    type: "text",
+    text:
+      `Tag this image. Filename: \`${hint.filename}\`. Storage folder: \`${hint.folder || "(root)"}\`. ` +
+      `Use the filename + folder as soft hints (e.g. folder \`shoots/2025-08-pendry\` suggests venue=Pendry, year=2025) but don't fabricate details you can't see in the image itself.`,
+  });
 
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -198,17 +273,9 @@ async function callClaudeVision(imageUrl: string, hint: { filename: string; fold
       model: "claude-sonnet-4-6",
       max_tokens: 1024,
       system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-      tools: [TOOL],
+      tools: [buildTool(roster)],
       tool_choice: { type: "tool", name: "tag_image" },
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "image", source: { type: "url", url: imageUrl } },
-            { type: "text", text: userText },
-          ],
-        },
-      ],
+      messages: [{ role: "user", content: userContent }],
     }),
   });
 
@@ -220,7 +287,62 @@ async function callClaudeVision(imageUrl: string, hint: { filename: string; fold
   const data = await resp.json();
   const block = (data.content || []).find((c: any) => c.type === "tool_use" && c.name === "tag_image");
   if (!block) throw new Error("Anthropic did not return tag_image tool_use");
-  return block.input as TagImageOutput;
+  const out = block.input as TagImageOutput;
+
+  // Defense in depth: even with the schema constraint, sanitize people_names
+  // to the roster. If the roster is empty, force people_names to [] regardless
+  // of what the model returned.
+  const rosterNameSet = new Set(roster.map((m) => m.name));
+  out.people_names = (out.people_names ?? []).filter((n) => rosterNameSet.has(n));
+
+  return out;
+}
+
+async function loadRoster(supabase: ReturnType<typeof createClient>): Promise<RosterEntry[]> {
+  const { data, error } = await supabase
+    .from("band_members")
+    .select("id, name, role, reference_image_path")
+    .eq("active", true)
+    .not("reference_image_path", "is", null);
+  if (error) {
+    console.error("loadRoster select failed", error);
+    return [];
+  }
+  const members = (data ?? []) as BandMember[];
+  const out: RosterEntry[] = [];
+  for (const m of members) {
+    try {
+      const { data: blob, error: dlErr } = await supabase.storage
+        .from("visual-assets")
+        .download(m.reference_image_path);
+      if (dlErr || !blob) {
+        console.warn(`roster download skipped for ${m.name} (${m.reference_image_path}): ${dlErr?.message ?? "no blob"}`);
+        continue;
+      }
+      const buf = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      // base64 encode in chunks to avoid call-stack blowouts on large refs.
+      let binary = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)));
+      }
+      const b64 = btoa(binary);
+      const media = blob.type || mediaTypeFromPath(m.reference_image_path);
+      out.push({ ...m, reference_base64: b64, reference_media_type: media });
+    } catch (e) {
+      console.warn(`roster entry ${m.name} failed: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+  return out;
+}
+
+function mediaTypeFromPath(p: string): string {
+  const lower = p.toLowerCase();
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".gif")) return "image/gif";
+  return "image/jpeg";
 }
 
 Deno.serve(async (req) => {
@@ -271,16 +393,19 @@ Deno.serve(async (req) => {
   const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/visual-assets/${asset.storage_path}`;
 
   try {
-    const tagged = await callClaudeVision(publicUrl, {
-      filename: asset.filename,
-      folder: asset.folder,
-    });
+    const roster = await loadRoster(supabase);
+    const tagged = await callClaudeVision(
+      publicUrl,
+      { filename: asset.filename, folder: asset.folder },
+      roster,
+    );
 
     const updates: Record<string, unknown> = {
       ai_suggested_tags: tagged.tags,
       ai_suggested_alt: tagged.alt_text,
       ai_suggested_caption: tagged.caption,
       ai_suggested_kind: tagged.kind,
+      ai_suggested_people_names: tagged.people_names,
       ai_suggested_people_roles: tagged.people_roles,
       ai_suggested_people_count: tagged.people_count,
       ai_suggested_venue: tagged.venue || null,
@@ -369,6 +494,7 @@ function buildPrefixedTags(t: TagImageOutput): string[] {
   const out: string[] = [];
   if (t.kind) out.push(`kind:${t.kind}`);
   if (t.people_count && t.people_count !== "none") out.push(`count:${t.people_count}`);
+  for (const n of t.people_names || []) out.push(`person:${slug(n)}`);
   for (const r of t.people_roles || []) out.push(`role:${r}`);
   if (t.venue) out.push(`venue:${slug(t.venue)}`);
   for (const i of t.instruments || []) out.push(`instrument:${i}`);

@@ -73,6 +73,7 @@ const contentMenu: MegaMenu = {
     { name: "Social", href: "/team/social", icon: Share2, description: "Posting times & social manager" },
     { name: "Brand Studio", href: "/team/brand-studio", icon: Palette, description: "People, decisions, releases, EPKs" },
     { name: "Visual Assets", href: "/team/visual-assets", icon: Images, description: "Photos, logos, design files" },
+    { name: "Band Members", href: "/team/band-members", icon: Users, description: "Roster + reference images for visual-asset face recognition" },
   ],
 };
 

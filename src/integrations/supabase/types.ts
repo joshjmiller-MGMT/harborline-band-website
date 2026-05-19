@@ -44,6 +44,36 @@ export type Database = {
         }
         Relationships: []
       }
+      band_members: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          reference_image_path: string | null
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          reference_image_path?: string | null
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          reference_image_path?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       booking_agent_config: {
         Row: {
           color: string
@@ -1307,6 +1337,7 @@ export type Database = {
           ai_suggested_kind: string | null
           ai_suggested_location: string | null
           ai_suggested_people_count: string | null
+          ai_suggested_people_names: string[]
           ai_suggested_people_roles: string[]
           ai_suggested_tags: string[]
           ai_suggested_venue: string | null
@@ -1340,6 +1371,7 @@ export type Database = {
           ai_suggested_kind?: string | null
           ai_suggested_location?: string | null
           ai_suggested_people_count?: string | null
+          ai_suggested_people_names?: string[]
           ai_suggested_people_roles?: string[]
           ai_suggested_tags?: string[]
           ai_suggested_venue?: string | null
@@ -1373,6 +1405,7 @@ export type Database = {
           ai_suggested_kind?: string | null
           ai_suggested_location?: string | null
           ai_suggested_people_count?: string | null
+          ai_suggested_people_names?: string[]
           ai_suggested_people_roles?: string[]
           ai_suggested_tags?: string[]
           ai_suggested_venue?: string | null
