@@ -19,6 +19,13 @@ import { requireOperator } from "../_shared/require-operator.ts";
 import type { Adapter, AdapterResult } from "../_shared/health-adapters/types.ts";
 import { googleCalendarAdapter } from "../_shared/health-adapters/google-calendar.ts";
 import { mondayAdapter } from "../_shared/health-adapters/monday.ts";
+import { gmailScopeAdapter } from "../_shared/health-adapters/gmail-scope.ts";
+import { djepAvailabilityAdapter } from "../_shared/health-adapters/djep-availability.ts";
+import { trelloLatencyAdapter } from "../_shared/health-adapters/trello-latency.ts";
+import { djepScrubAdapter } from "../_shared/health-adapters/djep-scrub.ts";
+import { edgeFnErrorRateAdapter } from "../_shared/health-adapters/edge-fn-error-rate.ts";
+import { authGateAdapter } from "../_shared/health-adapters/auth-gate.ts";
+import { secretsSanityAdapter } from "../_shared/health-adapters/secrets-sanity.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,8 +37,15 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const ADAPTERS: Array<{ name: string; run: Adapter }> = [
+  { name: "auth-gate", run: authGateAdapter },
+  { name: "secrets-sanity", run: secretsSanityAdapter },
   { name: "google-calendar", run: googleCalendarAdapter },
+  { name: "gmail-scope", run: gmailScopeAdapter },
   { name: "monday", run: mondayAdapter },
+  { name: "djep-availability", run: djepAvailabilityAdapter },
+  { name: "trello-latency", run: trelloLatencyAdapter },
+  { name: "djep-scrub", run: djepScrubAdapter },
+  { name: "edge-fn-error-rate", run: edgeFnErrorRateAdapter },
 ];
 
 function worst(a: "green" | "yellow" | "red", b: "green" | "yellow" | "red"): "green" | "yellow" | "red" {
