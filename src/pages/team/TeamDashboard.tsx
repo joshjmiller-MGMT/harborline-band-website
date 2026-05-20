@@ -1,5 +1,6 @@
 import TeamLayout from "@/components/TeamLayout";
 import AvailabilityCheckerWidget from "@/components/dashboard/AvailabilityCheckerWidget";
+import IntegrationHealthWidget from "@/components/dashboard/IntegrationHealthWidget";
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
 import SmartTaskWidget from "@/components/dashboard/SmartTaskWidget";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
@@ -18,9 +19,10 @@ export default function TeamDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <NeedsActionWidget />
+          <UnifiedCalendarWidget />
+          <IntegrationHealthWidget />
           <AvailabilityCheckerWidget />
           <SmartTaskWidget />
-          <UnifiedCalendarWidget />
         </div>
       </div>
     </TeamLayout>
