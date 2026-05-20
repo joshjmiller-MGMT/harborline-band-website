@@ -13,6 +13,10 @@
 //                 rows, attaches `✅ routed` on Trello.
 //   - dry-run   → read-only preview. Reports planned seed + planned dispatch
 //                 counts without writing to Supabase or POSTing to Trello.
+//   - mark-done → P325c. Idempotently attaches `✅ done by claude` (purple) to
+//                 a single Trello card. Body: { card_id }. Used by the
+//                 orchestrator-pickup loop once a queued card's status flips
+//                 to `done` / `not_applicable` / `failed`.
 //
 // Idempotency: trello_card_routes.trello_card_id is the PK; ON CONFLICT DO
 // NOTHING keeps re-runs cheap. Cards already carrying the `✅ routed` label
@@ -28,6 +32,7 @@ import {
   boardNotFoundReason,
   findBoard,
   findOrCreateLabel,
+  getCardWithLabels,
   trelloConfigured,
   trelloGet,
   type TrelloCard,
@@ -46,6 +51,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const ROUTED_LABEL_NAME = "✅ routed";
 const ROUTED_LABEL_COLOR = "blue";
+const DONE_LABEL_NAME = "✅ done by claude";
+const DONE_LABEL_COLOR = "purple";
 const CLAUDE_HANDLER = "route_to_claude_action_queue";
 
 type RouteRow = {
@@ -415,6 +422,57 @@ function routesAreNonSynthetic(routes: RouteRow[]): boolean {
   return routes.every((r) => !r.id.startsWith("00000000-0000-0000-0000-"));
 }
 
+async function handleMarkDone(cardId: string) {
+  const cardRes = await getCardWithLabels(cardId);
+  if ("error" in cardRes) {
+    return json(cardRes.status, {
+      error: cardRes.error,
+      status: cardRes.status,
+      detail: cardRes.detail,
+    });
+  }
+  const existing = (cardRes.labels || []).find(
+    (l: TrelloLabel) => l.name === DONE_LABEL_NAME,
+  );
+  if (existing) {
+    return json(200, {
+      labeled: true,
+      card_id: cardId,
+      label_id: existing.id,
+      already: true,
+    });
+  }
+  let doneLabel: TrelloLabel;
+  try {
+    doneLabel = await findOrCreateLabel(
+      cardRes.idBoard,
+      DONE_LABEL_NAME,
+      DONE_LABEL_COLOR,
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return json(500, {
+      error: "done_label_setup_failed",
+      status: 500,
+      detail: msg,
+    });
+  }
+  const attachRes = await attachLabelToCard(cardId, doneLabel.id);
+  if (!attachRes.ok) {
+    const detail = await attachRes.text();
+    return json(attachRes.status, {
+      error: "label_attach_failed",
+      status: attachRes.status,
+      detail: detail.slice(0, 300),
+    });
+  }
+  return json(200, {
+    labeled: true,
+    card_id: cardId,
+    label_id: doneLabel.id,
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -440,8 +498,20 @@ Deno.serve(async (req) => {
       "route"
     );
 
-    if (action !== "route" && action !== "dry-run") {
+    if (action !== "route" && action !== "dry-run" && action !== "mark-done") {
       return json(400, { error: "unknown_action", action });
+    }
+
+    if (action === "mark-done") {
+      const cardId = typeof body?.card_id === "string" ? body.card_id.trim() : "";
+      if (!cardId) {
+        return json(400, {
+          error: "missing_card_id",
+          status: 400,
+          detail: "POST body must include a non-empty `card_id` string.",
+        });
+      }
+      return await handleMarkDone(cardId);
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
