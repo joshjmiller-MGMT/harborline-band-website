@@ -12,12 +12,29 @@ const occasions = [
 ];
 
 const PrivatePartiesPage = () => {
+  const privatePartySchema = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "name": "Harborline Private Party Entertainment",
+    "serviceType": "Private Party Entertainment",
+    "provider": {
+      "@type": "MusicGroup",
+      "name": "Harborline"
+    },
+    "areaServed": "Baltimore, Maryland",
+    "description": "Live entertainment for private parties, milestone birthdays, anniversaries, holiday gatherings, and intimate celebrations in Baltimore and Maryland."
+  };
+
   return (
     <Layout
       title="Private Party Band Baltimore | Harborline Entertainment"
       description="Live entertainment for private parties, birthdays, anniversaries, and special celebrations in Baltimore. Harborline creates unforgettable experiences."
       canonical="https://harborlineband.com/private-parties"
     >
+      <script type="application/ld+json">
+        {JSON.stringify(privatePartySchema)}
+      </script>
+
       <PageHero
         eyebrow="PRIVATE PARTIES"
         title="YOUR CELEBRATION"

@@ -21,12 +21,29 @@ const eventTypes = [
 ];
 
 const CorporatePage = () => {
+  const corporateSchema = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "name": "Harborline Corporate Event Entertainment",
+    "serviceType": "Corporate Event Entertainment",
+    "provider": {
+      "@type": "MusicGroup",
+      "name": "Harborline"
+    },
+    "areaServed": "Baltimore, Maryland",
+    "description": "Live entertainment for corporate events, galas, conferences, company parties, and team-building events in Baltimore and Maryland."
+  };
+
   return (
     <Layout
       title="Corporate Event Band Baltimore | Harborline Entertainment"
       description="Elevate your corporate event with Harborline. Professional live entertainment for galas, conferences, company parties, and team events in Baltimore."
       canonical="https://harborlineband.com/corporate"
     >
+      <script type="application/ld+json">
+        {JSON.stringify(corporateSchema)}
+      </script>
+
       <PageHero
         eyebrow="CORPORATE EVENTS"
         title="ELEVATE YOUR EVENT"
