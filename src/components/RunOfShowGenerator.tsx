@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table, Search, Hash, Sparkles, ArrowRight, X, Check, Plus, Trash2, Layers, ArrowDownLeft } from "lucide-react";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table, Search, Hash, Sparkles, ArrowRight, X, Check, Plus, Trash2, Layers, ArrowDownLeft, ListMusic } from "lucide-react";
+import { Link as RouterLink } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1675,7 +1676,7 @@ export default function RunOfShowGenerator() {
             </CardDescription>
           )}
         </CardHeader>
-        <CardContent className="flex justify-center">
+        <CardContent className="flex flex-col items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="hero" size="sm">
@@ -1719,6 +1720,24 @@ export default function RunOfShowGenerator() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {mergedEvent.songSections.some((s) => (s.songs?.length ?? 0) > 0) && (
+              <RouterLink
+                to="/team/setlist-builder"
+                state={{
+                  eventName: mergedEvent.eventName,
+                  eventDate: (mergedEvent.details["event date"] || "").slice(0, 10),
+                  venue: mergedEvent.details["venue"] || "",
+                  rawInput: mergedEvent.songSections
+                    .flatMap((s) => (s.songs || []).map((song: any) => song?.title).filter(Boolean))
+                    .join("\n"),
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline inline-flex items-center gap-1.5"
+              >
+                <ListMusic className="w-3.5 h-3.5" />
+                Also build a setlist folder with these songs →
+              </RouterLink>
+            )}
         </CardContent>
       </Card>
     </div>

@@ -22,6 +22,7 @@ import {
   Megaphone,
   Shield,
   Users,
+  ListMusic,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,7 @@ const megaMenus: MegaMenu[] = [dailyMenu, pipelinesMenu, contentMenu, adminMenu]
 const libraryNav: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { name: "Practice", href: "/team/practice", icon: Activity },
   { name: "Songs", href: "/team/songs", icon: Music },
+  { name: "Setlist Builder", href: "/team/setlist-builder", icon: ListMusic },
   { name: "Resources", href: "/team/resources", icon: FolderOpen },
 ];
 
