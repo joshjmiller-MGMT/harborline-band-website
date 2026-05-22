@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import ScrollToTopOnNavigate from "./components/ScrollToTopOnNavigate";
+import { TeamNoindex } from "./components/TeamNoindex";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AboutPage from "./pages/About";
@@ -86,6 +87,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ScrollToTopOnNavigate />
+          <TeamNoindex />
           <TeamAuthProvider>
             <Routes>
               <Route path="/" element={<Index />} />

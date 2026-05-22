@@ -375,7 +375,7 @@ const WhereWePerformPage = () => {
           content="Harborline performs at premier venues across Baltimore, Washington DC, Annapolis, and the Mid-Atlantic region. View our featured venues and service areas."
         />
         <meta name="keywords" content="Baltimore wedding band, DC event band, Annapolis live music, Maryland wedding entertainment, luxury venue band" />
-        <link rel="canonical" href="https://harborline.lovable.app/where-we-perform" />
+        <link rel="canonical" href="https://harborlineband.com/where-we-perform" />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
