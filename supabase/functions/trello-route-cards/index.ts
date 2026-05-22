@@ -22,8 +22,12 @@
 // NOTHING keeps re-runs cheap. Cards already carrying the `✅ routed` label
 // are also pre-filtered.
 //
-// Auth: requireOperator()-gated. Service-role bypass preserved for cron /
-// internal callers (P325d may schedule this).
+// Auth: requireOperator()-gated. Additionally honors an x-cron-secret header
+// (P325cf) whose canonical value lives in public.cron_secrets — same pattern
+// as P331a integration-health-check. Used by trigger_trello_mark_done() +
+// trigger_trello_route() SQL fns so pg_net callers can invoke without an
+// operator JWT. Service-role bypass via the existing requireOperator helper
+// is also preserved for internal callers presenting that JWT.
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireOperator } from "../_shared/require-operator.ts";
@@ -473,11 +477,49 @@ async function handleMarkDone(cardId: string) {
   });
 }
 
+// Cron-secret cache + constant-time compare (mirrors P331a integration-health-check).
+let cachedCronSecret: string | null = null;
+async function loadCronSecret(supabase: SupabaseClient): Promise<string | null> {
+  if (cachedCronSecret !== null) return cachedCronSecret;
+  const { data, error } = await supabase
+    .from("cron_secrets")
+    .select("secret")
+    .eq("name", "trello_route_cron_secret")
+    .maybeSingle();
+  if (error || !data?.secret) return null;
+  cachedCronSecret = data.secret as string;
+  return cachedCronSecret;
+}
+
+function constantTimeEquals(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return result === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const denial = await requireOperator(req);
-  if (denial) return denial;
+  // Service-role supabase client — used for cron-secret lookup + route ops.
+  // Same client serves both purposes; created once per request.
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+
+  // Cron-secret bypass (pg_net caller via trigger_trello_*()). Secret lives in
+  // public.cron_secrets (RLS-on, no policies — service-role read only).
+  const cronHeader = req.headers.get("x-cron-secret");
+  let isCron = false;
+  if (cronHeader) {
+    const expected = await loadCronSecret(supabase);
+    if (expected && constantTimeEquals(cronHeader, expected)) isCron = true;
+  }
+
+  if (!isCron) {
+    const denial = await requireOperator(req);
+    if (denial) return denial;
+  }
 
   if (!trelloConfigured()) {
     return json(500, {
@@ -514,10 +556,7 @@ Deno.serve(async (req) => {
       return await handleMarkDone(cardId);
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-    });
-
+    // Re-use the supabase client created at the top of the handler.
     const { response } = await handleRoute(supabase, action === "dry-run");
     return response;
   } catch (err) {
