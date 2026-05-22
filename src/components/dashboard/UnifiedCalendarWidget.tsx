@@ -442,7 +442,6 @@ export default function UnifiedCalendarWidget() {
         meta: { ...p, brandName: brand.name, brandSlug: brand.slug },
       });
     }
-    console.log("[UnifiedCalendar] social events loaded:", socialEvents.length, socialEvents);
     // Merge: replace any existing social events
     setEvents((prev) => [...prev.filter((e) => e.source !== "social"), ...socialEvents]);
   };
@@ -707,8 +706,6 @@ export default function UnifiedCalendarWidget() {
 
   const EventBlock = ({ event }: EventProps<UnifiedEvent>) => {
     const dupes = event.duplicateAccounts || (event.accountEmail ? [event.accountEmail] : []);
-    const shown = dupes.slice(0, 3);
-    const extra = dupes.length - shown.length;
     const timeLabel = event.allDay
       ? "All day"
       : `${format(event.start, "h:mm a")} – ${format(event.end, "h:mm a")}`;
