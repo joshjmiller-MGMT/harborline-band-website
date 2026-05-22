@@ -1,16 +1,23 @@
-// P325b — Trello-bucket dispatcher.
+// P325b/P336 — Trello-bucket dispatcher.
 //
 // Reads open Trello cards from the configured board, looks up the per-list
 // route in `trello_bucket_routes`, dispatches each card through the named
-// handler exactly once, and writes back a `✅ routed` label so the paper trail
-// is legible on the Trello side. Phase-1 scope: one handler
-// (`route_to_claude_action_queue`) wired to two lists (`To Claude` +
-// `website fixes`); other lists are ignored until P325c introduces more
-// handlers. Self-seeds those two routes on first run if the board has none.
+// handler exactly once, and writes back a `✅ routed` label so the paper
+// trail is legible on the Trello side.
+//
+// Handlers wired in this fn:
+//   - route_to_claude_action_queue (P325b): `To Claude` + `website fixes` →
+//     claude_action_queue → orchestrator-pickup loop in CLAUDE.md.
+//   - route_to_smart_board (P336): `Urgent` → smart_task_queue → drainer
+//     (`smart-task-queue-drain`) runs SMART rewrite, lands the result in
+//     smart_task_enrichments, and (when a due_date falls out) auto-creates a
+//     Google Calendar event so the task surfaces on UnifiedCalendarWidget.
+//
+// Self-seeds all three Phase-1+P336 routes on first run if the board has none.
 //
 // Ops (via ?action= or POST body):
-//   - route     → live dispatch. Inserts trello_card_routes + claude_action_queue
-//                 rows, attaches `✅ routed` on Trello.
+//   - route     → live dispatch. Inserts trello_card_routes + the
+//                 handler-specific queue row, attaches `✅ routed` on Trello.
 //   - dry-run   → read-only preview. Reports planned seed + planned dispatch
 //                 counts without writing to Supabase or POSTing to Trello.
 //   - mark-done → P325c. Idempotently attaches `✅ done by claude` (purple) to
@@ -54,6 +61,8 @@ const ROUTED_LABEL_COLOR = "blue";
 const DONE_LABEL_NAME = "✅ done by claude";
 const DONE_LABEL_COLOR = "purple";
 const CLAUDE_HANDLER = "route_to_claude_action_queue";
+const SMART_HANDLER = "route_to_smart_board";
+const DISPATCH_HANDLERS = new Set([CLAUDE_HANDLER, SMART_HANDLER]);
 
 type RouteRow = {
   id: string;
@@ -66,9 +75,11 @@ type RouteRow = {
   priority: number;
 };
 
-// Phase-1 seed: the two lists the dispatcher self-seeds when the
+// Seed set: the lists the dispatcher self-seeds when the
 // trello_bucket_routes table has no row for the discovered board.
-const PHASE_1_SEEDS: Array<{
+// P325b seeded the two CLAUDE_HANDLER rows; P336 adds the Urgent →
+// SMART_HANDLER row. Renamed from PHASE_1_SEEDS for clarity.
+const DEFAULT_SEEDS: Array<{
   list_name: string;
   action_handler: string;
   handler_config: Record<string, unknown>;
@@ -82,6 +93,11 @@ const PHASE_1_SEEDS: Array<{
     list_name: "website fixes",
     action_handler: CLAUDE_HANDLER,
     handler_config: { context: "harborline_website_repo" },
+  },
+  {
+    list_name: "Urgent",
+    action_handler: SMART_HANDLER,
+    handler_config: {},
   },
 ];
 
@@ -105,11 +121,11 @@ async function loadRoutes(
   return (data ?? []) as RouteRow[];
 }
 
-async function seedPhase1Routes(
+async function seedDefaultRoutes(
   supabase: SupabaseClient,
   boardId: string,
 ): Promise<{ seeded: number }> {
-  const rows = PHASE_1_SEEDS.map((s) => ({
+  const rows = DEFAULT_SEEDS.map((s) => ({
     board_id: boardId,
     list_name: s.list_name,
     action_handler: s.action_handler,
@@ -118,8 +134,34 @@ async function seedPhase1Routes(
   const { error, count } = await supabase
     .from("trello_bucket_routes")
     .insert(rows, { count: "exact" });
-  if (error) throw new Error(`seed_phase1_routes_failed: ${error.message}`);
+  if (error) throw new Error(`seed_default_routes_failed: ${error.message}`);
   return { seeded: count ?? rows.length };
+}
+
+// Backfill helper: a board that was first routed under P325b will have the
+// two CLAUDE_HANDLER rows but no SMART_HANDLER row. The dispatcher upserts
+// any missing seed rows on every run so an already-seeded board picks up the
+// P336 Urgent route without manual SQL. Idempotent via the (board_id,
+// list_name) unique index.
+async function backfillMissingSeeds(
+  supabase: SupabaseClient,
+  boardId: string,
+  existing: RouteRow[],
+): Promise<{ added: number }> {
+  const have = new Set(existing.map((r) => r.list_name));
+  const missing = DEFAULT_SEEDS.filter((s) => !have.has(s.list_name));
+  if (missing.length === 0) return { added: 0 };
+  const rows = missing.map((s) => ({
+    board_id: boardId,
+    list_name: s.list_name,
+    action_handler: s.action_handler,
+    handler_config: s.handler_config,
+  }));
+  const { error, count } = await supabase
+    .from("trello_bucket_routes")
+    .upsert(rows, { onConflict: "board_id,list_name", ignoreDuplicates: true, count: "exact" });
+  if (error) throw new Error(`backfill_seeds_failed: ${error.message}`);
+  return { added: count ?? rows.length };
 }
 
 async function fetchBoardCardsAndLists(boardId: string): Promise<{
@@ -167,7 +209,7 @@ function selectCandidates(
   const listNameById = new Map(lists.map((l) => [l.id, l.name]));
   const routeByListName = new Map<string, RouteRow>();
   for (const r of routes) {
-    if (r.action_handler !== CLAUDE_HANDLER) continue;
+    if (!DISPATCH_HANDLERS.has(r.action_handler)) continue;
     routeByListName.set(r.list_name, r);
   }
   const out: CandidateCard[] = [];
@@ -188,11 +230,21 @@ function selectCandidates(
 type RouteOutcome = {
   card_id: string;
   list_name: string;
+  handler: string;
   routed: boolean;
   labeled: boolean;
   queue_inserted: boolean;
   reason?: string;
 };
+
+// Map an action_handler to its queue table. Both queue tables share the
+// same column shape (P336's smart_task_queue mirrors P325a's
+// claude_action_queue) so a single upsert payload works for either.
+function queueTableForHandler(handler: string): string | null {
+  if (handler === CLAUDE_HANDLER) return "claude_action_queue";
+  if (handler === SMART_HANDLER) return "smart_task_queue";
+  return null;
+}
 
 async function dispatchOne(
   supabase: SupabaseClient,
@@ -229,6 +281,7 @@ async function dispatchOne(
     return {
       card_id: card.id,
       list_name: listName,
+      handler: route.action_handler,
       routed: false,
       labeled: false,
       queue_inserted: false,
@@ -236,9 +289,23 @@ async function dispatchOne(
     };
   }
 
-  // INSERT claude_action_queue — idempotent via unique(trello_card_id).
+  // INSERT the handler-specific queue row. claude_action_queue and
+  // smart_task_queue have identical columns by design (P336 migration
+  // mirrors claude_action_queue). Idempotent via unique(trello_card_id).
+  const queueTable = queueTableForHandler(route.action_handler);
+  if (!queueTable) {
+    return {
+      card_id: card.id,
+      list_name: listName,
+      handler: route.action_handler,
+      routed: true,
+      labeled: false,
+      queue_inserted: false,
+      reason: `no_queue_for_handler: ${route.action_handler}`,
+    };
+  }
   const { error: queueErr } = await supabase
-    .from("claude_action_queue")
+    .from(queueTable)
     .upsert(
       {
         trello_card_id: card.id,
@@ -254,10 +321,11 @@ async function dispatchOne(
     return {
       card_id: card.id,
       list_name: listName,
+      handler: route.action_handler,
       routed: true,
       labeled: false,
       queue_inserted: false,
-      reason: `claude_action_queue_upsert_failed: ${queueErr.message}`,
+      reason: `${queueTable}_upsert_failed: ${queueErr.message}`,
     };
   }
 
@@ -269,6 +337,7 @@ async function dispatchOne(
     return {
       card_id: card.id,
       list_name: listName,
+      handler: route.action_handler,
       routed: true,
       labeled: false,
       queue_inserted: true,
@@ -278,6 +347,7 @@ async function dispatchOne(
   return {
     card_id: card.id,
     list_name: listName,
+    handler: route.action_handler,
     routed: true,
     labeled: true,
     queue_inserted: true,
@@ -299,15 +369,17 @@ async function handleRoute(supabase: SupabaseClient, dryRun: boolean) {
     };
   }
 
-  // Self-seed routes if board has none. Dry-run reports the planned seed but
-  // does not write to Supabase.
+  // Self-seed routes if board has none, OR backfill any missing default
+  // seeds on a board that was seeded under an earlier phase. Dry-run reports
+  // planned seed/backfill but does not write.
   let routes = await loadRoutes(supabase, board.id);
   let seeded = 0;
+  let backfilled = 0;
   if (routes.length === 0) {
     if (dryRun) {
-      // Return planned seed alongside; dispatch preview still runs using
-      // synthetic in-memory routes so Josh sees what would happen end-to-end.
-      const syntheticRoutes: RouteRow[] = PHASE_1_SEEDS.map((s, i) => ({
+      // Synthetic in-memory routes so the dispatch preview still runs end
+      // to end. UUIDs with the zero-prefix flag these as not-yet-persisted.
+      const syntheticRoutes: RouteRow[] = DEFAULT_SEEDS.map((s, i) => ({
         id: `00000000-0000-0000-0000-${String(i).padStart(12, "0")}`,
         board_id: board.id,
         list_name: s.list_name,
@@ -319,10 +391,14 @@ async function handleRoute(supabase: SupabaseClient, dryRun: boolean) {
       }));
       routes = syntheticRoutes;
     } else {
-      const { seeded: n } = await seedPhase1Routes(supabase, board.id);
+      const { seeded: n } = await seedDefaultRoutes(supabase, board.id);
       seeded = n;
       routes = await loadRoutes(supabase, board.id);
     }
+  } else if (!dryRun) {
+    const { added } = await backfillMissingSeeds(supabase, board.id, routes);
+    backfilled = added;
+    if (added > 0) routes = await loadRoutes(supabase, board.id);
   }
 
   const { cards, lists } = await fetchBoardCardsAndLists(board.id);
@@ -341,18 +417,26 @@ async function handleRoute(supabase: SupabaseClient, dryRun: boolean) {
       handler_config: c.route.handler_config,
     }));
     const skipped_already_routed = candidates.length - fresh.length;
+    // Seed summary: distinguish "no rows at all → would seed full default
+    // set" from "some rows present → would backfill any missing seeds".
+    const haveListNames = new Set(routes.filter((r) => routesAreNonSynthetic([r])).map((r) => r.list_name));
+    const wouldBackfill = DEFAULT_SEEDS.filter((s) => !haveListNames.has(s.list_name));
+    const seedSummary = routesAreNonSynthetic(routes)
+      ? wouldBackfill.length > 0
+        ? { action: "would_backfill", missing: wouldBackfill, existing_routes: routes.length }
+        : { action: "none", existing_routes: routes.length }
+      : { action: "would_seed", rows: DEFAULT_SEEDS };
     return {
       response: json(200, {
         mode: "dry-run",
         board: { id: board.id, name: board.name },
-        seed: routes.length > 0 && seeded === 0 && routesAreNonSynthetic(routes)
-          ? { action: "none", existing_routes: routes.length }
-          : { action: "would_seed", rows: PHASE_1_SEEDS },
+        seed: seedSummary,
         total_cards: cards.length,
-        phase1_candidates: candidates.length,
+        candidate_count: candidates.length,
         skipped_already_routed,
         planned_dispatch_count: planned.length,
         planned_dispatch: planned,
+        planned_dispatch_by_handler: countByHandler(planned.map((p) => p.handler)),
         planned_label: {
           name: ROUTED_LABEL_NAME,
           color: ROUTED_LABEL_COLOR,
@@ -398,10 +482,12 @@ async function handleRoute(supabase: SupabaseClient, dryRun: boolean) {
       mode: "route",
       board: { id: board.id, name: board.name },
       seeded_routes: seeded,
+      backfilled_routes: backfilled,
       total_cards: cards.length,
-      phase1_candidates: candidates.length,
+      candidate_count: candidates.length,
       skipped_already_routed: candidates.length - fresh.length,
       dispatched: fresh.length,
+      dispatched_by_handler: countByHandler(outcomes.map((o) => o.handler)),
       routed_count,
       labeled_count,
       queue_inserted_count,
@@ -420,6 +506,12 @@ async function handleRoute(supabase: SupabaseClient, dryRun: boolean) {
 // dry-run summary reports the correct seed action.
 function routesAreNonSynthetic(routes: RouteRow[]): boolean {
   return routes.every((r) => !r.id.startsWith("00000000-0000-0000-0000-"));
+}
+
+function countByHandler(handlers: string[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const h of handlers) out[h] = (out[h] ?? 0) + 1;
+  return out;
 }
 
 async function handleMarkDone(cardId: string) {
