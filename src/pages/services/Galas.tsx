@@ -12,12 +12,29 @@ const features = [
 ];
 
 const GalasPage = () => {
+  const galaSchema = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "name": "Harborline Gala & Fundraiser Entertainment",
+    "serviceType": "Gala and Fundraiser Entertainment",
+    "provider": {
+      "@type": "MusicGroup",
+      "name": "Harborline"
+    },
+    "areaServed": "Baltimore, Maryland",
+    "description": "Sophisticated live entertainment for galas, fundraisers, awards ceremonies, and black-tie events in Baltimore and Maryland."
+  };
+
   return (
     <Layout
       title="Gala Entertainment Baltimore | Harborline Live Band"
       description="Sophisticated live entertainment for galas, fundraisers, and black-tie events in Baltimore. Harborline brings elegance and energy to your special occasion."
       canonical="https://harborlineband.com/galas"
     >
+      <script type="application/ld+json">
+        {JSON.stringify(galaSchema)}
+      </script>
+
       <PageHero
         eyebrow="GALAS & FUNDRAISERS"
         title="BLACK-TIE ENTERTAINMENT"

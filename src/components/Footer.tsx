@@ -117,7 +117,7 @@ const Footer = () => {
           <div>
             <h4 className="font-display tracking-wide text-sm mb-4">VENUES</h4>
             <ul className="space-y-2">
-              {venueLinks.slice(0, 8).map((link) => (
+              {venueLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     to={link.href}

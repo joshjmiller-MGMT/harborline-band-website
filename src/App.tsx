@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import ScrollToTopOnNavigate from "./components/ScrollToTopOnNavigate";
 import PageLoadingSpinner from "./components/PageLoadingSpinner";
+import { TeamNoindex } from "./components/TeamNoindex";
 
 // Eager: canonical landing surfaces + 404 (small, first-paint critical)
 import Index from "./pages/Index";
@@ -77,6 +78,7 @@ const TeamBrandStudio = lazy(() => import("./pages/team/TeamBrandStudio"));
 const TeamBandMembers = lazy(() => import("./pages/team/TeamBandMembers"));
 const TeamSmartTasks = lazy(() => import("./pages/team/TeamSmartTasks"));
 const TeamAdminUsers = lazy(() => import("./pages/team/TeamAdminUsers"));
+const TeamSetlistBuilder = lazy(() => import("./pages/team/TeamSetlistBuilder"));
 
 const queryClient = new QueryClient();
 
@@ -88,6 +90,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ScrollToTopOnNavigate />
+          <TeamNoindex />
           <TeamAuthProvider>
             <Suspense fallback={<PageLoadingSpinner />}>
               <Routes>
@@ -160,6 +163,7 @@ const App = () => (
                 <Route path="/team/band-members" element={<TeamBandMembers />} />
                 <Route path="/team/smart-tasks" element={<TeamSmartTasks />} />
                 <Route path="/team/admin/users" element={<TeamAdminUsers />} />
+                <Route path="/team/setlist-builder" element={<TeamSetlistBuilder />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
