@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ChevronDown, Music, MapPin, Users, Mic2, Piano, Guitar, Music2, User, Heart, Briefcase, PartyPopper, Gift, Lock } from "lucide-react";
+import { Menu, X, ChevronDown, Music, MapPin, Users, Mic2, Piano, Guitar, Music2, User, Heart, Briefcase, PartyPopper, Gift, Lock, Sparkles, Cake, TreePine, Award, Beer } from "lucide-react";
 import logo from "@/assets/logo-text.png";
 
 // Ensemble configurations - how the band can be sized
@@ -15,12 +15,27 @@ const ensembleLinks = [
   { name: "Solo Performer", href: "/ensembles/solo-performer", icon: User, description: "Piano, guitar, or voice" },
 ];
 
-// Occasions - what events we cover
-const occasionLinks = [
+// Occasions - what events we cover, grouped for the 2-column dropdown
+const weddingsGalasLinks = [
   { name: "Weddings", href: "/weddings", icon: Heart, description: "Ceremony to reception" },
+  { name: "Galas & Fundraisers", href: "/galas", icon: Gift, description: "Black-tie & nonprofit" },
   { name: "Corporate Events", href: "/corporate", icon: Briefcase, description: "Galas & conferences" },
-  { name: "Private Parties", href: "/private-parties", icon: PartyPopper, description: "Celebrations of all kinds" },
-  { name: "Special Occasions", href: "/galas", icon: Gift, description: "Fundraisers & milestones" },
+  { name: "Private Parties", href: "/private-parties", icon: Sparkles, description: "Upscale & intimate" },
+];
+
+const partiesCelebrationsLinks = [
+  { name: "Birthday Parties", href: "/birthday-parties", icon: Cake, description: "Milestones & big numbers" },
+  { name: "Holiday Parties", href: "/holiday-parties", icon: TreePine, description: "Seasonal & festive" },
+  { name: "Anniversaries", href: "/anniversaries", icon: Award, description: "Vow renewals & toasts" },
+  { name: "Brewery Events", href: "/brewery-events", icon: Beer, description: "Taprooms & beer halls" },
+];
+
+// Locations - top-funnel cities for the Where We Perform dropdown
+const locationLinks = [
+  { name: "Baltimore", href: "/locations/baltimore" },
+  { name: "Washington DC", href: "/locations/washington-dc" },
+  { name: "Annapolis", href: "/locations/annapolis" },
+  { name: "Bethesda", href: "/locations/bethesda" },
 ];
 
 const Header = () => {
@@ -135,27 +150,56 @@ const Header = () => {
                     transition={{ duration: 0.2 }}
                     className="absolute top-full left-0 pt-2 z-50"
                   >
-                    <div className="bg-card border border-border rounded-xl shadow-2xl p-6 min-w-[320px]">
+                    <div className="bg-card border border-border rounded-xl shadow-2xl p-6 min-w-[560px]">
                       <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
                         <PartyPopper className="w-5 h-5 text-primary" />
                         <span className="font-display text-sm text-foreground">Event Types</span>
                       </div>
-                      <div className="space-y-1">
-                        {occasionLinks.map((link) => (
-                          <Link
-                            key={link.href}
-                            to={link.href}
-                            className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
-                          >
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                              <link.icon className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <span className="font-display text-sm text-foreground block">{link.name}</span>
-                              <span className="text-xs text-muted-foreground">{link.description}</span>
-                            </div>
-                          </Link>
-                        ))}
+                      <div className="grid grid-cols-2 gap-x-4">
+                        <div>
+                          <div className="font-display text-xs tracking-wide-custom text-muted-foreground uppercase mb-2 px-3">
+                            Weddings & Galas
+                          </div>
+                          <div className="space-y-1">
+                            {weddingsGalasLinks.map((link) => (
+                              <Link
+                                key={link.href}
+                                to={link.href}
+                                className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                              >
+                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                  <link.icon className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <span className="font-display text-sm text-foreground block">{link.name}</span>
+                                  <span className="text-xs text-muted-foreground">{link.description}</span>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-display text-xs tracking-wide-custom text-muted-foreground uppercase mb-2 px-3">
+                            Parties & Celebrations
+                          </div>
+                          <div className="space-y-1">
+                            {partiesCelebrationsLinks.map((link) => (
+                              <Link
+                                key={link.href}
+                                to={link.href}
+                                className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                              >
+                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                  <link.icon className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <span className="font-display text-sm text-foreground block">{link.name}</span>
+                                  <span className="text-xs text-muted-foreground">{link.description}</span>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -163,14 +207,60 @@ const Header = () => {
               </AnimatePresence>
             </div>
 
-            {/* Where We Perform - Single Link */}
-            <Link
-              to="/where-we-perform"
-              className="flex items-center gap-1 px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors"
+            {/* Where We Perform Dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => handleMenuEnter('locations')}
+              onMouseLeave={handleMenuLeave}
             >
-              <MapPin className="w-4 h-4" />
-              Where We Perform
-            </Link>
+              <button className="flex items-center gap-1 px-4 py-2 font-display tracking-wide-custom text-sm text-muted-foreground hover:text-primary transition-colors">
+                <MapPin className="w-4 h-4" />
+                Where We Perform
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${activeMenu === 'locations' ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {activeMenu === 'locations' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute top-full left-0 pt-2 z-50"
+                  >
+                    <div className="bg-card border border-border rounded-xl shadow-2xl p-6 min-w-[320px]">
+                      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
+                        <MapPin className="w-5 h-5 text-primary" />
+                        <span className="font-display text-sm text-foreground">Cities & Regions</span>
+                      </div>
+                      <div className="space-y-1">
+                        {locationLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                              <MapPin className="w-5 h-5" />
+                            </div>
+                            <span className="font-display text-sm text-foreground">{link.name}</span>
+                          </Link>
+                        ))}
+                      </div>
+                      <div className="mt-2 pt-3 border-t border-border">
+                        <Link
+                          to="/where-we-perform"
+                          className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors text-sm font-display text-primary"
+                        >
+                          All locations
+                          <span aria-hidden>→</span>
+                        </Link>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Direct Links */}
             <Link
@@ -270,7 +360,24 @@ const Header = () => {
                         exit={{ opacity: 0, height: 0 }}
                         className="pl-4 overflow-hidden"
                       >
-                        {occasionLinks.map((link) => (
+                        <div className="font-display text-xs tracking-wide-custom text-muted-foreground uppercase mt-2 mb-1">
+                          Weddings & Galas
+                        </div>
+                        {weddingsGalasLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="flex items-center gap-3 py-2 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <link.icon className="w-4 h-4" />
+                            {link.name}
+                          </Link>
+                        ))}
+                        <div className="font-display text-xs tracking-wide-custom text-muted-foreground uppercase mt-3 mb-1">
+                          Parties & Celebrations
+                        </div>
+                        {partiesCelebrationsLinks.map((link) => (
                           <Link
                             key={link.href}
                             to={link.href}
@@ -286,15 +393,49 @@ const Header = () => {
                   </AnimatePresence>
                 </div>
 
-                {/* Where We Perform - Single Link */}
-                <Link
-                  to="/where-we-perform"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-2 py-3 font-display tracking-wide-custom text-lg text-foreground hover:text-primary transition-colors"
-                >
-                  <MapPin className="w-5 h-5" />
-                  Where We Perform
-                </Link>
+                {/* Mobile Where We Perform */}
+                <div>
+                  <button
+                    onClick={() => toggleMobileMenu('locations')}
+                    className="flex items-center justify-between w-full py-3 font-display tracking-wide-custom text-lg text-foreground"
+                  >
+                    <span className="flex items-center gap-2">
+                      <MapPin className="w-5 h-5" />
+                      Where We Perform
+                    </span>
+                    <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${mobileExpandedMenu === 'locations' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {mobileExpandedMenu === 'locations' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="pl-4 overflow-hidden"
+                      >
+                        {locationLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="flex items-center gap-3 py-2 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <MapPin className="w-4 h-4" />
+                            {link.name}
+                          </Link>
+                        ))}
+                        <Link
+                          to="/where-we-perform"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center justify-between py-2 mt-1 pt-2 border-t border-border text-sm font-display text-primary"
+                        >
+                          All locations
+                          <span aria-hidden>→</span>
+                        </Link>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
                 {/* Direct Links */}
                 <Link
