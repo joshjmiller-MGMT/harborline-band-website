@@ -394,6 +394,58 @@ function competingSourcesForField(
   return out;
 }
 
+// P335: two values "agree" when their normalized (lowercased, whitespace-
+// collapsed, trimmed) forms match. Anything else is a real disagreement and
+// gets flagged for explicit resolution. Empty/missing on either side ≠
+// conflict — that's just sparse data, handled by first-wins fall-through.
+const normalizeForCompare = (v: string): string =>
+  v.toLowerCase().trim().replace(/\s+/g, " ");
+
+const valuesAgree = (a: string, b: string): boolean => {
+  const na = normalizeForCompare(a);
+  const nb = normalizeForCompare(b);
+  if (!na || !nb) return true;
+  return na === nb;
+};
+
+interface FieldConflict {
+  fieldKey: string;
+  fieldLabel: string;
+  winningSourceId: string;
+  winningValue: string;
+  others: { sourceId: string; value: string }[];
+}
+
+// P335: identify the subset of template fields where ≥2 sources supplied
+// genuinely different values. Fields with only one source, or where all
+// sources agree after normalization, are NOT conflicts. A manual-overrides
+// entry takes definitive precedence and exits the conflict set entirely.
+function detectFieldConflicts(
+  sources: Source[],
+  mergedEvent: MergedEvent,
+  fields: { label: string; key: string }[],
+  manualOverrideKeys: Set<string>,
+): FieldConflict[] {
+  const out: FieldConflict[] = [];
+  for (const f of fields) {
+    if (manualOverrideKeys.has(f.key)) continue;
+    const winningSourceId = mergedEvent.provenance[f.key];
+    const winningValue = mergedEvent.details[f.key];
+    if (!winningSourceId || !winningValue) continue;
+    const competing = competingSourcesForField(sources, f.key, winningSourceId);
+    const disagreeing = competing.filter((c) => !valuesAgree(winningValue, c.value));
+    if (disagreeing.length === 0) continue;
+    out.push({
+      fieldKey: f.key,
+      fieldLabel: f.label,
+      winningSourceId,
+      winningValue,
+      others: disagreeing.map((d) => ({ sourceId: d.source.id, value: d.value })),
+    });
+  }
+  return out;
+}
+
 const imageToBase64 = (src: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -429,6 +481,36 @@ export default function RunOfShowGenerator() {
     () => mergeSources(sources, fieldOverrides),
     [sources, fieldOverrides],
   );
+
+  // P335: surface fields where sources disagree so Josh picks one explicitly
+  // instead of trusting silent first-wins. A conflict is "resolved" when the
+  // value flowing into the export came from an explicit choice — either a
+  // fieldOverrides entry (resolve button) or a manual-overrides textarea
+  // entry. Default first-wins without an explicit pick = still unresolved.
+  const manualOverrideKeys = useMemo(() => {
+    const keys = new Set<string>();
+    if (!manualOverrides.trim()) return keys;
+    for (const line of manualOverrides.split("\n")) {
+      const colonIdx = line.indexOf(":");
+      if (colonIdx <= 0) continue;
+      const key = normalizeDetailKey(line.substring(0, colonIdx).trim());
+      const value = line.substring(colonIdx + 1).trim();
+      if (key && value) keys.add(key);
+    }
+    return keys;
+  }, [manualOverrides]);
+
+  const fieldConflicts = useMemo(
+    () => detectFieldConflicts(sources, mergedEvent, TEMPLATE_FIELDS[template], manualOverrideKeys),
+    [sources, mergedEvent, template, manualOverrideKeys],
+  );
+
+  const isFieldResolved = (fieldKey: string): boolean => {
+    if (manualOverrideKeys.has(fieldKey)) return true;
+    return fieldOverrides[fieldKey] !== undefined;
+  };
+
+  const unresolvedConflicts = fieldConflicts.filter((c) => !isFieldResolved(c.fieldKey));
 
   // Autocorrect state (P6)
   const [autocorrectLoading, setAutocorrectLoading] = useState(false);
@@ -823,7 +905,21 @@ export default function RunOfShowGenerator() {
     );
   };
 
+  // P335: gate every export path on resolving multi-source conflicts. The
+  // Trello card phrasing — "dont allow multiple versions of the same info
+  // through" — wants an affirmative pick on each disputed field. We allow
+  // Josh to override with a confirm() so the rare "just ship the default"
+  // case still works, but the silent path is gone.
+  const confirmConflictsBeforeExport = (): boolean => {
+    if (unresolvedConflicts.length === 0) return true;
+    const list = unresolvedConflicts.map((c) => c.fieldLabel).join(", ");
+    return window.confirm(
+      `${unresolvedConflicts.length} field${unresolvedConflicts.length !== 1 ? "s have" : " has"} conflicting values across sources: ${list}.\n\nThe first-source value will be used for each unresolved field. Export anyway?`,
+    );
+  };
+
   const generateDocument = async (mode: "download" | "preview" | "print" | "docx") => {
+    if (!confirmConflictsBeforeExport()) return;
     const needsPreviewWindow = mode === "preview" || mode === "print";
     const previewWindow = needsPreviewWindow ? window.open("", "_blank") : null;
 
@@ -939,6 +1035,7 @@ export default function RunOfShowGenerator() {
   };
 
   const handleDriveUpload = async () => {
+    if (!confirmConflictsBeforeExport()) return;
     setGenerating(true);
     try {
       const overrides = parseManualOverrides();
@@ -990,6 +1087,7 @@ export default function RunOfShowGenerator() {
   const getExportData = (): ParsedEventData | null => (sources.length > 0 ? mergedEvent : null);
 
   const exportAsPlainText = () => {
+    if (!confirmConflictsBeforeExport()) return;
     const data = getExportData();
     if (!data) { toast({ title: "No data", description: "Import a sheet first.", variant: "destructive" }); return; }
     let text = `${data.eventName || "Run of Show"}\n${"=".repeat(40)}\n\n`;
@@ -1460,6 +1558,91 @@ export default function RunOfShowGenerator() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* P335: conflict banner — surfaces fields where sources disagree
+              so Josh picks one before silent first-wins ships the wrong
+              value. Resolution writes to fieldOverrides (or manual entry). */}
+          {fieldConflicts.length > 0 && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                <div className="text-sm font-medium text-destructive">
+                  {unresolvedConflicts.length > 0
+                    ? `${unresolvedConflicts.length} of ${fieldConflicts.length} conflict${fieldConflicts.length !== 1 ? "s" : ""} need resolving`
+                    : `${fieldConflicts.length} conflict${fieldConflicts.length !== 1 ? "s" : ""} — all resolved`}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Sources disagree on these fields. Pick one value per field — the chosen value is what flows into the exported doc. Other values are discarded.
+              </p>
+              <ul className="space-y-2">
+                {fieldConflicts.map((conflict) => {
+                  const resolved = isFieldResolved(conflict.fieldKey);
+                  const isManualResolved = manualOverrideKeys.has(conflict.fieldKey);
+                  const choices = [
+                    { sourceId: conflict.winningSourceId, value: conflict.winningValue },
+                    ...conflict.others,
+                  ];
+                  const activeOverride = fieldOverrides[conflict.fieldKey];
+                  return (
+                    <li
+                      key={conflict.fieldKey}
+                      className="rounded-md bg-card border border-border p-2.5"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-xs font-semibold text-foreground">{conflict.fieldLabel}</span>
+                        {resolved ? (
+                          <span className="text-[10px] uppercase tracking-wide text-primary inline-flex items-center gap-0.5">
+                            <Check className="w-3 h-3" /> Resolved
+                          </span>
+                        ) : (
+                          <span className="text-[10px] uppercase tracking-wide text-destructive font-semibold">
+                            Pick one
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        {choices.map((choice) => {
+                          const idx = sources.findIndex((s) => s.id === choice.sourceId);
+                          const isPicked = !isManualResolved && activeOverride === choice.sourceId;
+                          return (
+                            <button
+                              key={choice.sourceId}
+                              type="button"
+                              onClick={() => setFieldOverride(conflict.fieldKey, choice.sourceId)}
+                              disabled={isManualResolved}
+                              className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded text-left text-xs transition-colors ${
+                                isPicked
+                                  ? "bg-primary/20 border border-primary/60 text-foreground"
+                                  : "bg-secondary/40 border border-border hover:bg-secondary/70 disabled:opacity-50 disabled:cursor-not-allowed"
+                              }`}
+                            >
+                              <span className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground shrink-0">
+                                  Source {idx + 1}
+                                </span>
+                                <span className="font-mono truncate text-foreground">{choice.value}</span>
+                              </span>
+                              {isPicked && <Check className="w-3 h-3 text-primary shrink-0" />}
+                            </button>
+                          );
+                        })}
+                        {isManualResolved ? (
+                          <p className="text-[10px] text-muted-foreground pl-1">
+                            Manual entry below overrides all source values.
+                          </p>
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground pl-1">
+                            Or type a custom value in the manual-overrides textarea below.
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
           {/* Field status report */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {fieldStatus.map((field) => {
@@ -1474,23 +1657,34 @@ export default function RunOfShowGenerator() {
                 : [];
               const showProvenance = sources.length >= 2 && (isManual || winningSourceId);
               const isOverridden = !!fieldOverrides[field.key];
+              const fieldConflict = fieldConflicts.find((c) => c.fieldKey === field.key);
+              const hasUnresolvedConflict = !!fieldConflict && !isFieldResolved(field.key);
 
               return (
                 <div
                   key={field.key}
                   className={`flex flex-col gap-1 text-sm px-3 py-2 rounded-md ${
-                    field.found
-                      ? "bg-primary/5 text-foreground"
-                      : "bg-destructive/5 text-muted-foreground"
+                    !field.found
+                      ? "bg-destructive/5 text-muted-foreground"
+                      : hasUnresolvedConflict
+                        ? "bg-destructive/10 text-foreground border border-destructive/40"
+                        : "bg-primary/5 text-foreground"
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    {field.found ? (
-                      <CircleCheck className="w-3.5 h-3.5 text-primary shrink-0" />
-                    ) : (
+                    {!field.found ? (
                       <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
+                    ) : hasUnresolvedConflict ? (
+                      <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
+                    ) : (
+                      <CircleCheck className="w-3.5 h-3.5 text-primary shrink-0" />
                     )}
                     <span className="font-medium text-xs">{field.label}</span>
+                    {hasUnresolvedConflict && (
+                      <span className="text-[10px] uppercase tracking-wide text-destructive font-semibold ml-1">
+                        Conflict
+                      </span>
+                    )}
                     {field.found && (
                       <span className="text-xs text-muted-foreground truncate ml-auto max-w-[140px]">
                         {field.value}
@@ -1673,6 +1867,12 @@ export default function RunOfShowGenerator() {
             <CardDescription className="flex items-center gap-1 text-xs">
               <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground" />
               No data imported — document will have blank fields. You can still export.
+            </CardDescription>
+          )}
+          {unresolvedConflicts.length > 0 && (
+            <CardDescription className="flex items-center gap-1.5 text-xs text-destructive">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              {unresolvedConflicts.length} unresolved conflict{unresolvedConflicts.length !== 1 ? "s" : ""} ({unresolvedConflicts.map((c) => c.fieldLabel).join(", ")}). Resolve above or you'll be asked to confirm before export.
             </CardDescription>
           )}
         </CardHeader>
