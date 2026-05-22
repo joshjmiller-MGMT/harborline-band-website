@@ -76,6 +76,7 @@ import TeamBrandStudio from "./pages/team/TeamBrandStudio";
 import TeamBandMembers from "./pages/team/TeamBandMembers";
 import TeamSmartTasks from "./pages/team/TeamSmartTasks";
 import TeamAdminUsers from "./pages/team/TeamAdminUsers";
+import TeamSetlistBuilder from "./pages/team/TeamSetlistBuilder";
 
 const queryClient = new QueryClient();
 
@@ -159,6 +160,7 @@ const App = () => (
               <Route path="/team/band-members" element={<TeamBandMembers />} />
               <Route path="/team/smart-tasks" element={<TeamSmartTasks />} />
               <Route path="/team/admin/users" element={<TeamAdminUsers />} />
+              <Route path="/team/setlist-builder" element={<TeamSetlistBuilder />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
