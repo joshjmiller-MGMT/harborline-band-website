@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { format } from "date-fns";
+import { Helmet } from "react-helmet-async";
 import { Calendar as CalendarIcon, Check, X, Clock, MapPin, ChevronRight, ArrowLeft, Home, Send, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -166,6 +167,10 @@ export default function SchedulePage() {
   if (!selectedRehearsal) {
     return (
       <div className="min-h-screen bg-background">
+        <Helmet>
+          <title>Schedule | Harborline</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
         <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
           <div className="container max-w-3xl mx-auto px-4 py-4">
             <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
@@ -223,6 +228,10 @@ export default function SchedulePage() {
   // Rehearsal Detail View
   return (
     <div className="min-h-screen bg-background py-12 px-4">
+      <Helmet>
+        <title>Schedule | Harborline</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="container max-w-6xl mx-auto">
         <Button
           variant="ghost"
