@@ -61,7 +61,7 @@ const Footer = () => {
           <div className="col-span-2 md:col-span-1">
             <img src={logo} alt="Harborline" className="h-12 w-auto mb-4 object-contain" />
             <p className="text-muted-foreground text-sm mb-4">
-              The DMV's newest premiere band—building the vibe, reading the room, and keeping dance floors moving all night.
+              Musician-led. Baltimore-based. Booking across the DMV.
             </p>
             <div className="flex gap-3">
               {socialLinks.map((social) => (

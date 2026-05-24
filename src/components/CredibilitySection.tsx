@@ -53,10 +53,10 @@ const CredibilitySection = () => {
             TRUSTED & RECOGNIZED
           </p>
           <h2 className="font-display text-4xl md:text-6xl tracking-tight mb-4">
-            WHY CLIENTS CHOOSE US
+            WHAT'S ON THE RECORD
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Top-rated entertainment trusted by Fortune 500 companies, luxury venues, and discerning clients throughout the Mid-Atlantic.
+            1000+ events. 10+ years. Reviews you can read. We've played most of the rooms — and remember which corner of each sounds best.
           </p>
         </motion.div>
 

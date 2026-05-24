@@ -33,8 +33,7 @@ const RequestQuotePage = () => {
                 REQUEST A QUOTE
               </h1>
               <p className="text-muted-foreground text-lg mb-8 max-w-lg">
-                Ready to make your next event unforgettable? Fill out the form and our team 
-                will get back to you within 24 hours with availability and pricing for your event.
+                Tell us about your event. We'll respond within 24 hours with availability and pricing.
               </p>
 
               {/* Contact Info */}
