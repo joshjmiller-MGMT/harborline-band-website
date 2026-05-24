@@ -18,11 +18,22 @@ export default function TeamDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Calendar gets the full width — it's the daily-driver surface. */}
+          <div className="lg:col-span-2">
+            <UnifiedCalendarWidget />
+          </div>
+
           <NeedsActionWidget />
-          <UnifiedCalendarWidget />
-          <IntegrationHealthWidget />
-          <AvailabilityCheckerWidget />
           <SmartTaskWidget />
+
+          <div className="lg:col-span-2">
+            <AvailabilityCheckerWidget />
+          </div>
+
+          {/* Integration health goes last — it's read-only diagnostics, not a daily-driver. */}
+          <div className="lg:col-span-2">
+            <IntegrationHealthWidget />
+          </div>
         </div>
       </div>
     </TeamLayout>

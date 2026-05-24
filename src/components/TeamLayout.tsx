@@ -19,7 +19,6 @@ import {
   Sparkles,
   Zap,
   Workflow,
-  Megaphone,
   Shield,
   Users,
   ListMusic,
@@ -47,51 +46,52 @@ type MegaMenu = {
   items: NavItem[];
 };
 
-const dailyMenu: MegaMenu = {
-  label: "Daily",
-  icon: Zap,
-  items: [
-    { name: "Dashboard", href: "/team/dashboard", icon: LayoutDashboard, description: "Overview and live activity" },
-    { name: "Doc Generator", href: "/team/run-of-show", icon: FileText, description: "Run of show & client docs" },
-    { name: "Booking", href: "/team/booking", icon: Phone, description: "Lead pipeline & venue tracker" },
-  ],
-};
-
-const pipelinesMenu: MegaMenu = {
-  label: "Pipelines",
+const pipelineMenu: MegaMenu = {
+  label: "Pipeline",
   icon: Workflow,
   items: [
     { name: "Lead Pipeline", href: "/team/booking-pipeline", icon: Kanban, description: "Scrum board — drag leads across buckets" },
+    { name: "Booking", href: "/team/booking", icon: Phone, description: "Lead intake & venue tracker" },
+    { name: "Doc Generator", href: "/team/run-of-show", icon: FileText, description: "Run of show & client docs" },
+  ],
+};
+
+const opsMenu: MegaMenu = {
+  label: "Ops",
+  icon: Zap,
+  items: [
     { name: "SMART Tasks", href: "/team/smart-tasks", icon: Sparkles, description: "Trello inbox → SMART → Active across ventures" },
+    { name: "Practice", href: "/team/practice", icon: Activity, description: "Practice tracker + instrument hours" },
     { name: "Scheduler", href: "/team/scheduler", icon: Calendar, description: "Rehearsal & event scheduling" },
   ],
 };
 
-const contentMenu: MegaMenu = {
-  label: "Content",
-  icon: Megaphone,
+const brandPeopleMenu: MegaMenu = {
+  label: "Brand & People",
+  icon: Palette,
   items: [
-    { name: "Social", href: "/team/social", icon: Share2, description: "Posting times & social manager" },
     { name: "Brand Studio", href: "/team/brand-studio", icon: Palette, description: "People, decisions, releases, EPKs" },
     { name: "Visual Assets", href: "/team/visual-assets", icon: Images, description: "Photos, logos, design files" },
     { name: "Band Members", href: "/team/band-members", icon: Users, description: "Roster + reference images for visual-asset face recognition" },
+    { name: "Team Members", href: "/team/admin/users", icon: Shield, description: "Invite + manage team logins" },
   ],
 };
 
-const adminMenu: MegaMenu = {
-  label: "Admin",
-  icon: Shield,
+const musicMenu: MegaMenu = {
+  label: "Music",
+  icon: Music,
   items: [
-    { name: "Team Members", href: "/team/admin/users", icon: Users, description: "Invite + manage team logins" },
+    { name: "Songs", href: "/team/songs", icon: Music, description: "Master song catalog with tags + keys" },
+    { name: "Setlist Builder", href: "/team/setlist-builder", icon: ListMusic, description: "Build & save setlists for any ensemble" },
+    { name: "Social", href: "/team/social", icon: Share2, description: "Posting times, content queue, handoff to Des" },
   ],
 };
 
-const megaMenus: MegaMenu[] = [dailyMenu, pipelinesMenu, contentMenu, adminMenu];
+const megaMenus: MegaMenu[] = [pipelineMenu, opsMenu, brandPeopleMenu, musicMenu];
 
-const libraryNav: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { name: "Practice", href: "/team/practice", icon: Activity },
-  { name: "Songs", href: "/team/songs", icon: Music },
-  { name: "Setlist Builder", href: "/team/setlist-builder", icon: ListMusic },
+// Direct-link nav (no dropdown). Dashboard first, Resources at the tail.
+const directLinks: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { name: "Dashboard", href: "/team/dashboard", icon: LayoutDashboard },
   { name: "Resources", href: "/team/resources", icon: FolderOpen },
 ];
 
@@ -125,6 +125,27 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
           </div>
 
           <nav className="flex items-center gap-1">
+            {/* Dashboard direct link — first slot */}
+            {(() => {
+              const dash = directLinks[0];
+              const isActive = location.pathname === dash.href;
+              const DashIcon = dash.icon;
+              return (
+                <Link
+                  key={dash.href}
+                  to={dash.href}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-display tracking-wide-custom transition-colors ${
+                    isActive
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  <DashIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{dash.name}</span>
+                </Link>
+              );
+            })()}
+
             {megaMenus.map((menu) => {
               const isActive = menu.items.some((m) => location.pathname === m.href);
               const TriggerIcon = menu.icon;
@@ -169,7 +190,8 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
               );
             })}
 
-            {libraryNav.map((item) => {
+            {/* Resources direct link — tail slot */}
+            {directLinks.slice(1).map((item) => {
               const isActive = location.pathname === item.href;
               const ItemIcon = item.icon;
               return (
