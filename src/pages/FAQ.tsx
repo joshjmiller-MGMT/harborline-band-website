@@ -10,44 +10,56 @@ import {
 
 const faqs = [
   {
-    question: "How far in advance should I book Harborline?",
-    answer: "We recommend booking as early as possible, especially for peak wedding season (May-October). Popular dates can book 12-18 months in advance. However, we occasionally have last-minute availability, so don't hesitate to reach out even for events coming up soon."
+    question: "How quickly does Harborline respond to inquiries?",
+    answer: "One named point-of-contact responds within 24 hours, every time. Quote in hand or a follow-up call scheduled — no auto-replies, no \"we'll get back to you when we can.\""
+  },
+  {
+    question: "What happens if a band member can't make it?",
+    answer: "Every role has a confirmed backup on the roster. If a player has to swap inside 72 hours of the event, a backup deploys with the same charts. We've never missed an event in 10+ years."
+  },
+  {
+    question: "How is pricing structured?",
+    answer: "Every quote is line-itemed: musicians × hours, bandleader fee, agency markup if a third party is involved, and a 12% business margin. No hidden costs. No surprise add-ons after the event."
+  },
+  {
+    question: "How does Harborline stay in touch before the event?",
+    answer: "Three calendared check-ins — 1 week, 72 hours, and 24 hours before — plus a same-day debrief after. Nothing slips, nothing surprises anyone day-of."
+  },
+  {
+    question: "Can the band read the room and adjust mid-set?",
+    answer: "Yes. The MD on stage has live-pivot capability — the setlist is built as modules, not a linear sequence. If the floor empties, we shift the energy without breaking flow."
+  },
+  {
+    question: "What kind of music does Harborline play?",
+    answer: "Nine style sub-brands: Jazz · Yacht Rock · 80s · 90s/2000s Pop & Electronic · Soul/R&B · Variety · Modern · Funk/Disco · Latin. Each one is its own configuration — you pick the style that fits your event, we book the right players for it."
   },
   {
     question: "What size band configurations do you offer?",
-    answer: "We offer flexible configurations from a 4-piece combo (perfect for cocktail hours and intimate gatherings) up to a full 12-piece ensemble with a horn section. Our most popular option is our 7-piece band, which provides a full sound for most venues."
+    answer: "Three tiers within each style: Intimate (trio to 5-piece, cocktail-hour and ceremony scale), Standard (7–10-piece, reception and mid-size venue), and Premium (12+ piece, festival and large-gala scale). Add-on sets for cocktail, reception, or ceremony coverage attach to any tier."
+  },
+  {
+    question: "How far in advance should I book Harborline?",
+    answer: "Wedding season (May–October) books 12–18 months out for popular dates. Off-season weddings and corporate events often have shorter lead times — 3 to 6 months is plenty for most weekends. Last-minute openings happen; ask."
   },
   {
     question: "Can we request specific songs?",
-    answer: "Absolutely! We love learning new songs for our clients. Most requests can be accommodated with adequate notice. We'll also work with you to create a custom setlist that fits your event's vibe and keeps your guests on the dance floor."
+    answer: "Yes. Most requests are accommodated with adequate notice. We'll also build the setlist with you so it fits your event's shape — special-moment songs (first dance, parent dances, ceremony processional) are locked early, then the dance-floor set is curated around what your guests will actually move to."
   },
   {
-    question: "Do you provide your own sound and lighting?",
-    answer: "Yes! We come fully equipped with professional-grade sound systems and lighting appropriate for your venue size. For larger events, we can also coordinate with your venue's in-house AV team or bring in additional production."
+    question: "Do you perform ceremonies and cocktail hours?",
+    answer: "Yes — many wedding clients book the full event. Smaller acoustic or jazz configurations cover ceremony and cocktail hour; the full band brings the energy for the reception."
   },
   {
-    question: "What genres of music do you play?",
-    answer: "We cover an extensive range: Motown, classic rock, R&B, funk, jazz standards, Top 40 hits, country, and more. Our diverse repertoire ensures there's something for every generation at your event."
-  },
-  {
-    question: "Do you perform during ceremonies and cocktail hours?",
-    answer: "Yes! Many of our wedding clients book us for the full event. We can provide elegant acoustic or jazz arrangements for your ceremony and cocktail hour, then bring the energy for your reception."
-  },
-  {
-    question: "What is your pricing structure?",
-    answer: "Pricing varies based on band size, event duration, date, and location. We provide customized quotes for each event. Contact us with your event details for a personalized proposal."
+    question: "Do you provide sound and lighting?",
+    answer: "We come fully equipped with professional sound systems and lighting appropriate for the venue. For larger events we coordinate with the venue's in-house production or bring in additional staging through our BSE-side infrastructure."
   },
   {
     question: "Do you travel outside the Baltimore area?",
-    answer: "Yes! While we're based in Baltimore, we regularly perform throughout Maryland, Washington D.C., Northern Virginia, Delaware, and Pennsylvania. Travel fees may apply for events beyond the immediate Baltimore area."
+    answer: "Yes. We're based in Baltimore and play regularly across Maryland, DC, Northern Virginia, Delaware, and Pennsylvania. Travel fees may apply for events beyond the immediate DMV; we line-item them in the quote."
   },
   {
     question: "Can we see you perform before booking?",
-    answer: "We occasionally have public performances or showcase events. We also have extensive video footage of live performances that we're happy to share. Contact us to learn about upcoming showcases or to request performance videos."
-  },
-  {
-    question: "What happens if a band member gets sick?",
-    answer: "We maintain a roster of exceptional musicians who can step in if needed. In our 10+ years, we've never missed an event. Your celebration is our priority, and we have contingency plans for any situation."
+    answer: "Performance videos are available on request — full-band, ensemble, and cocktail configurations. Occasional public shows happen too; ask and we'll point you at the next one in your area."
   }
 ];
 
@@ -75,7 +87,7 @@ const FAQPage = () => {
       <script type="application/ld+json">
         {JSON.stringify(faqSchema)}
       </script>
-      
+
       <PageHero
         eyebrow="QUESTIONS"
         title="FREQUENTLY ASKED"
