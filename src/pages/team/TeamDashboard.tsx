@@ -4,6 +4,7 @@ import IntegrationHealthWidget from "@/components/dashboard/IntegrationHealthWid
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
 import SmartTaskWidget from "@/components/dashboard/SmartTaskWidget";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
+import UrgentAlertsWidget from "@/components/dashboard/UrgentAlertsWidget";
 import { LayoutDashboard } from "lucide-react";
 
 export default function TeamDashboard() {
@@ -17,17 +18,24 @@ export default function TeamDashboard() {
           <p className="text-muted-foreground mt-2">Overview and tools for the Harborline team.</p>
         </div>
 
+        {/* Urgent alerts pin — Trello-routed urgent items, top of dashboard. */}
+        <div className="mb-6">
+          <UrgentAlertsWidget />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Calendar gets the full width — it's the daily-driver surface. */}
           <div className="lg:col-span-2">
             <UnifiedCalendarWidget />
           </div>
 
-          <NeedsActionWidget />
+          {/* AvailabilityChecker paired with SmartTask per Josh's 2026-05-24 card. */}
           <SmartTaskWidget />
+          <AvailabilityCheckerWidget />
 
+          {/* Needs-action takes the full row — list-shaped widget benefits from width. */}
           <div className="lg:col-span-2">
-            <AvailabilityCheckerWidget />
+            <NeedsActionWidget />
           </div>
 
           {/* Integration health goes last — it's read-only diagnostics, not a daily-driver. */}
