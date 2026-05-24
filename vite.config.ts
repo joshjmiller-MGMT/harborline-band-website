@@ -18,37 +18,13 @@ export default defineConfig(() => ({
     },
   },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          if (!id.includes("node_modules")) return undefined;
-          if (
-            /node_modules\/react\//.test(id) ||
-            id.includes("react-dom") ||
-            id.includes("react-router") ||
-            id.includes("scheduler") ||
-            id.includes("react-helmet-async")
-          ) {
-            return "vendor-react";
-          }
-          if (id.includes("@radix-ui") || id.includes("cmdk") || id.includes("vaul") || id.includes("sonner")) {
-            return "vendor-radix";
-          }
-          if (id.includes("recharts") || id.includes("d3-")) {
-            return "vendor-charts";
-          }
-          if (id.includes("@dnd-kit")) {
-            return "vendor-dnd";
-          }
-          if (id.includes("@supabase") || id.includes("@tanstack/react-query")) {
-            return "vendor-data";
-          }
-          if (id.includes("lucide-react")) {
-            return "vendor-icons";
-          }
-          return "vendor";
-        },
-      },
-    },
+    // manualChunks intentionally NOT set. The previous strategy split vendor into
+    // 7 named chunks (vendor-react / vendor-radix / vendor-charts / vendor-dnd /
+    // vendor-data / vendor-icons / vendor catch-all) but P334's lazy() additions
+    // tipped the chunk graph into a circular import between vendor-react and the
+    // catch-all `vendor` chunk → `Cannot read properties of undefined (reading
+    // 'createContext')` → black-screen mount crash on 2026-05-22. Default Vite
+    // chunking avoids cycles. Revisit splitting once we have a deterministic
+    // cycle-free strategy verified across all lazy() boundaries.
   },
 }));
