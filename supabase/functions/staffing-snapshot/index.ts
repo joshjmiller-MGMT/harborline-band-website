@@ -474,6 +474,15 @@ Deno.serve(async (req) => {
                 if (!e.colorId || !GREEN_COLOR_IDS.has(String(e.colorId))) continue;
 
                 const title = e.summary || "(no title)";
+
+                // P340b — exclude events that are BSE-AV / AV-only / A1-only.
+                // Josh's rule (2026-05-24): "I don't staff BSE, and certainly
+                // not AV." Harborline gigs booked through BSE title as
+                // "Harborline @ Venue", not "BSE @ Venue", so the bare BSE
+                // token is a safe-to-exclude signal for BSE-internal events.
+                // A1 is a sound-tech role marker, indicates AV-only event.
+                if (/\b(A1|AV|BSE)\b/i.test(title)) continue;
+
                 const description = e.description || "";
                 const inference = inferExpectedHeadcount(title);
                 const parsed = parseStaff(description);
