@@ -205,7 +205,8 @@
   color: hsl(var(--muted-foreground) / 0.5);
 }
 .unified-cal .rbc-today {
-  background: hsl(var(--primary) / 0.08);
+  background: hsl(var(--primary) / 0.22);
+  box-shadow: inset 0 0 0 2px hsl(var(--primary) / 0.7);
 }
 .unified-cal .rbc-date-cell {
   padding: 4px 6px;
@@ -218,7 +219,8 @@
 }
 .unified-cal .rbc-now > a {
   color: hsl(var(--primary));
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 0.85rem;
 }
 .unified-cal .rbc-event {
   cursor: pointer;

@@ -107,10 +107,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // List events: default = next 90 days
+    // List events: default = past 365 days through next 90 days. Wide past
+    // window so the month-grid + 6-week views can scroll back roughly a year
+    // without hitting blank cells. Callers can still narrow via ?timeMin=.
     const timeMin =
       url.searchParams.get("timeMin") ||
-      new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
     const timeMax =
       url.searchParams.get("timeMax") ||
       new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
