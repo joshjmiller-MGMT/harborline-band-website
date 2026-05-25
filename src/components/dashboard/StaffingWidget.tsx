@@ -12,7 +12,6 @@ import {
   ExternalLink,
   RefreshCw,
   Loader2,
-  HelpCircle,
   Pencil,
   Save,
   X,
@@ -63,10 +62,17 @@ function parseEventDate(value: string): Date {
   return value.length === 10 ? new Date(`${value}T00:00:00`) : parseISO(value);
 }
 
-function eventStatus(ev: StaffingEvent): "complete" | "missing" | "unknown" {
-  if (ev.expected_headcount === null) return "unknown";
-  if (ev.missing_count === null || ev.missing_count === 0) return "complete";
-  return "missing";
+// Binary: matches what staffing-color-write writes to GCal. No "untagged"
+// middle state — Josh's mental model is staffed (green) or not (yellow);
+// "no headcount rule matched" is a system artifact, not a meaningful state.
+//   - expected known  → staffed when staffed_count >= expected
+//   - expected unknown → staffed when there's at least one name (trust the
+//     user's manual list)
+function eventStatus(ev: StaffingEvent): "staffed" | "unstaffed" {
+  if (ev.expected_headcount === null) {
+    return ev.staff_names.length > 0 ? "staffed" : "unstaffed";
+  }
+  return (ev.missing_count ?? 0) === 0 ? "staffed" : "unstaffed";
 }
 
 function EventRow({ ev, onSaved }: { ev: StaffingEvent; onSaved: () => void }) {
@@ -124,22 +130,18 @@ function EventRow({ ev, onSaved }: { ev: StaffingEvent; onSaved: () => void }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm truncate">{ev.title}</span>
-            {status === "missing" && (
-              <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30 text-xs">
-                <AlertTriangle className="w-3 h-3 mr-1" />
-                Needs {ev.missing_count}
-              </Badge>
-            )}
-            {status === "complete" && (
+            {status === "staffed" && (
               <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30 text-xs">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
                 Staffed
               </Badge>
             )}
-            {status === "unknown" && (
+            {status === "unstaffed" && (
               <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs">
-                <HelpCircle className="w-3 h-3 mr-1" />
-                Untagged
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                {ev.expected_headcount !== null && ev.missing_count
+                  ? `Needs ${ev.missing_count}`
+                  : "Needs staff"}
               </Badge>
             )}
           </div>
@@ -296,21 +298,18 @@ function EventRow({ ev, onSaved }: { ev: StaffingEvent; onSaved: () => void }) {
 }
 
 type StaffingWidgetProps = {
-  /** Days of forward calendar window. Defaults to 90 (3 months). */
+  /** Days of forward calendar window. Defaults to 730 (2 years — the
+   * staffing-snapshot edge fn cap) so every future unstaffed gig surfaces. */
   windowDays?: number;
-  /** Hide the "Staffed" rows by default; user can toggle to see them. */
-  defaultMissingOnly?: boolean;
 };
 
 export default function StaffingWidget({
-  windowDays = 90,
-  defaultMissingOnly = false,
+  windowDays = 730,
 }: StaffingWidgetProps) {
   const [data, setData] = useState<StaffingResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(true);
-  const [missingOnly, setMissingOnly] = useState(defaultMissingOnly);
 
   async function load() {
     setLoading(true);
@@ -338,7 +337,7 @@ export default function StaffingWidget({
 
   const events = data?.events || [];
   const grouped = useMemo(() => {
-    const out = { missing: [] as StaffingEvent[], unknown: [] as StaffingEvent[], complete: [] as StaffingEvent[] };
+    const out = { unstaffed: [] as StaffingEvent[], staffed: [] as StaffingEvent[] };
     for (const ev of events) {
       const s = eventStatus(ev);
       out[s].push(ev);
@@ -346,18 +345,16 @@ export default function StaffingWidget({
     return out;
   }, [events]);
 
-  const visible = missingOnly ? grouped.missing : [...grouped.missing, ...grouped.unknown, ...grouped.complete];
+  // Unstaffed first (the work to do), then staffed (the goal state).
+  const visible = [...grouped.unstaffed, ...grouped.staffed];
 
   const summary = (
     <div className="flex items-center gap-2 flex-wrap text-xs">
-      <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
-        {grouped.missing.length} need staff
-      </Badge>
       <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-        {grouped.unknown.length} untagged
+        {grouped.unstaffed.length} need staff
       </Badge>
       <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
-        {grouped.complete.length} staffed
+        {grouped.staffed.length} staffed
       </Badge>
     </div>
   );
@@ -370,10 +367,10 @@ export default function StaffingWidget({
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <CardTitle className="font-display text-lg tracking-wide-custom flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" /> Staffing — next {windowDays} days
+                  <Users className="w-5 h-5 text-primary" /> Staffing — all upcoming
                 </CardTitle>
                 <CardDescription>
-                  Green-colored calendar events, parsed for staff coverage.
+                  Every booked (green/yellow) calendar event going forward, parsed for staff coverage.
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -387,17 +384,7 @@ export default function StaffingWidget({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={missingOnly ? "default" : "outline"}
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setMissingOnly(!missingOnly)}
-                >
-                  {missingOnly ? "Showing: missing only" : "Show: all events"}
-                </Button>
-              </div>
+            <div className="flex items-center justify-end gap-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -428,9 +415,7 @@ export default function StaffingWidget({
 
             {data && data.connected && visible.length === 0 && (
               <div className="text-sm text-muted-foreground py-4 text-center">
-                {missingOnly
-                  ? "Nothing missing — every green event in this window is staffed."
-                  : "No green-colored events found in this window."}
+                No green-colored events found in this window.
               </div>
             )}
 
@@ -448,8 +433,9 @@ export default function StaffingWidget({
 
 /**
  * Compact summary for embedding in NeedsActionWidget — fetches the next 14 days
- * and shows just a one-line "N events missing staff in the next 2 weeks" + a
- * top-3 list. Click jumps to the scheduler page.
+ * and shows a one-line "N events need staff" + a top-3 list. Surfaces every
+ * unstaffed event (the binary unstaffed = staff list empty OR known headcount
+ * not met). Click jumps to the scheduler page.
  */
 export function StaffingNeedsAction() {
   const [data, setData] = useState<StaffingResponse | null>(null);
@@ -459,9 +445,11 @@ export function StaffingNeedsAction() {
     let cancelled = false;
     (async () => {
       try {
+        // 730 days = max the staffing-snapshot edge fn allows. Surfaces every
+        // future unstaffed gig, not just a near-term slice.
         const { data: resp } = await supabase.functions.invoke("staffing-snapshot", {
           method: "POST",
-          body: { days: 14 },
+          body: { days: 730 },
         });
         if (!cancelled) setData(resp as StaffingResponse);
       } catch {
@@ -478,21 +466,21 @@ export function StaffingNeedsAction() {
   if (loading) return null;
   if (!data || !data.connected) return null;
 
-  const missing = (data.events || []).filter((e) => eventStatus(e) === "missing");
-  if (missing.length === 0) return null;
+  const unstaffed = (data.events || []).filter((e) => eventStatus(e) === "unstaffed");
+  if (unstaffed.length === 0) return null;
 
-  const top = missing.slice(0, 3);
+  const top = unstaffed.slice(0, 3);
 
   return (
-    <div className="border border-destructive/40 rounded-lg p-3 bg-destructive/5">
+    <div className="border border-amber-500/40 rounded-lg p-3 bg-amber-500/5">
       <a
         href="/team/scheduler"
         className="flex items-center justify-between gap-2 group"
       >
         <div className="flex items-center gap-2 min-w-0">
-          <Users className="w-4 h-4 text-destructive shrink-0" />
+          <Users className="w-4 h-4 text-amber-600 shrink-0" />
           <span className="text-sm font-medium">
-            {missing.length} event{missing.length === 1 ? "" : "s"} missing staff (next 14 days)
+            {unstaffed.length} upcoming event{unstaffed.length === 1 ? "" : "s"} need{unstaffed.length === 1 ? "s" : ""} staff
           </span>
         </div>
         <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-foreground shrink-0" />
@@ -500,18 +488,20 @@ export function StaffingNeedsAction() {
       <ul className="mt-2 space-y-1 text-xs text-muted-foreground pl-6">
         {top.map((ev) => {
           const date = ev.start ? parseEventDate(ev.start) : null;
+          const label =
+            ev.expected_headcount !== null && ev.missing_count
+              ? `needs ${ev.missing_count}`
+              : "needs staff";
           return (
             <li key={ev.id} className="flex items-center gap-2">
               {date && <span className="tabular-nums">{format(date, "MMM d")}</span>}
               <span className="truncate">{ev.title}</span>
-              <span className="ml-auto shrink-0">
-                needs {ev.missing_count}
-              </span>
+              <span className="ml-auto shrink-0">{label}</span>
             </li>
           );
         })}
-        {missing.length > top.length && (
-          <li className="italic">+ {missing.length - top.length} more…</li>
+        {unstaffed.length > top.length && (
+          <li className="italic">+ {unstaffed.length - top.length} more…</li>
         )}
       </ul>
     </div>

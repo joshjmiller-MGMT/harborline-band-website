@@ -422,9 +422,14 @@ Deno.serve(async (req) => {
         // body optional
       }
     }
+    // Upper bound bumped to 730 days (2 years) so the dashboard alert can
+    // surface ALL future unstaffed gigs, not just a near-term slice. Josh's
+    // booking horizon rarely extends past that; clamp is a safety rail
+    // against accidental "send me every event ever" calls that would burn
+    // GCal API quota.
     const days = Math.max(
       1,
-      Math.min(180, Number(bodyDays ?? url.searchParams.get("days") ?? 90)),
+      Math.min(730, Number(bodyDays ?? url.searchParams.get("days") ?? 90)),
     );
     const now = new Date();
     const timeMin = now.toISOString();
@@ -475,13 +480,11 @@ Deno.serve(async (req) => {
 
                 const title = e.summary || "(no title)";
 
-                // P340b — exclude events that are BSE-AV / AV-only / A1-only.
-                // Josh's rule (2026-05-24): "I don't staff BSE, and certainly
-                // not AV." Harborline gigs booked through BSE title as
-                // "Harborline @ Venue", not "BSE @ Venue", so the bare BSE
-                // token is a safe-to-exclude signal for BSE-internal events.
-                // A1 is a sound-tech role marker, indicates AV-only event.
-                if (/\b(A1|AV|BSE)\b/i.test(title)) continue;
+                // Exclude events Josh doesn't staff. BSE/AV/A1 from P340b
+                // (2026-05-24): BSE-internal, AV-only, A1 sound-tech roles.
+                // TSB added 2026-05-25: Tom Starr Band — Tom handles lineup,
+                // Josh just plays.
+                if (/\b(A1|AV|BSE|TSB)\b/i.test(title)) continue;
 
                 const description = e.description || "";
                 const inference = inferExpectedHeadcount(title);

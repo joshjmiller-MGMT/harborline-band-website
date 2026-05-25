@@ -82,7 +82,14 @@ function mergeDescription(existing: string, newStaffNames: string[]): string {
 }
 
 function colorForStaffing(staffed: number, expected: number | null): string {
-  if (expected === null || expected <= 0) return COLOR_BANANA_PARTIALLY_STAFFED;
+  // No headcount rule matched the title (e.g. "JMT @ BB" — band name we don't
+  // have an inferExpectedHeadcount rule for). The user is manually editing
+  // this list — trust them: non-empty = staffed = sage; empty = banana.
+  // Previously this branch always returned banana, leaving manually-confirmed
+  // gigs stuck on yellow in GCal even after Josh saved the right names.
+  if (expected === null || expected <= 0) {
+    return staffed > 0 ? COLOR_SAGE_FULLY_STAFFED : COLOR_BANANA_PARTIALLY_STAFFED;
+  }
   return staffed >= expected
     ? COLOR_SAGE_FULLY_STAFFED
     : COLOR_BANANA_PARTIALLY_STAFFED;
