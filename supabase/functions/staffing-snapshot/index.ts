@@ -422,9 +422,14 @@ Deno.serve(async (req) => {
         // body optional
       }
     }
+    // Upper bound bumped to 730 days (2 years) so the dashboard alert can
+    // surface ALL future unstaffed gigs, not just a near-term slice. Josh's
+    // booking horizon rarely extends past that; clamp is a safety rail
+    // against accidental "send me every event ever" calls that would burn
+    // GCal API quota.
     const days = Math.max(
       1,
-      Math.min(180, Number(bodyDays ?? url.searchParams.get("days") ?? 90)),
+      Math.min(730, Number(bodyDays ?? url.searchParams.get("days") ?? 90)),
     );
     const now = new Date();
     const timeMin = now.toISOString();

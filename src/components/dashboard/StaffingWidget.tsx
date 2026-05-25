@@ -298,12 +298,13 @@ function EventRow({ ev, onSaved }: { ev: StaffingEvent; onSaved: () => void }) {
 }
 
 type StaffingWidgetProps = {
-  /** Days of forward calendar window. Defaults to 90 (3 months). */
+  /** Days of forward calendar window. Defaults to 730 (2 years — the
+   * staffing-snapshot edge fn cap) so every future unstaffed gig surfaces. */
   windowDays?: number;
 };
 
 export default function StaffingWidget({
-  windowDays = 90,
+  windowDays = 730,
 }: StaffingWidgetProps) {
   const [data, setData] = useState<StaffingResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -366,10 +367,10 @@ export default function StaffingWidget({
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <CardTitle className="font-display text-lg tracking-wide-custom flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" /> Staffing — next {windowDays} days
+                  <Users className="w-5 h-5 text-primary" /> Staffing — all upcoming
                 </CardTitle>
                 <CardDescription>
-                  Green-colored calendar events, parsed for staff coverage.
+                  Every booked (green/yellow) calendar event going forward, parsed for staff coverage.
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -444,9 +445,11 @@ export function StaffingNeedsAction() {
     let cancelled = false;
     (async () => {
       try {
+        // 730 days = max the staffing-snapshot edge fn allows. Surfaces every
+        // future unstaffed gig, not just a near-term slice.
         const { data: resp } = await supabase.functions.invoke("staffing-snapshot", {
           method: "POST",
-          body: { days: 14 },
+          body: { days: 730 },
         });
         if (!cancelled) setData(resp as StaffingResponse);
       } catch {
@@ -477,7 +480,7 @@ export function StaffingNeedsAction() {
         <div className="flex items-center gap-2 min-w-0">
           <Users className="w-4 h-4 text-amber-600 shrink-0" />
           <span className="text-sm font-medium">
-            {unstaffed.length} event{unstaffed.length === 1 ? "" : "s"} need staff (next 14 days)
+            {unstaffed.length} upcoming event{unstaffed.length === 1 ? "" : "s"} need{unstaffed.length === 1 ? "s" : ""} staff
           </span>
         </div>
         <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-foreground shrink-0" />
