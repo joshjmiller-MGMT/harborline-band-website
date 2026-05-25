@@ -6,6 +6,7 @@ import { AlertTriangle, ChevronDown } from "lucide-react";
 import MissingDatesWidget from "./MissingDatesWidget";
 import TodaysActionItemsWidget from "./TodaysActionItemsWidget";
 import BookingAgentActionWidget from "./BookingAgentActionWidget";
+import UrgentAlertsWidget from "./UrgentAlertsWidget";
 import WaitingOnJoshWidget from "./WaitingOnJoshWidget";
 import { StaffingNeedsAction } from "./StaffingWidget";
 import { EveningAvailabilityNeedsAction } from "./EveningAvailabilityWidget";
@@ -34,6 +35,8 @@ export default function NeedsActionWidget() {
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="space-y-4">
+            {/* Urgent pin sits at the very top of Needs Action (P341, 2026-05-25). */}
+            <UrgentAlertsWidget />
             <WaitingOnJoshWidget />
             <TodaysActionItemsWidget />
             <StaffingNeedsAction />
