@@ -298,19 +298,15 @@ function EventRow({ ev, onSaved }: { ev: StaffingEvent; onSaved: () => void }) {
 type StaffingWidgetProps = {
   /** Days of forward calendar window. Defaults to 90 (3 months). */
   windowDays?: number;
-  /** Hide the "Staffed" rows by default; user can toggle to see them. */
-  defaultMissingOnly?: boolean;
 };
 
 export default function StaffingWidget({
   windowDays = 90,
-  defaultMissingOnly = false,
 }: StaffingWidgetProps) {
   const [data, setData] = useState<StaffingResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(true);
-  const [missingOnly, setMissingOnly] = useState(defaultMissingOnly);
 
   async function load() {
     setLoading(true);
@@ -346,7 +342,11 @@ export default function StaffingWidget({
     return out;
   }, [events]);
 
-  const visible = missingOnly ? grouped.missing : [...grouped.missing, ...grouped.unknown, ...grouped.complete];
+  // Always surface all three statuses — missing first (top urgency), then
+  // untagged (band names we don't have a headcount rule for), then staffed.
+  // The previous missing-only toggle was removed 2026-05-25 per Josh: yellow
+  // and green items both deserve standing visibility.
+  const visible = [...grouped.missing, ...grouped.unknown, ...grouped.complete];
 
   const summary = (
     <div className="flex items-center gap-2 flex-wrap text-xs">
@@ -387,17 +387,7 @@ export default function StaffingWidget({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={missingOnly ? "default" : "outline"}
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setMissingOnly(!missingOnly)}
-                >
-                  {missingOnly ? "Showing: missing only" : "Show: all events"}
-                </Button>
-              </div>
+            <div className="flex items-center justify-end gap-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -428,9 +418,7 @@ export default function StaffingWidget({
 
             {data && data.connected && visible.length === 0 && (
               <div className="text-sm text-muted-foreground py-4 text-center">
-                {missingOnly
-                  ? "Nothing missing — every green event in this window is staffed."
-                  : "No green-colored events found in this window."}
+                No green-colored events found in this window.
               </div>
             )}
 
@@ -448,8 +436,11 @@ export default function StaffingWidget({
 
 /**
  * Compact summary for embedding in NeedsActionWidget — fetches the next 14 days
- * and shows just a one-line "N events missing staff in the next 2 weeks" + a
- * top-3 list. Click jumps to the scheduler page.
+ * and shows a one-line "N events need attention" + a top-3 list. Surfaces both
+ * missing-staff (red) AND untagged events (yellow — band names without a
+ * headcount rule, so we don't know if they're staffed). Green events are
+ * intentionally omitted from this alert; they're the goal state.
+ * Click jumps to the scheduler page.
  */
 export function StaffingNeedsAction() {
   const [data, setData] = useState<StaffingResponse | null>(null);
@@ -478,40 +469,62 @@ export function StaffingNeedsAction() {
   if (loading) return null;
   if (!data || !data.connected) return null;
 
-  const missing = (data.events || []).filter((e) => eventStatus(e) === "missing");
-  if (missing.length === 0) return null;
+  const needsAttention = (data.events || []).filter((e) => {
+    const s = eventStatus(e);
+    return s === "missing" || s === "unknown";
+  });
+  if (needsAttention.length === 0) return null;
 
-  const top = missing.slice(0, 3);
+  const missingCount = needsAttention.filter((e) => eventStatus(e) === "missing").length;
+  const untaggedCount = needsAttention.length - missingCount;
+  const top = needsAttention.slice(0, 3);
+
+  // Border tinted destructive when there's at least one truly-missing event,
+  // amber when it's only untagged.
+  const tone =
+    missingCount > 0
+      ? "border-destructive/40 bg-destructive/5"
+      : "border-amber-500/40 bg-amber-500/5";
+  const iconTone = missingCount > 0 ? "text-destructive" : "text-amber-600";
+
+  const headline = (() => {
+    if (missingCount > 0 && untaggedCount > 0) {
+      return `${missingCount} missing staff · ${untaggedCount} untagged (next 14 days)`;
+    }
+    if (missingCount > 0) {
+      return `${missingCount} event${missingCount === 1 ? "" : "s"} missing staff (next 14 days)`;
+    }
+    return `${untaggedCount} untagged event${untaggedCount === 1 ? "" : "s"} (next 14 days)`;
+  })();
 
   return (
-    <div className="border border-destructive/40 rounded-lg p-3 bg-destructive/5">
+    <div className={`border rounded-lg p-3 ${tone}`}>
       <a
         href="/team/scheduler"
         className="flex items-center justify-between gap-2 group"
       >
         <div className="flex items-center gap-2 min-w-0">
-          <Users className="w-4 h-4 text-destructive shrink-0" />
-          <span className="text-sm font-medium">
-            {missing.length} event{missing.length === 1 ? "" : "s"} missing staff (next 14 days)
-          </span>
+          <Users className={`w-4 h-4 ${iconTone} shrink-0`} />
+          <span className="text-sm font-medium">{headline}</span>
         </div>
         <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-foreground shrink-0" />
       </a>
       <ul className="mt-2 space-y-1 text-xs text-muted-foreground pl-6">
         {top.map((ev) => {
           const date = ev.start ? parseEventDate(ev.start) : null;
+          const isUntagged = eventStatus(ev) === "unknown";
           return (
             <li key={ev.id} className="flex items-center gap-2">
               {date && <span className="tabular-nums">{format(date, "MMM d")}</span>}
               <span className="truncate">{ev.title}</span>
               <span className="ml-auto shrink-0">
-                needs {ev.missing_count}
+                {isUntagged ? "untagged" : `needs ${ev.missing_count}`}
               </span>
             </li>
           );
         })}
-        {missing.length > top.length && (
-          <li className="italic">+ {missing.length - top.length} more…</li>
+        {needsAttention.length > top.length && (
+          <li className="italic">+ {needsAttention.length - top.length} more…</li>
         )}
       </ul>
     </div>
