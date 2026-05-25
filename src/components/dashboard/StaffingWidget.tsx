@@ -13,6 +13,9 @@ import {
   RefreshCw,
   Loader2,
   HelpCircle,
+  Pencil,
+  Save,
+  X,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -25,6 +28,7 @@ type StaffEntry = {
 type StaffingEvent = {
   id: string;
   accountEmail: string;
+  calendarId: string;
   calendarName: string;
   title: string;
   description: string;
@@ -65,10 +69,54 @@ function eventStatus(ev: StaffingEvent): "complete" | "missing" | "unknown" {
   return "missing";
 }
 
-function EventRow({ ev }: { ev: StaffingEvent }) {
+function EventRow({ ev, onSaved }: { ev: StaffingEvent; onSaved: () => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draftNames, setDraftNames] = useState<string>(ev.staff_names.join("\n"));
+  const [saving, setSaving] = useState(false);
+  const [saveErr, setSaveErr] = useState<string | null>(null);
   const status = eventStatus(ev);
   const date = ev.start ? parseEventDate(ev.start) : null;
+
+  // Extract the raw GCal eventId from the prefixed id "<account>:<gcal-id>".
+  const eventId = ev.id.startsWith(`${ev.accountEmail}:`)
+    ? ev.id.slice(ev.accountEmail.length + 1)
+    : ev.id;
+
+  async function saveStaffing() {
+    setSaving(true);
+    setSaveErr(null);
+    const names = draftNames
+      .split("\n")
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0);
+    try {
+      const { data, error } = await supabase.functions.invoke("staffing-color-write", {
+        method: "POST",
+        body: {
+          accountEmail: ev.accountEmail,
+          calendarId: ev.calendarId,
+          eventId,
+          newStaffNames: names,
+          expected: ev.expected_headcount,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      setEditing(false);
+      onSaved();
+    } catch (e) {
+      setSaveErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function cancelEdit() {
+    setDraftNames(ev.staff_names.join("\n"));
+    setEditing(false);
+    setSaveErr(null);
+  }
 
   return (
     <div className="border border-border/50 rounded-lg p-3 space-y-2">
@@ -110,6 +158,19 @@ function EventRow({ ev }: { ev: StaffingEvent }) {
             variant="ghost"
             size="sm"
             className="h-7 px-2"
+            onClick={() => {
+              if (!expanded) setExpanded(true);
+              setEditing(true);
+            }}
+            disabled={editing}
+            aria-label="Edit staffing"
+          >
+            <Pencil className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
             onClick={() => setExpanded(!expanded)}
           >
             <ChevronDown
@@ -119,7 +180,46 @@ function EventRow({ ev }: { ev: StaffingEvent }) {
         </div>
       </div>
 
-      {expanded && (
+      {editing && (
+        <div className="text-xs space-y-2 pt-2 border-t border-border/30">
+          <p className="text-muted-foreground">
+            One name per line. Save writes the staff list back to the GCal event
+            description and flips the event color: <span className="inline-block w-2 h-2 rounded-full bg-green-500 align-middle" /> sage if staffed_count ≥ expected ({ev.expected_headcount ?? "?"}), <span className="inline-block w-2 h-2 rounded-full bg-amber-500 align-middle" /> yellow otherwise.
+          </p>
+          <textarea
+            className="w-full min-h-[6em] px-2 py-1 text-xs font-mono bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+            value={draftNames}
+            onChange={(e) => setDraftNames(e.target.value)}
+            disabled={saving}
+            placeholder="Sean Sidley&#10;Colin Sidley&#10;Ian Hoke"
+          />
+          {saveErr && (
+            <p className="text-destructive">Couldn't save: {saveErr}</p>
+          )}
+          <div className="flex gap-2">
+            <Button size="sm" className="h-7 px-3" onClick={saveStaffing} disabled={saving}>
+              {saving ? (
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              ) : (
+                <Save className="w-3 h-3 mr-1" />
+              )}
+              Save
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-3"
+              onClick={cancelEdit}
+              disabled={saving}
+            >
+              <X className="w-3 h-3 mr-1" />
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {expanded && !editing && (
         <div className="text-xs space-y-2 pt-2 border-t border-border/30">
           <div>
             <span className="text-muted-foreground">Expected:</span>{" "}
@@ -336,7 +436,7 @@ export default function StaffingWidget({
 
             <div className="space-y-2">
               {visible.map((ev) => (
-                <EventRow key={ev.id} ev={ev} />
+                <EventRow key={ev.id} ev={ev} onSaved={load} />
               ))}
             </div>
           </CardContent>
