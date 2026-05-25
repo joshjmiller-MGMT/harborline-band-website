@@ -45,6 +45,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import ColorSwatchPicker from "./ColorSwatchPicker";
+import SixWeekView from "./SixWeekView";
 const COLOR_OVERRIDES_KEY = "unifiedCalendar.colorOverrides";
 
 const locales = { "en-US": enUS };
@@ -165,7 +166,10 @@ type SocialBrand = {
 const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 export default function UnifiedCalendarWidget() {
-  const [view, setView] = useState<View>("month");
+  // sixWeek is a custom view (see SixWeekView.tsx) — 42 days anchored at the
+  // start of the current week. Default to it because it's the surface Josh
+  // checks most often; calendar-month and week are still in the view toggle.
+  const [view, setView] = useState<View>("sixWeek" as View);
   const [date, setDate] = useState(new Date());
   const [events, setEvents] = useState<UnifiedEvent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1456,6 +1460,7 @@ export default function UnifiedCalendarWidget() {
         {/* View toggle */}
         <Tabs value={view} onValueChange={(v) => setView(v as View)} className="mb-3">
           <TabsList>
+            <TabsTrigger value="sixWeek">6 Weeks</TabsTrigger>
             <TabsTrigger value="month">Month</TabsTrigger>
             <TabsTrigger value="week">Week</TabsTrigger>
             <TabsTrigger value="agenda">Upcoming</TabsTrigger>
@@ -1551,7 +1556,12 @@ export default function UnifiedCalendarWidget() {
                 onView={setView}
                 date={date}
                 onNavigate={setDate}
-                views={["month", "week", "day"]}
+                views={{
+                  sixWeek: SixWeekView,
+                  month: true,
+                  week: true,
+                  day: true,
+                }}
                 eventPropGetter={eventStyleGetter}
                 components={{ event: EventBlock }}
                 style={{ height: "100%" }}
