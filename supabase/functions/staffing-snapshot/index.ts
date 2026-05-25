@@ -475,13 +475,11 @@ Deno.serve(async (req) => {
 
                 const title = e.summary || "(no title)";
 
-                // P340b — exclude events that are BSE-AV / AV-only / A1-only.
-                // Josh's rule (2026-05-24): "I don't staff BSE, and certainly
-                // not AV." Harborline gigs booked through BSE title as
-                // "Harborline @ Venue", not "BSE @ Venue", so the bare BSE
-                // token is a safe-to-exclude signal for BSE-internal events.
-                // A1 is a sound-tech role marker, indicates AV-only event.
-                if (/\b(A1|AV|BSE)\b/i.test(title)) continue;
+                // Exclude events Josh doesn't staff. BSE/AV/A1 from P340b
+                // (2026-05-24): BSE-internal, AV-only, A1 sound-tech roles.
+                // TSB added 2026-05-25: Tom Starr Band — Tom handles lineup,
+                // Josh just plays.
+                if (/\b(A1|AV|BSE|TSB)\b/i.test(title)) continue;
 
                 const description = e.description || "";
                 const inference = inferExpectedHeadcount(title);
