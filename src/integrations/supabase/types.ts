@@ -47,29 +47,41 @@ export type Database = {
       band_members: {
         Row: {
           active: boolean
+          bio_short: string | null
           created_at: string
+          headshot_url: string | null
           id: string
+          instagram_handle: string | null
           name: string
           reference_image_path: string | null
           role: string
+          tier: number | null
           updated_at: string
         }
         Insert: {
           active?: boolean
+          bio_short?: string | null
           created_at?: string
+          headshot_url?: string | null
           id?: string
+          instagram_handle?: string | null
           name: string
           reference_image_path?: string | null
           role: string
+          tier?: number | null
           updated_at?: string
         }
         Update: {
           active?: boolean
+          bio_short?: string | null
           created_at?: string
+          headshot_url?: string | null
           id?: string
+          instagram_handle?: string | null
           name?: string
           reference_image_path?: string | null
           role?: string
+          tier?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -134,6 +146,27 @@ export type Database = {
           type_col?: string
           updated_at?: string
           venue_tab_gid?: string
+        }
+        Relationships: []
+      }
+      booking_pipeline_buckets: {
+        Row: {
+          bucket: string
+          row_index: number
+          sheet_id: string
+          updated_at: string
+        }
+        Insert: {
+          bucket: string
+          row_index: number
+          sheet_id: string
+          updated_at?: string
+        }
+        Update: {
+          bucket?: string
+          row_index?: number
+          sheet_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -454,6 +487,86 @@ export type Database = {
         }
         Relationships: []
       }
+      claude_action_queue: {
+        Row: {
+          card_desc: string | null
+          card_name: string
+          card_url: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          list_name: string
+          picked_up_at: string | null
+          picked_up_by: string | null
+          result_artifact: string | null
+          status: string
+          status_notes: string | null
+          trello_card_id: string
+          updated_at: string
+        }
+        Insert: {
+          card_desc?: string | null
+          card_name: string
+          card_url: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          list_name: string
+          picked_up_at?: string | null
+          picked_up_by?: string | null
+          result_artifact?: string | null
+          status?: string
+          status_notes?: string | null
+          trello_card_id: string
+          updated_at?: string
+        }
+        Update: {
+          card_desc?: string | null
+          card_name?: string
+          card_url?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          list_name?: string
+          picked_up_at?: string | null
+          picked_up_by?: string | null
+          result_artifact?: string | null
+          status?: string
+          status_notes?: string | null
+          trello_card_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claude_action_queue_trello_card_id_fkey"
+            columns: ["trello_card_id"]
+            isOneToOne: true
+            referencedRelation: "trello_card_routes"
+            referencedColumns: ["trello_card_id"]
+          },
+        ]
+      }
+      cron_secrets: {
+        Row: {
+          created_at: string
+          description: string | null
+          name: string
+          secret: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          name: string
+          secret: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          name?: string
+          secret?: string
+        }
+        Relationships: []
+      }
       djep_events_cache: {
         Row: {
           cache_key: string
@@ -487,6 +600,30 @@ export type Database = {
           raw?: Json | null
           refreshed_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      gmail_needs_action_cache: {
+        Row: {
+          account_email: string
+          expires_at: string
+          fetched_at: string
+          id: string
+          payload: Json
+        }
+        Insert: {
+          account_email: string
+          expires_at: string
+          fetched_at?: string
+          id?: string
+          payload: Json
+        }
+        Update: {
+          account_email?: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          payload?: Json
         }
         Relationships: []
       }
@@ -659,6 +796,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      integration_health_history: {
+        Row: {
+          checked_at: string
+          created_at: string
+          detail: string | null
+          id: string
+          integration: string
+          metric_value: string | null
+          status: string
+        }
+        Insert: {
+          checked_at?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          integration: string
+          metric_value?: string | null
+          status: string
+        }
+        Update: {
+          checked_at?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          integration?: string
+          metric_value?: string | null
+          status?: string
+        }
+        Relationships: []
       }
       monday_calendar_sources: {
         Row: {
@@ -1124,9 +1291,62 @@ export type Database = {
           },
         ]
       }
+      setlist_builds: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          event_date: string | null
+          event_name: string
+          gig_slug: string
+          id: string
+          manifest: Json
+          materialized_at: string | null
+          materialized_path: string | null
+          materialized_summary: Json | null
+          raw_input: string
+          status: string
+          updated_at: string
+          venue: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          event_date?: string | null
+          event_name: string
+          gig_slug: string
+          id?: string
+          manifest: Json
+          materialized_at?: string | null
+          materialized_path?: string | null
+          materialized_summary?: Json | null
+          raw_input: string
+          status?: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          event_date?: string | null
+          event_name?: string
+          gig_slug?: string
+          id?: string
+          manifest?: Json
+          materialized_at?: string | null
+          materialized_path?: string | null
+          materialized_summary?: Json | null
+          raw_input?: string
+          status?: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
       smart_task_enrichments: {
         Row: {
           blockers: string | null
+          board_bucket: string | null
+          board_venture: string | null
           created_at: string
           definition_of_done: string | null
           due_date: string | null
@@ -1142,6 +1362,8 @@ export type Database = {
         }
         Insert: {
           blockers?: string | null
+          board_bucket?: string | null
+          board_venture?: string | null
           created_at?: string
           definition_of_done?: string | null
           due_date?: string | null
@@ -1157,6 +1379,8 @@ export type Database = {
         }
         Update: {
           blockers?: string | null
+          board_bucket?: string | null
+          board_venture?: string | null
           created_at?: string
           definition_of_done?: string | null
           due_date?: string | null
@@ -1171,6 +1395,65 @@ export type Database = {
           trello_card_url?: string | null
         }
         Relationships: []
+      }
+      smart_task_queue: {
+        Row: {
+          card_desc: string | null
+          card_name: string
+          card_url: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          list_name: string
+          picked_up_at: string | null
+          picked_up_by: string | null
+          result_artifact: string | null
+          status: string
+          status_notes: string | null
+          trello_card_id: string
+          updated_at: string
+        }
+        Insert: {
+          card_desc?: string | null
+          card_name: string
+          card_url: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          list_name: string
+          picked_up_at?: string | null
+          picked_up_by?: string | null
+          result_artifact?: string | null
+          status?: string
+          status_notes?: string | null
+          trello_card_id: string
+          updated_at?: string
+        }
+        Update: {
+          card_desc?: string | null
+          card_name?: string
+          card_url?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          list_name?: string
+          picked_up_at?: string | null
+          picked_up_by?: string | null
+          result_artifact?: string | null
+          status?: string
+          status_notes?: string | null
+          trello_card_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_task_queue_trello_card_id_fkey"
+            columns: ["trello_card_id"]
+            isOneToOne: true
+            referencedRelation: "trello_card_routes"
+            referencedColumns: ["trello_card_id"]
+          },
+        ]
       }
       social_brands: {
         Row: {
@@ -1205,6 +1488,48 @@ export type Database = {
           sort_order?: number
           updated_at?: string
           voice_notes?: string
+        }
+        Relationships: []
+      }
+      social_content_queue: {
+        Row: {
+          accounts: string[]
+          assigned_to: string
+          caption: string
+          created_at: string
+          id: string
+          media_paths: string[]
+          notes: string
+          scheduled_for: string | null
+          slot: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accounts?: string[]
+          assigned_to?: string
+          caption?: string
+          created_at?: string
+          id?: string
+          media_paths?: string[]
+          notes?: string
+          scheduled_for?: string | null
+          slot?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accounts?: string[]
+          assigned_to?: string
+          caption?: string
+          created_at?: string
+          id?: string
+          media_paths?: string[]
+          notes?: string
+          scheduled_for?: string | null
+          slot?: string | null
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1323,6 +1648,125 @@ export type Database = {
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "social_brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_workflow_status: {
+        Row: {
+          date: string
+          fri_stories_done: boolean
+          mon_prep_done: boolean
+          thu_post_done: boolean
+          thu_stories_done: boolean
+          tue_post_done: boolean
+          tue_stories_done: boolean
+          updated_at: string
+          wed_stories_done: boolean
+        }
+        Insert: {
+          date: string
+          fri_stories_done?: boolean
+          mon_prep_done?: boolean
+          thu_post_done?: boolean
+          thu_stories_done?: boolean
+          tue_post_done?: boolean
+          tue_stories_done?: boolean
+          updated_at?: string
+          wed_stories_done?: boolean
+        }
+        Update: {
+          date?: string
+          fri_stories_done?: boolean
+          mon_prep_done?: boolean
+          thu_post_done?: boolean
+          thu_stories_done?: boolean
+          tue_post_done?: boolean
+          tue_stories_done?: boolean
+          updated_at?: string
+          wed_stories_done?: boolean
+        }
+        Relationships: []
+      }
+      trello_bucket_routes: {
+        Row: {
+          action_handler: string
+          board_id: string
+          created_at: string
+          enabled: boolean
+          handler_config: Json
+          id: string
+          list_id: string | null
+          list_name: string
+          priority: number
+          updated_at: string
+        }
+        Insert: {
+          action_handler: string
+          board_id: string
+          created_at?: string
+          enabled?: boolean
+          handler_config?: Json
+          id?: string
+          list_id?: string | null
+          list_name: string
+          priority?: number
+          updated_at?: string
+        }
+        Update: {
+          action_handler?: string
+          board_id?: string
+          created_at?: string
+          enabled?: boolean
+          handler_config?: Json
+          id?: string
+          list_id?: string | null
+          list_name?: string
+          priority?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trello_card_routes: {
+        Row: {
+          action_handler: string
+          completed_at: string | null
+          completion_notes: string | null
+          completion_status: string | null
+          persisted_ref: string | null
+          raw_card_snapshot: Json
+          route_id: string | null
+          routed_at: string
+          trello_card_id: string
+        }
+        Insert: {
+          action_handler: string
+          completed_at?: string | null
+          completion_notes?: string | null
+          completion_status?: string | null
+          persisted_ref?: string | null
+          raw_card_snapshot: Json
+          route_id?: string | null
+          routed_at?: string
+          trello_card_id: string
+        }
+        Update: {
+          action_handler?: string
+          completed_at?: string | null
+          completion_notes?: string | null
+          completion_status?: string | null
+          persisted_ref?: string | null
+          raw_card_snapshot?: Json
+          route_id?: string | null
+          routed_at?: string
+          trello_card_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trello_card_routes_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "trello_bucket_routes"
             referencedColumns: ["id"]
           },
         ]
@@ -1489,7 +1933,10 @@ export type Database = {
       }
       cleanup_old_posting_times_sources: { Args: never; Returns: undefined }
       trigger_availability_prefetch: { Args: never; Returns: undefined }
+      trigger_integration_health_check: { Args: never; Returns: number }
       trigger_posting_times_refresh: { Args: never; Returns: number }
+      trigger_trello_mark_done: { Args: { p_card_id: string }; Returns: number }
+      trigger_trello_route: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never
