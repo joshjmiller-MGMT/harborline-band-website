@@ -22,16 +22,27 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // so "updates-noreply@linkedin.com" gets filtered too.
 const NOREPLY_RE = /noreply@|notifications@|no-reply@|donotreply@/i;
 
-// P305 — hard-coded promo-sender blocklist (Q3 resolution 2026-05-13).
-// category:promotions catches most marketing senders, but legitimate-looking
-// transactional domains (Marriott Bonvoy, hotel chains, etc.) slip through.
-// Extend conservatively — anything added here will not surface even when
-// Gmail's promotions classifier disagrees.
+// Hard-coded promo-sender blocklist — belt-and-suspenders on top of
+// category:primary below. Gmail's Primary tab already filters most marketing,
+// but transactional/account-update senders (hotel programs, bank alerts, etc.)
+// occasionally land in Primary anyway. Pattern is intentionally broad to
+// catch domain variants without needing a per-domain entry.
+//
+// Originally P305 (2026-05-13) targeted Marriott Bonvoy specifically;
+// generalized 2026-05-27 (Josh's call: "not Marriott specific, just make sure
+// no spam") to match common loyalty/marketing domain shapes.
 const PROMO_SENDER_RE =
-  /@bonvoy\.|@email\.marriott\.|@.*\.marriott\.com|^marketing@/i;
+  /@[^@]*bonvoy[^@]*\.|@[^@]*\.marriott\.com|^(?:marketing|newsletter|updates|alerts|digest|notifications?)@/i;
 
+// 2026-05-27 — switched from "exclude promotions+social" to "include primary
+// only". Gmail's Primary tab is the most authoritative "real human mail"
+// signal; Updates (transactional notifications) and Forums get excluded
+// automatically along with promo/social. Combined with the sender blocklist
+// above, the false-positive rate on the NeedsActionWidget should drop
+// substantially. If legitimate transactional mail (e.g. invoice confirmations)
+// stops surfacing as a result, add `OR category:updates` back in.
 const GMAIL_QUERY =
-  "is:unread older_than:3d -category:promotions -category:social -label:^smartlabel_personal -in:snoozed -in:spam -in:trash";
+  "is:unread older_than:3d category:primary -label:^smartlabel_personal -in:snoozed -in:spam -in:trash";
 
 // P305 — 1-hour TTL on per-account fetch results. Manual refresh via
 // ?refresh=1 query param busts the cache (wired to the dashboard Refresh
