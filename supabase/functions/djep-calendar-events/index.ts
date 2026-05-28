@@ -1,8 +1,16 @@
 // DJ Event Planner (DJEP) → calendar events
 //
-// Uses Firecrawl's /v2/extract LLM-powered endpoint with a natural-language
-// prompt to log in, navigate to "Web Links → SALES - MILLER", and pull out the
-// events list with the "Next Action Date" column as the calendar date.
+// Uses Firecrawl's /v2/scrape with multi-step actions to log in, navigate
+// directly to DJEP's Events List view with `salespersonfilter=-1` (all
+// salespeople) + all status filters + all event types, and pull the rendered
+// events table. Calendar position is keyed off the "Next Action Date" column.
+//
+// 2026-05-28 (Card #10): broadened from "Web Links → SALES - MILLER" view
+// (Miller-only events) to the system-wide Events List view (all BSE
+// salespeople: Brandon / Jeff / Miller / Rachel Foster / Stan / Alex / Tom /
+// Eric / Chelsea Wood / Master Admin). The salesperson column is now
+// meaningful per-row instead of always "Miller". Josh has full DJEP admin
+// access so permissions aren't a blocker.
 //
 // Results are cached in the `djep_events_cache` Supabase table for 1 hour so
 // the dashboard stays snappy. Pass ?refresh=1 to force a fresh scrape.
@@ -25,7 +33,16 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const DJEP_URL =
   "https://baltimoresoundeventmanager.com/dj_event_planner/base2.asp";
-const CACHE_KEY = "djep:sales-miller";
+// Card #10 (2026-05-28) — system-wide events list URL. After logging in, we
+// navigate directly to this URL instead of clicking through "Web Links → SALES
+// - MILLER". `salespersonfilter=-1` means "all salespeople" (Miller is just
+// salesperson ID one of ~10); status_filter_list covers every DJEP status
+// (Requested Info through CRUSH THE EVENT); typefilter=All Event Types
+// covers every event type; datefilter=Upcoming Events keeps the view forward-
+// looking (matches the prior SALES-MILLER scope which was also upcoming).
+const EVENTS_LIST_URL =
+  "https://baltimoresoundeventmanager.com/dj_event_planner/events_list.asp?status_filter_list=Requested%20Info,New%20Lead,Active%20Lead,Meeting,Contract%20Sent,Contract%20Overdue,Sent%20Info,Followed%20Up,Pending,Confirm,Rain%20Date,Booked,Postponed,Completed,Schedule%20Planning%20Meeting,Send%20Thank%20You,CRUSH%20THE%20EVENT&eventid_list=&datefilter=Upcoming%20Events&start_date=&end_date=&statusfilter=Selected%20Status%20Values&statusfilterlist=Requested%20Info,%20New%20Lead,%20Active%20Lead,%20Meeting,%20Contract%20Sent,%20Contract%20Overdue,%20Sent%20Info,%20Followed%20Up,%20Pending,%20Confirm,%20Rain%20Date,%20Booked,%20Postponed,%20Completed,%20Schedule%20Planning%20Meeting,%20Send%20Thank%20You,%20CRUSH%20THE%20EVENT&typefilter=All%20Event%20Types&packageid=0&salespersonfilter=-1";
+const CACHE_KEY = "djep:all-events";
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 type DjepEvent = {
@@ -95,45 +112,25 @@ async function writeCache(events: DjepEvent[], raw: unknown) {
 }
 
 // Firecrawl /v2/scrape with actions array — multi-step interactive navigation.
-// Logs in, clicks "Web Links", clicks "SALES - MILLER", waits for the grid,
-// then returns the rendered HTML which we parse for events.
+// Logs into DJEP, then navigates directly to the Events List URL (with
+// salespersonfilter=-1 + all statuses + all event types), waits for the
+// grid, and returns the rendered HTML which we parse for events. The previous
+// implementation clicked through "Web Links → SALES - MILLER" (Miller-only);
+// the direct-URL nav supersedes that for system-wide coverage (Card #10,
+// 2026-05-28).
 async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
-  const clickByTextJs = (text: string) => `
+  // Navigate the top window directly to EVENTS_LIST_URL. Replaces the prior
+  // "find SALES - MILLER link in Web Links sidebar and click it" flow.
+  // DJEP's session cookie set during login is honored on the subsequent
+  // events_list.asp request, so we can jump straight to the filtered view.
+  const navigateEventsListJs = `
     (() => {
-      const target = ${JSON.stringify(text)}.toLowerCase().trim();
-      const all = Array.from(document.querySelectorAll('a, button, span, div, td, li'));
-      const el = all.find(e => (e.textContent || '').toLowerCase().trim() === target)
-              || all.find(e => (e.textContent || '').toLowerCase().includes(target));
-      if (el) { el.click(); return true; }
-      return false;
-    })();
-  `;
-
-  // Find the SALES - MILLER link and navigate the top window directly to its href.
-  // This bypasses iframe/popup quirks that prevented the previous click from loading content.
-  const navigateSalesMillerJs = `
-    (() => {
-      const docs = [document];
       try {
-        for (const f of Array.from(document.querySelectorAll('iframe, frame'))) {
-          try { if (f.contentDocument) docs.push(f.contentDocument); } catch(e) {}
-        }
-      } catch(e) {}
-      const allLinks = [];
-      for (const d of docs) {
-        try { allLinks.push(...Array.from(d.querySelectorAll('a[href]'))); } catch(e) {}
+        window.location.href = ${JSON.stringify(EVENTS_LIST_URL)};
+        return { ok: true, href: ${JSON.stringify(EVENTS_LIST_URL)} };
+      } catch (e) {
+        return { ok: false, error: String(e && e.message || e) };
       }
-      const matches = allLinks.filter(a => {
-        const t = (a.textContent || '').toLowerCase();
-        return t.includes('sales - miller') || t.includes('sales-miller') || t.includes('sales miller');
-      });
-      const link = matches[0];
-      if (!link) return { ok: false, reason: 'no-link', candidates: allLinks.map(a => (a.textContent||'').trim()).filter(Boolean).slice(0, 50) };
-      const href = link.getAttribute('href') || link.href;
-      if (!href) return { ok: false, reason: 'no-href' };
-      const absolute = new URL(href, location.href).href;
-      window.location.href = absolute;
-      return { ok: true, href: absolute, linkText: (link.textContent || '').trim() };
     })();
   `;
 
@@ -175,10 +172,8 @@ async function firecrawlScrape(): Promise<{ events: DjepEvent[]; raw: any }> {
       { type: "executeJavascript", script: submitLoginJs },
       { type: "wait", milliseconds: 5000 },
       { type: "executeJavascript", script: `(() => ({ stage: 'post-login', title: document.title, url: location.href }))()` },
-      { type: "executeJavascript", script: clickByTextJs("Web Links") },
-      { type: "wait", milliseconds: 2000 },
-      { type: "executeJavascript", script: navigateSalesMillerJs },
-      { type: "wait", milliseconds: 6000 },
+      { type: "executeJavascript", script: navigateEventsListJs },
+      { type: "wait", milliseconds: 8000 },
       { type: "executeJavascript", script: `(() => ({ stage: 'post-nav', title: document.title, url: location.href, tableCount: document.querySelectorAll('table').length, headers: Array.from(document.querySelectorAll('th')).slice(0, 30).map(e => (e.textContent||'').trim()) }))()` },
       { type: "scrape" },
     ],
@@ -360,7 +355,10 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     const salesperson = get(idx.salesperson);
     const eventId = get(idx.eventId);
 
-    // Salesperson filter is already applied server-side via the SALES-MILLER URL.
+    // Card #10 (2026-05-28): system-wide scrape now — salesperson column is
+    // meaningful per-row (Brandon / Jeff / Miller / Rachel / Stan / Alex / Tom
+    // / Eric / Chelsea / Master Admin) rather than always "Miller". Field gets
+    // populated below if the column exists in the events_list table.
 
     const title = action ? `${action} · ${client}` : client;
     const fields: { label: string; value: string }[] = [];
