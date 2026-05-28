@@ -28,7 +28,7 @@ const GalasPage = () => {
   return (
     <Layout
       title="Gala Entertainment Baltimore | Harborline Live Band"
-      description="Sophisticated live entertainment for galas, fundraisers, and black-tie events in Baltimore. Harborline brings elegance and energy to your special occasion."
+      description="Live music for galas, fundraisers, and black-tie events across Baltimore + the DMV. Cocktail hour through dinner through dance floor — one band, three registers."
       canonical="https://harborlineband.com/galas"
     >
       <script type="application/ld+json">
@@ -38,7 +38,7 @@ const GalasPage = () => {
       <PageHero
         eyebrow="GALAS & FUNDRAISERS"
         title="BLACK-TIE ENTERTAINMENT"
-        subtitle="Sophisticated performances for your most prestigious occasions"
+        subtitle="Cocktail hour through dinner through dance floor — one band, three registers."
       />
 
       <section className="py-20 md:py-24">
@@ -52,18 +52,19 @@ const GalasPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                UNFORGETTABLE <span className="text-gradient-gold">ELEGANCE</span>
+                GALAS WE'VE <span className="text-gradient-gold">RUN</span>
               </h2>
               <p className="text-muted-foreground text-lg">
-                Galas and fundraisers demand a special kind of entertainment—one that 
-                matches the sophistication of your event while keeping guests engaged 
-                and energized. Harborline specializes in creating the perfect atmosphere 
-                for black-tie occasions.
+                Galas have three registers — cocktail-hour ambient, dinner-music
+                low, post-dinner dance floor. We work all three from the same
+                stage in one night. No band swap, no volume scramble between
+                courses.
               </p>
               <p className="text-muted-foreground">
-                Whether it's a charity fundraiser, awards ceremony, or nonprofit gala, 
-                we bring refined musicianship and professional polish that elevates 
-                every moment of your evening.
+                Charity fundraisers, awards ceremonies, nonprofit galas — we
+                coordinate with your event planner on the run-of-show in
+                advance and stay tight to it. Auction support, program
+                transitions, dance-floor energy all built around your timeline.
               </p>
               
               <div className="flex flex-wrap gap-4 pt-4">

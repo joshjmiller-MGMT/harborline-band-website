@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Cake, Music, Users, Sparkles } from "lucide-react";
 
 const occasions = [
-  { icon: Cake, title: "Birthday Parties", description: "Milestone celebrations deserve live music magic" },
-  { icon: Users, title: "Anniversary Parties", description: "Honor your years together with timeless songs" },
-  { icon: Sparkles, title: "Holiday Gatherings", description: "Seasonal celebrations with festive entertainment" },
-  { icon: Music, title: "Private Dinners", description: "Intimate acoustic sets for special evenings" },
+  { icon: Cake, title: "Birthday Parties", description: "30/40/50/60th milestones — set built around the toast, the cake, the dance floor" },
+  { icon: Users, title: "Anniversary Parties", description: "First-dance reprise, era-specific sets, family-friendly registers" },
+  { icon: Sparkles, title: "Holiday Gatherings", description: "Cocktail background through full party hour; custom carol arrangements on request" },
+  { icon: Music, title: "Private Dinners", description: "Acoustic duo or trio. Dinner-music volume, conversational" },
 ];
 
 const PrivatePartiesPage = () => {
@@ -28,7 +28,7 @@ const PrivatePartiesPage = () => {
   return (
     <Layout
       title="Private Party Band Baltimore | Harborline Entertainment"
-      description="Live entertainment for private parties, birthdays, anniversaries, and special celebrations in Baltimore. Harborline creates unforgettable experiences."
+      description="Live music for private parties, milestone birthdays, anniversaries, and holiday gatherings across Baltimore + the DMV. 4-piece up to full band, depending on the room."
       canonical="https://harborlineband.com/private-parties"
     >
       <script type="application/ld+json">
@@ -38,7 +38,7 @@ const PrivatePartiesPage = () => {
       <PageHero
         eyebrow="PRIVATE PARTIES"
         title="YOUR CELEBRATION"
-        subtitle="Personalized entertainment that makes your occasion unforgettable"
+        subtitle="Birthdays, anniversaries, holiday gatherings. 4-piece up to full band, depending on the room."
       />
 
       <section className="py-20 md:py-24">
@@ -50,11 +50,12 @@ const PrivatePartiesPage = () => {
             className="text-center mb-16"
           >
             <h2 className="font-display text-4xl md:text-5xl tracking-tight mb-6">
-              EVERY OCCASION <span className="text-gradient-gold">DESERVES LIVE MUSIC</span>
+              PARTIES WE <span className="text-gradient-gold">RUN</span>
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              From intimate milestone birthdays to grand anniversary celebrations, 
-              Harborline brings the perfect energy and entertainment to your private events.
+              From intimate milestone birthdays to multi-room anniversary parties,
+              we scale to the venue. Custom setlists, MD running the room, named
+              POC from first inquiry.
             </p>
           </motion.div>
 
@@ -81,11 +82,12 @@ const PrivatePartiesPage = () => {
             viewport={{ once: true }}
             className="bg-card border border-border rounded-lg p-8 md:p-12 text-center"
           >
-            <h3 className="font-display text-3xl mb-4">FULLY CUSTOMIZED EXPERIENCES</h3>
+            <h3 className="font-display text-3xl mb-4">WORKED AROUND YOUR ROOM</h3>
             <p className="text-muted-foreground max-w-2xl mx-auto mb-8">
-              Your private party should reflect your unique style. We work with you to create 
-              a custom setlist, coordinate with your venue, and ensure every detail is perfect. 
-              From song requests to timing, we make it seamless.
+              We run a 30-minute call before the event to walk the setlist, the
+              room, and the timing of toasts, cake, and dance-floor opening. The
+              MD adjusts in real time when something hits or doesn't. You're not
+              managing the band — we're managing the night.
             </p>
             <Button variant="hero" size="lg" asChild>
               <a href="/request-a-quote">Request a Quote</a>

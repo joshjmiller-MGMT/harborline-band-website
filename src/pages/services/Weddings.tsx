@@ -45,7 +45,7 @@ const WeddingsPage = () => {
   return (
     <Layout
       title="Wedding Band Baltimore | Harborline Live Music"
-      description="Make your Baltimore wedding unforgettable with Harborline. Live ceremony music, cocktail hour entertainment, and high-energy reception performances."
+      description="Harborline plays weddings across Baltimore + the DMV — ceremony musicians through last dance. 4-piece up to a full 12-piece, depending on the room."
       canonical="https://harborlineband.com/weddings"
     >
       <script type="application/ld+json">
@@ -54,8 +54,8 @@ const WeddingsPage = () => {
 
       <PageHero
         eyebrow="WEDDINGS"
-        title="YOUR PERFECT SOUNDTRACK"
-        subtitle="From the first note to the last dance, Harborline creates unforgettable wedding celebrations"
+        title="MUSIC FOR YOUR DAY"
+        subtitle="Ceremony, cocktail hour, reception. 4-piece to full band — we scale to the room you've already booked."
       />
 
       {/* Intro Section */}
@@ -70,16 +70,19 @@ const WeddingsPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                BALTIMORE'S PREMIER <span className="text-gradient-gold">WEDDING BAND</span>
+                WORKING <span className="text-gradient-gold">WEDDING BAND</span>
               </h2>
               <p className="text-muted-foreground text-lg">
-                Your wedding day deserves live music that moves hearts and fills the dance floor. 
-                Harborline delivers the best of the old and the best of the new—timeless classics 
-                and today's hits woven into one nonstop, feel-good celebration.
+                We do weddings as a full operation — ceremony musicians through
+                cocktail hour through last dance. The set bends to your night:
+                Motown when the dance floor's warming up, today's hits when it's
+                peaked, jazz standards during the cocktail hour.
               </p>
               <p className="text-muted-foreground">
-                From the first dance to the last song, Harborline sets the tone and keeps the groove alive—working 
-                closely with each couple to craft the perfect soundtrack for every moment.
+                We talk to the couple about must-plays, do-not-plays, and the
+                songs that matter to specific guests (parents' first dance, the
+                bridal party's anthem). Then we build the night around those —
+                not around a stock setlist.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
                 {features.map((feature) => (

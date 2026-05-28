@@ -6,22 +6,22 @@ import { Music, Users, Calendar, Award, Heart, Sparkles } from "lucide-react";
 
 const stats = [
   { icon: Calendar, value: "1000+", label: "Events Performed" },
-  { icon: Users, value: "10+", label: "Years Experience" },
-  { icon: Award, value: "100%", label: "Client Satisfaction" },
-  { icon: Heart, value: "50+", label: "Wedding Venues" },
+  { icon: Users, value: "10+", label: "Years Operating" },
+  { icon: Award, value: "100%", label: "Backup-per-Role Coverage" },
+  { icon: Heart, value: "50+", label: "Wedding Venues Worked" },
 ];
 
 const AboutPage = () => {
   return (
     <Layout
-      title="About Harborline | Baltimore's Premier Event Band"
-      description="Harborline is the DMV's premiere event band bringing modern soul and R&B energy to every celebration. The best of the old and the best of the new."
+      title="About Harborline | Musician-Led Event Band in the DMV"
+      description="Harborline is a musician-led event band based in Baltimore, working weddings, galas, corporate events, and private parties across the DMV. Built and run by working musicians."
       canonical="https://harborlineband.com/about"
     >
       <PageHero
         eyebrow="OUR STORY"
         title="ABOUT HARBORLINE"
-        subtitle="Modern soul. Timeless energy."
+        subtitle="Musician-led. Baltimore-based."
         showCTA={false}
       />
 
@@ -55,24 +55,26 @@ const AboutPage = () => {
               transition={{ duration: 0.6 }}
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight mb-6">
-                SETTING THE TONE
+                HOW WE WORK
               </h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
-                  Whether it's a first dance, a company party, or a night you'll never forget, 
-                  Harborline sets the tone and keeps the groove alive. The band is Baltimore's go-to 
-                  choice for weddings, corporate events, galas, and private parties.
+                  Harborline plays weddings, corporate events, galas, and private
+                  parties across Baltimore and the DMV. Same band, different rooms —
+                  a quiet jazz quartet for cocktail hour scales up to a full 12-piece
+                  for the dance floor.
                 </p>
                 <p>
-                  Harborline's seasoned musicians bring decades of combined experience across every style—
-                  from classic Motown and soul to today's hottest hits. The band delivers the best of 
-                  the old and the best of the new in one nonstop, feel-good set that reads the 
-                  room and keeps people dancing.
+                  The guys playing these gigs are working musicians, not subcontracted
+                  side gigs. We read the room — Motown when the dance floor's warming
+                  up, today's hits when it's peaked, jazz standards for the cocktail
+                  hour — and pivot mid-set when the MD calls it.
                 </p>
                 <p>
-                  What sets Harborline apart isn't just the talent—it's the commitment to creating 
-                  an unforgettable vibe, working closely with every client to craft the perfect 
-                  experience and ensure every moment hits exactly right.
+                  What's different about us is the operational backbone — named POC
+                  from first inquiry, backup-per-role on the roster, line-itemed
+                  pricing, and check-ins at 1 week / 72 hours / 24 hours out. The
+                  musicianship is the floor; the reliability is the differentiator.
                 </p>
               </div>
             </motion.div>
@@ -114,10 +116,10 @@ const AboutPage = () => {
             className="text-center mb-12"
           >
             <p className="text-primary font-display tracking-display text-sm mb-3">
-              THE HARBORLINE DIFFERENCE
+              WHAT'S ON THE RECORD
             </p>
             <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-              WHY CLIENTS CHOOSE US
+              HOW WE DELIVER
             </h2>
           </motion.div>
 
@@ -125,18 +127,18 @@ const AboutPage = () => {
             {[
               {
                 icon: Music,
-                title: "Versatile Repertoire",
-                description: "From Sinatra to Bruno Mars, we cover every genre to keep all your guests entertained."
+                title: "Range, Not Genre",
+                description: "Sinatra through Bruno Mars. The MD reads the room and pivots the set live — no fixed canned setlist."
               },
               {
                 icon: Users,
                 title: "Flexible Configurations",
-                description: "From a 4-piece combo to a full 12-piece ensemble with horns—we scale to your venue and vision."
+                description: "4-piece combo through 12-piece with horns. We scale to your venue, headcount, and budget."
               },
               {
                 icon: Sparkles,
-                title: "White-Glove Service",
-                description: "Professional from first inquiry to final song. We handle every detail so you can focus on celebrating."
+                title: "Operational Backbone",
+                description: "Named POC from first inquiry. Backup-per-role on the roster. Check-ins at 1 week / 72 hours / 24 hours out."
               }
             ].map((item, index) => (
               <motion.div
