@@ -12,7 +12,8 @@ const ColumbiaPage = () => {
         "Robinson Nature Center",
         "The Mansion at Maple Lawn",
         "Historic Oakland Manor",
-        "The Other Barn"
+        "The Other Barn",
+        "The Mansion at Laurel"
       ]}
       nearbyAreas={[
         { name: "Baltimore", slug: "baltimore" },

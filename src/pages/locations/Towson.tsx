@@ -12,7 +12,8 @@ const TowsonPage = () => {
         "The Grand Lodge",
         "Historic Hampton",
         "Baltimore Country Club",
-        "Valley Mansion"
+        "Valley Mansion",
+        "Camp Hidden Valley"
       ]}
       nearbyAreas={[
         { name: "Baltimore", slug: "baltimore" },

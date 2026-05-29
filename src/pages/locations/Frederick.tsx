@@ -14,7 +14,8 @@ const FrederickPage = () => {
         "Walkers Overlook",
         "Stone Manor Country Club",
         "Musket Ridge Golf Club",
-        "The Frederick Fairgrounds"
+        "The Frederick Fairgrounds",
+        "BlueBird Manor"
       ]}
       nearbyAreas={[
         { name: "Rockville", slug: "rockville" },
