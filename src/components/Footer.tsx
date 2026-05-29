@@ -167,7 +167,7 @@ const Footer = () => {
         <div className="pt-8 border-t border-border">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-muted-foreground text-sm">
-              © {new Date().getFullYear()} Harborline. Baltimore's Premier Event Band.
+              © {new Date().getFullYear()} Harborline. Musician-led Baltimore event band.
             </p>
             <p className="text-muted-foreground/60 text-xs">
               Live Entertainment for Maryland, DC, Virginia & Beyond
