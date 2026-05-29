@@ -5,7 +5,7 @@ const AnnapolisPage = () => {
     <LocationPage
       city="Annapolis"
       region="Maryland"
-      description="Maryland's capital city offers stunning waterfront venues and historic charm—the perfect backdrop for unforgettable events. Harborline brings sophisticated entertainment to Annapolis weddings, corporate gatherings, and private celebrations. From downtown historic venues to bayside celebrations, we create the perfect soundtrack for your Annapolis event."
+      description="Annapolis is a 45-minute drive from Baltimore. We work waterfront weddings, historic-downtown receptions, and Naval Academy events here regularly — the venues below have hosted us across all three. Named POC from first inquiry, run-of-show walked in a 30-minute pre-event call."
       venues={[
         "The Hotel & Conference Center",
         "Annapolis Waterfront Hotel",

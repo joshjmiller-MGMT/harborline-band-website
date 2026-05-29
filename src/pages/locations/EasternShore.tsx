@@ -5,7 +5,7 @@ const EasternShorePage = () => {
     <LocationPage
       city="Eastern Shore"
       region="Maryland"
-      description="Harborline brings world-class live entertainment to Maryland's beautiful Eastern Shore. From waterfront weddings in St. Michaels to elegant celebrations in Easton, we've become the premier choice for events across the Chesapeake Bay region. Our experience performing at Eastern Shore venues means we understand the unique charm and relaxed sophistication that makes this area so special."
+      description="Eastern Shore work means a Bay Bridge run, so we plan load-in around the bridge schedule and bring our own gear end-to-end. The venues below have hosted us for waterfront weddings, Easton galas, and St. Michaels receptions. Named POC from first inquiry; we coordinate with the event planner on the full run-of-show in advance."
       venues={[
         "The Chesapeake Bay Beach Club",
         "The Oaks Waterfront Inn",
