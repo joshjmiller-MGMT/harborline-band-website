@@ -5,7 +5,7 @@ const RockvillePage = () => {
     <LocationPage
       city="Rockville"
       region="Maryland"
-      description="Harborline proudly serves Rockville and central Montgomery County with premium live entertainment. Whether you're hosting a corporate event at a Rockville conference center or celebrating a wedding at one of the area's beautiful venues, we bring energy, professionalism, and musical excellence to every performance. Our experience performing throughout the DC suburbs has made us experts at reading diverse crowds."
+      description="Rockville and central Montgomery County are an hour's drive from Baltimore. We work the corporate-conference and country-club circuits here for weddings, galas, and corporate events. The venues below are on the regular rotation. Configurations from 4-piece up to 14-piece, scaled to the room."
       venues={[
         "Rockville Hilton",
         "Glenview Mansion",

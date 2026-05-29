@@ -5,7 +5,7 @@ const BaltimorePage = () => {
     <LocationPage
       city="Baltimore"
       region="Maryland"
-      description="As Baltimore's premier event band, Harborline has been the soundtrack to countless celebrations throughout Charm City. From the Inner Harbor to Mount Vernon, we bring unmatched energy and professionalism to weddings, corporate galas, and private parties across Baltimore. Our deep roots in the Baltimore music scene and understanding of local venues make us the go-to choice for clients who demand excellence."
+      description="Baltimore is home. Most of the band lives within 30 minutes of the Inner Harbor, and we've worked the rooms below across weddings, corporate events, galas, and private parties. Named POC from first inquiry, backup-per-role on the roster, configurations from 4-piece up to 14-piece depending on the room."
       venues={[
         "The Pendry Baltimore",
         "Sagamore Pendry",

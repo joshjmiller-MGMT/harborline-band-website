@@ -34,7 +34,7 @@ const LocationPage = ({ city, region, description, venues, nearbyAreas }: Locati
   return (
     <Layout
       title={`${city} Event Band | Harborline Live Entertainment`}
-      description={`Book Harborline for weddings, corporate events, and private parties in ${city}, ${region}. Professional live entertainment that creates unforgettable celebrations.`}
+      description={`Live event band based in Baltimore — we work ${city}, ${region} regularly for weddings, corporate events, galas, and private parties. Named POC, backup-per-role, configurations from 4-piece up to 14-piece.`}
       canonical={`https://harborlineband.com/locations/${city.toLowerCase().replace(/\s/g, '-')}`}
     >
       <script type="application/ld+json">
@@ -91,7 +91,7 @@ const LocationPage = ({ city, region, description, venues, nearbyAreas }: Locati
                 <div>
                   <h3 className="font-display text-2xl mb-4">POPULAR {city.toUpperCase()} VENUES</h3>
                   <p className="text-muted-foreground mb-4">
-                    We've performed at many of {city}'s finest venues, including:
+                    {city} venues we've worked, including:
                   </p>
                   <ul className="grid sm:grid-cols-2 gap-2">
                     {venues.map((venue) => (
@@ -118,14 +118,14 @@ const LocationPage = ({ city, region, description, venues, nearbyAreas }: Locati
             >
               {/* Quick Facts */}
               <div className="bg-card border border-border rounded-lg p-6">
-                <h3 className="font-display text-xl mb-4">WHY HARBORLINE</h3>
+                <h3 className="font-display text-xl mb-4">WHAT WE BRING</h3>
                 <ul className="space-y-3">
                   {[
-                    "1000+ events performed",
-                    "10+ years experience",
-                    "All genres covered",
-                    "Flexible band sizes",
-                    "Professional sound & lighting"
+                    "1000+ events on the books",
+                    "10+ years working the DMV",
+                    "Range across decades and registers",
+                    "4-piece up to 14-piece configurations",
+                    "Sound + lighting on request"
                   ].map((fact) => (
                     <li key={fact} className="flex items-center gap-2 text-sm">
                       <CheckCircle className="w-4 h-4 text-primary" />

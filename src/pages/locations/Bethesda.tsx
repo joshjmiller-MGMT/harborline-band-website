@@ -5,7 +5,7 @@ const BethesdaPage = () => {
     <LocationPage
       city="Bethesda"
       region="Maryland"
-      description="Serving Montgomery County's most sophisticated clientele, Harborline delivers exceptional live entertainment for Bethesda's upscale events. From country club weddings to corporate conferences at premier hotels, we understand the refined expectations of Bethesda audiences. Our professional approach and diverse repertoire have made us a trusted name for events throughout the Bethesda-Chevy Chase corridor."
+      description="We work Bethesda and the surrounding Montgomery County country-club circuit on a regular basis. The venues below are familiar territory across weddings, corporate conferences, and milestone celebrations. Configurations scale from a 4-piece dinner-music register up to the full 14-piece dance band, depending on the room."
       venues={[
         "Bethesda Country Club",
         "Bethesda North Marriott Hotel & Conference Center",

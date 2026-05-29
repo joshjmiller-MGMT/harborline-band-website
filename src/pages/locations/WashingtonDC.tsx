@@ -5,7 +5,7 @@ const WashingtonDCPage = () => {
     <LocationPage
       city="Washington DC"
       region="District of Columbia"
-      description="Harborline brings Baltimore's finest live entertainment to the nation's capital. From prestigious embassy events to intimate Georgetown celebrations, we've earned a reputation as the go-to band for Washington DC's most discerning clients. Our versatile repertoire and polished professionalism make us the perfect choice for corporate galas, political fundraisers, and elegant weddings throughout the District."
+      description="Harborline is a Baltimore band that works DC regularly. We drive down for embassy events, Georgetown weddings, corporate galas, and political fundraisers — the venues below are familiar across all four. Named POC from first inquiry, configurations from 4-piece up to 14-piece depending on the room and the run-of-show."
       venues={[
         "The Hay-Adams",
         "The Willard InterContinental",

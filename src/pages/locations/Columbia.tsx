@@ -5,7 +5,7 @@ const ColumbiaPage = () => {
     <LocationPage
       city="Columbia"
       region="Maryland"
-      description="Columbia's planned community and beautiful venues make it a premier destination for celebrations. Harborline brings world-class entertainment to Columbia weddings, corporate gatherings, and milestone celebrations. Our experience performing at Columbia's diverse range of venues—from lakeside settings to elegant ballrooms—ensures a perfect musical experience for your event."
+      description="Columbia sits between our Baltimore base and the DC suburbs — we cover it for weddings, milestone events, and corporate gatherings. The venues below are familiar ground, from the Lakefront to Turf Valley. We scale from a 4-piece acoustic register to the full band depending on the space and the run-of-show."
       venues={[
         "Turf Valley Resort",
         "Columbia Lakefront",
