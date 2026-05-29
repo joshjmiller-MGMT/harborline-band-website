@@ -27,8 +27,8 @@ const baseOrgSchema = {
 
 const Layout = ({ 
   children, 
-  title = "Harborline | Baltimore's Premier Event & Corporate Band",
-  description = "Top-rated live entertainment for weddings, galas, corporate events, and private celebrations in Baltimore, Maryland, and the Mid-Atlantic region.",
+  title = "Harborline | Baltimore Live Event Band",
+  description = "Live event band based in Baltimore — weddings, galas, corporate events, and private celebrations across the DMV. Named POC, backup-per-role, configurations from 4-piece up to 14-piece.",
   canonical,
   keywords = "Baltimore wedding band, corporate event band, live music Baltimore, wedding entertainment Maryland",
   ogImage = "https://harborlineband.com/og-image.jpg"

@@ -8,8 +8,8 @@ import logo from "@/assets/logo-text.png";
 // Ensemble configurations - how the band can be sized
 const ensembleLinks = [
   { name: "The Full Band", href: "/ensembles/full-band", icon: Users, description: "8-12 piece high-energy" },
-  { name: "Jazz Quartet", href: "/ensembles/jazz-quartet", icon: Mic2, description: "Sophisticated swing" },
-  { name: "Piano Trio", href: "/ensembles/piano-trio", icon: Piano, description: "Elegant & intimate" },
+  { name: "Jazz Quartet", href: "/ensembles/jazz-quartet", icon: Mic2, description: "4-piece, dinner register" },
+  { name: "Piano Trio", href: "/ensembles/piano-trio", icon: Piano, description: "3-piece, cocktail register" },
   { name: "Acoustic Duo", href: "/ensembles/acoustic-duo", icon: Guitar, description: "Stripped-down soul" },
   { name: "String Ensemble", href: "/ensembles/string-ensemble", icon: Music2, description: "Classical beauty" },
   { name: "Solo Performer", href: "/ensembles/solo-performer", icon: User, description: "Piano, guitar, or voice" },

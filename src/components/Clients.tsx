@@ -35,7 +35,7 @@ const Clients = () => {
           viewport={{ once: true }}
           className="text-center text-muted-foreground font-display tracking-display text-xs mb-8"
         >
-          TRUSTED BY BALTIMORE'S FINEST VENUES & ORGANIZATIONS
+          VENUES + ORGANIZATIONS WE'VE WORKED WITH
         </motion.p>
         
         {/* Scrolling marquee */}
