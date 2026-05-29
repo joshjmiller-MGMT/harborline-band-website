@@ -1,9 +1,10 @@
 // djep-event-lookup — Cut 5 (Layer 7 of v2 architecture).
 //
 // Find a DJEP event record by name + date. Strategy: filter the djep_events_cache
-// table populated by djep-calendar-events. The calendar function already pulls
-// Josh's complete SALES-MILLER event list every hour via Firecrawl scrape; we
-// just query that cache rather than re-running the (expensive) scrape per
+// table populated by djep-calendar-events. The calendar function pulls the
+// system-wide DJEP events list every hour via Firecrawl scrape (Card #10,
+// 2026-05-28 — broadened from SALES-MILLER-only to all salespeople); we
+// query that cache rather than re-running the (expensive) scrape per
 // lookup. If the cache is empty or stale, we trigger a refresh first.
 //
 // P17 widening: on eventId hits, lazily fetch the per-event detail page via
@@ -37,7 +38,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
 const DJEP_USERNAME = Deno.env.get("DJEP_USERNAME");
 const DJEP_PASSWORD = Deno.env.get("DJEP_PASSWORD");
-const CACHE_KEY = "djep:sales-miller";
+const CACHE_KEY = "djep:all-events";
 const DJEP_BASE = "https://baltimoresoundeventmanager.com/dj_event_planner/";
 // Re-scrape a detail page if cached entry is older than this. 24h is the
 // pragmatic default — DJEP detail tends to evolve over a lead's lifecycle.
@@ -593,9 +594,10 @@ Deno.serve(async (req) => {
       });
 
       // event_details is keyed by numeric event ID and may carry a row even
-      // when the SALES-MILLER queue (events[]) doesn't — e.g. a previously
-      // scraped lead that fell off the queue's filter. Synthesize a stub from
-      // the cached detail so the lookup still returns something usable.
+      // when the events queue (events[]) doesn't — e.g. a previously scraped
+      // lead that fell off the queue's filter (Upcoming Events vs.
+      // event_details persists indefinitely). Synthesize a stub from the
+      // cached detail so the lookup still returns something usable.
       if (idHits.length === 0 && eventDetails[eventId]) {
         const cached = eventDetails[eventId];
         const findField = (re: RegExp) =>
@@ -624,7 +626,7 @@ Deno.serve(async (req) => {
           cache_refreshed_at: (data as { refreshed_at?: string } | null)?.refreshed_at ?? null,
           mode: "eventId",
           not_found: "eventId",
-          note: `Event ID ${eventId} isn't in the DJEP cache (${events.length} event${events.length === 1 ? "" : "s"} cached from the SALES-MILLER queue). Try searching by client name + event date instead.`,
+          note: `Event ID ${eventId} isn't in the DJEP cache (${events.length} event${events.length === 1 ? "" : "s"} cached from the system-wide events queue). Try searching by client name + event date instead.`,
         }, 404);
       }
 

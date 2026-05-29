@@ -676,7 +676,7 @@ export default function RunOfShowGenerator() {
   // generate-run-of-show already understands. Labels get a trailing colon so
   // parseSheetToEvent picks them up via its `cell.endsWith(':') && nextCell`
   // branch. We also synthesize a Client + Event Name from `match.title`
-  // ("<next action> · <client>") because DJEP's SALES-MILLER scrape doesn't
+  // ("<next action> · <client>") because DJEP's events_list scrape doesn't
   // store a dedicated event-name field.
   const djepMatchToSheetData = (match: DjepMatch): SheetData => {
     const rows: string[][] = [];
@@ -1384,7 +1384,7 @@ export default function RunOfShowGenerator() {
             <span className="text-muted-foreground">or</span> Import from DJEP
           </CardTitle>
           <CardDescription>
-            Pull an event from the DJEP SALES-MILLER cache by name + date, or by Event ID.
+            Pull an event from the DJEP events cache by name + date, or by Event ID. Covers all BSE salespeople (Brandon / Jeff / Miller / Rachel / Stan / Alex / Tom / Eric / Chelsea / Master Admin).
           </CardDescription>
         </CardHeader>
         <CardContent>
