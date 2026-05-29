@@ -5,19 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Building2, Presentation, Award, Users, CheckCircle } from "lucide-react";
 
 const benefits = [
-  "Professional emcee and event coordination",
-  "Brand-appropriate song selections",
-  "Seamless integration with event timeline",
-  "Corporate-friendly repertoire",
-  "Experienced with 1000+ corporate events",
-  "Full production capabilities"
+  "Emcee + transitions on request",
+  "Setlist filtered for your brand context",
+  "Tight to your run-of-show — we coordinate with your planner",
+  "Register flexes: conference-appropriate or party-appropriate",
+  "1000+ corporate events on the books",
+  "Sound + lighting on request"
 ];
 
 const eventTypes = [
-  { icon: Award, title: "Award Galas", description: "Elegant entertainment for your recognition events" },
-  { icon: Presentation, title: "Conferences", description: "Energizing performances for corporate gatherings" },
-  { icon: Building2, title: "Company Parties", description: "Holiday parties, summer picnics, and milestones" },
-  { icon: Users, title: "Team Building", description: "Interactive entertainment that brings teams together" },
+  { icon: Award, title: "Award Galas", description: "Quiet dinner backing through celebration-volume dance floor — one stage, one band" },
+  { icon: Presentation, title: "Conferences", description: "Welcome receptions, between-session sets, evening parties" },
+  { icon: Building2, title: "Company Parties", description: "Holiday parties, summer picnics, milestones" },
+  { icon: Users, title: "Team Building", description: "Song-request bidding, MD-led group sessions, custom formats" },
 ];
 
 const CorporatePage = () => {
@@ -37,7 +37,7 @@ const CorporatePage = () => {
   return (
     <Layout
       title="Corporate Event Band Baltimore | Harborline Entertainment"
-      description="Elevate your corporate event with Harborline. Professional live entertainment for galas, conferences, company parties, and team events in Baltimore."
+      description="Live entertainment for corporate galas, conferences, company parties, and team events in Baltimore + the DMV. 1000+ corporate events run."
       canonical="https://harborlineband.com/corporate"
     >
       <script type="application/ld+json">
@@ -46,8 +46,8 @@ const CorporatePage = () => {
 
       <PageHero
         eyebrow="CORPORATE EVENTS"
-        title="ELEVATE YOUR EVENT"
-        subtitle="Professional entertainment that impresses clients and energizes teams"
+        title="ENTERTAINMENT THAT WORKS THE ROOM"
+        subtitle="We've run 1000+ corporate events — conferences, galas, holiday parties. Different rooms, same operational backbone."
       />
 
       <section className="py-20 md:py-24">
@@ -60,12 +60,13 @@ const CorporatePage = () => {
               transition={{ duration: 0.6 }}
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight mb-6">
-                CORPORATE <span className="text-gradient-gold">EXCELLENCE</span>
+                CORPORATE <span className="text-gradient-gold">EVENTS</span>
               </h2>
               <p className="text-muted-foreground text-lg mb-6">
-                Whether it's a company party or a night your team will never forget, 
-                Harborline sets the tone with modern soul and R&B energy—building the vibe, 
-                reading the room, and keeping the energy high from first note to last.
+                Whether it's a conference welcome reception or the company holiday
+                party, Harborline reads the room — energy in, energy out — and
+                pivots the set live. Up to 14 musicians depending on the venue
+                and the budget.
               </p>
               
               <ul className="grid sm:grid-cols-2 gap-3">
@@ -113,14 +114,15 @@ const CorporatePage = () => {
             viewport={{ once: true }}
           >
             <p className="text-primary font-display tracking-display text-sm mb-3">
-              TRUSTED BY
+              WHO WE'VE PLAYED FOR
             </p>
             <h3 className="font-display text-3xl mb-8">
-              LEADING ORGANIZATIONS
+              CORPORATIONS, NONPROFITS, INSTITUTIONS
             </h3>
             <p className="text-muted-foreground">
-              Harborline has had the privilege of performing for corporations, nonprofits, 
-              and institutions throughout the Baltimore-Washington region.
+              We've worked corporate events across Baltimore, DC, and the broader
+              DMV — corporations, nonprofits, healthcare systems, universities.
+              Specific references on request.
             </p>
           </motion.div>
         </div>
