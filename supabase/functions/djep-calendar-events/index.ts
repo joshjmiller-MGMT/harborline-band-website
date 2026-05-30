@@ -31,6 +31,10 @@ const DJEP_PASSWORD = Deno.env.get("DJEP_PASSWORD");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Cron secret name in public.cron_secrets — fetched at request time so a
+// scheduled pg_cron job can trigger refresh without an operator JWT.
+const CRON_SECRET_NAME = "djep_calendar_events_cron_secret";
+
 const DJEP_URL =
   "https://baltimoresoundeventmanager.com/dj_event_planner/base2.asp";
 // Card #10 (2026-05-28) — system-wide events list URL. After logging in, we
@@ -449,8 +453,20 @@ function parseDate(raw: string): Date | null {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const denial = await requireOperator(req);
-  if (denial) return denial;
+  const cronHeader = req.headers.get("x-cron-secret");
+  let cronAuthed = false;
+  if (cronHeader) {
+    const { data: secretRow } = await supabase
+      .from("cron_secrets")
+      .select("secret")
+      .eq("name", CRON_SECRET_NAME)
+      .maybeSingle();
+    if (secretRow?.secret && cronHeader === secretRow.secret) cronAuthed = true;
+  }
+  if (!cronAuthed) {
+    const denial = await requireOperator(req);
+    if (denial) return denial;
+  }
 
   if (!FIRECRAWL_API_KEY) {
     return jsonResponse({ configured: false, events: [], error: "FIRECRAWL_API_KEY not set" });
