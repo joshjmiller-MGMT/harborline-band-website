@@ -14,6 +14,114 @@ export type Database = {
   }
   public: {
     Tables: {
+      archive_event_tags: {
+        Row: {
+          confidence: number
+          created_at: string
+          event_id: string
+          inferred_by: string
+          tag_id: string
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          event_id: string
+          inferred_by?: string
+          tag_id: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          event_id?: string
+          inferred_by?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archive_event_tags_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "archive_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archive_event_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "archive_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      archive_events: {
+        Row: {
+          created_at: string
+          id: string
+          location_lat: number | null
+          location_lng: number | null
+          location_name: string | null
+          occurred_at: string
+          occurred_end: string | null
+          raw_metadata: Json
+          source: string
+          source_id: string
+          summary: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          location_name?: string | null
+          occurred_at: string
+          occurred_end?: string | null
+          raw_metadata?: Json
+          source: string
+          source_id: string
+          summary?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          location_name?: string | null
+          occurred_at?: string
+          occurred_end?: string | null
+          raw_metadata?: Json
+          source?: string
+          source_id?: string
+          summary?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      archive_tags: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          kind: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          name?: string
+        }
+        Relationships: []
+      }
       availability_cache: {
         Row: {
           created_at: string
