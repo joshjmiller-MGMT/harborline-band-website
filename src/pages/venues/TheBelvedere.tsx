@@ -7,19 +7,19 @@ const TheBelvederePage = () => {
       city="Baltimore"
       venueType="Historic Hotel & Venue"
       capacity="Up to 400 guests"
-      description="The Belvedere has been Baltimore's premier social destination since 1903. This Beaux-Arts landmark in Mount Vernon offers multiple stunning event spaces, from the legendary 13th Floor with panoramic city views to the elegant John Eager Howard Room. Our band has been part of countless celebrations in this iconic venue, and we know exactly how to make the grand spaces feel both epic and intimate."
+      description="The Belvedere is a Beaux-Arts landmark in Mount Vernon — open since 1903. Multiple event spaces, from the 13th Floor with panoramic city views to the John Eager Howard Room. We've played here many times and know how the room scales — 4-piece for the John Eager, full band for the 13th Floor or grand ballroom."
       features={[
         "Historic Beaux-Arts architecture",
         "Multiple event spaces",
         "Panoramic 13th Floor views",
         "Grand ballroom",
-        "Elegant smaller rooms",
+        "Smaller intimate rooms",
         "On-site catering",
         "Central Mount Vernon location",
         "Rooftop terrace"
       ]}
       highlights={[
-        "The 13th Floor views create magical evening receptions",
+        "The 13th Floor views work for evening receptions with a dance-floor register",
         "Versatile spaces accommodate any band configuration",
         "Rich history adds gravitas to every celebration",
         "Excellent sound and power infrastructure"

@@ -12,13 +12,13 @@ const ensembles = [
   {
     icon: Mic2,
     title: "Jazz Quartet",
-    description: "Sophisticated swing and standards for cocktails, dinners, and elegant affairs.",
+    description: "Swing and standards for cocktails, dinners, and listening-room sets.",
     link: "/ensembles/jazz-quartet",
   },
   {
     icon: Piano,
     title: "Piano Trio",
-    description: "Intimate elegance with piano, bass, and drums—perfect for any setting.",
+    description: "Piano, bass, and drums — dinner volume through cocktail register.",
     link: "/ensembles/piano-trio",
   },
   {
@@ -36,7 +36,7 @@ const ensembles = [
   {
     icon: User,
     title: "Solo Performer",
-    description: "Piano, guitar, or vocals—one musician creating the perfect ambiance.",
+    description: "Piano, guitar, or vocals — one musician for cocktail hours and dinners.",
     link: "/ensembles/solo-performer",
   },
 ];

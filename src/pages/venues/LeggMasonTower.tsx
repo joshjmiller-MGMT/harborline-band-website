@@ -7,7 +7,7 @@ const LeggMasonTowerPage = () => {
       city="Baltimore"
       venueType="Corporate Venue"
       capacity="Up to 400 guests"
-      description="Legg Mason Tower in Harbor East offers some of the most stunning panoramic views of Baltimore's skyline and waterfront. This modern, sophisticated venue is a favorite for corporate events, galas, and milestone celebrations. Harborline has energized many events in this sleek space, bringing our signature sound to complement the contemporary elegance and breathtaking vistas."
+      description="Legg Mason Tower in Harbor East has panoramic views of Baltimore's skyline and waterfront. A modern venue for corporate events, galas, and milestone celebrations. Harborline has played here multiple times — the contemporary space suits a 4-piece up through full-band configurations depending on the room and the run-of-show."
       features={[
         "Panoramic harbor views",
         "Modern event spaces",
@@ -21,7 +21,7 @@ const LeggMasonTowerPage = () => {
       highlights={[
         "The views at night are absolutely spectacular",
         "Modern facilities make load-in seamless",
-        "Perfect for sophisticated corporate events",
+        "Reliable corporate-event venue with load-in handled",
         "The contemporary setting suits our versatile style"
       ]}
       nearbyVenues={[
