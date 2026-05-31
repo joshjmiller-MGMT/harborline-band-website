@@ -47,7 +47,7 @@ const StringEnsemblePage = () => {
   return (
     <Layout
       title="String Quartet Baltimore | Harborline String Ensemble"
-      description="Elegant string quartet for wedding ceremonies and formal events. Classical repertoire and modern pop arrangements performed with sophistication."
+      description="String quartet for wedding ceremonies and formal events. Classical repertoire plus modern pop arrangements — Bach to Beyoncé."
       canonical="https://harborlineband.com/ensembles/string-ensemble"
     >
       <script type="application/ld+json">

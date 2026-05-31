@@ -45,7 +45,7 @@ const BirthdayPartiesPage = () => {
   return (
     <Layout
       title="Birthday Party Band Baltimore | Harborline Live Entertainment"
-      description="Make your birthday celebration unforgettable with Harborline. Live band entertainment for milestone birthdays, sweet 16s, and surprise parties in Baltimore."
+      description="Live band entertainment for milestone birthdays, sweet 16s, and surprise parties across Baltimore + the DMV. Named POC, backup-per-role, 4-piece up to full band depending on the room."
       canonical="https://harborlineband.com/birthday-parties"
     >
       <script type="application/ld+json">
