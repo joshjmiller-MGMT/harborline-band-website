@@ -7,7 +7,7 @@ const EvergreenMuseumPage = () => {
       city="Baltimore"
       venueType="Historic Estate"
       capacity="Up to 200 guests"
-      description="Evergreen Museum & Library, a Johns Hopkins University property, is a hidden gem in North Baltimore. This stunning 48-room Gilded Age mansion and its beautiful grounds offer an intimate, elegant setting for weddings and special events. Harborline has performed in both the grand interior spaces and the gorgeous garden settings, creating the perfect soundtrack for refined celebrations."
+      description="Evergreen Museum & Library is a Johns Hopkins University property in North Baltimore — a 48-room Gilded Age mansion with formal gardens. Harborline has played here for ceremonies in the garden and receptions in the grand interior; we scale from a 4-piece register for cocktail hour up to the full band for the reception."
       features={[
         "Gilded Age mansion",
         "Beautiful formal gardens",
@@ -21,7 +21,7 @@ const EvergreenMuseumPage = () => {
       highlights={[
         "The gardens are perfect for outdoor ceremonies",
         "Intimate scale creates connection with guests",
-        "The historic setting inspires elegant repertoire",
+        "The historic setting fits a quieter cocktail register; full band lands on the reception side",
         "Stunning architecture in every photograph"
       ]}
       nearbyVenues={[

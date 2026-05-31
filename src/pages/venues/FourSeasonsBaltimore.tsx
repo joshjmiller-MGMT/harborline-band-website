@@ -9,20 +9,20 @@ const FourSeasonsBaltimorePage = () => {
       capacity="Up to 350 guests"
       description="Four Seasons Baltimore sets the standard for luxury events in the Mid-Atlantic. Perched on the waterfront in Harbor East, this five-star property offers impeccable service and stunning spaces that range from intimate gatherings to grand ballroom celebrations. Harborline has been the band of choice for countless Four Seasons weddings and corporate events, and we've built strong relationships with their exceptional events team."
       features={[
-        "Five-star luxury service",
+        "Five-star service",
         "Harbor East waterfront",
-        "Elegant ballroom",
+        "Grand ballroom",
         "Outdoor terrace options",
-        "World-class catering",
+        "Onsite catering",
         "Luxury accommodations",
         "Spa & amenities",
         "Dedicated event planners"
       ]}
       highlights={[
         "The events team is among the best we've worked with",
-        "Sound and lighting infrastructure is exceptional",
-        "The waterfront setting adds magic to every event",
-        "Perfect for sophisticated, elegant celebrations"
+        "Sound and lighting infrastructure handles a full-band setup without rentals",
+        "The waterfront terrace suits cocktail hour and ceremony, ballroom for the reception",
+        "Indoor-outdoor flow walked in the 30-min pre-event call"
       ]}
       nearbyVenues={[
         { name: "The Pendry Baltimore", slug: "pendry-baltimore" },

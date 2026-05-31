@@ -7,22 +7,22 @@ const SagamorePendryPage = () => {
       city="Baltimore"
       venueType="Waterfront Hotel"
       capacity="Up to 250 guests"
-      description="Sagamore Pendry Baltimore, nestled in the heart of Fells Point, offers a perfect blend of historic charm and modern luxury. This beautifully restored pier building provides an extraordinary setting for weddings and special events. Our band has performed countless celebrations here, mastering the flow between the elegant indoor spaces and the stunning waterfront pier."
+      description="Sagamore Pendry Baltimore sits on the Fells Point waterfront — a restored pier building with a ballroom on one side and the harbor pier on the other. Our band has played here many times, working the indoor-outdoor flow from cocktail hour through dance floor."
       features={[
         "Historic pier location",
         "Waterfront ceremony options",
-        "Elegant indoor ballroom",
-        "Boutique luxury hotel",
-        "Exceptional cuisine",
+        "Indoor ballroom",
+        "Boutique waterfront hotel",
+        "Onsite catering",
         "Pier 5 access",
         "Sunset harbor views",
-        "Intimate garden spaces"
+        "Garden + cocktail spaces"
       ]}
       highlights={[
-        "The pier provides a magical setting for outdoor performances",
-        "Excellent acoustics in the main event space",
-        "Staff is incredibly accommodating for live bands",
-        "Perfect for elegant, sophisticated celebrations"
+        "The pier handles outdoor sets well — backup-per-role on the roster covers weather pivots",
+        "Acoustics in the main ballroom work for a 4-piece up through full band",
+        "Staff is hands-on with live bands — load-in dock is straightforward",
+        "Indoor-outdoor transitions handled by the MD live"
       ]}
       nearbyVenues={[
         { name: "The Pendry Baltimore", slug: "pendry-baltimore" },
@@ -31,7 +31,7 @@ const SagamorePendryPage = () => {
         { name: "The Belvedere", slug: "the-belvedere" }
       ]}
       images={[
-        { src: "venues/pendry-1", alt: "Sagamore Pendry elegant ballroom with French Revival architecture" },
+        { src: "venues/pendry-1", alt: "Sagamore Pendry ballroom with French Revival architecture" },
         { src: "venues/pendry-2", alt: "Sagamore Pendry waterfront pier ceremony at golden hour" }
       ]}
     />
