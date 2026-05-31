@@ -1,8 +1,10 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /team/
 
 User-agent: Bingbot
 Allow: /
+Disallow: /team/
 
 User-agent: Twitterbot
 Allow: /
@@ -12,8 +14,6 @@ Allow: /
 
 User-agent: *
 Allow: /
-
-User-agent: *
 Disallow: /team/
 
 Sitemap: https://harborlineband.com/sitemap.xml

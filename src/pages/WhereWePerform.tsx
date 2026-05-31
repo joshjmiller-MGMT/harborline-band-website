@@ -78,7 +78,7 @@ const serviceAreas = [
   {
     region: "DC Metro",
     areas: ["Washington DC", "Bethesda", "Rockville", "Silver Spring", "Chevy Chase", "Georgetown"],
-    description: "Premier venues throughout the nation's capital",
+    description: "Venues throughout the nation's capital",
   },
   {
     region: "Annapolis & Eastern Shore",
@@ -372,7 +372,7 @@ const WhereWePerformPage = () => {
         <title>Where We Perform | Baltimore & DC Area | Harborline</title>
         <meta
           name="description"
-          content="Harborline performs at premier venues across Baltimore, Washington DC, Annapolis, and the Mid-Atlantic region. View our featured venues and service areas."
+          content="Harborline performs across Baltimore, Washington DC, Annapolis, and the Mid-Atlantic region. View our featured venues and service areas."
         />
         <meta name="keywords" content="Baltimore wedding band, DC event band, Annapolis live music, Maryland wedding entertainment, luxury venue band" />
         <link rel="canonical" href="https://harborlineband.com/where-we-perform" />
@@ -396,7 +396,7 @@ const WhereWePerformPage = () => {
 
       <PageHero
         title="Where We Perform"
-        subtitle="From historic ballrooms to waterfront estates, we bring unforgettable entertainment to the Mid-Atlantic's most prestigious venues"
+        subtitle="From historic ballrooms to waterfront estates, we work the Mid-Atlantic's venues across weddings, galas, and corporate events"
       />
 
       {/* Upcoming Shows Calendar */}

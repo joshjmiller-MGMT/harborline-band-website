@@ -47,7 +47,7 @@ const JazzQuartetPage = () => {
   return (
     <Layout
       title="Jazz Quartet Baltimore | Harborline Live Jazz Music"
-      description="Add sophistication to your event with Harborline's jazz quartet. Perfect for cocktail hours, corporate events, and upscale celebrations."
+      description="Harborline's jazz quartet — 4-piece for cocktail hours, corporate events, and dinner-music register. Standards and swing."
       canonical="https://harborlineband.com/ensembles/jazz-quartet"
     >
       <script type="application/ld+json">

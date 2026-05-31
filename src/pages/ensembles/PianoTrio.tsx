@@ -47,7 +47,7 @@ const PianoTrioPage = () => {
   return (
     <Layout
       title="Piano Trio Baltimore | Harborline Live Piano Music"
-      description="Create an atmosphere of elegance with Harborline's piano trio. Perfect for weddings, cocktail hours, and sophisticated gatherings."
+      description="Harborline's piano trio — piano, bass, and drums for weddings, cocktail hours, and dinner-music gatherings."
       canonical="https://harborlineband.com/ensembles/piano-trio"
     >
       <script type="application/ld+json">
