@@ -14,11 +14,12 @@ interface LocationPageProps {
 }
 
 const LocationPage = ({ city, region, description, venues, nearbyAreas }: LocationPageProps) => {
+  const slug = city.toLowerCase().replace(/\s/g, '-');
   const localBusinessSchema = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     "name": "Harborline",
-    "@id": `https://harborlineband.com/locations/${city.toLowerCase().replace(/\s/g, '-')}`,
+    "@id": `https://harborlineband.com/locations/${slug}`,
     "description": `Live event band and entertainment services in ${city}, ${region}`,
     "areaServed": {
       "@type": "City",
@@ -30,15 +31,27 @@ const LocationPage = ({ city, region, description, venues, nearbyAreas }: Locati
     },
     "priceRange": "$$$$"
   };
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Locations", "item": "https://harborlineband.com/where-we-perform" },
+      { "@type": "ListItem", "position": 3, "name": city, "item": `https://harborlineband.com/locations/${slug}` }
+    ]
+  };
 
   return (
     <Layout
       title={`${city} Event Band | Harborline Live Entertainment`}
       description={`Live event band based in Baltimore — we work ${city}, ${region} regularly for weddings, corporate events, galas, and private parties. Named POC, backup-per-role, configurations from 4-piece up to 14-piece.`}
-      canonical={`https://harborlineband.com/locations/${city.toLowerCase().replace(/\s/g, '-')}`}
+      canonical={`https://harborlineband.com/locations/${slug}`}
     >
       <script type="application/ld+json">
         {JSON.stringify(localBusinessSchema)}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbSchema)}
       </script>
 
       <PageHero

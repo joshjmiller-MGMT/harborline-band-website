@@ -14,7 +14,8 @@ const EasternShorePage = () => {
         "Tidewater Inn",
         "Celebrations at the Bay",
         "Kent Manor Inn",
-        "Historic Inns of Annapolis"
+        "Historic Inns of Annapolis",
+        "Bohemia Overlook"
       ]}
       nearbyAreas={[
         { name: "Annapolis", slug: "annapolis" },

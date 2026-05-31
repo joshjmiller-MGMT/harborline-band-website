@@ -38,7 +38,7 @@ const VenuePage = ({
     "@context": "https://schema.org",
     "@type": "Event",
     "name": `Harborline Live Entertainment at ${venueName}`,
-    "description": `Book Harborline to perform at ${venueName} in ${city}. Professional live band for weddings, corporate events, and celebrations.`,
+    "description": `Book Harborline to perform at ${venueName} in ${city}. Live band for weddings, corporate events, and celebrations.`,
     "location": {
       "@type": "Place",
       "name": venueName,
@@ -53,15 +53,27 @@ const VenuePage = ({
       "name": "Harborline"
     }
   };
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Venues", "item": "https://harborlineband.com/where-we-perform" },
+      { "@type": "ListItem", "position": 3, "name": venueName, "item": `https://harborlineband.com/venues/${slug}` }
+    ]
+  };
 
   return (
     <Layout
       title={`${venueName} Wedding Band | Harborline at ${venueName}`}
-      description={`Book Harborline to perform at ${venueName} in ${city}. Expert live band with experience at this stunning ${venueType.toLowerCase()}. Weddings, galas, and corporate events.`}
+      description={`Book Harborline to perform at ${venueName} in ${city}. Live band with experience at this ${venueType.toLowerCase()}. Weddings, galas, and corporate events.`}
       canonical={`https://harborlineband.com/venues/${slug}`}
     >
       <script type="application/ld+json">
         {JSON.stringify(venueSchema)}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbSchema)}
       </script>
 
       <PageHero

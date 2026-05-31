@@ -14,7 +14,13 @@ const BaltimorePage = () => {
         "American Visionary Art Museum",
         "The B&O Railroad Museum",
         "Pier 5 Hotel",
-        "Four Seasons Baltimore"
+        "Four Seasons Baltimore",
+        "Mount Vernon Country Club",
+        "Baltimore Convention Center",
+        "Maryland Center for History and Culture",
+        "Guinness Open Gate Brewery",
+        "The Voxel",
+        "Whitehall Mill"
       ]}
       nearbyAreas={[
         { name: "Towson", slug: "towson" },

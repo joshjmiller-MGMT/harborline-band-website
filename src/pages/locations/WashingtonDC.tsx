@@ -14,7 +14,8 @@ const WashingtonDCPage = () => {
         "Carnegie Library at Mt. Vernon Square",
         "The Mayflower Hotel",
         "Anderson House",
-        "The Line DC"
+        "The Line DC",
+        "City Tavern"
       ]}
       nearbyAreas={[
         { name: "Bethesda", slug: "bethesda" },
