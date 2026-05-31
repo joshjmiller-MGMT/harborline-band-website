@@ -34,12 +34,26 @@ const AnniversariesPage = () => {
     "@context": "https://schema.org",
     "@type": "Service",
     "name": "Harborline Anniversary Party Entertainment",
+    "serviceType": "Anniversary Party Entertainment",
     "provider": {
       "@type": "MusicGroup",
       "name": "Harborline"
     },
-    "areaServed": "Baltimore, Maryland",
+    "areaServed": {
+      "@type": "City",
+      "name": "Baltimore",
+      "containedInPlace": { "@type": "State", "name": "Maryland" }
+    },
     "description": "Live band entertainment for anniversary parties and milestone celebrations in Baltimore and Maryland."
+  };
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Occasions", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 3, "name": "Anniversaries", "item": "https://harborlineband.com/anniversaries" }
+    ]
   };
 
   return (
@@ -50,6 +64,9 @@ const AnniversariesPage = () => {
     >
       <script type="application/ld+json">
         {JSON.stringify(serviceSchema)}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbSchema)}
       </script>
 
       <PageHero

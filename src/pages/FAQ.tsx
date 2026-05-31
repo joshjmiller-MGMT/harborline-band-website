@@ -78,6 +78,15 @@ const FAQPage = () => {
     }))
   };
 
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 2, "name": "FAQ", "item": "https://harborlineband.com/faq" }
+    ]
+  };
+
   return (
     <Layout
       title="FAQ | Harborline Baltimore Event Band"
@@ -86,6 +95,9 @@ const FAQPage = () => {
     >
       <script type="application/ld+json">
         {JSON.stringify(faqSchema)}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbSchema)}
       </script>
 
       <PageHero

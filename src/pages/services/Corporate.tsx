@@ -30,8 +30,21 @@ const CorporatePage = () => {
       "@type": "MusicGroup",
       "name": "Harborline"
     },
-    "areaServed": "Baltimore, Maryland",
+    "areaServed": {
+      "@type": "City",
+      "name": "Baltimore",
+      "containedInPlace": { "@type": "State", "name": "Maryland" }
+    },
     "description": "Live entertainment for corporate events, galas, conferences, company parties, and team-building events in Baltimore and Maryland."
+  };
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Occasions", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 3, "name": "Corporate Events", "item": "https://harborlineband.com/corporate" }
+    ]
   };
 
   return (
@@ -42,6 +55,9 @@ const CorporatePage = () => {
     >
       <script type="application/ld+json">
         {JSON.stringify(corporateSchema)}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbSchema)}
       </script>
 
       <PageHero

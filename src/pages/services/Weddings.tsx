@@ -34,12 +34,26 @@ const WeddingsPage = () => {
     "@context": "https://schema.org",
     "@type": "Service",
     "name": "Harborline Wedding Entertainment",
+    "serviceType": "Wedding Band & Entertainment",
     "provider": {
       "@type": "MusicGroup",
       "name": "Harborline"
     },
-    "areaServed": "Baltimore, Maryland",
+    "areaServed": {
+      "@type": "City",
+      "name": "Baltimore",
+      "containedInPlace": { "@type": "State", "name": "Maryland" }
+    },
     "description": "Live wedding band services for ceremonies, cocktail hours, and receptions in Baltimore and Maryland."
+  };
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Occasions", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 3, "name": "Weddings", "item": "https://harborlineband.com/weddings" }
+    ]
   };
 
   return (
@@ -50,6 +64,9 @@ const WeddingsPage = () => {
     >
       <script type="application/ld+json">
         {JSON.stringify(weddingSchema)}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbSchema)}
       </script>
 
       <PageHero

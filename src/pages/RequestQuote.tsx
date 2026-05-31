@@ -12,6 +12,16 @@ const RequestQuotePage = () => {
         <title>Request a Quote | Harborline Entertainment</title>
         <meta name="description" content="Get a custom quote for your event. Harborline provides live entertainment for weddings, corporate events, and private celebrations in Baltimore, Maryland and beyond." />
         <link rel="canonical" href="https://harborlineband.com/request-a-quote" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: "https://harborlineband.com/" },
+              { "@type": "ListItem", position: 2, name: "Request a Quote", item: "https://harborlineband.com/request-a-quote" },
+            ],
+          })}
+        </script>
       </Helmet>
       
       <Header />
