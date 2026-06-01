@@ -6,9 +6,9 @@ import { OptimizedImage } from "@/components/OptimizedImage";
 import { Music2, Heart, Users, Sparkles, CheckCircle } from "lucide-react";
 const features = [
   { icon: Users, text: "2-4 Musicians" },
-  { icon: Music2, text: "Classical & Modern" },
-  { icon: Heart, text: "Ceremony Perfect" },
-  { icon: Sparkles, text: "Elegant Ambiance" },
+  { icon: Music2, text: "Classical + Pop Arrangements" },
+  { icon: Heart, text: "Ceremony-Focused" },
+  { icon: Sparkles, text: "Acoustic, No PA" },
 ];
 
 const includes = [
@@ -41,13 +41,13 @@ const StringEnsemblePage = () => {
       "name": "Harborline"
     },
     "areaServed": "Baltimore, Maryland",
-    "description": "Elegant string quartet and ensemble for wedding ceremonies, formal events, and sophisticated celebrations in Baltimore."
+    "description": "Harborline's string ensemble — 2 to 4 musicians (violin(s), viola, cello). Classical repertoire plus custom pop arrangements. Acoustic — no PA needed for ceremony or cocktail volume. Conservatory-trained players for ceremonies, formal dinners, corporate receptions, and galas in Baltimore + DC + the DMV."
   };
 
   return (
     <Layout
       title="String Quartet Baltimore | Harborline String Ensemble"
-      description="String quartet for wedding ceremonies and formal events. Classical repertoire plus modern pop arrangements — Bach to Beyoncé."
+      description="Harborline's string ensemble — 2 to 4 conservatory-trained players (violin / viola / cello) for wedding ceremonies, prelude sets, and formal events. Classical repertoire plus custom arrangements of pop and rock hits. Acoustic — no amp needed."
       canonical="https://harborlineband.com/ensembles/string-ensemble"
     >
       <script type="application/ld+json">
@@ -56,8 +56,8 @@ const StringEnsemblePage = () => {
 
       <PageHero
         eyebrow="STRING ENSEMBLE"
-        title="CLASSICAL BEAUTY"
-        subtitle="The timeless elegance of strings, from Bach to Beyoncé"
+        title="STRINGS — BACH TO BEYONCÉ"
+        subtitle="Two to four conservatory-trained players. Classical repertoire or custom pop arrangements — your call"
       />
 
       {/* Intro Section */}
@@ -72,17 +72,21 @@ const StringEnsemblePage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                STRINGS THAT <span className="text-gradient-gold">MOVE HEARTS</span>
+                ACOUSTIC, <span className="text-gradient-gold">CONSERVATORY-TRAINED</span>
               </h2>
               <p className="text-muted-foreground text-lg">
-                Nothing sets a ceremony mood quite like a string ensemble. Whether you dream 
-                of walking down the aisle to Pachelbel's Canon or a strings arrangement of 
-                your favorite modern song, our ensemble delivers elegance personified.
+                The string ensemble is what we staff when a ceremony or formal moment needs
+                music that the room hears without amplification. Two to four players —
+                typically violin and cello, often a viola, sometimes two violins for
+                processional weight. Acoustic. No PA setup, no monitor wedges, no power
+                outlet required.
               </p>
               <p className="text-muted-foreground">
-                Our classically trained musicians bring conservatory credentials and years of 
-                experience to every performance. But they're not stuffy—they love reimagining 
-                pop hits and rock classics through the lens of chamber music.
+                Classical repertoire is the floor — Bach, Pachelbel's Canon, Vivaldi, Handel
+                for a processional or prelude. Custom arrangements of pop and rock songs are
+                the upgrade — Coldplay, Adele, Vampire Weekend, your first-dance song in
+                chamber arrangement. The players are conservatory-trained. The arrangements
+                are by working musicians.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
                 {features.map((feature) => (
@@ -111,7 +115,7 @@ const StringEnsemblePage = () => {
               />
               <OptimizedImage
                 src="gallery-5"
-                alt="Elegant ceremony setting"
+                alt="String ensemble performing at a ceremony"
                 className="rounded-lg shadow-lg mt-8"
               />
             </motion.div>
