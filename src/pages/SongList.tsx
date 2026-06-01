@@ -969,12 +969,24 @@ ${generateContent()}
 
   if (embedded) return content;
 
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Song List", "item": "https://harborlineband.com/songs" }
+    ]
+  };
+
   return (
     <Layout
       title="Song List & Repertoire | Harborline Baltimore Band"
       description="Browse Harborline's extensive song list featuring Motown, Top 40, rock classics, jazz standards, and more. Request your favorite songs for your event."
       canonical="https://harborlineband.com/songs"
     >
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbSchema)}
+      </script>
       {content}
     </Layout>
   );

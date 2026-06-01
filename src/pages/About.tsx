@@ -12,12 +12,24 @@ const stats = [
 ];
 
 const AboutPage = () => {
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 2, "name": "About", "item": "https://harborlineband.com/about" }
+    ]
+  };
+
   return (
     <Layout
       title="About Harborline | Musician-Led Event Band in the DMV"
       description="Harborline is a musician-led event band based in Baltimore, working weddings, galas, corporate events, and private parties across the DMV. Built and run by working musicians."
       canonical="https://harborlineband.com/about"
     >
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbSchema)}
+      </script>
       <PageHero
         eyebrow="OUR STORY"
         title="ABOUT HARBORLINE"

@@ -21,8 +21,21 @@ const GalasPage = () => {
       "@type": "MusicGroup",
       "name": "Harborline"
     },
-    "areaServed": "Baltimore, Maryland",
-    "description": "Sophisticated live entertainment for galas, fundraisers, awards ceremonies, and black-tie events in Baltimore and Maryland."
+    "areaServed": {
+      "@type": "City",
+      "name": "Baltimore",
+      "containedInPlace": { "@type": "State", "name": "Maryland" }
+    },
+    "description": "Live entertainment for galas, fundraisers, awards ceremonies, and black-tie events in Baltimore and Maryland."
+  };
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Occasions", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 3, "name": "Galas & Fundraisers", "item": "https://harborlineband.com/galas" }
+    ]
   };
 
   return (
@@ -33,6 +46,9 @@ const GalasPage = () => {
     >
       <script type="application/ld+json">
         {JSON.stringify(galaSchema)}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbSchema)}
       </script>
 
       <PageHero

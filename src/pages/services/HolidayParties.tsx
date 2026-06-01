@@ -34,12 +34,26 @@ const HolidayPartiesPage = () => {
     "@context": "https://schema.org",
     "@type": "Service",
     "name": "Harborline Holiday Party Entertainment",
+    "serviceType": "Holiday Party Entertainment",
     "provider": {
       "@type": "MusicGroup",
       "name": "Harborline"
     },
-    "areaServed": "Baltimore, Maryland",
+    "areaServed": {
+      "@type": "City",
+      "name": "Baltimore",
+      "containedInPlace": { "@type": "State", "name": "Maryland" }
+    },
     "description": "Live band entertainment for holiday parties, corporate celebrations, and New Year's Eve events in Baltimore and Maryland."
+  };
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Occasions", "item": "https://harborlineband.com/" },
+      { "@type": "ListItem", "position": 3, "name": "Holiday Parties", "item": "https://harborlineband.com/holiday-parties" }
+    ]
   };
 
   return (
@@ -50,6 +64,9 @@ const HolidayPartiesPage = () => {
     >
       <script type="application/ld+json">
         {JSON.stringify(serviceSchema)}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbSchema)}
       </script>
 
       <PageHero
