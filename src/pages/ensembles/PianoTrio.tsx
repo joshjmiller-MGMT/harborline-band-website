@@ -7,8 +7,8 @@ import { Piano, Music, Users, Heart, CheckCircle } from "lucide-react";
 const features = [
   { icon: Users, text: "3 Musicians" },
   { icon: Piano, text: "Piano-Led Sound" },
-  { icon: Music, text: "Versatile Repertoire" },
-  { icon: Heart, text: "Romantic Ambiance" },
+  { icon: Music, text: "Ballads to Standards" },
+  { icon: Heart, text: "Conversation Volume" },
 ];
 
 const includes = [
@@ -41,13 +41,13 @@ const PianoTrioPage = () => {
       "name": "Harborline"
     },
     "areaServed": "Baltimore, Maryland",
-    "description": "Elegant piano trio for weddings, cocktail hours, and intimate events in Baltimore and Maryland."
+    "description": "Harborline's 3-piece piano trio — piano (acoustic or electric), upright or electric bass, drums or percussion. Conversation-level volume floor for ceremonies, cocktail hours, dinner sets, lobbies, and proposal events in Baltimore + DC + the DMV."
   };
 
   return (
     <Layout
       title="Piano Trio Baltimore | Harborline Live Piano Music"
-      description="Harborline's piano trio — piano, bass, and drums for weddings, cocktail hours, and dinner-music gatherings."
+      description="Harborline's piano trio — three musicians for weddings, cocktail hours, restaurant ambiance, and intimate gatherings. Piano-led volume floor means full sound that doesn't drown the conversation."
       canonical="https://harborlineband.com/ensembles/piano-trio"
     >
       <script type="application/ld+json">
@@ -56,8 +56,8 @@ const PianoTrioPage = () => {
 
       <PageHero
         eyebrow="PIANO TRIO"
-        title="ELEGANT INTIMACY"
-        subtitle="The perfect balance of sophistication and warmth for refined celebrations"
+        title="PIANO, BASS, DRUMS"
+        subtitle="Full sound at conversation volume — piano-led, vocals optional, setlist to the moment"
       />
 
       {/* Intro Section */}
@@ -72,17 +72,20 @@ const PianoTrioPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                CLASSIC <span className="text-gradient-gold">PIANO ELEGANCE</span>
+                PIANO-LED <span className="text-gradient-gold">THREE-PIECE</span>
               </h2>
               <p className="text-muted-foreground text-lg">
-                The piano trio is the quintessential choice for events where ambiance matters. 
-                Three musicians creating a full, rich sound that fills a room without overpowering 
-                conversation.
+                The trio is the right call when the room needs a full sound that doesn't drown
+                the conversation. Three musicians — piano (acoustic or electric), upright or
+                electric bass, drums or percussion — at a volume floor that lets a wedding
+                ceremony, a cocktail reception, or a dinner set breathe.
               </p>
               <p className="text-muted-foreground">
-                From romantic ballads during dinner to upbeat standards that get toes tapping, 
-                our piano trio adapts seamlessly to the mood of your event—sophisticated enough 
-                for a black-tie affair, warm enough for an intimate gathering.
+                Ballads for the dinner hour. Standards when the room loosens up. Pop
+                arrangements for a younger crowd. We've staffed this trio at hotel lobbies,
+                wedding ceremonies (processional and reception), proposal moments where the
+                music needed to land just right, and corporate dinners where two-piece felt
+                thin but five-piece would crowd the room.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
                 {features.map((feature) => (
@@ -111,7 +114,7 @@ const PianoTrioPage = () => {
               />
               <OptimizedImage
                 src="band/jazz-trio-2"
-                alt="Elegant trio performance under tent"
+                alt="Piano trio performing under tent with drums and upright bass"
                 className="rounded-lg shadow-lg mt-8"
               />
             </motion.div>

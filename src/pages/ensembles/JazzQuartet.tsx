@@ -6,9 +6,9 @@ import { OptimizedImage } from "@/components/OptimizedImage";
 import { Music, Wine, Users, Sparkles, CheckCircle } from "lucide-react";
 const features = [
   { icon: Users, text: "4 Musicians" },
-  { icon: Wine, text: "Sophisticated Sound" },
-  { icon: Music, text: "Standards & Swing" },
-  { icon: Sparkles, text: "Intimate Elegance" },
+  { icon: Music, text: "Standards + Bossa" },
+  { icon: Wine, text: "Brushes Optional" },
+  { icon: Sparkles, text: "Reads the Room" },
 ];
 
 const includes = [
@@ -41,13 +41,13 @@ const JazzQuartetPage = () => {
       "name": "Harborline"
     },
     "areaServed": "Baltimore, Maryland",
-    "description": "Sophisticated jazz quartet for cocktail hours, corporate events, and elegant celebrations in Baltimore."
+    "description": "Harborline's 4-piece jazz quartet — piano or guitar, upright or electric bass, drums with brushes, sax or trumpet, optional vocals. Standards, bossa nova, swing classics, and jazz takes on modern hits. Cocktail hours, dinner sets, corporate events, gallery openings, wine tastings, and reception sets in Baltimore + DC + the DMV."
   };
 
   return (
     <Layout
       title="Jazz Quartet Baltimore | Harborline Live Jazz Music"
-      description="Harborline's jazz quartet — 4-piece for cocktail hours, corporate events, and dinner-music register. Standards and swing."
+      description="Harborline's jazz quartet — 4 musicians playing standards, bossa nova, and swing classics for cocktail hours, dinner sets, corporate events, gallery openings. We adjust volume and tempo to the room — brushes for dinner, swing-out when the floor opens up."
       canonical="https://harborlineband.com/ensembles/jazz-quartet"
     >
       <script type="application/ld+json">
@@ -56,8 +56,8 @@ const JazzQuartetPage = () => {
 
       <PageHero
         eyebrow="JAZZ QUARTET"
-        title="TIMELESS SOPHISTICATION"
-        subtitle="Four musicians creating the perfect atmosphere of elegance and swing"
+        title="FOUR PIECES, ONE GROOVE"
+        subtitle="Piano or guitar, upright or electric bass, drums, sax or trumpet — and we read the room from the first set"
       />
 
       {/* Intro Section */}
@@ -72,17 +72,20 @@ const JazzQuartetPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                THE ART OF <span className="text-gradient-gold">LIVE JAZZ</span>
+                FOUR PIECES, <span className="text-gradient-gold">ONE GROOVE</span>
               </h2>
               <p className="text-muted-foreground text-lg">
-                There's a reason jazz has been the soundtrack to elegant gatherings for a century. 
-                Our quartet brings the warmth, spontaneity, and sophistication that only live jazz 
-                can provide.
+                The quartet is piano or guitar, upright or electric bass, drums with brushes
+                for the dinner sets, and sax or trumpet on top. Optional vocals if the moment
+                calls for it. We staff the gig for what the room actually needs — three sets
+                at a cocktail hour reads differently than a single-set wedding cocktail window.
               </p>
               <p className="text-muted-foreground">
-                From Great American Songbook standards to bossa nova, from swing classics to 
-                modern jazz interpretations of contemporary hits—our musicians create an atmosphere 
-                of refined celebration that elevates any event.
+                Standards from the Great American Songbook are the bread and butter — Cole
+                Porter, Gershwin, Mancini, Bacharach. Bossa nova when the energy needs to
+                settle. Swing classics when the floor wants to open. Jazz takes on modern
+                hits when the crowd is more contemporary than canonical. The MD watches the
+                room and pivots set-by-set.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
                 {features.map((feature) => (
