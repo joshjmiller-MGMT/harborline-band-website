@@ -29,7 +29,7 @@ const AnniversariesPage = lazy(() => import("./pages/services/Anniversaries"));
 const BreweryEventsPage = lazy(() => import("./pages/services/BreweryEvents"));
 
 const FullBandPage = lazy(() => import("./pages/ensembles/FullBand"));
-const JazzQuartetPage = lazy(() => import("./pages/ensembles/JazzQuartet"));
+const JazzCombosPage = lazy(() => import("./pages/ensembles/JazzCombos"));
 const PianoTrioPage = lazy(() => import("./pages/ensembles/PianoTrio"));
 const AcousticDuoPage = lazy(() => import("./pages/ensembles/AcousticDuo"));
 const StringEnsemblePage = lazy(() => import("./pages/ensembles/StringEnsemble"));
@@ -113,7 +113,7 @@ const App = () => (
 
                 {/* Ensemble Routes */}
                 <Route path="/ensembles/full-band" element={<FullBandPage />} />
-                <Route path="/ensembles/jazz-quartet" element={<JazzQuartetPage />} />
+                <Route path="/ensembles/jazz-combos" element={<JazzCombosPage />} />
                 <Route path="/ensembles/piano-trio" element={<PianoTrioPage />} />
                 <Route path="/ensembles/acoustic-duo" element={<AcousticDuoPage />} />
                 <Route path="/ensembles/string-ensemble" element={<StringEnsemblePage />} />

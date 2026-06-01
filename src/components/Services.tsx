@@ -11,9 +11,9 @@ const ensembles = [
   },
   {
     icon: Mic2,
-    title: "Jazz Quartet",
-    description: "Swing and standards for cocktails, dinners, and listening-room sets.",
-    link: "/ensembles/jazz-quartet",
+    title: "Jazz Combos",
+    description: "Three to seven musicians — swing to bossa, ballads to contemporary, sized to the room.",
+    link: "/ensembles/jazz-combos",
   },
   {
     icon: Piano,

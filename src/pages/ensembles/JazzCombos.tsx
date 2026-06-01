@@ -31,11 +31,11 @@ const idealFor = [
   "Intimate wedding receptions",
 ];
 
-const JazzQuartetPage = () => {
+const JazzCombosPage = () => {
   const schema = {
     "@context": "https://schema.org",
     "@type": "Service",
-    "name": "Harborline Jazz Quartet",
+    "name": "Harborline Jazz Combos",
     "provider": {
       "@type": "MusicGroup",
       "name": "Harborline"
@@ -48,7 +48,7 @@ const JazzQuartetPage = () => {
     <Layout
       title="Jazz Combos Baltimore | Harborline Live Jazz Music"
       description="Harborline's jazz combos — three to seven musicians for cocktail hours, dinner sets, corporate events, and reception sets in Baltimore + DC + the DMV. Swing, bossa, ballads, contemporary. Pick your size; we staff the lineup to match the room."
-      canonical="https://harborlineband.com/ensembles/jazz-quartet"
+      canonical="https://harborlineband.com/ensembles/jazz-combos"
     >
       <script type="application/ld+json">
         {JSON.stringify(schema)}
@@ -183,4 +183,4 @@ const JazzQuartetPage = () => {
   );
 };
 
-export default JazzQuartetPage;
+export default JazzCombosPage;
