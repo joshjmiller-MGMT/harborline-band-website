@@ -12,10 +12,8 @@ const features = [
 ];
 
 const includes = [
-  "Piano (acoustic or electric)",
-  "Upright or electric bass",
-  "Drums or percussion",
-  "Optional vocalist",
+  "Piano-led (acoustic or electric)",
+  "Two more — bass, drums, vocals, or sax",
   "Extensive song library",
   "Custom arrangements",
   "Background or spotlight performance",
@@ -41,7 +39,7 @@ const PianoTrioPage = () => {
       "name": "Harborline"
     },
     "areaServed": "Baltimore, Maryland",
-    "description": "Harborline's 3-piece piano trio — piano (acoustic or electric), upright or electric bass, drums or percussion. Conversation-level volume floor for ceremonies, cocktail hours, dinner sets, lobbies, and proposal events in Baltimore + DC + the DMV."
+    "description": "Harborline's piano trio — three musicians, piano-led (acoustic or electric) with two more to fit the event: bass, drums, vocals, or sax. Conversation-level volume floor for ceremonies, cocktail hours, dinner sets, lobbies, and proposal events in Baltimore + DC + the DMV."
   };
 
   return (
@@ -56,8 +54,8 @@ const PianoTrioPage = () => {
 
       <PageHero
         eyebrow="PIANO TRIO"
-        title="PIANO, BASS, DRUMS"
-        subtitle="Full sound at conversation volume — piano-led, vocals optional, setlist to the moment"
+        title="PIANO + TWO"
+        subtitle="Full sound at conversation volume — piano-led, instrumentation to the room"
       />
 
       {/* Intro Section */}
@@ -76,9 +74,10 @@ const PianoTrioPage = () => {
               </h2>
               <p className="text-muted-foreground text-lg">
                 The trio is the right call when the room needs a full sound that doesn't drown
-                the conversation. Three musicians — piano (acoustic or electric), upright or
-                electric bass, drums or percussion — at a volume floor that lets a wedding
-                ceremony, a cocktail reception, or a dinner set breathe.
+                the conversation. Three musicians — piano-led, with two more to fit the event.
+                Bass and drums for a jazz feel, bass and vocals for a singer-songwriter mood,
+                sax and bass for cocktail-hour energy. Volume floor that lets a ceremony, a
+                reception, or a dinner set breathe.
               </p>
               <p className="text-muted-foreground">
                 Ballads for the dinner hour. Standards when the room loosens up. Pop
