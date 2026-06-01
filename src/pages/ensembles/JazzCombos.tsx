@@ -56,8 +56,8 @@ const JazzCombosPage = () => {
 
       <PageHero
         eyebrow="JAZZ COMBOS"
-        title="SWING TO BOSSA"
-        subtitle="Three to seven musicians, instrumentation to the room"
+        title="JAZZ THAT READS THE ROOM"
+        subtitle="Three to seven musicians, staffed to the gig — swing to bossa, ballads to contemporary"
       />
 
       {/* Intro Section */}
@@ -72,12 +72,13 @@ const JazzCombosPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                BALLADS TO <span className="text-gradient-gold">CONTEMPORARY</span>
+                STAFFED TO THE <span className="text-gradient-gold">GIG</span>
               </h2>
               <p className="text-muted-foreground text-lg">
-                Three to seven musicians, instrumentation to fit your event. A trio for a
-                quiet dinner, a quintet with horns for a cocktail hour, a septet when the
-                floor wants to open up. Pick the size; we staff the lineup to match.
+                Three to seven musicians, staffed to the gig — swing to bossa, ballads to
+                contemporary. A trio for a quiet dinner, a quintet with horns for a cocktail
+                hour, a septet when the floor wants to open up. Pick the size; we staff the
+                lineup to match.
               </p>
               <p className="text-muted-foreground">
                 Swing, bossa, ballads, contemporary. The set list shifts to the room — bossa
