@@ -31,11 +31,11 @@ const idealFor = [
   "Intimate wedding receptions",
 ];
 
-const JazzQuartetPage = () => {
+const JazzCombosPage = () => {
   const schema = {
     "@context": "https://schema.org",
     "@type": "Service",
-    "name": "Harborline Jazz Quartet",
+    "name": "Harborline Jazz Combos",
     "provider": {
       "@type": "MusicGroup",
       "name": "Harborline"
@@ -48,7 +48,7 @@ const JazzQuartetPage = () => {
     <Layout
       title="Jazz Combos Baltimore | Harborline Live Jazz Music"
       description="Harborline's jazz combos — three to seven musicians for cocktail hours, dinner sets, corporate events, and reception sets in Baltimore + DC + the DMV. Swing, bossa, ballads, contemporary. Pick your size; we staff the lineup to match the room."
-      canonical="https://harborlineband.com/ensembles/jazz-quartet"
+      canonical="https://harborlineband.com/ensembles/jazz-combos"
     >
       <script type="application/ld+json">
         {JSON.stringify(schema)}
@@ -56,8 +56,8 @@ const JazzQuartetPage = () => {
 
       <PageHero
         eyebrow="JAZZ COMBOS"
-        title="SWING TO BOSSA"
-        subtitle="Three to seven musicians, instrumentation to the room"
+        title="JAZZ THAT READS THE ROOM"
+        subtitle="Three to seven musicians, staffed to the gig — swing to bossa, ballads to contemporary"
       />
 
       {/* Intro Section */}
@@ -72,12 +72,13 @@ const JazzQuartetPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                BALLADS TO <span className="text-gradient-gold">CONTEMPORARY</span>
+                STAFFED TO THE <span className="text-gradient-gold">GIG</span>
               </h2>
               <p className="text-muted-foreground text-lg">
-                Three to seven musicians, instrumentation to fit your event. A trio for a
-                quiet dinner, a quintet with horns for a cocktail hour, a septet when the
-                floor wants to open up. Pick the size; we staff the lineup to match.
+                Three to seven musicians, staffed to the gig — swing to bossa, ballads to
+                contemporary. A trio for a quiet dinner, a quintet with horns for a cocktail
+                hour, a septet when the floor wants to open up. Pick the size; we staff the
+                lineup to match.
               </p>
               <p className="text-muted-foreground">
                 Swing, bossa, ballads, contemporary. The set list shifts to the room — bossa
@@ -183,4 +184,4 @@ const JazzQuartetPage = () => {
   );
 };
 
-export default JazzQuartetPage;
+export default JazzCombosPage;

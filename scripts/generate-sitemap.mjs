@@ -27,7 +27,7 @@ const routes = [
   { path: "/brewery-events", priority: "0.7" },
 
   { path: "/ensembles/full-band", priority: "0.7" },
-  { path: "/ensembles/jazz-quartet", priority: "0.7" },
+  { path: "/ensembles/jazz-combos", priority: "0.7" },
   { path: "/ensembles/piano-trio", priority: "0.7" },
   { path: "/ensembles/acoustic-duo", priority: "0.7" },
   { path: "/ensembles/string-ensemble", priority: "0.7" },
