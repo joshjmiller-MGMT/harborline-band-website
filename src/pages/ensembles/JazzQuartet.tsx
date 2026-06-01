@@ -5,21 +5,21 @@ import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { Music, Wine, Users, Sparkles, CheckCircle } from "lucide-react";
 const features = [
-  { icon: Users, text: "4 Musicians" },
-  { icon: Music, text: "Standards + Bossa" },
-  { icon: Wine, text: "Brushes Optional" },
+  { icon: Users, text: "3 to 7 Pieces" },
+  { icon: Music, text: "Swing + Bossa" },
+  { icon: Wine, text: "Ballads + Contemporary" },
   { icon: Sparkles, text: "Reads the Room" },
 ];
 
 const includes = [
-  "Piano or guitar",
+  "3 to 7 musicians, your size",
+  "Piano or guitar (or both)",
   "Upright or electric bass",
-  "Drums with brushes option",
-  "Saxophone or trumpet",
-  "Vocal capabilities",
-  "Curated jazz standards library",
-  "Custom song requests",
-  "Background or featured performance",
+  "Drums and percussion",
+  "Saxophone or trumpet (or both)",
+  "Optional vocals",
+  "Curated standards library",
+  "Background or featured set",
 ];
 
 const idealFor = [
@@ -41,13 +41,13 @@ const JazzQuartetPage = () => {
       "name": "Harborline"
     },
     "areaServed": "Baltimore, Maryland",
-    "description": "Harborline's 4-piece jazz quartet — piano or guitar, upright or electric bass, drums with brushes, sax or trumpet, optional vocals. Standards, bossa nova, swing classics, and jazz takes on modern hits. Cocktail hours, dinner sets, corporate events, gallery openings, wine tastings, and reception sets in Baltimore + DC + the DMV."
+    "description": "Harborline's jazz combos — three to seven musicians, instrumentation to fit your event. Swing, bossa, ballads, and contemporary for cocktail hours, dinner sets, corporate events, gallery openings, and reception sets in Baltimore + DC + the DMV."
   };
 
   return (
     <Layout
-      title="Jazz Quartet Baltimore | Harborline Live Jazz Music"
-      description="Harborline's jazz quartet — 4 musicians playing standards, bossa nova, and swing classics for cocktail hours, dinner sets, corporate events, gallery openings. We adjust volume and tempo to the room — brushes for dinner, swing-out when the floor opens up."
+      title="Jazz Combos Baltimore | Harborline Live Jazz Music"
+      description="Harborline's jazz combos — three to seven musicians for cocktail hours, dinner sets, corporate events, and reception sets in Baltimore + DC + the DMV. Swing, bossa, ballads, contemporary. Pick your size; we staff the lineup to match the room."
       canonical="https://harborlineband.com/ensembles/jazz-quartet"
     >
       <script type="application/ld+json">
@@ -55,9 +55,9 @@ const JazzQuartetPage = () => {
       </script>
 
       <PageHero
-        eyebrow="JAZZ QUARTET"
-        title="FOUR PIECES, ONE GROOVE"
-        subtitle="Piano or guitar, upright or electric bass, drums, sax or trumpet — and we read the room from the first set"
+        eyebrow="JAZZ COMBOS"
+        title="SWING TO BOSSA"
+        subtitle="Three to seven musicians, instrumentation to the room"
       />
 
       {/* Intro Section */}
@@ -72,20 +72,17 @@ const JazzQuartetPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                FOUR PIECES, <span className="text-gradient-gold">ONE GROOVE</span>
+                BALLADS TO <span className="text-gradient-gold">CONTEMPORARY</span>
               </h2>
               <p className="text-muted-foreground text-lg">
-                The quartet is piano or guitar, upright or electric bass, drums with brushes
-                for the dinner sets, and sax or trumpet on top. Optional vocals if the moment
-                calls for it. We staff the gig for what the room actually needs — three sets
-                at a cocktail hour reads differently than a single-set wedding cocktail window.
+                Three to seven musicians, instrumentation to fit your event. A trio for a
+                quiet dinner, a quintet with horns for a cocktail hour, a septet when the
+                floor wants to open up. Pick the size; we staff the lineup to match.
               </p>
               <p className="text-muted-foreground">
-                Standards from the Great American Songbook are the bread and butter — Cole
-                Porter, Gershwin, Mancini, Bacharach. Bossa nova when the energy needs to
-                settle. Swing classics when the floor wants to open. Jazz takes on modern
-                hits when the crowd is more contemporary than canonical. The MD watches the
-                room and pivots set-by-set.
+                Swing, bossa, ballads, contemporary. The set list shifts to the room — bossa
+                for dinner, swing when the floor opens, ballads where the moment calls. The
+                MD adjusts set by set.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
                 {features.map((feature) => (
@@ -109,12 +106,12 @@ const JazzQuartetPage = () => {
             >
               <OptimizedImage
                 src="band/jazz-trio-1"
-                alt="Jazz trio performing under tent with piano, drums and upright bass"
+                alt="Jazz combo performing under tent with piano, drums and upright bass"
                 className="rounded-lg shadow-lg"
               />
               <OptimizedImage
                 src="band/jazz-trio-2"
-                alt="Jazz trio intimate performance"
+                alt="Jazz combo performing at an intimate event"
                 className="rounded-lg shadow-lg mt-8"
               />
             </motion.div>
