@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { UserCheck, Check, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
+import { UserCheck, Check, RefreshCw, ChevronDown, ChevronRight, ArrowRight } from "lucide-react";
 
 type Row = {
   id: string;
@@ -81,9 +82,17 @@ export default function WaitingOnJoshWidget() {
   if (rows.length === 0 && !loading) {
     return (
       <div className="rounded border border-border/40 bg-card/30 p-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <UserCheck className="w-4 h-4 text-primary" />
-          Nothing waiting on you. Good.
+        <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <UserCheck className="w-4 h-4 text-primary" />
+            Nothing waiting on you. Good.
+          </div>
+          <Link
+            to="/team/review"
+            className="text-xs hover:text-foreground inline-flex items-center gap-1 transition-colors"
+          >
+            Full queue <ArrowRight className="w-3 h-3" />
+          </Link>
         </div>
       </div>
     );
@@ -97,9 +106,18 @@ export default function WaitingOnJoshWidget() {
           <h4 className="text-sm font-display tracking-wide-custom text-foreground">Waiting on Josh</h4>
           <Badge variant="outline" className="text-xs">{rows.length}</Badge>
         </div>
-        <Button variant="ghost" size="icon" onClick={load} disabled={loading} title="Refresh">
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Link
+            to="/team/review"
+            className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/40 transition-colors"
+            title="Open full review queue with media + context"
+          >
+            Full queue <ArrowRight className="w-3 h-3" />
+          </Link>
+          <Button variant="ghost" size="icon" onClick={load} disabled={loading} title="Refresh">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </div>
       <ul className="divide-y divide-border/40">
         {rows.map((r) => {
