@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      archive_event_hashes: {
+        Row: {
+          content_hash: string
+          file_size_bytes: number | null
+          hash_algorithm: string
+          hashed_at: string
+          hashed_by: string | null
+          source: string
+          source_id: string
+        }
+        Insert: {
+          content_hash: string
+          file_size_bytes?: number | null
+          hash_algorithm?: string
+          hashed_at?: string
+          hashed_by?: string | null
+          source: string
+          source_id: string
+        }
+        Update: {
+          content_hash?: string
+          file_size_bytes?: number | null
+          hash_algorithm?: string
+          hashed_at?: string
+          hashed_by?: string | null
+          source?: string
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archive_event_hashes_source_source_id_fkey"
+            columns: ["source", "source_id"]
+            isOneToOne: true
+            referencedRelation: "archive_events"
+            referencedColumns: ["source", "source_id"]
+          },
+        ]
+      }
       archive_event_tags: {
         Row: {
           confidence: number
@@ -1986,37 +2024,55 @@ export type Database = {
       }
       waiting_on_josh: {
         Row: {
+          context_md: string | null
           detail: string | null
           id: string
+          item_type: string
+          media_refs: Json
           priority: string
+          prompt: string | null
           queued_at: string
           resolution_note: string | null
           resolved_at: string | null
           resolved_by: string | null
+          source_ref: string | null
           source_session: string | null
           title: string
+          triangulation_loops: Json
         }
         Insert: {
+          context_md?: string | null
           detail?: string | null
           id?: string
+          item_type?: string
+          media_refs?: Json
           priority?: string
+          prompt?: string | null
           queued_at?: string
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          source_ref?: string | null
           source_session?: string | null
           title: string
+          triangulation_loops?: Json
         }
         Update: {
+          context_md?: string | null
           detail?: string | null
           id?: string
+          item_type?: string
+          media_refs?: Json
           priority?: string
+          prompt?: string | null
           queued_at?: string
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          source_ref?: string | null
           source_session?: string | null
           title?: string
+          triangulation_loops?: Json
         }
         Relationships: []
       }
@@ -2040,6 +2096,8 @@ export type Database = {
         Returns: unknown
       }
       cleanup_old_posting_times_sources: { Args: never; Returns: undefined }
+      refresh_djep_calendar_events_cache: { Args: never; Returns: number }
+      refresh_djep_past_events_cache: { Args: never; Returns: number }
       trigger_availability_prefetch: { Args: never; Returns: undefined }
       trigger_integration_health_check: { Args: never; Returns: number }
       trigger_posting_times_refresh: { Args: never; Returns: number }
@@ -2177,3 +2235,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

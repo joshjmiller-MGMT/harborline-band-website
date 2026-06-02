@@ -22,6 +22,7 @@ import {
   Shield,
   Users,
   ListMusic,
+  Inbox,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -89,9 +90,10 @@ const musicMenu: MegaMenu = {
 
 const megaMenus: MegaMenu[] = [pipelineMenu, opsMenu, brandPeopleMenu, musicMenu];
 
-// Direct-link nav (no dropdown). Dashboard first, Resources at the tail.
+// Direct-link nav (no dropdown). Dashboard first, Review second, Resources at the tail.
 const directLinks: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { name: "Dashboard", href: "/team/dashboard", icon: LayoutDashboard },
+  { name: "Review", href: "/team/review", icon: Inbox },
   { name: "Resources", href: "/team/resources", icon: FolderOpen },
 ];
 

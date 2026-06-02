@@ -79,6 +79,7 @@ const TeamBandMembers = lazy(() => import("./pages/team/TeamBandMembers"));
 const TeamSmartTasks = lazy(() => import("./pages/team/TeamSmartTasks"));
 const TeamAdminUsers = lazy(() => import("./pages/team/TeamAdminUsers"));
 const TeamSetlistBuilder = lazy(() => import("./pages/team/TeamSetlistBuilder"));
+const TeamReviewQueue = lazy(() => import("./pages/team/TeamReviewQueue"));
 
 const queryClient = new QueryClient();
 
@@ -164,6 +165,7 @@ const App = () => (
                 <Route path="/team/smart-tasks" element={<TeamSmartTasks />} />
                 <Route path="/team/admin/users" element={<TeamAdminUsers />} />
                 <Route path="/team/setlist-builder" element={<TeamSetlistBuilder />} />
+                <Route path="/team/review" element={<TeamReviewQueue />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
