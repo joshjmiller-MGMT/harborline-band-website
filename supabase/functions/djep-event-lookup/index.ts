@@ -187,11 +187,48 @@ function parseDetailHtml(html: string, eventId: string): {
       const commonLabels = /^(ID|Name|Date|Time|Subject|Status|Action|Trigger|Employee|Type|Page Views?|IP Address|Sent Email Date|Automation Type|Browser Details|Signed)$/i;
       if (commonLabels.test(cleanValue)) return;
     }
-    const dedupeKey = `${cleanLabel.toLowerCase()}|${cleanValue.toLowerCase()}`;
+    // Dedup is label-keyed, first-wins. Shapes run cleanest-first (Shape 0
+    // report fields → Shape 1 td pairs → Shape 2-4 raw widgets), so the clean
+    // display value for a label beats a later raw-widget value for the same
+    // label (e.g. clean "Event Date" wins over a Month/Day/Year widget; "Venue"
+    // wins over the raw "Event Location Id" widget value).
+    const dedupeKey = cleanLabel.toLowerCase();
     if (seenLabels.has(dedupeKey)) return;
     seenLabels.add(dedupeKey);
     fields.push({ label: cleanLabel, value: cleanValue });
   };
+
+  // Shape 0 (highest precedence): DJEP's events_report.asp renders its clean,
+  // human-facing fields as a "metro-table" div layout —
+  //   <div class="fieldtitle"><strong>Label:</strong></div> … <div class="fielddata">Value</div>
+  // — NOT the <td>Label:</td><td>Value</td> shape the parser historically read.
+  // This is where Event Date, Venue Address, Guest Count, Attire, Setup/Start/
+  // End times, Point of Contact, etc. actually live. The <input>/<select>
+  // widgets parsed in the later shapes only carry raw DJEP field-names
+  // ("Addon1fee", "Event Location Id") and split Month/Day/Year date pickers we
+  // deliberately drop — which is why the event date used to go missing. Collect
+  // the fieldtitle/fielddata tokens in document order and pair each title with
+  // the data cell that immediately follows it (section-header titles with no
+  // following data cell are skipped). Runs first so these win the label dedup.
+  const metroTokenRe = /class="(fieldtitle|fielddata)"[^>]*>([\s\S]*?)<\/div>/gi;
+  const metroToks: { kind: string; text: string }[] = [];
+  for (const t of html.matchAll(metroTokenRe)) {
+    metroToks.push({
+      kind: t[1].toLowerCase(),
+      // <br> inside a fielddata separates address lines etc. — keep it as ", ".
+      text: stripTags(t[2].replace(/<br\s*\/?>/gi, ", ")),
+    });
+  }
+  for (let i = 0; i < metroToks.length; i++) {
+    if (metroToks[i].kind !== "fieldtitle") continue;
+    const next = metroToks[i + 1];
+    if (next && next.kind === "fielddata") pushField(metroToks[i].text, next.text);
+  }
+
+  // Venue name lives in a linked header, not a fielddata cell:
+  //   Venue: <a href="…venues.asp?...">Aix La Chapelle Farm - Poolesville, MD</a>
+  const venueNameMatch = html.match(/Venue:\s*<a\b[^>]*venues\.asp[^>]*>([^<]+)<\/a>/i);
+  if (venueNameMatch) pushField("Venue", stripTags(venueNameMatch[1]));
 
   // Shape 1: <td>Label:</td><td>Value</td>. STRICT: only accept pairs where
   // the label ends in ":" / "：". The looser title-case heuristic mis-pairs
