@@ -598,11 +598,13 @@ Deno.serve(async (req) => {
       // lead that fell off the queue's filter (Upcoming Events vs.
       // event_details persists indefinitely). Synthesize a stub from the
       // cached detail so the lookup still returns something usable.
+      const numericId = /^\d+$/.test(eventId);
+      const detailUrl = `${DJEP_BASE}events_report.asp?eventid=${eventId}`;
+      let synthesizedOnMiss = false;
       if (idHits.length === 0 && eventDetails[eventId]) {
         const cached = eventDetails[eventId];
         const findField = (re: RegExp) =>
           cached.fields.find((f) => re.test(f.label))?.value ?? "";
-        const detailUrl = `${DJEP_BASE}events_report.asp?eventid=${eventId}`;
         idHits.push({
           id: `djep-${eventId}`,
           title: findField(/^(event\s*)?title$|^event\s*name$|^client$/i) ||
@@ -619,14 +621,44 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Auto-cache on miss (P-docgen-repair 2026-06-08 — Josh-reported
+      // regression). events[] only holds DJEP's current "Upcoming Events"
+      // window, so a by-ID lookup for a past / out-of-window event used to 404
+      // here. Instead, when the ID is numeric and Firecrawl/DJEP creds are
+      // configured, synthesize a bare stub pointing at the event's detail URL
+      // and let the enrichment loop below scrape it fresh. persistEventDetail()
+      // writes the result into event_details, so the next lookup hits cache.
+      const haveScrapeCreds = !!(FIRECRAWL_API_KEY && DJEP_USERNAME && DJEP_PASSWORD);
+      if (idHits.length === 0 && numericId && haveScrapeCreds) {
+        synthesizedOnMiss = true;
+        idHits.push({
+          id: `djep-${eventId}`,
+          title: `DJEP event ${eventId}`,
+          start: "",
+          end: "",
+          allDay: true,
+          source: "djep",
+          sourceLabel: "DJEP",
+          color: "",
+          fields: [],
+          itemUrl: detailUrl,
+          eventUrl: detailUrl,
+        });
+      }
+
       if (idHits.length === 0) {
+        const why = !numericId
+          ? `Event ID "${eventId}" isn't numeric — DJEP event IDs are numbers. Check the ID, or search by client name + event date.`
+          : !haveScrapeCreds
+          ? `Event ID ${eventId} isn't in the DJEP cache and on-demand scrape is unavailable (Firecrawl/DJEP creds not configured). Try searching by client name + event date.`
+          : `Event ID ${eventId} isn't in the DJEP cache (${events.length} event${events.length === 1 ? "" : "s"} cached from the system-wide events queue). Try searching by client name + event date instead.`;
         return jsonResponse({
           matches: [],
           total_in_cache: events.length,
           cache_refreshed_at: (data as { refreshed_at?: string } | null)?.refreshed_at ?? null,
           mode: "eventId",
           not_found: "eventId",
-          note: `Event ID ${eventId} isn't in the DJEP cache (${events.length} event${events.length === 1 ? "" : "s"} cached from the system-wide events queue). Try searching by client name + event date instead.`,
+          note: why,
         }, 404);
       }
 
@@ -764,6 +796,21 @@ Deno.serve(async (req) => {
           // deno-lint-ignore no-explicit-any
           ...({ _detailSource: detailSource } as any),
         });
+      }
+
+      // If we synthesized a stub on cache-miss and the on-demand scrape came
+      // back empty (bad ID, or DJEP served a login/empty page), don't return a
+      // hollow match — 404 so the caller can fall back to name+date search.
+      if (synthesizedOnMiss && (enrichedHits[0]?.fields.length ?? 0) === 0) {
+        return jsonResponse({
+          matches: [],
+          total_in_cache: events.length,
+          cache_refreshed_at: (data as { refreshed_at?: string } | null)?.refreshed_at ?? null,
+          mode: "eventId",
+          not_found: "eventId",
+          note: `Event ID ${eventId} not found in DJEP — direct lookup returned no data. Verify the ID, or search by client name + event date.`,
+          detail_log: detailLog,
+        }, 404);
       }
 
       const matches = enrichedHits.slice(0, 10).map((event) => ({

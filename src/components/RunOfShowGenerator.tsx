@@ -225,6 +225,7 @@ type SourceKind = "url" | "djep";
 interface Source {
   id: string;
   kind: SourceKind;
+  djepId?: string; // DJEP event id (kind === "djep") — identity key for dedup / load-once.
   label: string; // "Drive Sheet — Hoffman ROS", "DJEP — Smith Wedding", "CSV — payroll.csv", etc.
   sheetData: SheetData;
   parsedData: ParsedEventData | null;
@@ -660,6 +661,11 @@ export default function RunOfShowGenerator() {
           title: "No DJEP matches",
           description: String(data?.note || "Try different terms or refresh the DJEP cache."),
         });
+      } else if (matches.length === 1) {
+        // Single match (always the case for an event-ID lookup) — load it
+        // straight into sources so Josh doesn't have to click it a second time.
+        // applyDjepMatch's own load-once guard makes this safe to fire-and-forget.
+        void applyDjepMatch(matches[0]);
       }
     } catch (err: any) {
       toast({
@@ -704,6 +710,14 @@ export default function RunOfShowGenerator() {
   };
 
   const applyDjepMatch = async (match: DjepMatch) => {
+    // Load-once guard: a DJEP event can only be added as a source one time.
+    // Lookups now auto-load a single match and the match list locks added
+    // events, but this is the backstop that stops a duplicate source (and a
+    // duplicate generate-run-of-show call) from ever being created.
+    if (sources.some((s) => s.kind === "djep" && s.djepId === match.djep_id)) {
+      toast({ title: "Already loaded", description: `${match.title} is already in your sources.` });
+      return;
+    }
     setLoading(true);
     try {
       const synthesized = djepMatchToSheetData(match);
@@ -718,12 +732,13 @@ export default function RunOfShowGenerator() {
       const newSource: Source = {
         id: `djep-${match.djep_id}-${Date.now()}`,
         kind: "djep",
+        djepId: match.djep_id,
         label: synthesized.sheetTitle,
         sheetData: synthesized,
         parsedData: genData?.parsedData || null,
       };
       setSources((prev) => [...prev, newSource]);
-      toast({ title: "DJEP event added", description: synthesized.sheetTitle });
+      toast({ title: "DJEP event loaded", description: synthesized.sheetTitle });
     } catch (err: any) {
       toast({
         title: "Failed to apply DJEP match",
@@ -1452,17 +1467,23 @@ export default function RunOfShowGenerator() {
           {djepMatches && djepMatches.length > 0 && (
             <div className="mt-4 space-y-2">
               <p className="text-xs text-muted-foreground">
-                {djepMatches.length} match{djepMatches.length !== 1 ? "es" : ""} — click to load
+                {djepMatches.length} match{djepMatches.length !== 1 ? "es" : ""}
+                {djepMatches.length === 1 ? " — loaded automatically" : " — click to load"}
               </p>
               {djepMatches.map((m) => {
                 const eventDateField = m.fields.find((f) => f.label.toLowerCase() === "event date");
                 const venueField = m.fields.find((f) => f.label.toLowerCase() === "venue");
+                const alreadyAdded = sources.some((s) => s.kind === "djep" && s.djepId === m.djep_id);
                 return (
                   <button
                     key={m.djep_id}
                     onClick={() => applyDjepMatch(m)}
-                    disabled={loading}
-                    className="w-full text-left p-3 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/60 hover:border-muted-foreground/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={loading || alreadyAdded}
+                    className={`w-full text-left p-3 rounded-lg border transition-colors disabled:cursor-not-allowed ${
+                      alreadyAdded
+                        ? "border-primary/40 bg-primary/5"
+                        : "border-border bg-secondary/30 hover:bg-secondary/60 hover:border-muted-foreground/40 disabled:opacity-50"
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -1473,9 +1494,15 @@ export default function RunOfShowGenerator() {
                           <span className="opacity-70">{m.djep_id}</span>
                         </div>
                       </div>
-                      <span className="text-[10px] uppercase font-semibold text-muted-foreground shrink-0">
-                        {Math.round(m.match_score * 100)}%
-                      </span>
+                      {alreadyAdded ? (
+                        <span className="text-[10px] uppercase font-semibold text-primary shrink-0 flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Loaded
+                        </span>
+                      ) : (
+                        <span className="text-[10px] uppercase font-semibold text-muted-foreground shrink-0">
+                          {Math.round(m.match_score * 100)}%
+                        </span>
+                      )}
                     </div>
                   </button>
                 );
