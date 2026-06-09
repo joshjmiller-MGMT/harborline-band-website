@@ -22,12 +22,14 @@ import logoTextHarborline from "@/assets/logo-harborline-doc.png";
 import logoTextBSE from "@/assets/logo-bse-dark.png";
 import logoTextTSB from "@/assets/logo-tsb.webp";
 
-type OrgKey = "harborline" | "bse" | "tsb";
+type OrgKey = "harborline" | "bse" | "tsb" | "other";
 
 const ORG_INFO: Record<OrgKey, { name: string; logoText: string }> = {
   harborline: { name: "Harborline", logoText: logoTextHarborline },
   bse: { name: "Baltimore Sound Entertainment", logoText: logoTextBSE },
   tsb: { name: "Tom Starr Band", logoText: logoTextTSB },
+  // "Other" — user types a one-off org name; no preset brand logo on the doc.
+  other: { name: "Other (enter name)", logoText: "" },
 };
 
 type TemplateType = "wedding-ros" | "client-planner" | "corporate-ros" | "party-runsheet";
@@ -475,6 +477,7 @@ export default function RunOfShowGenerator() {
   const [generating, setGenerating] = useState(false);
   const [logosBase64, setLogosBase64] = useState<{ circle: string; text: string } | null>(null);
   const [organization, setOrganization] = useState<OrgKey>("harborline");
+  const [customOrg, setCustomOrg] = useState("");
   const [manualOverrides, setManualOverrides] = useState("");
   const manualOverridesRef = useRef<HTMLTextAreaElement>(null);
 
@@ -530,7 +533,11 @@ export default function RunOfShowGenerator() {
   const currentLogoText = ORG_INFO[organization].logoText;
 
   useEffect(() => {
-    Promise.all([imageToBase64(logoCircle), imageToBase64(currentLogoText)])
+    Promise.all([
+      imageToBase64(logoCircle),
+      // "Other" org has no preset logo — skip the text-logo load.
+      currentLogoText ? imageToBase64(currentLogoText) : Promise.resolve(""),
+    ])
       .then(([circle, text]) => setLogosBase64({ circle, text }))
       .catch(() => console.warn("Failed to preload logos"));
   }, [currentLogoText]);
@@ -573,6 +580,15 @@ export default function RunOfShowGenerator() {
     const base = normalizeDetails(mergedEvent.details);
     const overrides = parseManualOverrides();
     const merged = { ...base, ...overrides };
+
+    // Organization comes from the Step-3 selector (Harborline / BSE / TSB, or a
+    // custom name via "Other") — that's the authoritative org for this doc, so
+    // it fills the Organization field (DJEP doesn't supply one). An explicit
+    // manual-override line still wins.
+    const orgName = organization === 'other'
+      ? (customOrg.trim() || 'Other')
+      : ORG_INFO[organization].name;
+    merged['organization'] = overrides['organization'] || orgName;
 
     // Apply org-specific defaults for project lead
     if (!merged['project lead'] && !merged['bandleader']) {
@@ -1487,6 +1503,10 @@ export default function RunOfShowGenerator() {
               {djepMatches.map((m) => {
                 const eventDateField = m.fields.find((f) => f.label.toLowerCase() === "event date");
                 const venueField = m.fields.find((f) => f.label.toLowerCase() === "venue");
+                const eventNameField = m.fields.find((f) => f.label.toLowerCase() === "event name");
+                // Prefer the real scraped event name over the backend stub title
+                // ("DJEP event <id>") so the tile reads e.g. "Robinette Wedding".
+                const displayTitle = eventNameField?.value?.trim() || m.title;
                 const alreadyAdded = sources.some((s) => s.kind === "djep" && s.djepId === m.djep_id);
                 return (
                   <button
@@ -1501,7 +1521,7 @@ export default function RunOfShowGenerator() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm text-foreground font-medium truncate">{m.title}</p>
+                        <p className="text-sm text-foreground font-medium truncate">{displayTitle}</p>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
                           {eventDateField && <span>Event: {eventDateField.value}</span>}
                           {venueField && <span>Venue: {venueField.value}</span>}
@@ -1571,7 +1591,7 @@ export default function RunOfShowGenerator() {
             <span className="text-primary">3.</span> Organization
           </CardTitle>
           <CardDescription>
-            Choose which brand logo appears on the generated document.
+            Sets the brand logo and the Organization field on the generated document. Pick "Other" to enter a one-off org name.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1585,6 +1605,14 @@ export default function RunOfShowGenerator() {
               ))}
             </SelectContent>
           </Select>
+          {organization === "other" && (
+            <Input
+              className="mt-3 bg-secondary/50 border-border"
+              placeholder="Organization name (appears on the document)"
+              value={customOrg}
+              onChange={(e) => setCustomOrg(e.target.value)}
+            />
+          )}
         </CardContent>
       </Card>
 
