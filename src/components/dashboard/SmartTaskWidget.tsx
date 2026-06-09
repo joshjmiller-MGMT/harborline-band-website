@@ -9,8 +9,9 @@ import { operatorAuthHeader } from "@/integrations/supabase/operator-fetch";
 import { useToast } from "@/hooks/use-toast";
 import {
   Sparkles, Save, RotateCcw, Loader2, CheckCircle2, Clock, Target, AlertTriangle, Calendar,
-  Trello, RefreshCw, ExternalLink, Inbox, LayoutGrid,
+  Trello, RefreshCw, ExternalLink, Inbox, LayoutGrid, HelpCircle,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import {
   useSmartTaskBoardData,
   type TrelloCard,
@@ -25,6 +26,7 @@ type SmartShape = {
   blockers: string;
   effort: string;
   due_date: string | null;
+  clarifying_questions?: string[];
 };
 
 type CardContext = {
@@ -60,6 +62,9 @@ export default function SmartTaskWidget() {
   const [smart, setSmart] = useState<SmartShape | null>(null);
   const [working, setWorking] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Clarify-loop (#16): answers keyed by clarifying-question index. Cleared on
+  // every fresh rewrite; fed back into the rewrite on "Re-run with answers".
+  const [answers, setAnswers] = useState<Record<number, string>>({});
 
   // Source-of-task tracking: when null, the input came from the textarea
   // (free-form). When set, the input came from a Trello card; saving will
@@ -83,13 +88,16 @@ export default function SmartTaskWidget() {
     setActiveCard(card);
   }
 
-  async function rewrite() {
+  async function runRewrite(answersText?: string) {
     if (!input.trim()) return;
     setWorking(true);
     setSmart(null);
     try {
-      const body: { input: string; card_context?: CardContext } = { input: input.trim() };
+      const body: { input: string; card_context?: CardContext; answers?: string } = {
+        input: input.trim(),
+      };
       if (activeCard) body.card_context = buildCardContext(activeCard);
+      if (answersText) body.answers = answersText;
       const { data, error } = await supabase.functions.invoke("smart-task-rewrite", { body });
       if (error) throw error;
       const result = (data as { smart?: SmartShape })?.smart;
@@ -101,6 +109,26 @@ export default function SmartTaskWidget() {
     } finally {
       setWorking(false);
     }
+  }
+
+  // Fresh rewrite from the textarea/Trello card — clears any prior answers.
+  function rewrite() {
+    setAnswers({});
+    void runRewrite();
+  }
+
+  // Re-run folding in Josh's answers to the clarifying questions (#16).
+  function rerunWithAnswers() {
+    const qs = smart?.clarifying_questions ?? [];
+    const qa = qs
+      .map((q, i) => (answers[i]?.trim() ? `Q: ${q}\nA: ${answers[i].trim()}` : null))
+      .filter(Boolean)
+      .join("\n\n");
+    if (!qa) {
+      toast({ title: "Answer at least one question first" });
+      return;
+    }
+    void runRewrite(qa);
   }
 
   async function createCalendarEvent(s: SmartShape): Promise<{ id: string; htmlLink: string } | null> {
@@ -221,6 +249,7 @@ export default function SmartTaskWidget() {
 
   function reset() {
     setSmart(null);
+    setAnswers({});
   }
 
   function clearSource() {
@@ -329,6 +358,42 @@ export default function SmartTaskWidget() {
                 <Trello className="w-3 h-3" />
                 On save: Trello card labeled ✅ SMART-ified (stays on board).
               </p>
+            )}
+
+            {(smart.clarifying_questions?.length ?? 0) > 0 && (
+              <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+                <p className="text-[11px] uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  Sharpen this (optional) — answer + re-run for a tighter SMART task
+                </p>
+                <div className="space-y-2">
+                  {smart.clarifying_questions!.map((q, i) => (
+                    <div key={i} className="space-y-1">
+                      <label className="text-xs text-foreground">{q}</label>
+                      <Input
+                        value={answers[i] ?? ""}
+                        onChange={(e) => setAnswers((prev) => ({ ...prev, [i]: e.target.value }))}
+                        placeholder="Your answer…"
+                        className="h-8 text-sm"
+                        disabled={working || saving}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={rerunWithAnswers}
+                  disabled={working || saving}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  {working ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Re-running…</>
+                  ) : (
+                    <><Sparkles className="w-4 h-4 mr-2" /> Re-run with answers</>
+                  )}
+                </Button>
+              </div>
             )}
 
             <div className="flex gap-2 pt-2">

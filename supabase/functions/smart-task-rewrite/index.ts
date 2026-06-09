@@ -51,6 +51,12 @@ const SMART_TOOL = {
         description:
           "ISO date (YYYY-MM-DD) if the input mentions a deadline; otherwise null. Do not invent a deadline.",
       },
+      clarifying_questions: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "0-3 SHORT questions for Josh when the task is too vague to be genuinely SMART — e.g. no deadline is stated or implied (so due_date had to be null), the definition of done is ambiguous, or scope is unclear. Each question's answer should directly let you set a real due_date / definition_of_done / measure. Return an EMPTY array when the task is already clear. Never ask about something the input or card_context already answers.",
+      },
     },
     required: ["revised_title", "definition_of_done", "measure", "blockers", "effort"],
   },
@@ -64,6 +70,8 @@ Rules:
 - Only include a due_date if the input mentions one (or implies one like "this week" / "by Friday"). Otherwise return null. Do not invent deadlines.
 - Blockers should reflect what the input actually mentions — return "None" if nothing is implied.
 - Effort: pick the closest bucket. When ambiguous, lean smaller.
+- clarifying_questions: when the task is too vague to make genuinely SMART — no deadline stated or implied (so due_date is null), an ambiguous definition of done, or unclear scope — return up to 3 short, specific questions whose answers would let you set a real due_date / definition_of_done / measure. Return an empty array when the task is already clear. Never ask about something the input or card_context already answers. The most useful question is almost always the missing deadline.
+- When Josh has supplied answers to earlier clarifying questions, treat them as authoritative, fold them into the SMART fields (including due_date), and return clarifying_questions empty unless something material is still genuinely missing.
 
 When card_context is provided (from a Trello card), use it as additional signal — never as the sole source:
 - The list (bucket) carries urgency intent. "Urgent" / "Daily's" → near-term; "Notes" / "To Listen to" / "To Watch" / "To Learn" / "POC - F/U" → backlog, likely no deadline. Use this to inform due_date inference only when the card text itself implies a timeframe; do not invent a date purely from the bucket name.
@@ -113,7 +121,7 @@ Deno.serve(async (req) => {
   if (denial) return denial;
 
   try {
-    const { input, card_context } = await req.json();
+    const { input, card_context, answers } = await req.json();
     if (!input || typeof input !== "string" || !input.trim()) {
       return new Response(JSON.stringify({ error: "input (string) required" }), {
         status: 400,
@@ -134,7 +142,11 @@ Deno.serve(async (req) => {
       card_context && typeof card_context === "object"
         ? formatCardContext(card_context as CardContext)
         : "";
-    const userText = `Today's date: ${today}\n\nRaw task: ${input.trim()}${contextBlock}`;
+    const answersBlock =
+      answers && typeof answers === "string" && answers.trim()
+        ? `\n\nJosh answered earlier clarifying questions — treat these as authoritative, fold them into the SMART fields (including due_date), and do NOT ask them again:\n${answers.trim()}`
+        : "";
+    const userText = `Today's date: ${today}\n\nRaw task: ${input.trim()}${contextBlock}${answersBlock}`;
 
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
