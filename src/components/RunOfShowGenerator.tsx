@@ -686,12 +686,20 @@ export default function RunOfShowGenerator() {
   // store a dedicated event-name field.
   const djepMatchToSheetData = (match: DjepMatch): SheetData => {
     const rows: string[][] = [];
-    const parts = match.title.split(" · ");
-    const client = parts.length >= 2 ? parts.slice(1).join(" · ").trim() : match.title.trim();
-    if (client) {
-      rows.push(["Event Name:", client]);
-      rows.push(["Client:", client]);
-    }
+    const findField = (re: RegExp) =>
+      match.fields.find((f) => re.test(f.label.trim()))?.value?.trim() || "";
+    // Prefer the REAL scraped Event Name / Client. match.title is only a
+    // synthesized fallback — for an auto-cached / by-ID lookup it's the useless
+    // stub "DJEP event <id>", which used to override the real values and show
+    // up as the event name + client in the generated doc.
+    const titleParts = match.title.split(" · ");
+    const titleClient = titleParts.length >= 2
+      ? titleParts.slice(1).join(" · ").trim()
+      : match.title.trim();
+    const eventName = findField(/^event\s*name$/i) || titleClient;
+    const client = findField(/^client(\s*name)?$/i) || titleClient;
+    if (eventName) rows.push(["Event Name:", eventName]);
+    if (client) rows.push(["Client:", client]);
     for (const f of match.fields) {
       const label = f.label.trim();
       const value = (f.value || "").trim();
@@ -700,7 +708,13 @@ export default function RunOfShowGenerator() {
       // lead pipeline, not the run-of-show. They live in DJEP for sales ops,
       // not document generation. Event ID is kept for traceability.
       if (/^(status|next action|next action date)$/i.test(label)) continue;
-      rows.push([`${label}:`, value]);
+      // Event Name + Client/Client Name are already emitted canonically above;
+      // don't re-push them or the parser's first-wins picks the wrong one.
+      if (/^(event\s*name|client(\s*name)?)$/i.test(label)) continue;
+      // DJEP labels its combined window "Start / End Times"; the templates
+      // expect "Start / End". Rename so it maps instead of exporting blank.
+      const outLabel = /^start\s*\/\s*end\s*times$/i.test(label) ? "Start / End" : label;
+      rows.push([`${outLabel}:`, value]);
     }
     return {
       headers: ["Field", "Value"],
