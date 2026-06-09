@@ -141,7 +141,8 @@ Deno.serve(async (req) => {
       );
     }
     // Guard against pathological pastes — cap input to keep latency/cost sane.
-    const clipped = text.length > 24000 ? text.slice(0, 24000) : text;
+    const wasClipped = text.length > 24000;
+    const clipped = wasClipped ? text.slice(0, 24000) : text;
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) {
@@ -162,7 +163,9 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 4096,
+        // A big multi-set wedding (setlist + timeline + personnel) can exceed 4096
+        // output tokens; truncation there silently drops sets. 8192 gives headroom.
+        max_tokens: 8192,
         system: [
           { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
         ],
@@ -192,6 +195,9 @@ Deno.serve(async (req) => {
     }
 
     const data = await resp.json();
+    // If the model hit the output cap, the forced tool_use JSON is cut off — its
+    // input is partial (trailing sets/songs silently missing). Surface it.
+    const outputTruncated = data.stop_reason === "max_tokens";
     const block = (data.content || []).find(
       (c: { type: string; name?: string }) =>
         c.type === "tool_use" && c.name === EXTRACT_TOOL.name,
@@ -204,13 +210,30 @@ Deno.serve(async (req) => {
     }
 
     const out = block.input as Record<string, unknown>;
+    // Surface anything the operator should know about silently-dropped input/output
+    // by folding it into `notes` (the UI already shows that field).
+    const warnings: string[] = [];
+    if (wasClipped) {
+      warnings.push(
+        `Input was capped at 24,000 characters — the last ${text.length - 24000} were not read; re-run that tail separately if it had more sets.`,
+      );
+    }
+    if (outputTruncated) {
+      warnings.push(
+        "Extraction hit the output length limit and may be missing the final sets/songs — split the paste into smaller pieces and re-run.",
+      );
+    }
+    const modelNotes = typeof out.notes === "string" ? out.notes : "";
+    const notes = [modelNotes, ...warnings].filter(Boolean).join(" — ");
+
     // Normalize/guard the shape so the frontend can trust it.
     const result = {
       details: (out.details && typeof out.details === "object") ? out.details : {},
       songSections: Array.isArray(out.songSections) ? out.songSections : [],
       timeline: Array.isArray(out.timeline) ? out.timeline : [],
       personnel: Array.isArray(out.personnel) ? out.personnel : [],
-      notes: typeof out.notes === "string" ? out.notes : "",
+      notes,
+      truncated: outputTruncated || wasClipped,
       model,
     };
 
