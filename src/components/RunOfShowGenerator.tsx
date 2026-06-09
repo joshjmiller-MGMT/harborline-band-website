@@ -22,13 +22,18 @@ import logoTextHarborline from "@/assets/logo-harborline-doc.png";
 import logoTextBSE from "@/assets/logo-bse-dark.png";
 import logoTextTSB from "@/assets/logo-tsb.webp";
 
-type OrgKey = "harborline" | "bse" | "tsb" | "other";
+// The Section-3 selector picks the ENSEMBLE / band entity, and also drives the
+// document letterhead logo (the ensemble's brand). "Other" = a one-off name.
+// Distinct from the doc's Organization field, which is the CLIENT's org and
+// comes from the imported event.
+type OrgKey = "harborline" | "bse" | "tsb" | "jmj" | "other";
 
 const ORG_INFO: Record<OrgKey, { name: string; logoText: string }> = {
   harborline: { name: "Harborline", logoText: logoTextHarborline },
   bse: { name: "Baltimore Sound Entertainment", logoText: logoTextBSE },
   tsb: { name: "Tom Starr Band", logoText: logoTextTSB },
-  // "Other" — user types a one-off org name; no preset brand logo on the doc.
+  jmj: { name: "JMJ", logoText: "" },
+  // "Other" — user types a one-off ensemble name; no preset brand logo on the doc.
   other: { name: "Other (enter name)", logoText: "" },
 };
 
@@ -98,6 +103,7 @@ const TEMPLATE_FIELDS: Record<TemplateType, { label: string; key: string }[]> = 
     { label: "Event Type", key: "event type" },
     { label: "Client", key: "client" },
     { label: "Organization", key: "organization" },
+    { label: "Ensemble", key: "ensemble" },
     { label: "Venue", key: "venue" },
     { label: "Venue Address", key: "venue address" },
     { label: "Guest Count", key: "guest count" },
@@ -581,14 +587,14 @@ export default function RunOfShowGenerator() {
     const overrides = parseManualOverrides();
     const merged = { ...base, ...overrides };
 
-    // Organization comes from the Step-3 selector (Harborline / BSE / TSB, or a
-    // custom name via "Other") — that's the authoritative org for this doc, so
-    // it fills the Organization field (DJEP doesn't supply one). An explicit
-    // manual-override line still wins.
-    const orgName = organization === 'other'
+    // The Step-3 selector picks the ENSEMBLE (Harborline / BSE / TSB / JMJ, or a
+    // custom name via "Other"). It's authoritative for the ensemble field —
+    // DJEP doesn't carry it — though an explicit manual-override line still wins.
+    // (Organization is the CLIENT's org and flows in from the imported event.)
+    const ensembleName = organization === 'other'
       ? (customOrg.trim() || 'Other')
       : ORG_INFO[organization].name;
-    merged['organization'] = overrides['organization'] || orgName;
+    merged['ensemble'] = overrides['ensemble'] || ensembleName;
 
     // Apply org-specific defaults for project lead
     if (!merged['project lead'] && !merged['bandleader']) {
@@ -873,8 +879,18 @@ export default function RunOfShowGenerator() {
       organization: opts.organization,
       requiredFields: opts.requiredFields,
     };
+    // Ensemble comes from the Step-3 selector; DJEP doesn't carry it and it's not
+    // a backend param, so inject it into the data the edge function renders.
+    const ensembleVal = opts.organization === "other"
+      ? (customOrg.trim() || "Other")
+      : ORG_INFO[opts.organization].name;
     if (opts.sources.length <= 1) {
-      const sheetData = opts.sources[0]?.sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
+      const src = opts.sources[0]?.sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
+      // Prepend the ensemble row so it wins the parser's first-wins. A manual
+      // override (applied by the edge fn last) still takes precedence.
+      const sheetData = ensembleVal
+        ? { ...src, rows: [["Ensemble:", ensembleVal], ...(src.rows || [])] }
+        : src;
       return { ...baseBody, sheetData };
     }
     // Strip provenance — the edge function only knows the EventData shape.
@@ -884,7 +900,7 @@ export default function RunOfShowGenerator() {
       // Empty sheetData satisfies any defensive validation; preMergedEvent is
       // the load-bearing field.
       sheetData: { headers: [], rows: [], sheetTitle: opts.sources.map((s) => s.label).join(" + ") },
-      preMergedEvent: eventData,
+      preMergedEvent: { ...eventData, details: { ...eventData.details, ensemble: ensembleVal || eventData.details?.ensemble } },
     };
   };
 
@@ -1584,14 +1600,14 @@ export default function RunOfShowGenerator() {
         </CardContent>
       </Card>
 
-      {/* Step 3: Organization / Brand */}
+      {/* Step 3: Ensemble (band entity — also drives the letterhead) */}
       <Card className="mb-6 bg-card border-border">
         <CardHeader>
           <CardTitle className="text-xl font-display tracking-wide-custom flex items-center gap-2">
-            <span className="text-primary">3.</span> Organization
+            <span className="text-primary">3.</span> Ensemble
           </CardTitle>
           <CardDescription>
-            Sets the brand logo and the Organization field on the generated document. Pick "Other" to enter a one-off org name.
+            The performing ensemble — fills the Ensemble field and sets the document letterhead. Pick "Other" to enter a one-off name. (The client's organization comes from the imported event.)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1608,7 +1624,7 @@ export default function RunOfShowGenerator() {
           {organization === "other" && (
             <Input
               className="mt-3 bg-secondary/50 border-border"
-              placeholder="Organization name (appears on the document)"
+              placeholder="Ensemble name (appears on the document)"
               value={customOrg}
               onChange={(e) => setCustomOrg(e.target.value)}
             />
