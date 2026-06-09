@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table, Search, Hash, Sparkles, ArrowRight, X, Check, Plus, Trash2, Layers, ArrowDownLeft, ListMusic } from "lucide-react";
+import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table, Search, Hash, Sparkles, ArrowRight, X, Check, Plus, Trash2, Layers, ArrowDownLeft, ListMusic, ClipboardPaste, Wand2 } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   DropdownMenu,
@@ -229,7 +229,7 @@ interface ParsedEventData {
 // (first-source-wins for scalars/details; dedup-merge for arrays), with
 // per-field overrides letting Josh pick a later source's value when the
 // default ordering loses information.
-type SourceKind = "url" | "djep";
+type SourceKind = "url" | "djep" | "paste";
 
 interface Source {
   id: string;
@@ -487,6 +487,16 @@ export default function RunOfShowGenerator() {
   const [customOrg, setCustomOrg] = useState("");
   const [manualOverrides, setManualOverrides] = useState("");
   const manualOverridesRef = useRef<HTMLTextAreaElement>(null);
+
+  // Smart Paste (P-docgen smart-import): throw any messy doc / pasted text at the
+  // smart-extract edge fn → structured event (details + setlist + timeline +
+  // personnel) → becomes a Source like a URL/DJEP import. Two entry points share
+  // the same runSmartExtract: the collapsible paste box here, and an
+  // "Extract everything" button on the manual-overrides textarea below.
+  const [showPaste, setShowPaste] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteLoading, setPasteLoading] = useState(false);
+  const [extractAllLoading, setExtractAllLoading] = useState(false);
 
   const mergedEvent: MergedEvent = useMemo(
     () => mergeSources(sources, fieldOverrides),
@@ -885,7 +895,16 @@ export default function RunOfShowGenerator() {
     const ensembleVal = opts.organization === "other"
       ? (customOrg.trim() || "Other")
       : ORG_INFO[opts.organization].name;
-    if (opts.sources.length <= 1) {
+    // The single-source fast path re-parses the source's raw sheetData through
+    // the edge fn for the most faithful render. That only works when the lone
+    // source actually carries a raw sheet (URL/DJEP). A lone Smart Paste source
+    // has no raw sheet — its data lives in parsedData — so it must take the
+    // preMergedEvent path below, same as multi-source, or it would export blank.
+    const lone = opts.sources.length === 1 ? opts.sources[0] : null;
+    const loneHasRawSheet = !!(
+      lone && (((lone.sheetData?.rows?.length ?? 0) > 0) || ((lone.sheetData?.headers?.length ?? 0) > 0))
+    );
+    if (opts.sources.length === 0 || loneHasRawSheet) {
       const src = opts.sources[0]?.sheetData || { headers: [], rows: [], sheetTitle: "Untitled" };
       // Prepend the ensemble row so it wins the parser's first-wins. A manual
       // override (applied by the edge fn last) still takes precedence.
@@ -1320,6 +1339,98 @@ export default function RunOfShowGenerator() {
 
   const dismissAllCorrections = () => setAutocorrectSuggestions(null);
 
+  // Smart Paste: turn smart-extract's JSON into a Source the merge/export already
+  // understands. Detail keys from smart-extract are the same lowercase canonical
+  // keys the template fields use, so normalizeDetails just tidies them.
+  const buildExtractedSource = (
+    result: {
+      details?: Record<string, string>;
+      songSections?: ParsedEventData["songSections"];
+      timeline?: ParsedEventData["timeline"];
+      personnel?: ParsedEventData["personnel"];
+    },
+    label: string,
+  ): Source => {
+    const details = normalizeDetails(result.details || {});
+    return {
+      id: `paste-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      kind: "paste",
+      label,
+      sheetData: { headers: [], rows: [], sheetTitle: label },
+      parsedData: {
+        eventName: details["event name"] || "",
+        details,
+        personnel: Array.isArray(result.personnel) ? result.personnel : [],
+        timeline: Array.isArray(result.timeline) ? result.timeline : [],
+        songSections: Array.isArray(result.songSections) ? result.songSections : [],
+      },
+    };
+  };
+
+  const runSmartExtract = async (
+    rawText: string,
+    opts: { setLoading: (b: boolean) => void; onDone?: () => void },
+  ) => {
+    const text = rawText.trim();
+    if (!text) {
+      toast({
+        title: "Nothing to extract",
+        description: "Paste some text first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    opts.setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("smart-extract", {
+        body: { text },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const songSections: ParsedEventData["songSections"] = Array.isArray(data?.songSections)
+        ? data.songSections
+        : [];
+      const songCount = songSections.reduce((sum, s) => sum + (s.songs?.length || 0), 0);
+      const detailCount = data?.details ? Object.keys(data.details).length : 0;
+
+      if (songCount === 0 && detailCount === 0) {
+        toast({
+          title: "Nothing found",
+          description: "That text didn't yield any songs or event fields. Try pasting more detail.",
+        });
+        return;
+      }
+
+      const evName = (data?.details?.["event name"] as string | undefined) || "";
+      const label = evName
+        ? `Smart Paste — ${evName}`
+        : `Smart Paste — ${songCount} song${songCount !== 1 ? "s" : ""}`;
+
+      setSources((prev) => [...prev, buildExtractedSource(data, label)]);
+      opts.onDone?.();
+
+      const bits: string[] = [];
+      if (songCount) bits.push(`${songCount} song${songCount !== 1 ? "s" : ""}`);
+      if (detailCount) bits.push(`${detailCount} field${detailCount !== 1 ? "s" : ""}`);
+      toast({
+        title: "Extracted & loaded",
+        description:
+          `Added a source with ${bits.join(" + ")}.` +
+          (typeof data?.notes === "string" && data.notes ? ` ${data.notes}` : ""),
+      });
+    } catch (err: any) {
+      console.error("smart-extract failed", err);
+      toast({
+        title: "Extraction failed",
+        description: err?.message || "Could not reach the extraction service.",
+        variant: "destructive",
+      });
+    } finally {
+      opts.setLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-6 py-10 max-w-4xl">
       <div className="mb-8">
@@ -1367,6 +1478,53 @@ export default function RunOfShowGenerator() {
             </p>
           )}
 
+          {/* Smart Paste — throw any messy doc / raw text at the LLM extractor */}
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => setShowPaste((v) => !v)}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
+            >
+              <ClipboardPaste className="w-3.5 h-3.5" />
+              {showPaste ? "Hide paste box" : "…or paste raw text (messy setlist, email, copied cells)"}
+              <ChevronDown className={`w-3 h-3 transition-transform ${showPaste ? "rotate-180" : ""}`} />
+            </button>
+            {showPaste && (
+              <div className="mt-2 space-y-2">
+                <Textarea
+                  placeholder={`Paste anything — a rough setlist, an email, copied spreadsheet cells…\n\nSet 1\n1. So Easy - Olivia Dean\n2. P.D.A - John Legend\n…`}
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  className="bg-secondary/50 border-border font-mono text-sm min-h-[120px]"
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    The AI pulls out the setlist + any event fields and adds it as a source.
+                  </p>
+                  <Button
+                    onClick={() =>
+                      runSmartExtract(pasteText, {
+                        setLoading: setPasteLoading,
+                        onDone: () => {
+                          setPasteText("");
+                          setShowPaste(false);
+                        },
+                      })
+                    }
+                    disabled={pasteLoading || !pasteText.trim()}
+                  >
+                    {pasteLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-4 h-4 mr-1.5" />
+                    )}
+                    {pasteLoading ? "Extracting…" : "Extract & Load"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {hasAnySource && (
             <div className="mt-4 space-y-2">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -1392,6 +1550,8 @@ export default function RunOfShowGenerator() {
                       <div className="flex items-center gap-2 text-sm">
                         {src.kind === "djep" ? (
                           <Hash className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        ) : src.kind === "paste" ? (
+                          <ClipboardPaste className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         ) : (
                           <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         )}
@@ -1845,20 +2005,39 @@ export default function RunOfShowGenerator() {
               <label className="text-sm font-medium text-foreground">
                 Add or override fields manually
               </label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={runAutocorrect}
-                disabled={autocorrectLoading || !manualOverrides.trim()}
-              >
-                {autocorrectLoading ? (
-                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                )}
-                Clean up entries
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    runSmartExtract(manualOverrides, { setLoading: setExtractAllLoading })
+                  }
+                  disabled={extractAllLoading || !manualOverrides.trim()}
+                  title="Pull a full setlist + event fields out of whatever's in this box and add it as a source"
+                >
+                  {extractAllLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <Wand2 className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  Extract everything
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={runAutocorrect}
+                  disabled={autocorrectLoading || !manualOverrides.trim()}
+                >
+                  {autocorrectLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  Clean up entries
+                </Button>
+              </div>
             </div>
             <p className="text-xs text-muted-foreground mb-2">
               Enter one field per line as <code className="bg-secondary/50 px-1 py-0.5 rounded text-[11px]">Label: Value</code>.
