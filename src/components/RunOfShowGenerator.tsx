@@ -21,6 +21,7 @@ import logoCircle from "@/assets/logo-harborline-doc.png";
 import logoTextHarborline from "@/assets/logo-harborline-doc.png";
 import logoTextBSE from "@/assets/logo-bse-dark.png";
 import logoTextTSB from "@/assets/logo-tsb.webp";
+import logoTextJMJ from "@/assets/logo-jmj.jpg";
 
 // The Section-3 selector picks the ENSEMBLE / band entity, and also drives the
 // document letterhead logo (the ensemble's brand). "Other" = a one-off name.
@@ -32,7 +33,7 @@ const ORG_INFO: Record<OrgKey, { name: string; logoText: string }> = {
   harborline: { name: "Harborline", logoText: logoTextHarborline },
   bse: { name: "Baltimore Sound Entertainment", logoText: logoTextBSE },
   tsb: { name: "Tom Starr Band", logoText: logoTextTSB },
-  jmj: { name: "JMJ", logoText: "" },
+  jmj: { name: "JMJ", logoText: logoTextJMJ },
   // "Other" — user types a one-off ensemble name; no preset brand logo on the doc.
   other: { name: "Other (enter name)", logoText: "" },
 };
