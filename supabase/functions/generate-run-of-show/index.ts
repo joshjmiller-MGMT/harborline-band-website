@@ -1795,7 +1795,8 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
 
 function generateCorporateHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[], organization?: string): string {
   const isTSB = organization === 'tsb';
-  const teal = isTSB ? '#E85D04' : '#14B8A6';
+  const isJMJ = organization === 'jmj';
+  const teal = isTSB ? '#E85D04' : isJMJ ? '#0B3D91' : '#14B8A6';
   const darkText = '#1a1a1a';
   const bodyText = '#333333';
   const textLogo = logos?.text || '';
@@ -1937,14 +1938,17 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
 
 function generateInternalHTML(event: EventData, logos?: { circle: string; text: string }, requiredFields?: RequiredField[], organization?: string): string {
   const isTSB = organization === 'tsb';
-  const purple = isTSB ? '#DC2626' : '#7C3AED';
-  const teal = isTSB ? '#E85D04' : '#14B8A6';
+  const isJMJ = organization === 'jmj';
+  const purple = isTSB ? '#DC2626' : isJMJ ? '#0B3D91' : '#7C3AED';
+  const teal = isTSB ? '#E85D04' : isJMJ ? '#1E40AF' : '#14B8A6';
   const darkText = '#1a1a1a';
   const bodyText = '#333333';
   const mutedText = '#666666';
 
-  const circleColors = isTSB 
+  const circleColors = isTSB
     ? ['#DC2626', '#E85D04', '#F59E0B', '#EF4444', '#D97706', '#FBBF24']
+    : isJMJ
+    ? ['#0B3D91', '#1E40AF', '#1D4ED8', '#2563EB', '#3B82F6', '#1E3A8A']
     : ['#14B8A6', '#0EA5E9', '#6366F1', '#7C3AED', '#A855F7', '#3B82F6'];
   const textLogo = logos?.text || '';
 
@@ -2098,7 +2102,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
     ${songlistHTML}
 
     <div class="footer">
-      ${isTSB ? 'TOM STARR BAND &nbsp;&middot;&nbsp; tomstarrband.com' : organization === 'bse' ? 'BALTIMORE SOUND ENTERTAINMENT &nbsp;&middot;&nbsp; baltimoresound.net' : 'HARBORLINE &nbsp;&middot;&nbsp; Baltimore\'s Go-To Live Band &nbsp;&middot;&nbsp; harborlineband.com'}
+      ${isTSB ? 'TOM STARR BAND &nbsp;&middot;&nbsp; tomstarrband.com' : isJMJ ? 'JMJ' : organization === 'bse' ? 'BALTIMORE SOUND ENTERTAINMENT &nbsp;&middot;&nbsp; baltimoresound.net' : 'HARBORLINE &nbsp;&middot;&nbsp; Baltimore\'s Go-To Live Band &nbsp;&middot;&nbsp; harborlineband.com'}
     </div>
   </div>
 </body>
