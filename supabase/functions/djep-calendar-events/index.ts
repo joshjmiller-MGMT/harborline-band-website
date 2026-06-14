@@ -49,6 +49,18 @@ const EVENTS_LIST_URL =
 const CACHE_KEY = "djep:all-events";
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
+// Card #31 (2026-06-09): the unified calendar must show only MY (Miller's)
+// assigned leads — NOT the system-wide list. Card #10 had broadened the SCRAPE
+// to system-wide (salespersonfilter=-1) so a gig could be found by event ID;
+// that system-wide capability now lives in the separate djep-event-lookup fn
+// (used by the doc generator). Here we keep the cheap single system-wide scrape
+// but filter the calendar feed down to Miller's rows — the same scope as the
+// original "Web Links → SALES - MILLER" view. Matched case-insensitively as a
+// substring so "Miller" / "Josh Miller" / "J. Miller" all qualify. If DJEP ever
+// drops the Salesperson column we fail OPEN (show all) rather than emit an empty
+// calendar.
+const MY_SALESPERSON = "miller";
+
 type DjepEvent = {
   id: string;
   title: string;
@@ -334,6 +346,7 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
   ].filter((n) => n >= 0));
 
   const events: DjepEvent[] = [];
+  let droppedNonMiller = 0; // Card #31: how many rows were filtered out as not-mine
   for (const { cells, cellsHtml } of dataRowsPairs) {
     const get = (j: number) => (j >= 0 && j < cells.length ? cells[j] : "");
     const getHtml = (j: number) => (j >= 0 && j < cellsHtml.length ? cellsHtml[j] : "");
@@ -358,6 +371,15 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
     const venue = get(idx.venue);
     const salesperson = get(idx.salesperson);
     const eventId = get(idx.eventId);
+
+    // Card #31 (2026-06-09): calendar shows MY leads only. The scrape stays
+    // system-wide (Card #10) so the data is there, but we drop non-Miller rows
+    // here. Fail OPEN when the Salesperson column is absent (idx.salesperson < 0)
+    // — a fuller calendar beats an empty one if DJEP's table layout shifts.
+    if (idx.salesperson >= 0 && !salesperson.toLowerCase().includes(MY_SALESPERSON)) {
+      droppedNonMiller++;
+      continue;
+    }
 
     // Card #10 (2026-05-28): system-wide scrape now — salesperson column is
     // meaningful per-row (Brandon / Jeff / Miller / Rachel / Stan / Alex / Tom
@@ -437,7 +459,7 @@ function parseEventsFromHtml(html: string): { events: DjepEvent[]; debug: any } 
       ...(eventUrl ? { eventUrl } : {}),
     });
   }
-  return { events, debug: { ...debug, idx, parsedRows: events.length } };
+  return { events, debug: { ...debug, idx, parsedRows: events.length, droppedNonMiller } };
 }
 
 function parseDate(raw: string): Date | null {
