@@ -1486,6 +1486,37 @@ interface PersonnelGroup {
 }
 
 function groupPersonnelByDept(personnel: { role: string; name: string }[]): PersonnelGroup[] {
+  // Person-level dedup BEFORE grouping: same name with varied role wordings
+  // collapses to one entry (belt-and-suspenders for paths that bypass the
+  // client-side mergeSources dedup).
+  const normName = (n: string) =>
+    (n || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  const byName = new Map<string, { role: string; name: string }>();
+  for (const p of personnel) {
+    const k = normName(p.name);
+    if (!k) continue;
+    const existing = byName.get(k);
+    if (!existing) {
+      byName.set(k, { ...p });
+      continue;
+    }
+    const oldRole = (existing.role || '').trim();
+    const newRole = (p.role || '').trim();
+    if (!oldRole) existing.role = newRole;
+    else if (!newRole || oldRole === newRole) {/* no-op */}
+    else if (oldRole.toLowerCase().includes(newRole.toLowerCase())) {/* keep longer */}
+    else if (newRole.toLowerCase().includes(oldRole.toLowerCase())) existing.role = newRole;
+    else existing.role = `${oldRole} / ${newRole}`;
+  }
+  const deduped = Array.from(byName.values());
+
+  // Routing keywords. Order matters: more-specific categories must precede
+  // less-specific ones (BOOKING before VENUE before COORD; VENUE before LIGHTING).
+  // The Class-2 bug that put Courtney Alday in Lighting came from "events" not
+  // having a venue route — she landed in Band as fallback, then got mis-routed
+  // by an earlier code path. Explicit venue/booking routing fixes it.
+  const bookingKeywords = ['booking', 'sales person', 'salesperson', 'sales rep', 'sales contact', 'bse sales'];
+  const venueKeywords = ['venue contact', 'venue manager', 'events manager', 'events & activations', 'activations manager', 'venue coordinator', 'venue events', 'on-site venue', 'aramark events'];
   const soundKeywords = ['sound', 'audio', 'a/v', 'av ', 'a1', 'a2', 'monitor', 'foh'];
   const lightKeywords = ['light', 'lighting', 'ld', 'spots', 'spot op'];
   const productionKeywords = ['mc', 'emcee', 'stage manager', 'production', 'break playlist', 'dj'];
@@ -1493,16 +1524,21 @@ function groupPersonnelByDept(personnel: { role: string; name: string }[]): Pers
 
   const groups: Record<string, { role: string; name: string }[]> = {
     'Band': [],
+    'Booking': [],
+    'Venue': [],
     'Sound': [],
     'Lighting': [],
     'Production': [],
     'Coordination': [],
   };
 
-  for (const p of personnel) {
-    // Check both role AND name for department keywords (handles "JACK - SOUND – Ceremony" where name contains dept info)
+  for (const p of deduped) {
     const combined = (p.role + ' ' + p.name).toLowerCase();
-    if (soundKeywords.some(k => combined.includes(k))) {
+    if (bookingKeywords.some(k => combined.includes(k))) {
+      groups['Booking'].push(p);
+    } else if (venueKeywords.some(k => combined.includes(k))) {
+      groups['Venue'].push(p);
+    } else if (soundKeywords.some(k => combined.includes(k))) {
       groups['Sound'].push(p);
     } else if (lightKeywords.some(k => combined.includes(k))) {
       groups['Lighting'].push(p);
@@ -1532,17 +1568,142 @@ function personnelGroupsToHTML(groups: PersonnelGroup[], roleFirst = true): stri
 type RequiredField = { label: string; key: string };
 
 // Build detail HTML showing all required fields, with blanks for missing ones
+// Cross-validate eventName against the structured venue field. When the
+// event name (often derived from a Google Doc/Sheet filename) contains a
+// venue-word with a typo and the structured `venue` field has the canonical
+// spelling, swap to the canonical. Example: filename "6/13 Harborline @
+// Guiness Open Gate" (one N) + structured Venue "Guinness Open Gate Brewery"
+// (two N) -> eventName becomes "6/13 Harborline @ Guinness Open Gate".
+function validatedEventName(event: EventData): string {
+  const en = event.eventName || '';
+  const venue = (event.details['venue'] || '').toString();
+  if (!en || !venue) return en;
+
+  // Tokenize venue (words of length >= 4 only, lowercased).
+  const venueTokens = venue.split(/[^a-zA-Z]+/).filter(w => w.length >= 4);
+  if (!venueTokens.length) return en;
+
+  const lev1 = (a: string, b: string): boolean => {
+    if (a === b) return false; // identical -> not a typo
+    const al = a.length, bl = b.length;
+    if (Math.abs(al - bl) > 1) return false;
+    if (Math.abs(al - bl) === 1) {
+      // single insertion/deletion
+      const [shorter, longer] = al < bl ? [a, b] : [b, a];
+      let i = 0, j = 0, skipped = 0;
+      while (i < shorter.length && j < longer.length) {
+        if (shorter[i] !== longer[j]) {
+          if (skipped) return false;
+          skipped = 1;
+          j++;
+        } else {
+          i++; j++;
+        }
+      }
+      return true;
+    }
+    // same length: single substitution
+    let diffs = 0;
+    for (let i = 0; i < al; i++) if (a[i] !== b[i]) diffs++;
+    return diffs === 1;
+  };
+
+  let fixed = en;
+  for (const vt of venueTokens) {
+    // Find all tokens in eventName that look like typo'd vt
+    fixed = fixed.replace(/[A-Za-z]+/g, (word) => {
+      if (word.length < 4) return word;
+      if (word.toLowerCase() === vt.toLowerCase()) return word;
+      if (lev1(word.toLowerCase(), vt.toLowerCase())) {
+        // Preserve original casing pattern (UPPER vs Title vs lower).
+        if (word === word.toUpperCase()) return vt.toUpperCase();
+        if (word[0] === word[0].toUpperCase()) return vt.charAt(0).toUpperCase() + vt.slice(1).toLowerCase();
+        return vt.toLowerCase();
+      }
+      return word;
+    });
+  }
+  return fixed;
+}
+
+// Semantic-equivalent field pairs: same datum, different label. When BOTH
+// fields are present + values agree (or one is missing), collapse to the
+// canonical label. Order: [canonical, alias-to-suppress-if-canonical-wins].
+// If the alias is populated and the canonical is blank, the alias value migrates
+// onto the canonical label and the alias row is dropped.
+const FIELD_EQUIVALENCE_PAIRS: Array<[string, string]> = [
+  ['load-in time', 'setup time'],
+  ['coordinator', 'venue contact'],
+  ['coordinator', 'on-site contact'],
+  ['musician pos', 'on-site poc'],
+];
+
+// Wedding-only fields that should hide when the event type is clearly non-wedding
+// (concerts, corporate, brewery, etc.). Hidden only when the field has no value.
+const WEDDING_ONLY_KEYS = new Set(['officiant', 'entrance', 'ceremony', 'recessional', 'processional', 'first look', 'toasts']);
+
+function isNonWeddingEventType(et: string): boolean {
+  if (!et) return false;
+  const s = et.toLowerCase();
+  // Catches "Live Music", "Summer Concert Series", "Corporate", "Brewery",
+  // "Birthday", "Anniversary", "Holiday Party", etc.
+  if (s.includes('wedding') || s.includes('ceremony')) return false;
+  return /(\bconcert\b|\blive music\b|corporate|brewery|birthday|anniversary|holiday|gala|fundraiser|charity|cocktail|reception|party)/.test(s);
+}
+
+// Build the field list with: (a) field-equivalence collapse, (b) blank-hide for
+// truly-empty fields (no fake underscore placeholder), (c) wedding-field
+// suppression when the event type signals non-wedding context.
+function resolveFieldsForRender(event: EventData, requiredFields: RequiredField[]): Array<{ label: string; value: string }> {
+  const eventType = (event.details['event type'] || event.details['event_type'] || '').toString();
+  const suppressWedding = isNonWeddingEventType(eventType);
+
+  const suppressed = new Set<string>();
+  // Equivalence collapse: if canonical has a value, suppress the alias.
+  for (const [canonical, alias] of FIELD_EQUIVALENCE_PAIRS) {
+    const canVal = getDetailValue(event.details, canonical);
+    const aliasVal = getDetailValue(event.details, alias);
+    if (canVal && aliasVal) {
+      // Both populated -> drop alias regardless (canonical wins).
+      suppressed.add(alias);
+    } else if (!canVal && aliasVal) {
+      // Only alias populated -> migrate alias value to canonical, drop alias row.
+      event.details[canonical] = aliasVal;
+      suppressed.add(alias);
+    }
+  }
+
+  const out: Array<{ label: string; value: string }> = [];
+  for (const f of requiredFields) {
+    if (suppressed.has(f.key)) continue;
+    const value = getDetailValue(event.details, f.key);
+    if (!value) {
+      // Blank-field policy: hide entirely if no value, unless the field is
+      // explicitly load-bearing (we keep Event Name + Venue placeholders for
+      // structural reasons -- those must show even if blank so the user sees
+      // what's missing).
+      const alwaysShow = f.key === 'event name' || f.key === 'venue' || f.key === 'event date';
+      if (!alwaysShow) continue;
+      // Wedding-field suppression: even alwaysShow doesn't apply here (these
+      // aren't in WEDDING_ONLY_KEYS), but check anyway.
+      if (suppressWedding && WEDDING_ONLY_KEYS.has(f.key)) continue;
+    }
+    if (!value && suppressWedding && WEDDING_ONLY_KEYS.has(f.key)) continue;
+    out.push({ label: f.label, value: value || '' });
+  }
+  return out;
+}
+
 function buildAllFieldsHTML(event: EventData, requiredFields?: RequiredField[], cssClass = 'detail-group', labelClass = 'detail-label', valueClass = 'detail-value'): string {
   if (!requiredFields || requiredFields.length === 0) {
-    // Fallback: just show what we have
     return Object.entries(event.details)
-      .filter(([k]) => !k.startsWith('vibe:') && !k.startsWith('timing:'))
+      .filter(([k, v]) => !k.startsWith('vibe:') && !k.startsWith('timing:') && v && v.trim())
       .map(([k, v]) => `<div class="${cssClass}"><div class="${labelClass}">${k.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</div><div class="${valueClass}">${v}</div></div>`)
       .join('');
   }
-  return requiredFields.map(f => {
-    const value = getDetailValue(event.details, f.key);
-    const display = value || '<span style="color:#ccc; letter-spacing:0.1em;">________</span>';
+  const resolved = resolveFieldsForRender(event, requiredFields);
+  return resolved.map(f => {
+    const display = f.value || '<span style="color:#ccc; letter-spacing:0.1em;">________</span>';
     return `<div class="${cssClass}"><div class="${labelClass}">${f.label}</div><div class="${valueClass}">${display}</div></div>`;
   }).join('');
 }
@@ -1551,13 +1712,13 @@ function buildAllFieldsHTML(event: EventData, requiredFields?: RequiredField[], 
 function buildAllFieldsLines(event: EventData, requiredFields?: RequiredField[]): string {
   if (!requiredFields || requiredFields.length === 0) {
     return Object.entries(event.details)
-      .filter(([k]) => !k.startsWith('vibe:') && !k.startsWith('timing:'))
+      .filter(([k, v]) => !k.startsWith('vibe:') && !k.startsWith('timing:') && v && v.trim())
       .map(([k, v]) => `<div class="detail-row"><strong>${k.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}:</strong> ${v}</div>`)
       .join('');
   }
-  return requiredFields.map(f => {
-    const value = getDetailValue(event.details, f.key);
-    const display = value || '<span style="color:#ccc; letter-spacing:0.1em;">________</span>';
+  const resolved = resolveFieldsForRender(event, requiredFields);
+  return resolved.map(f => {
+    const display = f.value || '<span style="color:#ccc; letter-spacing:0.1em;">________</span>';
     return `<div class="detail-row"><strong>${f.label}:</strong> ${display}</div>`;
   }).join('');
 }
@@ -1649,7 +1810,7 @@ function generateClientPlannerHTML(event: EventData, logos?: { circle: string; t
     }
   }
 
-  const eventName = event.eventName || 'Wedding Ceremony Planner';
+  const eventName = validatedEventName(event) || 'Wedding Ceremony Planner';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1763,7 +1924,7 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${event.eventName} - Run of Show</title>
+  <title>${validatedEventName(event)} - Run of Show</title>
   <style>${styles}</style>
 </head>
 <body>
@@ -1905,14 +2066,14 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${event.eventName} - Corporate Event</title>
+  <title>${validatedEventName(event)} - Corporate Event</title>
   <style>${styles}</style>
 </head>
 <body>
   <div class="page">
     <div class="header">
       ${textLogo ? `<img src="${textLogo}" alt="Logo" class="brand-text" />` : ''}
-      <div class="event-title">${event.eventName}</div>
+      <div class="event-title">${validatedEventName(event)}</div>
       <div class="event-meta">
         ${eventDate ? eventDate : ''}${venue ? ` &nbsp;&bull;&nbsp; ${venue}` : ''}
       </div>
@@ -2074,7 +2235,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${event.eventName} - Run of Show</title>
+  <title>${validatedEventName(event)} - Run of Show</title>
   <style>${styles}</style>
 </head>
 <body>
@@ -2084,7 +2245,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
       ${textLogo ? `<img src="${textLogo}" alt="Logo" class="brand-text" />` : ''}
     </div>
 
-    <div class="event-title">${event.eventName}</div>
+    <div class="event-title">${validatedEventName(event)}</div>
     <div class="event-meta">
       ${eventDate ? `${eventDate}` : ''}
       ${venue ? `<br/>Location: ${venue}` : ''}
