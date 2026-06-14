@@ -332,31 +332,71 @@ function mergeSources(
     }
   }
 
-  const personnelKey = (p: { role: string; name: string }) =>
-    `${(p.name || "").toLowerCase().trim()}|${(p.role || "").toLowerCase().trim()}`;
-  const personnelSeen = new Set<string>();
+  // Personnel: dedup by normalized NAME alone (not name+role) so the same
+  // person mentioned with varied role wordings — e.g. "Colin – Vocalist",
+  // "Colin – Lead Vocalist", "Colin – Vocalist / Instrumentalist" — collapses
+  // to ONE entry. Merge role descriptors by picking the longest most-specific
+  // wording (which usually carries the most information).
+  const normName = (n: string) =>
+    (n || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const personnelByName = new Map<string, { role: string; name: string }>();
   for (const s of sources) {
     for (const p of s.parsedData?.personnel || []) {
-      const k = personnelKey(p);
-      if (!personnelSeen.has(k)) {
-        personnelSeen.add(k);
-        merged.personnel.push(p);
+      const k = normName(p.name);
+      if (!k) continue;
+      const existing = personnelByName.get(k);
+      if (!existing) {
+        personnelByName.set(k, { ...p });
+        continue;
+      }
+      const oldRole = (existing.role || "").trim();
+      const newRole = (p.role || "").trim();
+      if (!oldRole) {
+        existing.role = newRole;
+      } else if (!newRole || oldRole === newRole) {
+        // no-op
+      } else if (oldRole.toLowerCase().includes(newRole.toLowerCase())) {
+        // existing already covers the new one
+      } else if (newRole.toLowerCase().includes(oldRole.toLowerCase())) {
+        existing.role = newRole;
+      } else {
+        existing.role = `${oldRole} / ${newRole}`;
       }
     }
   }
+  merged.personnel = Array.from(personnelByName.values());
 
-  const timelineKey = (t: { time: string; description: string }) =>
-    `${(t.time || "").trim()}|${(t.description || "").toLowerCase().trim().slice(0, 60)}`;
-  const timelineSeen = new Set<string>();
+  // Timeline: dedup by normalized TIME alone (not time+description). When the
+  // same time appears with varied descriptions across sources/extractions, keep
+  // the longest description (most informative). Triplicate schedule blocks
+  // produced by repeated extractions collapse to a single canonical schedule.
+  const normTime = (t: string) =>
+    (t || "")
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/\./g, ":");
+  const timelineByTime = new Map<string, { time: string; description: string }>();
   for (const s of sources) {
     for (const t of s.parsedData?.timeline || []) {
-      const k = timelineKey(t);
-      if (!timelineSeen.has(k)) {
-        timelineSeen.add(k);
-        merged.timeline.push(t);
+      const k = normTime(t.time);
+      if (!k) continue;
+      const existing = timelineByTime.get(k);
+      if (!existing) {
+        timelineByTime.set(k, { ...t });
+      } else {
+        const newDesc = (t.description || "").trim();
+        const oldDesc = (existing.description || "").trim();
+        if (newDesc.length > oldDesc.length) {
+          existing.description = newDesc;
+        }
       }
     }
   }
+  merged.timeline = Array.from(timelineByTime.values());
 
   // Sections dedup by lower(title); songs within a section dedup by lower(title)+lower(artist).
   // First source to introduce a section sets its `time`. Songs from later sources append in order.
