@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { MicButton } from "@/components/dictation/MicButton";
+import { appendDictation } from "@/hooks/useDictation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
@@ -560,7 +562,10 @@ function PersonDialog({
           </div>
 
           <div>
-            <Label htmlFor="notes">Notes</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="notes">Notes</Label>
+              <MicButton onText={(t) => setNotes((p) => appendDictation(p, t))} />
+            </div>
             <Textarea
               id="notes"
               value={notes}
@@ -821,7 +826,10 @@ function DecisionDialog({
           </div>
 
           <div>
-            <Label htmlFor="d-decision">Decision</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="d-decision">Decision</Label>
+              <MicButton onText={(t) => setDecisionText((p) => appendDictation(p, t))} />
+            </div>
             <Textarea
               id="d-decision"
               value={decisionText}
@@ -832,7 +840,10 @@ function DecisionDialog({
           </div>
 
           <div>
-            <Label htmlFor="d-rationale">Rationale (the why)</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="d-rationale">Rationale (the why)</Label>
+              <MicButton onText={(t) => setRationale((p) => appendDictation(p, t))} />
+            </div>
             <Textarea
               id="d-rationale"
               value={rationale}

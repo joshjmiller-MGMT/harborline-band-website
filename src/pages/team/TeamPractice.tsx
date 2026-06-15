@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { MicButton } from "@/components/dictation/MicButton";
+import { appendDictation } from "@/hooks/useDictation";
 import {
   Dialog,
   DialogContent,
@@ -352,7 +354,10 @@ export default function TeamPractice() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="log-notes">Notes (optional)</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="log-notes">Notes (optional)</Label>
+                    <MicButton onText={(t) => setLogNotes((p) => appendDictation(p, t))} />
+                  </div>
                   <Textarea
                     id="log-notes"
                     rows={3}

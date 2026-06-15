@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MicButton } from "@/components/dictation/MicButton";
+import { appendDictation } from "@/hooks/useDictation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table, Search, Hash, Sparkles, ArrowRight, X, Check, Plus, Trash2, Layers, ArrowDownLeft, ListMusic, ClipboardPaste, Wand2 } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
@@ -1550,8 +1552,15 @@ export default function RunOfShowGenerator() {
             </button>
             {showPaste && (
               <div className="mt-2 space-y-2">
+                <div className="flex justify-end">
+                  <MicButton
+                    label
+                    title="Dictate a setlist or notes"
+                    onText={(t) => setPasteText((p) => appendDictation(p, t))}
+                  />
+                </div>
                 <Textarea
-                  placeholder={`Paste anything — a rough setlist, an email, copied spreadsheet cells…\n\nSet 1\n1. So Easy - Olivia Dean\n2. P.D.A - John Legend\n…`}
+                  placeholder={`Paste anything — a rough setlist, an email, copied spreadsheet cells… or tap Dictate and talk.\n\nSet 1\n1. So Easy - Olivia Dean\n2. P.D.A - John Legend\n…`}
                   value={pasteText}
                   onChange={(e) => setPasteText(e.target.value)}
                   className="bg-secondary/50 border-border font-mono text-sm min-h-[120px]"
@@ -2104,6 +2113,16 @@ export default function RunOfShowGenerator() {
                 <> Missing: {missingFields.map(f => f.label).join(", ")}</>
               )}
             </p>
+            <div className="flex justify-end mb-2">
+              <MicButton
+                label
+                title="Dictate event fields"
+                onText={(t) => {
+                  setManualOverrides((p) => appendDictation(p, t));
+                  if (autocorrectSuggestions) setAutocorrectSuggestions(null);
+                }}
+              />
+            </div>
             <Textarea
               ref={manualOverridesRef}
               placeholder={`Event Name: Smith Wedding\nVenue: Baltimore Country Club\nEvent Date: April 24, 2026\nClient: John Smith`}
