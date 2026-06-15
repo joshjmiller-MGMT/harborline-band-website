@@ -206,21 +206,25 @@ export default function TeamBookingPipeline() {
           </div>
         )}
 
-        {!loading && totalLeads === 0 && !error ? (
-          <p className="text-sm text-muted-foreground mt-8">
-            No leads yet. Configure your Booking Agent sheet from the dashboard widget settings.
+        {/* Always render the board so the bucket columns stay visible even with
+            zero leads — Josh wants to see the pipeline structure (where leads
+            *would* land) rather than have the board collapse to a message. The
+            empty-state hint is a non-replacing banner above the board. */}
+        {!loading && totalLeads === 0 && !error && (
+          <p className="text-sm text-muted-foreground mb-4">
+            No leads yet — the buckets below show where leads will land once you
+            configure your Booking Agent sheet from the dashboard widget settings.
           </p>
-        ) : (
-          <ScrumBoard
-            columns={BOOKING_BUCKET_COLUMNS}
-            cards={cards}
-            onCardMove={handleCardMove}
-            renderCard={(card) => (
-              <BookingPipelineCard card={card} sheetFallbackUrl={sheetUrl} />
-            )}
-            emptyColumnLabel="No leads"
-          />
         )}
+        <ScrumBoard
+          columns={BOOKING_BUCKET_COLUMNS}
+          cards={cards}
+          onCardMove={handleCardMove}
+          renderCard={(card) => (
+            <BookingPipelineCard card={card} sheetFallbackUrl={sheetUrl} />
+          )}
+          emptyColumnLabel="No leads"
+        />
       </div>
     </TeamLayout>
   );
