@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { MicButton } from "@/components/dictation/MicButton";
+import { appendDictation } from "@/hooks/useDictation";
 import {
   Tabs,
   TabsList,
@@ -468,13 +470,20 @@ export default function TeamReviewQueue() {
 
                 {/* Resolution */}
                 <div className="border-t border-border/40 pt-4">
-                  <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                    Your answer
-                  </h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Your answer
+                    </h3>
+                    <MicButton
+                      label
+                      title="Dictate your answer"
+                      onText={(t) => setResolution((p) => appendDictation(p, t))}
+                    />
+                  </div>
                   <Textarea
                     value={resolution}
                     onChange={(e) => setResolution(e.target.value)}
-                    placeholder="Lock the answer into the source artifact. E.g. 'Erica Hoffman wedding cocktail hour — Gramercy, A1 role.'"
+                    placeholder="Lock the answer into the source artifact. E.g. 'Erica Hoffman wedding cocktail hour — Gramercy, A1 role.' — or tap Dictate and talk."
                     rows={4}
                     className="mb-3"
                   />

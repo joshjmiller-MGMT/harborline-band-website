@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { MicButton } from "@/components/dictation/MicButton";
+import { appendDictation } from "@/hooks/useDictation";
 import {
   Card,
   CardContent,
@@ -199,7 +201,10 @@ export default function TeamSetlistBuilder() {
             </div>
 
             <div>
-              <Label htmlFor="raw-input">Song list (one per line) *</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="raw-input">Song list (one per line) *</Label>
+                <MicButton label title="Dictate song titles" onText={(t) => setRawInput((p) => appendDictation(p, t))} />
+              </div>
               <Textarea
                 id="raw-input"
                 rows={12}

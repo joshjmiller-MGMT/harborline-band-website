@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { MicButton } from "@/components/dictation/MicButton";
+import { appendDictation } from "@/hooks/useDictation";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -980,7 +982,10 @@ function AssetDetailDialog({
             )}
 
             <div>
-              <Label htmlFor="alt">Alt text</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="alt">Alt text</Label>
+                <MicButton onText={(t) => setAltText((p) => appendDictation(p, t))} />
+              </div>
               <Textarea
                 id="alt"
                 value={altText}
@@ -991,7 +996,10 @@ function AssetDetailDialog({
             </div>
 
             <div>
-              <Label htmlFor="caption">Caption</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="caption">Caption</Label>
+                <MicButton onText={(t) => setCaption((p) => appendDictation(p, t))} />
+              </div>
               <Textarea
                 id="caption"
                 value={caption}
