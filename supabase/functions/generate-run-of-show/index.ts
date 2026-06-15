@@ -245,10 +245,11 @@ function cleanTimeString(timeStr: string): string {
     .trim();
 }
 
-/** Sort timeline entries chronologically by parsed time, and deduplicate */
-function sortTimeline(timeline: { time: string; description: string }[]): { time: string; description: string }[] {
+/** Sort timeline entries chronologically by parsed time, and deduplicate.
+ *  Generic so the `inferred` flag (and any other entry props) survive the pass. */
+function sortTimeline<T extends { time: string; description: string }>(timeline: T[]): T[] {
   // Deduplicate: entries with same description (case-insensitive) — keep the one with the cleaner time
-  const seen = new Map<string, { time: string; description: string }>();
+  const seen = new Map<string, T>();
   for (const entry of timeline) {
     const key = entry.description.toLowerCase().replace(/\s+/g, ' ').replace(/\([^)]*\)/g, '').trim();
     if (!seen.has(key)) {
