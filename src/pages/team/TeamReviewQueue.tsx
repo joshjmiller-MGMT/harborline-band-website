@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import TeamLayout from "@/components/TeamLayout";
 import { Helmet } from "react-helmet-async";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { DictationButton } from "@/components/DictationButton";
 import {
   Tabs,
   TabsList,
@@ -87,6 +88,7 @@ export default function TeamReviewQueue() {
   const [loading, setLoading] = useState(true);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [resolution, setResolution] = useState("");
+  const resolutionRef = useRef<HTMLTextAreaElement>(null);
   const [resolving, setResolving] = useState(false);
 
   const load = useCallback(async () => {
@@ -471,13 +473,23 @@ export default function TeamReviewQueue() {
                   <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
                     Your answer
                   </h3>
-                  <Textarea
-                    value={resolution}
-                    onChange={(e) => setResolution(e.target.value)}
-                    placeholder="Lock the answer into the source artifact. E.g. 'Erica Hoffman wedding cocktail hour — Gramercy, A1 role.'"
-                    rows={4}
-                    className="mb-3"
-                  />
+                  <div className="relative mb-3">
+                    <Textarea
+                      ref={resolutionRef}
+                      value={resolution}
+                      onChange={(e) => setResolution(e.target.value)}
+                      placeholder="Lock the answer into the source artifact. E.g. 'Erica Hoffman wedding cocktail hour — Gramercy, A1 role.'"
+                      rows={4}
+                      className="pr-10"
+                    />
+                    <DictationButton
+                      targetRef={resolutionRef}
+                      value={resolution}
+                      onValueChange={setResolution}
+                      label="Dictate your answer"
+                      className="absolute top-1.5 right-1.5"
+                    />
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button
                       onClick={() => resolveItem("resolved")}

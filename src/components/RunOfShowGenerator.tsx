@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { DictationButton } from "@/components/DictationButton";
 import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table, Search, Hash, Sparkles, ArrowRight, X, Check, Plus, Trash2, Layers, ArrowDownLeft, ListMusic, ClipboardPaste, Wand2 } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
 import {
@@ -547,6 +548,7 @@ export default function RunOfShowGenerator() {
   // "Extract everything" button on the manual-overrides textarea below.
   const [showPaste, setShowPaste] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const pasteTextRef = useRef<HTMLTextAreaElement>(null);
   const [pasteLoading, setPasteLoading] = useState(false);
   const [extractAllLoading, setExtractAllLoading] = useState(false);
 
@@ -1550,12 +1552,22 @@ export default function RunOfShowGenerator() {
             </button>
             {showPaste && (
               <div className="mt-2 space-y-2">
-                <Textarea
-                  placeholder={`Paste anything — a rough setlist, an email, copied spreadsheet cells…\n\nSet 1\n1. So Easy - Olivia Dean\n2. P.D.A - John Legend\n…`}
-                  value={pasteText}
-                  onChange={(e) => setPasteText(e.target.value)}
-                  className="bg-secondary/50 border-border font-mono text-sm min-h-[120px]"
-                />
+                <div className="relative">
+                  <Textarea
+                    ref={pasteTextRef}
+                    placeholder={`Paste anything — a rough setlist, an email, copied spreadsheet cells…\n\nSet 1\n1. So Easy - Olivia Dean\n2. P.D.A - John Legend\n…`}
+                    value={pasteText}
+                    onChange={(e) => setPasteText(e.target.value)}
+                    className="bg-secondary/50 border-border font-mono text-sm min-h-[120px] pr-10"
+                  />
+                  <DictationButton
+                    targetRef={pasteTextRef}
+                    value={pasteText}
+                    onValueChange={setPasteText}
+                    label="Dictate paste text"
+                    className="absolute top-1.5 right-1.5"
+                  />
+                </div>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-xs text-muted-foreground">
                     The AI pulls out the setlist + any event fields and adds it as a source.
@@ -2104,17 +2116,29 @@ export default function RunOfShowGenerator() {
                 <> Missing: {missingFields.map(f => f.label).join(", ")}</>
               )}
             </p>
-            <Textarea
-              ref={manualOverridesRef}
-              placeholder={`Event Name: Smith Wedding\nVenue: Baltimore Country Club\nEvent Date: April 24, 2026\nClient: John Smith`}
-              value={manualOverrides}
-              onChange={(e) => {
-                setManualOverrides(e.target.value);
-                // Pending corrections reference line indices that may shift on edit.
-                if (autocorrectSuggestions) setAutocorrectSuggestions(null);
-              }}
-              className="bg-secondary/50 border-border font-mono text-sm min-h-[100px]"
-            />
+            <div className="relative">
+              <Textarea
+                ref={manualOverridesRef}
+                placeholder={`Event Name: Smith Wedding\nVenue: Baltimore Country Club\nEvent Date: April 24, 2026\nClient: John Smith`}
+                value={manualOverrides}
+                onChange={(e) => {
+                  setManualOverrides(e.target.value);
+                  // Pending corrections reference line indices that may shift on edit.
+                  if (autocorrectSuggestions) setAutocorrectSuggestions(null);
+                }}
+                className="bg-secondary/50 border-border font-mono text-sm min-h-[100px] pr-10"
+              />
+              <DictationButton
+                targetRef={manualOverridesRef}
+                value={manualOverrides}
+                onValueChange={(v) => {
+                  setManualOverrides(v);
+                  if (autocorrectSuggestions) setAutocorrectSuggestions(null);
+                }}
+                label="Dictate event fields"
+                className="absolute top-1.5 right-1.5"
+              />
+            </div>
 
             {autocorrectSuggestions && autocorrectSuggestions.length > 0 && (
               <div className="mt-3 border border-border rounded-md bg-secondary/30">
