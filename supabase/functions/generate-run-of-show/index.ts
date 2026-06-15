@@ -116,6 +116,9 @@ Deno.serve(async (req) => {
           personnel: Array.isArray(preMergedEvent.personnel) ? preMergedEvent.personnel : [],
           timeline: Array.isArray(preMergedEvent.timeline) ? preMergedEvent.timeline : [],
           songSections: Array.isArray(preMergedEvent.songSections) ? preMergedEvent.songSections : [],
+          inferredKeys: Array.isArray(preMergedEvent.inferredKeys)
+            ? preMergedEvent.inferredKeys.filter((k: unknown) => typeof k === 'string')
+            : [],
         }
       : parseSheetToEvent(sheetData || { headers: [], rows: [], sheetTitle: 'Untitled' });
     
@@ -189,8 +192,11 @@ interface EventData {
   eventName: string;
   details: Record<string, string>;
   personnel: { role: string; name: string }[];
-  timeline: { time: string; description: string }[];
+  timeline: { time: string; description: string; inferred?: boolean }[];
   songSections: SongSection[];
+  // Detail keys whose values were LLM-inferred (not stated verbatim in source).
+  // Rendered with an "(inferred)" tag so the operator can tell derived from stated.
+  inferredKeys?: string[];
 }
 
 interface SongSection {
@@ -239,10 +245,11 @@ function cleanTimeString(timeStr: string): string {
     .trim();
 }
 
-/** Sort timeline entries chronologically by parsed time, and deduplicate */
-function sortTimeline(timeline: { time: string; description: string }[]): { time: string; description: string }[] {
+/** Sort timeline entries chronologically by parsed time, and deduplicate.
+ *  Generic so the `inferred` flag (and any other entry props) survive the pass. */
+function sortTimeline<T extends { time: string; description: string }>(timeline: T[]): T[] {
   // Deduplicate: entries with same description (case-insensitive) — keep the one with the cleaner time
-  const seen = new Map<string, { time: string; description: string }>();
+  const seen = new Map<string, T>();
   for (const entry of timeline) {
     const key = entry.description.toLowerCase().replace(/\s+/g, ' ').replace(/\([^)]*\)/g, '').trim();
     if (!seen.has(key)) {
@@ -362,6 +369,22 @@ function getDetailValue(details: Record<string, string>, lookupKey: string): str
   }
 
   return details[lookupKey] || '';
+}
+
+// ─── Inferred-value tagging (Class 4) ───────────────────────────────────
+// Values the LLM derived (rather than read verbatim) are flagged so the
+// rendered doc shows the operator what's stated vs. inferred.
+const INFERRED_TAG =
+  ' <span style="font-size:0.78em;font-style:italic;color:#999;font-weight:400;letter-spacing:0;">(inferred)</span>';
+
+/** True if `key` (under alias normalization) is in the event's inferred set. */
+function isInferredKey(event: EventData, key: string): boolean {
+  const keys = event.inferredKeys;
+  if (!keys || keys.length === 0) return false;
+  const target = DETAIL_KEY_ALIASES[normalizeDetailKey(key)] || normalizeDetailKey(key);
+  return keys.some(
+    (k) => (DETAIL_KEY_ALIASES[normalizeDetailKey(k)] || normalizeDetailKey(k)) === target,
+  );
 }
 
 // ─── Parser ─────────────────────────────────────────────────────────────
@@ -1654,7 +1677,7 @@ function isNonWeddingEventType(et: string): boolean {
 // Build the field list with: (a) field-equivalence collapse, (b) blank-hide for
 // truly-empty fields (no fake underscore placeholder), (c) wedding-field
 // suppression when the event type signals non-wedding context.
-function resolveFieldsForRender(event: EventData, requiredFields: RequiredField[]): Array<{ label: string; value: string }> {
+function resolveFieldsForRender(event: EventData, requiredFields: RequiredField[]): Array<{ label: string; value: string; key: string }> {
   const eventType = (event.details['event type'] || event.details['event_type'] || '').toString();
   const suppressWedding = isNonWeddingEventType(eventType);
 
@@ -1689,7 +1712,7 @@ function resolveFieldsForRender(event: EventData, requiredFields: RequiredField[
       if (suppressWedding && WEDDING_ONLY_KEYS.has(f.key)) continue;
     }
     if (!value && suppressWedding && WEDDING_ONLY_KEYS.has(f.key)) continue;
-    out.push({ label: f.label, value: value || '' });
+    out.push({ label: f.label, value: value || '', key: f.key });
   }
   return out;
 }
@@ -1698,13 +1721,14 @@ function buildAllFieldsHTML(event: EventData, requiredFields?: RequiredField[], 
   if (!requiredFields || requiredFields.length === 0) {
     return Object.entries(event.details)
       .filter(([k, v]) => !k.startsWith('vibe:') && !k.startsWith('timing:') && v && v.trim())
-      .map(([k, v]) => `<div class="${cssClass}"><div class="${labelClass}">${k.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</div><div class="${valueClass}">${v}</div></div>`)
+      .map(([k, v]) => `<div class="${cssClass}"><div class="${labelClass}">${k.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</div><div class="${valueClass}">${v}${isInferredKey(event, k) ? INFERRED_TAG : ''}</div></div>`)
       .join('');
   }
   const resolved = resolveFieldsForRender(event, requiredFields);
   return resolved.map(f => {
     const display = f.value || '<span style="color:#ccc; letter-spacing:0.1em;">________</span>';
-    return `<div class="${cssClass}"><div class="${labelClass}">${f.label}</div><div class="${valueClass}">${display}</div></div>`;
+    const tag = f.value && isInferredKey(event, f.key) ? INFERRED_TAG : '';
+    return `<div class="${cssClass}"><div class="${labelClass}">${f.label}</div><div class="${valueClass}">${display}${tag}</div></div>`;
   }).join('');
 }
 
@@ -1713,13 +1737,14 @@ function buildAllFieldsLines(event: EventData, requiredFields?: RequiredField[])
   if (!requiredFields || requiredFields.length === 0) {
     return Object.entries(event.details)
       .filter(([k, v]) => !k.startsWith('vibe:') && !k.startsWith('timing:') && v && v.trim())
-      .map(([k, v]) => `<div class="detail-row"><strong>${k.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}:</strong> ${v}</div>`)
+      .map(([k, v]) => `<div class="detail-row"><strong>${k.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}:</strong> ${v}${isInferredKey(event, k) ? INFERRED_TAG : ''}</div>`)
       .join('');
   }
   const resolved = resolveFieldsForRender(event, requiredFields);
   return resolved.map(f => {
     const display = f.value || '<span style="color:#ccc; letter-spacing:0.1em;">________</span>';
-    return `<div class="detail-row"><strong>${f.label}:</strong> ${display}</div>`;
+    const tag = f.value && isInferredKey(event, f.key) ? INFERRED_TAG : '';
+    return `<div class="detail-row"><strong>${f.label}:</strong> ${display}${tag}</div>`;
   }).join('');
 }
 
@@ -1767,7 +1792,7 @@ function generateClientPlannerHTML(event: EventData, logos?: { circle: string; t
     : [['Event Date', 'event date'], ['Event Type', 'event type'], ['Venue', 'venue'],
        ['Musicians', 'musicians'], ['Ensemble', 'ensemble'], ['Guest Count', 'guest count']]
       .filter(([, k]) => event.details[k as string])
-      .map(([label, k]) => `<div class="detail-line"><strong>${label}:</strong> ${event.details[k as string]}</div>`)
+      .map(([label, k]) => `<div class="detail-line"><strong>${label}:</strong> ${event.details[k as string]}${isInferredKey(event, k as string) ? INFERRED_TAG : ''}</div>`)
       .join('');
 
   // Build song sections — elegant style with vibes and simple song lines
@@ -1806,7 +1831,7 @@ function generateClientPlannerHTML(event: EventData, logos?: { circle: string; t
   if (event.timeline.length > 0) {
     timelineHTML = `<div class="section-heading">Timeline</div><hr class="divider" />`;
     for (const t of event.timeline) {
-      timelineHTML += `<div class="song-line"><strong>${t.time}</strong> — ${t.description}</div>`;
+      timelineHTML += `<div class="song-line"><strong>${t.time}</strong> — ${t.description}${t.inferred ? INFERRED_TAG : ''}</div>`;
     }
   }
 
@@ -1915,7 +1940,7 @@ function generateWeddingROSHTML(event: EventData, logos?: { circle: string; text
   if (event.timeline.length > 0) {
     timelineHTML = `<div class="section-title">Timeline</div><hr class="divider-light" />`;
     for (const t of event.timeline) {
-      timelineHTML += `<div class="detail-row"><strong>${t.time}</strong> — ${t.description}</div>`;
+      timelineHTML += `<div class="detail-row"><strong>${t.time}</strong> — ${t.description}${t.inferred ? INFERRED_TAG : ''}</div>`;
     }
   }
 
@@ -2008,7 +2033,7 @@ function generateCorporateHTML(event: EventData, logos?: { circle: string; text:
   let timelineHTML = '';
   if (event.timeline.length > 0) {
     const items = event.timeline.map(t =>
-      `<div class="timeline-item"><span class="timeline-time">${t.time}</span> &mdash; ${t.description}</div>`
+      `<div class="timeline-item"><span class="timeline-time">${t.time}</span> &mdash; ${t.description}${t.inferred ? INFERRED_TAG : ''}</div>`
     ).join('');
     timelineHTML = `
       <div class="section-title">Schedule</div>
@@ -2168,7 +2193,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
   let timelineHTML = '';
   if (event.timeline.length > 0) {
     const items = event.timeline.map(t =>
-      `<li class="timeline-item"><span class="timeline-time">${t.time}</span> : ${t.description}</li>`
+      `<li class="timeline-item"><span class="timeline-time">${t.time}</span> : ${t.description}${t.inferred ? INFERRED_TAG : ''}</li>`
     ).join('');
     timelineHTML = `
       <div class="section-title">Timeline</div>

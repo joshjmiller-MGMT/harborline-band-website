@@ -220,8 +220,10 @@ interface ParsedEventData {
   eventName: string;
   details: Record<string, string>;
   personnel: { role: string; name: string }[];
-  timeline: { time: string; description: string }[];
+  timeline: { time: string; description: string; inferred?: boolean }[];
   songSections: { title: string; time: string; songs: any[] }[];
+  // Detail keys whose values were LLM-inferred (vs. read verbatim from source).
+  inferredKeys?: string[];
 }
 
 // P7 multi-source fusion: each ingest (URL, DJEP) becomes a Source. The
@@ -283,8 +285,15 @@ function mergeSources(
     timeline: [],
     songSections: [],
     provenance: {},
+    inferredKeys: [],
   };
   if (sources.length === 0) return merged;
+
+  // Track which detail keys were inferred by whichever source supplied the
+  // winning value (Class 4 — so the export can tag them "(inferred)").
+  const inferredKeySet = new Set<string>();
+  const srcInferred = (s: Source | undefined, key: string) =>
+    !!s?.parsedData?.inferredKeys?.includes(key);
 
   const pickEventName = () => {
     const overrideId = fieldOverrides["eventName"];
@@ -319,6 +328,7 @@ function mergeSources(
       if (v) {
         merged.details[key] = v;
         merged.provenance[key] = s.id;
+        if (srcInferred(s, key)) inferredKeySet.add(key);
         continue;
       }
     }
@@ -327,10 +337,12 @@ function mergeSources(
       if (v) {
         merged.details[key] = v;
         merged.provenance[key] = s.id;
+        if (srcInferred(s, key)) inferredKeySet.add(key);
         break;
       }
     }
   }
+  merged.inferredKeys = Array.from(inferredKeySet);
 
   // Personnel: dedup by normalized NAME alone (not name+role) so the same
   // person mentioned with varied role wordings — e.g. "Colin – Vocalist",
@@ -379,7 +391,7 @@ function mergeSources(
       .toLowerCase()
       .replace(/\s+/g, "")
       .replace(/\./g, ":");
-  const timelineByTime = new Map<string, { time: string; description: string }>();
+  const timelineByTime = new Map<string, { time: string; description: string; inferred?: boolean }>();
   for (const s of sources) {
     for (const t of s.parsedData?.timeline || []) {
       const k = normTime(t.time);
@@ -1388,10 +1400,16 @@ export default function RunOfShowGenerator() {
       songSections?: ParsedEventData["songSections"];
       timeline?: ParsedEventData["timeline"];
       personnel?: ParsedEventData["personnel"];
+      inferredKeys?: string[];
     },
     label: string,
   ): Source => {
     const details = normalizeDetails(result.details || {});
+    // Keep only inferred keys that survived detail normalization (key casing
+    // matches), so the "(inferred)" tag lands on a field that actually renders.
+    const inferredKeys = Array.isArray(result.inferredKeys)
+      ? result.inferredKeys.filter((k) => typeof k === "string" && k in details)
+      : [];
     return {
       id: `paste-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       kind: "paste",
@@ -1403,6 +1421,7 @@ export default function RunOfShowGenerator() {
         personnel: Array.isArray(result.personnel) ? result.personnel : [],
         timeline: Array.isArray(result.timeline) ? result.timeline : [],
         songSections: Array.isArray(result.songSections) ? result.songSections : [],
+        inferredKeys,
       },
     };
   };

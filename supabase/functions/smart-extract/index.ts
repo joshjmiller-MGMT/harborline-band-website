@@ -82,6 +82,11 @@ const EXTRACT_TOOL = {
           properties: {
             time: { type: "string", description: "Time, normalized to '4:00 PM'." },
             description: { type: "string", description: "What happens at that time." },
+            inferred: {
+              type: "boolean",
+              description:
+                "true ONLY if you derived this entry (its time or its existence) rather than reading it verbatim from the source. Omit or false for entries copied straight from the text.",
+            },
           },
           required: ["time", "description"],
         },
@@ -98,6 +103,12 @@ const EXTRACT_TOOL = {
           },
           required: ["role", "name"],
         },
+      },
+      inferredKeys: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "List the keys from `details` whose values you INFERRED/derived rather than read verbatim — e.g. you turned a header '6/6 MVCC' into event date 'June 6', or computed a soundcheck start time from a stated wrap time. Use the EXACT same lowercase keys that appear in `details`. Empty array if every detail value was stated outright in the source.",
       },
       notes: {
         type: "string",
@@ -118,6 +129,8 @@ Rules:
 - SONGS: pull "Title - Artist" or "Title — Artist". If only a title is given, leave artist empty. Put parentheticals (arrangement/soloist notes) in notes. Fix ONLY unambiguous typos of famous acts (e.g. "Girth Wind & Fire" → "Earth, Wind & Fire"); never invent or "improve" a song the user didn't write.
 - EVENT FIELDS: pull any event name, date, venue, client, times, guest count, etc. Modestly infer from a header like a sheet title "6/6 MVCC" → date "June 6", venue "MVCC". Don't fabricate fields that aren't there — omit them.
 - Normalize dates to "Month D, YYYY" (omit year if absent), times to "4:00 PM", ranges to "X - Y".
+- PROVENANCE: track what you INFER vs. read verbatim. When you derive a value that wasn't stated outright (event date "June 6" from a sheet title "6/6 MVCC"; a soundcheck start computed from a stated wrap time), put that detail's key in inferredKeys and set inferred:true on any timeline entry you derived. A value copied straight from the source is NOT inferred — leave it out of inferredKeys.
+- CANONICAL REPRESENTATION: when you infer a value FROM a source datum, represent it ONCE — do not ALSO emit the original raw datum as a separate detail or timeline entry. E.g. if the source says "5:00 PM sound check WRAP target" and you record Soundcheck as "4:30 PM begin → 5:00 PM wrap", do NOT also add a separate "5:00 PM wrap target" timeline row. Pick the single clearest representation and fold the rest into it.
 - Do NOT hallucinate. If the input is just a setlist with no event info, return songSections populated and details mostly empty. If something is ambiguous or you corrected/dropped anything, say so briefly in notes.`;
 
 interface Body {
@@ -227,11 +240,25 @@ Deno.serve(async (req) => {
     const notes = [modelNotes, ...warnings].filter(Boolean).join(" — ");
 
     // Normalize/guard the shape so the frontend can trust it.
+    const details = (out.details && typeof out.details === "object")
+      ? out.details as Record<string, unknown>
+      : {};
+    const detailKeySet = new Set(Object.keys(details));
+    // Only keep inferred keys that actually correspond to an emitted detail —
+    // a stray key the model invents would otherwise tag nothing on render.
+    const inferredKeys = (Array.isArray(out.inferredKeys) ? out.inferredKeys : [])
+      .filter((k: unknown): k is string => typeof k === "string" && detailKeySet.has(k));
+    const timeline = (Array.isArray(out.timeline) ? out.timeline : []).map((t: Record<string, unknown>) => ({
+      time: typeof t?.time === "string" ? t.time : "",
+      description: typeof t?.description === "string" ? t.description : "",
+      ...(t?.inferred === true ? { inferred: true } : {}),
+    }));
     const result = {
-      details: (out.details && typeof out.details === "object") ? out.details : {},
+      details,
       songSections: Array.isArray(out.songSections) ? out.songSections : [],
-      timeline: Array.isArray(out.timeline) ? out.timeline : [],
+      timeline,
       personnel: Array.isArray(out.personnel) ? out.personnel : [],
+      inferredKeys,
       notes,
       truncated: outputTruncated || wasClipped,
       model,
