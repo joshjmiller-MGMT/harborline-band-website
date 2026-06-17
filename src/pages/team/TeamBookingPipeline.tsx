@@ -16,6 +16,7 @@ import {
   BookingPipelineCard,
   type BookingPipelineCardData,
 } from "@/components/board/BookingPipelineCard";
+import BookingEmailComposer from "@/components/booking/BookingEmailComposer";
 
 type ApiRow = {
   id: string;
@@ -173,6 +174,7 @@ export default function TeamBookingPipeline() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <BookingEmailComposer />
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-card/40">
               <Filter className="w-3.5 h-3.5 text-muted-foreground" />
               <Label htmlFor="show-done" className="text-xs text-muted-foreground cursor-pointer">
