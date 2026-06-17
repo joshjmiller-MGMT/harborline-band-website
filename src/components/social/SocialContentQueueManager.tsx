@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MicButton } from "@/components/dictation/MicButton";
+import { appendDictation } from "@/hooks/useDictation";
 import {
   Select,
   SelectContent,
@@ -338,12 +340,19 @@ export default function SocialContentQueueManager() {
           <div className="space-y-4">
             <div>
               <Label className="text-xs">Caption</Label>
-              <Textarea
-                value={edit.caption}
-                onChange={(e) => setEdit((p) => ({ ...p, caption: e.target.value }))}
-                placeholder="Caption / post body"
-                rows={4}
-              />
+              <div className="relative">
+                <Textarea
+                  value={edit.caption}
+                  onChange={(e) => setEdit((p) => ({ ...p, caption: e.target.value }))}
+                  placeholder="Caption / post body"
+                  rows={4}
+                  className="pr-10"
+                />
+                <MicButton
+                  className="absolute top-1 right-1"
+                  onText={(t) => setEdit((p) => ({ ...p, caption: appendDictation(p.caption, t) }))}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -413,12 +422,19 @@ export default function SocialContentQueueManager() {
             </div>
             <div>
               <Label className="text-xs">Internal notes</Label>
-              <Textarea
-                value={edit.notes}
-                onChange={(e) => setEdit((p) => ({ ...p, notes: e.target.value }))}
-                placeholder="Anything Des should know"
-                rows={2}
-              />
+              <div className="relative">
+                <Textarea
+                  value={edit.notes}
+                  onChange={(e) => setEdit((p) => ({ ...p, notes: e.target.value }))}
+                  placeholder="Anything Des should know"
+                  rows={2}
+                  className="pr-10"
+                />
+                <MicButton
+                  className="absolute top-1 right-1"
+                  onText={(t) => setEdit((p) => ({ ...p, notes: appendDictation(p.notes, t) }))}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>

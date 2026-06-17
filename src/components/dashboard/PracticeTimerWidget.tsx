@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { MicButton } from "@/components/dictation/MicButton";
+import { appendDictation } from "@/hooks/useDictation";
 import {
   Timer,
   Play,
@@ -375,12 +377,18 @@ function SortableRow({
           <Progress value={pct} className="h-1.5" />
 
           {(active || seg.what_practiced) && (
-            <Textarea
-              value={seg.what_practiced}
-              onChange={(e) => onChange({ what_practiced: e.target.value })}
-              placeholder="Notes — what did you actually work on?"
-              className="text-xs min-h-[40px] resize-none"
-            />
+            <div className="relative">
+              <Textarea
+                value={seg.what_practiced}
+                onChange={(e) => onChange({ what_practiced: e.target.value })}
+                placeholder="Notes — what did you actually work on?"
+                className="text-xs min-h-[40px] resize-none pr-9"
+              />
+              <MicButton
+                className="absolute top-0.5 right-0.5"
+                onText={(t) => onChange({ what_practiced: appendDictation(seg.what_practiced, t) })}
+              />
+            </div>
           )}
         </div>
       </div>
@@ -1360,12 +1368,15 @@ export default function PracticeTimerWidget() {
             placeholder="🎵 Song of the day"
             className="text-sm"
           />
-          <Input
-            value={sessionNotes}
-            onChange={(e) => setSessionNotes(e.target.value)}
-            placeholder="Session note"
-            className="text-sm"
-          />
+          <div className="flex items-center gap-1">
+            <Input
+              value={sessionNotes}
+              onChange={(e) => setSessionNotes(e.target.value)}
+              placeholder="Session note"
+              className="text-sm flex-1"
+            />
+            <MicButton onText={(t) => setSessionNotes((p) => appendDictation(p, t))} />
+          </div>
         </div>
 
         {/* Recommendation slot — only in flow mode, only when there's an active segment whose
