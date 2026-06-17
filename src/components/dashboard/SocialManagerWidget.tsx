@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { MicButton } from "@/components/dictation/MicButton";
+import { appendDictation } from "@/hooks/useDictation";
 import {
   Share2, Plus, Sparkles, Repeat, Calendar as CalIcon, Trash2, Wand2, Instagram, Music2, Facebook, ChevronRight, Copy, CheckCircle2,
 } from "lucide-react";
@@ -419,13 +421,20 @@ export default function SocialManagerWidget() {
                   onBlur={() => updatePost(postDialog.id, { title: postDialog.title })}
                   placeholder="Post title"
                 />
-                <Textarea
-                  value={postDialog.notes}
-                  onChange={(e) => setPostDialog({ ...postDialog, notes: e.target.value })}
-                  onBlur={() => updatePost(postDialog.id, { notes: postDialog.notes })}
-                  placeholder="Notes / angle / context"
-                  rows={3}
-                />
+                <div className="relative">
+                  <Textarea
+                    value={postDialog.notes}
+                    onChange={(e) => setPostDialog({ ...postDialog, notes: e.target.value })}
+                    onBlur={() => updatePost(postDialog.id, { notes: postDialog.notes })}
+                    placeholder="Notes / angle / context"
+                    rows={3}
+                    className="pr-10"
+                  />
+                  <MicButton
+                    className="absolute top-1 right-1"
+                    onText={(t) => setPostDialog((cur) => (cur ? { ...cur, notes: appendDictation(cur.notes, t) } : cur))}
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <Select
                     value={postDialog.status}
@@ -486,18 +495,31 @@ export default function SocialManagerWidget() {
                             </label>
                           </div>
                         </div>
-                        <Textarea
-                          rows={4}
-                          value={postDialog.captions?.[pl] || ""}
-                          onChange={(e) => {
-                            const captions = { ...(postDialog.captions || {}), [pl]: e.target.value };
-                            setPostDialog({ ...postDialog, captions });
-                          }}
-                          onBlur={() =>
-                            updatePost(postDialog.id, { captions: postDialog.captions })
-                          }
-                          placeholder={`Caption for ${pl}…`}
-                        />
+                        <div className="relative">
+                          <Textarea
+                            rows={4}
+                            value={postDialog.captions?.[pl] || ""}
+                            onChange={(e) => {
+                              const captions = { ...(postDialog.captions || {}), [pl]: e.target.value };
+                              setPostDialog({ ...postDialog, captions });
+                            }}
+                            onBlur={() =>
+                              updatePost(postDialog.id, { captions: postDialog.captions })
+                            }
+                            placeholder={`Caption for ${pl}…`}
+                            className="pr-10"
+                          />
+                          <MicButton
+                            className="absolute top-1 right-1"
+                            onText={(t) =>
+                              setPostDialog((cur) =>
+                                cur
+                                  ? { ...cur, captions: { ...(cur.captions || {}), [pl]: appendDictation(cur.captions?.[pl] || "", t) } }
+                                  : cur
+                              )
+                            }
+                          />
+                        </div>
                       </div>
                     );
                   })}
@@ -526,12 +548,19 @@ export default function SocialManagerWidget() {
               value={newSource.title || ""}
               onChange={(e) => setNewSource({ ...newSource, title: e.target.value })}
             />
-            <Textarea
-              placeholder="Description / brief"
-              rows={3}
-              value={newSource.description || ""}
-              onChange={(e) => setNewSource({ ...newSource, description: e.target.value })}
-            />
+            <div className="relative">
+              <Textarea
+                placeholder="Description / brief"
+                rows={3}
+                value={newSource.description || ""}
+                onChange={(e) => setNewSource({ ...newSource, description: e.target.value })}
+                className="pr-10"
+              />
+              <MicButton
+                className="absolute top-1 right-1"
+                onText={(t) => setNewSource((cur) => ({ ...cur, description: appendDictation(cur.description || "", t) }))}
+              />
+            </div>
             <Select
               value={newSource.kind}
               onValueChange={(v) => setNewSource({ ...newSource, kind: v as "recurring" | "oneoff" })}

@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { MicButton } from "@/components/dictation/MicButton";
+import { appendDictation } from "@/hooks/useDictation";
 import {
   Dialog,
   DialogContent,
@@ -1920,12 +1922,19 @@ export default function UnifiedCalendarWidget() {
             </div>
             <div>
               <Label>Description</Label>
-              <Textarea
-                value={newEvent.description}
-                onChange={(e) =>
-                  setNewEvent({ ...newEvent, description: e.target.value })
-                }
-              />
+              <div className="relative">
+                <Textarea
+                  value={newEvent.description}
+                  onChange={(e) =>
+                    setNewEvent({ ...newEvent, description: e.target.value })
+                  }
+                  className="pr-10"
+                />
+                <MicButton
+                  className="absolute top-1 right-1"
+                  onText={(t) => setNewEvent((cur) => ({ ...cur, description: appendDictation(cur.description, t) }))}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>

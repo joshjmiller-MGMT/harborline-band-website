@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { operatorAuthHeader } from "@/integrations/supabase/operator-fetch";
 import { useToast } from "@/hooks/use-toast";
+import { MicButton } from "@/components/dictation/MicButton";
+import { appendDictation } from "@/hooks/useDictation";
 import {
   Sparkles, Save, RotateCcw, Loader2, CheckCircle2, Clock, Target, AlertTriangle, Calendar,
   Trello, RefreshCw, ExternalLink, Inbox, LayoutGrid, HelpCircle,
@@ -286,7 +288,7 @@ export default function SmartTaskWidget() {
           disabled={working || saving}
         />
 
-        <div>
+        <div className="relative">
           <Textarea
             value={input}
             onChange={(e) => {
@@ -294,8 +296,12 @@ export default function SmartTaskWidget() {
               if (activeCard) setActiveCard(null);
             }}
             placeholder="e.g. Fix the website, follow up with Pendry, finalize the NJ setlist…"
-            className="min-h-[80px] resize-y"
+            className="min-h-[80px] resize-y pr-10"
             disabled={working || saving}
+          />
+          <MicButton
+            className="absolute top-1 right-1"
+            onText={(t) => setInput((p) => appendDictation(p, t))}
           />
           <div className="flex items-center justify-between gap-2 mt-1">
             <p className="text-xs text-muted-foreground">
