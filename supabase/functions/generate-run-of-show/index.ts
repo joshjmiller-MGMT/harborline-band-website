@@ -143,9 +143,19 @@ Deno.serve(async (req) => {
     if (overrides && typeof overrides === 'object') {
       for (const [key, value] of Object.entries(overrides)) {
         if (typeof value === 'string' && value.trim()) {
-          eventData.details[key.toLowerCase()] = value.trim();
+          const k = key.toLowerCase();
+          eventData.details[k] = value.trim();
+          // A manual override is user-supplied — it's no longer an inferred
+          // value, so drop it from inferredKeys (alias-aware, matching
+          // isInferredKey's normalization) to clear the stale "(inferred)" tag.
+          if (eventData.inferredKeys?.length) {
+            const target = DETAIL_KEY_ALIASES[normalizeDetailKey(k)] || normalizeDetailKey(k);
+            eventData.inferredKeys = eventData.inferredKeys.filter(
+              (ik) => (DETAIL_KEY_ALIASES[normalizeDetailKey(ik)] || normalizeDetailKey(ik)) !== target,
+            );
+          }
           // Also set event name if overridden
-          if (key.toLowerCase() === 'event name') {
+          if (k === 'event name') {
             eventData.eventName = value.trim();
           }
         }
