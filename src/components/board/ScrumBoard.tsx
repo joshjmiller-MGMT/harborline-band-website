@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback } from "react";
 import type { ReactNode } from "react";
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   TouchSensor,
   useDraggable,
@@ -9,6 +10,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { Check, X } from "lucide-react";
@@ -47,6 +49,7 @@ export function ScrumBoard<C extends ScrumCard>({
   emptyColumnLabel = "Empty",
 }: ScrumBoardProps<C>) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -63,8 +66,13 @@ export function ScrumBoard<C extends ScrumCard>({
     return map;
   }, [columns, cards]);
 
+  const handleDragStart = useCallback((e: DragStartEvent) => {
+    setActiveCardId(String(e.active.id));
+  }, []);
+
   const handleDragEnd = useCallback(
     (e: DragEndEvent) => {
+      setActiveCardId(null);
       const cardId = String(e.active.id);
       const toColumn = e.over ? String(e.over.id) : null;
       if (!toColumn) return;
@@ -74,6 +82,10 @@ export function ScrumBoard<C extends ScrumCard>({
     },
     [cards, onCardMove],
   );
+
+  const activeCard = activeCardId
+    ? cards.find((c) => c.id === activeCardId) ?? null
+    : null;
 
   const handleTapColumn = useCallback(
     (columnId: string) => {
@@ -92,7 +104,12 @@ export function ScrumBoard<C extends ScrumCard>({
   );
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveCardId(null)}
+    >
       {selectedCardId && (
         <div className="md:hidden mb-3 px-3 py-2 rounded-md bg-primary/10 border border-primary/30 text-xs flex items-center justify-between gap-3">
           <span className="text-foreground">Tap a column to move the selected card.</span>
@@ -141,6 +158,17 @@ export function ScrumBoard<C extends ScrumCard>({
           );
         })}
       </div>
+
+      {/* Portal overlay: the dragged card renders here so it escapes the
+          columns' overflow-y / row's overflow-x clipping (otherwise the card
+          can't visually cross into another column). */}
+      <DragOverlay dropAnimation={null}>
+        {activeCard ? (
+          <div className="rounded-md border bg-card text-card-foreground shadow-lg ring-2 ring-primary rotate-1 cursor-grabbing w-72 md:w-80">
+            {renderCard(activeCard, { isSelected: false })}
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
@@ -202,21 +230,16 @@ function BoardCard({
   onTapSelect: (id: string) => void;
   children: ReactNode;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: cardId,
   });
 
-  const style: React.CSSProperties = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        zIndex: 50,
-      }
-    : {};
-
+  // No transform on the source: the moving copy is rendered in <DragOverlay>,
+  // which lives in a portal and isn't clipped by the column's overflow. The
+  // source just dims in place to show it's being dragged.
   return (
     <li
       ref={setNodeRef}
-      style={style}
       {...attributes}
       {...listeners}
       onClick={(e) => {
