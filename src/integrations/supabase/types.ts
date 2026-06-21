@@ -568,6 +568,7 @@ export type Database = {
           search_tsv: unknown
           setlists: string[]
           sha256: string | null
+          storage_path: string | null
           tags: string[]
           time_signature: string | null
           title: string
@@ -597,6 +598,7 @@ export type Database = {
           search_tsv?: unknown
           setlists?: string[]
           sha256?: string | null
+          storage_path?: string | null
           tags?: string[]
           time_signature?: string | null
           title: string
@@ -626,6 +628,7 @@ export type Database = {
           search_tsv?: unknown
           setlists?: string[]
           sha256?: string | null
+          storage_path?: string | null
           tags?: string[]
           time_signature?: string | null
           title?: string
@@ -2095,6 +2098,7 @@ export type Database = {
         }
         Returns: unknown
       }
+      chart_index_genres: { Args: never; Returns: { genre: string }[] }
       cleanup_old_posting_times_sources: { Args: never; Returns: undefined }
       refresh_djep_calendar_events_cache: { Args: never; Returns: number }
       refresh_djep_past_events_cache: { Args: never; Returns: number }
