@@ -17,8 +17,7 @@ import {
   Loader2,
   Kanban,
   Sparkles,
-  Zap,
-  Workflow,
+  Megaphone,
   Shield,
   Users,
   ListMusic,
@@ -48,35 +47,25 @@ type MegaMenu = {
   items: NavItem[];
 };
 
-const pipelineMenu: MegaMenu = {
-  label: "Pipeline",
-  icon: Workflow,
+// Nav grouping: Marketing / Events / Music / Brand (Josh-approved 2026-06-21, Legion-3's
+// recommended mapping). Supersedes the prior Pipeline / Ops / Brand & People / Music structure.
+const marketingMenu: MegaMenu = {
+  label: "Marketing",
+  icon: Megaphone,
   items: [
     { name: "Lead Pipeline", href: "/team/booking-pipeline", icon: Kanban, description: "Scrum board — drag leads across buckets" },
     { name: "Booking", href: "/team/booking", icon: Phone, description: "Lead intake & venue tracker" },
+    { name: "Social", href: "/team/social", icon: Share2, description: "Posting times, content queue, handoff to Des" },
+  ],
+};
+
+const eventsMenu: MegaMenu = {
+  label: "Events",
+  icon: Calendar,
+  items: [
     { name: "Doc Generator", href: "/team/run-of-show", icon: FileText, description: "Run of show & client docs" },
-    { name: "Bands", href: "/team/bands", icon: Handshake, description: "Relationship board — bands for show swaps & support slots, by Artist Fit" },
-  ],
-};
-
-const opsMenu: MegaMenu = {
-  label: "Ops",
-  icon: Zap,
-  items: [
-    { name: "SMART Tasks", href: "/team/smart-tasks", icon: Sparkles, description: "Trello inbox → SMART → Active across ventures" },
-    { name: "Practice", href: "/team/practice", icon: Activity, description: "Practice tracker + instrument hours" },
     { name: "Scheduler", href: "/team/scheduler", icon: Calendar, description: "Rehearsal & event scheduling" },
-  ],
-};
-
-const brandPeopleMenu: MegaMenu = {
-  label: "Brand & People",
-  icon: Palette,
-  items: [
-    { name: "Brand Studio", href: "/team/brand-studio", icon: Palette, description: "People, decisions, releases, EPKs" },
-    { name: "Visual Assets", href: "/team/visual-assets", icon: Images, description: "Photos, logos, design files" },
-    { name: "Band Members", href: "/team/band-members", icon: Users, description: "Roster + reference images for visual-asset face recognition" },
-    { name: "Team Members", href: "/team/admin/users", icon: Shield, description: "Invite + manage team logins" },
+    { name: "SMART Tasks", href: "/team/smart-tasks", icon: Sparkles, description: "Trello inbox → SMART → Active across ventures" },
   ],
 };
 
@@ -86,17 +75,29 @@ const musicMenu: MegaMenu = {
   items: [
     { name: "Songs", href: "/team/songs", icon: Music, description: "Master song catalog with tags + keys" },
     { name: "Setlist Builder", href: "/team/setlist-builder", icon: ListMusic, description: "Build & save setlists for any ensemble" },
-    { name: "Social", href: "/team/social", icon: Share2, description: "Posting times, content queue, handoff to Des" },
+    { name: "Practice", href: "/team/practice", icon: Activity, description: "Practice tracker + instrument hours" },
+    { name: "Resources", href: "/team/resources", icon: FolderOpen, description: "Sheet music library — fake books, charts, parts, setlists" },
   ],
 };
 
-const megaMenus: MegaMenu[] = [pipelineMenu, opsMenu, brandPeopleMenu, musicMenu];
+const brandMenu: MegaMenu = {
+  label: "Brand",
+  icon: Palette,
+  items: [
+    { name: "Brand Studio", href: "/team/brand-studio", icon: Palette, description: "People, decisions, releases, EPKs" },
+    { name: "Visual Assets", href: "/team/visual-assets", icon: Images, description: "Photos, logos, design files" },
+    { name: "Band Members", href: "/team/band-members", icon: Users, description: "Roster + reference images for visual-asset face recognition" },
+    { name: "Bands", href: "/team/bands", icon: Handshake, description: "Relationship board — bands for show swaps & support slots, by Artist Fit" },
+    { name: "Team Members", href: "/team/admin/users", icon: Shield, description: "Invite + manage team logins" },
+  ],
+};
 
-// Direct-link nav (no dropdown). Dashboard first, Review second, Resources at the tail.
+const megaMenus: MegaMenu[] = [marketingMenu, eventsMenu, musicMenu, brandMenu];
+
+// Direct-link nav (no dropdown). Dashboard first, Review at the tail.
 const directLinks: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { name: "Dashboard", href: "/team/dashboard", icon: LayoutDashboard },
   { name: "Review", href: "/team/review", icon: Inbox },
-  { name: "Resources", href: "/team/resources", icon: FolderOpen },
 ];
 
 export default function TeamLayout({ children }: { children: React.ReactNode }) {
@@ -194,7 +195,7 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
               );
             })}
 
-            {/* Resources direct link — tail slot */}
+            {/* Review direct link — tail slot */}
             {directLinks.slice(1).map((item) => {
               const isActive = location.pathname === item.href;
               const ItemIcon = item.icon;
