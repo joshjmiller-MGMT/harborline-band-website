@@ -3,6 +3,7 @@ import SocialManagerWidget from "@/components/dashboard/SocialManagerWidget";
 import PostingTimesWidget from "@/components/dashboard/PostingTimesWidget";
 import SocialContentQueueManager from "@/components/social/SocialContentQueueManager";
 import ContentIngestLogWidget from "@/components/social/ContentIngestLogWidget";
+import ContentSmartGoalsWidget from "@/components/social/ContentSmartGoalsWidget";
 import { Share2 } from "lucide-react";
 
 export default function TeamSocial() {
@@ -22,6 +23,7 @@ export default function TeamSocial() {
           <SocialContentQueueManager />
           <SocialManagerWidget />
           <PostingTimesWidget />
+          <ContentSmartGoalsWidget />
           <ContentIngestLogWidget />
         </div>
       </div>
