@@ -27,8 +27,8 @@ type BandRow = { id: string; rowIndex: number; fields: Record<string, string> };
 
 // Match a sheet header case-insensitively against a set of aliases, so a rename
 // on the JJMM "Artists" tab (e.g. "Artist Fit" → "Fit") doesn't blank the view.
-function pick(fields: Record<string, string>, aliases: string[]): string {
-  const entries = Object.entries(fields);
+function pick(fields: Record<string, string> | undefined, aliases: string[]): string {
+  const entries = Object.entries(fields || {});
   for (const alias of aliases) {
     const a = alias.toLowerCase();
     const hit = entries.find(([k]) => k.trim().toLowerCase() === a);
