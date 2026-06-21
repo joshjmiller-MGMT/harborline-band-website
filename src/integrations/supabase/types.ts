@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -691,6 +691,81 @@ export type Database = {
             referencedColumns: ["trello_card_id"]
           },
         ]
+      }
+      content_ingest_log: {
+        Row: {
+          action: string | null
+          application: string | null
+          caption: string | null
+          collection_name: string | null
+          confidence: number | null
+          duration_sec: number | null
+          id: string
+          ingested_at: string
+          platform: string
+          processed_at: string | null
+          purpose: string | null
+          route: string | null
+          routed_ref: string | null
+          shortcode: string
+          source_account: string | null
+          status: string
+          summary: string | null
+          tags: string[]
+          transcript: string | null
+          uploader: string | null
+          url: string
+          venture: string | null
+        }
+        Insert: {
+          action?: string | null
+          application?: string | null
+          caption?: string | null
+          collection_name?: string | null
+          confidence?: number | null
+          duration_sec?: number | null
+          id?: string
+          ingested_at?: string
+          platform?: string
+          processed_at?: string | null
+          purpose?: string | null
+          route?: string | null
+          routed_ref?: string | null
+          shortcode: string
+          source_account?: string | null
+          status?: string
+          summary?: string | null
+          tags?: string[]
+          transcript?: string | null
+          uploader?: string | null
+          url: string
+          venture?: string | null
+        }
+        Update: {
+          action?: string | null
+          application?: string | null
+          caption?: string | null
+          collection_name?: string | null
+          confidence?: number | null
+          duration_sec?: number | null
+          id?: string
+          ingested_at?: string
+          platform?: string
+          processed_at?: string | null
+          purpose?: string | null
+          route?: string | null
+          routed_ref?: string | null
+          shortcode?: string
+          source_account?: string | null
+          status?: string
+          summary?: string | null
+          tags?: string[]
+          transcript?: string | null
+          uploader?: string | null
+          url?: string
+          venture?: string | null
+        }
+        Relationships: []
       }
       cron_secrets: {
         Row: {
@@ -1488,6 +1563,51 @@ export type Database = {
         }
         Relationships: []
       }
+      setlists: {
+        Row: {
+          created_at: string
+          created_by: string
+          event_date: string | null
+          event_name: string | null
+          id: string
+          name: string
+          notes: string | null
+          org: string
+          song_ids: string[]
+          song_snapshot: Json
+          updated_at: string
+          venue: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          event_date?: string | null
+          event_name?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          org: string
+          song_ids?: string[]
+          song_snapshot?: Json
+          updated_at?: string
+          venue?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          event_date?: string | null
+          event_name?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          org?: string
+          song_ids?: string[]
+          song_snapshot?: Json
+          updated_at?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
       smart_task_enrichments: {
         Row: {
           blockers: string | null
@@ -1834,6 +1954,45 @@ export type Database = {
         }
         Relationships: []
       }
+      songs: {
+        Row: {
+          active: boolean
+          artist: string
+          created_at: string
+          decade: string | null
+          functions: string[]
+          genre: string
+          id: string
+          org_tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          artist: string
+          created_at?: string
+          decade?: string | null
+          functions?: string[]
+          genre: string
+          id?: string
+          org_tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          artist?: string
+          created_at?: string
+          decade?: string | null
+          functions?: string[]
+          genre?: string
+          id?: string
+          org_tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       trello_bucket_routes: {
         Row: {
           action_handler: string
@@ -2076,6 +2235,48 @@ export type Database = {
         }
         Relationships: []
       }
+      work_claims: {
+        Row: {
+          branch: string | null
+          claimed_at: string
+          claimed_by: string
+          heartbeat_at: string
+          machine: string | null
+          notes: string | null
+          pr_url: string | null
+          released_at: string | null
+          status: string
+          title: string | null
+          work_key: string
+        }
+        Insert: {
+          branch?: string | null
+          claimed_at?: string
+          claimed_by: string
+          heartbeat_at?: string
+          machine?: string | null
+          notes?: string | null
+          pr_url?: string | null
+          released_at?: string | null
+          status?: string
+          title?: string | null
+          work_key: string
+        }
+        Update: {
+          branch?: string | null
+          claimed_at?: string
+          claimed_by?: string
+          heartbeat_at?: string
+          machine?: string | null
+          notes?: string | null
+          pr_url?: string | null
+          released_at?: string | null
+          status?: string
+          title?: string | null
+          work_key?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -2235,4 +2436,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

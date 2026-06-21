@@ -6,7 +6,7 @@ import { MicButton } from "@/components/dictation/MicButton";
 import { appendDictation } from "@/hooks/useDictation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { FileText, Download, Loader2, ExternalLink, AlertCircle, Music, Clock, Users, MapPin, CalendarDays, CheckCircle2, AlertTriangle, CircleCheck, Eye, Printer, Upload, ChevronDown, File, Copy, Table, Search, Hash, Sparkles, ArrowRight, X, Check, Plus, Trash2, Layers, ArrowDownLeft, ListMusic, ClipboardPaste, Wand2 } from "lucide-react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useLocation } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -541,6 +541,9 @@ export default function RunOfShowGenerator() {
   const [customOrg, setCustomOrg] = useState("");
   const [manualOverrides, setManualOverrides] = useState("");
   const manualOverridesRef = useRef<HTMLTextAreaElement>(null);
+  // Incoming setlist handoff from the Setlist Builder (one-shot on mount).
+  const location = useLocation();
+  const consumedSetlistState = useRef(false);
 
   // Smart Paste (P-docgen smart-import): throw any messy doc / pasted text at the
   // smart-extract edge fn → structured event (details + setlist + timeline +
@@ -1428,6 +1431,42 @@ export default function RunOfShowGenerator() {
     };
   };
 
+  // Setlist Builder → Run-of-Show handoff: when navigated here with a setlist in
+  // router state, seed a synthetic "paste" Source so the songs flow into the
+  // merged event (and export) like any other ingested source.
+  useEffect(() => {
+    if (consumedSetlistState.current) return;
+    const s = location.state as
+      | { setlistSongs?: { title: string; artist?: string }[]; eventName?: string; org?: OrgKey }
+      | null;
+    if (!s?.setlistSongs?.length) return;
+    consumedSetlistState.current = true;
+
+    const songSections: ParsedEventData["songSections"] = [
+      {
+        title: "Setlist",
+        time: "",
+        songs: s.setlistSongs.map((x) => ({
+          title: x.title,
+          artist: x.artist || "",
+          time: "",
+          notes: "",
+        })),
+      },
+    ];
+    setSources((prev) => [
+      ...prev,
+      buildExtractedSource(
+        { details: s.eventName ? { "event name": s.eventName } : {}, songSections },
+        `Setlist${s.eventName ? ` — ${s.eventName}` : ""}`,
+      ),
+    ]);
+    if (s.org) setOrganization(s.org);
+    // Clear router state so a refresh doesn't re-add the setlist.
+    window.history.replaceState({}, "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const runSmartExtract = async (
     rawText: string,
     opts: { setLoading: (b: boolean) => void; onDone?: () => void },
@@ -2278,7 +2317,7 @@ export default function RunOfShowGenerator() {
                 className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline inline-flex items-center gap-1.5"
               >
                 <ListMusic className="w-3.5 h-3.5" />
-                Also build a setlist folder with these songs →
+                Also build a setlist with these songs →
               </RouterLink>
             )}
         </CardContent>
