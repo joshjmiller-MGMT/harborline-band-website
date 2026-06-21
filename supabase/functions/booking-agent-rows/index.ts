@@ -169,6 +169,12 @@ Deno.serve(async (req) => {
       } catch (_) { /* ignore */ }
     }
     const useVenueTab = tabParam === "venue" || tabParam === "venues" || tabParam === "festival";
+    // Bands relationship view reads the JJMM "Artists — bands for show swaps / support
+    // slots" tab. Its gid is stable, so it's hardcoded here rather than adding a config
+    // column (keeps this lane migration-free). Returns generic header→value rows; the
+    // /team/bands page filters to Category=Artist and colors by the "Artist Fit" tier.
+    const useBandsTab = tabParam === "bands" || tabParam === "artists";
+    const BANDS_TAB_GID = "1165689834";
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: cfg } = await supabase
@@ -186,7 +192,7 @@ Deno.serve(async (req) => {
 
     const c = cfg as unknown as Config;
 
-    if (!useVenueTab && (!c.enabled || !c.sheet_id || !c.next_followup_col || !c.name_col)) {
+    if (!useVenueTab && !useBandsTab && (!c.enabled || !c.sheet_id || !c.next_followup_col || !c.name_col)) {
       return new Response(
         JSON.stringify({
           configured: false,
@@ -200,14 +206,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (useVenueTab && (!c.enabled || !c.sheet_id)) {
+    if ((useVenueTab || useBandsTab) && (!c.enabled || !c.sheet_id)) {
       return new Response(
         JSON.stringify({ configured: false, rows: [], note: "Booking Agent not configured. Set the Sheet ID first." }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    let activeGid = useVenueTab ? c.venue_tab_gid : c.tab_gid;
+    let activeGid = useVenueTab ? c.venue_tab_gid : useBandsTab ? BANDS_TAB_GID : c.tab_gid;
     let note: string | undefined;
 
     let sheetResult = await fetchSheetGrid(c.sheet_id, activeGid);
@@ -271,8 +277,9 @@ Deno.serve(async (req) => {
     const dataRows = grid.slice(1);
     const sheetUrl = `https://docs.google.com/spreadsheets/d/${c.sheet_id}/edit${activeGid ? `#gid=${activeGid}` : ""}`;
 
-    // === Venue & Festival tab: return generic header→value rows ===
-    if (useVenueTab) {
+    // === Venue & Festival OR Bands tab: return generic header→value rows ===
+    if (useVenueTab || useBandsTab) {
+      const prefix = useBandsTab ? "band" : "venue";
       const rows = dataRows
         .map((r, i) => {
           const obj: Record<string, string> = {};
@@ -282,12 +289,12 @@ Deno.serve(async (req) => {
           });
           const hasAny = Object.values(obj).some((v) => v !== "");
           if (!hasAny) return null;
-          return { id: `venue-${i}`, rowIndex: i + 2, fields: obj };
+          return { id: `${prefix}-${i}`, rowIndex: i + 2, fields: obj };
         })
         .filter(Boolean);
 
       return new Response(
-        JSON.stringify({ configured: true, tab: "venue", headers, rows, count: rows.length, sheetUrl, note }),
+        JSON.stringify({ configured: true, tab: useBandsTab ? "bands" : "venue", headers, rows, count: rows.length, sheetUrl, note }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

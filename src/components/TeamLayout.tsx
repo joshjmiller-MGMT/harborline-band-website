@@ -23,6 +23,7 @@ import {
   Users,
   ListMusic,
   Inbox,
+  Handshake,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ const pipelineMenu: MegaMenu = {
     { name: "Lead Pipeline", href: "/team/booking-pipeline", icon: Kanban, description: "Scrum board — drag leads across buckets" },
     { name: "Booking", href: "/team/booking", icon: Phone, description: "Lead intake & venue tracker" },
     { name: "Doc Generator", href: "/team/run-of-show", icon: FileText, description: "Run of show & client docs" },
+    { name: "Bands", href: "/team/bands", icon: Handshake, description: "Relationship board — bands for show swaps & support slots, by Artist Fit" },
   ],
 };
 
