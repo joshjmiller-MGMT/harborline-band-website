@@ -1,14 +1,15 @@
 // content-ingest-log — read-only audit surface for the IG content-ingest pipeline.
 //
-// Backs the "Content Ingest Log" section at the bottom of /team/social. Reels &
-// posts pulled from Josh's IG accounts (economy / harborline / personal) are
-// transcribed, classified, and routed; each lands as a row in
-// public.content_ingest_log (deduped on shortcode). This fn surfaces the recent
-// rows plus rollup counts for the audit widget.
+// Backs the "Content Ingest Log" + "Content → SMART Goals" sections at the bottom of
+// /team/social. Reels & posts pulled from Josh's IG accounts (economy / harborline /
+// personal) are transcribed, classified, deadline-stamped, and routed; each lands as a
+// row in public.content_ingest_log (deduped on shortcode). Clusters of items become
+// public.content_smart_goals. This fn surfaces both for the widgets.
 //
 // Ops:
 //   list   recent rows (default 100, newest first) + a summary object
 //          (total, counts per source_account, counts per purpose).
+//   goals  synthesized SMART goals, sorted by priority then urgency then size.
 //
 // Auth: requireOperator() gates the op (matches team-users). Service-role bypass
 // preserved for cron. Reads via the service-role client to see past RLS.
@@ -45,12 +46,25 @@ const DISPLAY_COLUMNS = [
   "tags",
   "status",
   "routed_ref",
+  "deadline",
+  "deadline_raw",
+  "time_sensitivity",
+  "recurring",
   "ingested_at",
   "processed_at",
 ].join(", ");
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
+
+// urgency rank for sorting goals (most pressing first; expired last)
+const URGENCY_RANK: Record<string, number> = {
+  urgent: 0,
+  soon: 1,
+  rolling: 2,
+  none: 3,
+  expired: 4,
+};
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -130,6 +144,25 @@ Deno.serve(async (req) => {
         by_purpose: byPurpose,
       },
     });
+  }
+
+  if (op === "goals") {
+    const { data: goals, error } = await supabase
+      .from("content_smart_goals")
+      .select("*");
+    if (error) {
+      return json(500, { error: "goals_failed", detail: error.message });
+    }
+    const sorted = (goals ?? []).slice().sort((a, b) => {
+      const ga = a as { priority: number | null; urgency: string | null; member_count: number | null };
+      const gb = b as { priority: number | null; urgency: string | null; member_count: number | null };
+      return (
+        (ga.priority ?? 9) - (gb.priority ?? 9) ||
+        (URGENCY_RANK[ga.urgency ?? "none"] ?? 5) - (URGENCY_RANK[gb.urgency ?? "none"] ?? 5) ||
+        (gb.member_count ?? 0) - (ga.member_count ?? 0)
+      );
+    });
+    return json(200, { goals: sorted });
   }
 
   return json(400, { error: "unknown_op", op });

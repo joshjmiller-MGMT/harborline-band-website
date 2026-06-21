@@ -34,6 +34,10 @@ type IngestRow = {
   tags: string[] | null;
   status: string | null;
   routed_ref: string | null;
+  deadline: string | null;
+  deadline_raw: string | null;
+  time_sensitivity: string | null;
+  recurring: boolean | null;
   ingested_at: string;
   processed_at: string | null;
 };
@@ -70,6 +74,14 @@ const ROUTE_LABEL: Record<string, string> = {
   passive_ref: "Passive ref",
 };
 
+// time-sensitivity badge styles — urgent screams, expired fades.
+const SENSITIVITY_STYLES: Record<string, string> = {
+  urgent: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40",
+  soon: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  rolling: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/20",
+  expired: "bg-muted text-muted-foreground border-border line-through",
+};
+
 const ACCOUNT_ORDER = ["economy", "harborline", "personal"];
 
 function accountBadgeClass(account: string | null): string {
@@ -86,6 +98,13 @@ function formatTimestamp(iso: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function formatDay(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 export default function ContentIngestLogWidget() {
@@ -140,7 +159,7 @@ export default function ContentIngestLogWidget() {
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
             Reels &amp; posts ingested from your IG accounts — transcribed, classified,
-            routed. Deduped automatically.
+            dated, routed. Deduped automatically.
           </p>
         </div>
         <Button
@@ -196,6 +215,7 @@ export default function ContentIngestLogWidget() {
               <TableRow>
                 <TableHead>Account</TableHead>
                 <TableHead>Purpose</TableHead>
+                <TableHead>When</TableHead>
                 <TableHead>Summary</TableHead>
                 <TableHead>Action</TableHead>
                 <TableHead>Route</TableHead>
@@ -216,6 +236,23 @@ export default function ContentIngestLogWidget() {
                       <Badge variant="secondary">
                         {PURPOSE_LABEL[item.purpose] ?? item.purpose}
                       </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {item.time_sensitivity && item.time_sensitivity !== "none" ? (
+                      <span className="flex items-center gap-1.5">
+                        <Badge
+                          variant="outline"
+                          className={SENSITIVITY_STYLES[item.time_sensitivity] ?? "text-muted-foreground"}
+                        >
+                          {item.time_sensitivity}
+                        </Badge>
+                        {item.deadline && (
+                          <span className="text-xs text-muted-foreground">{formatDay(item.deadline)}</span>
+                        )}
+                      </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
