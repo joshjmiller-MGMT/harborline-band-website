@@ -2,7 +2,6 @@ import TeamLayout from "@/components/TeamLayout";
 import AvailabilityCheckerWidget from "@/components/dashboard/AvailabilityCheckerWidget";
 import IntegrationHealthWidget from "@/components/dashboard/IntegrationHealthWidget";
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
-import SmartTaskWidget from "@/components/dashboard/SmartTaskWidget";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
 import { LayoutDashboard } from "lucide-react";
 
@@ -28,9 +27,11 @@ export default function TeamDashboard() {
             <UnifiedCalendarWidget />
           </div>
 
-          {/* AvailabilityChecker paired with SmartTask per Josh's 2026-05-24 card. */}
-          <SmartTaskWidget />
-          <AvailabilityCheckerWidget />
+          {/* AvailabilityChecker — full width. (SmartTaskWidget moved to the SMART Tasks
+              page 2026-06-21; the 2026-05-24 card had paired them here — flagged in the PR.) */}
+          <div className="lg:col-span-2">
+            <AvailabilityCheckerWidget />
+          </div>
 
           {/* Integration health goes last — it's read-only diagnostics, not a daily-driver. */}
           <div className="lg:col-span-2">

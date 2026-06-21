@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from "react";
 import TeamLayout from "@/components/TeamLayout";
-import { Sparkles, RefreshCw, ExternalLink } from "lucide-react";
+import { Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import SmartTaskWidget from "@/components/dashboard/SmartTaskWidget";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrumBoard } from "@/components/board/ScrumBoard";
@@ -206,11 +207,6 @@ export default function TeamSmartTasks() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button asChild variant="outline" size="sm">
-              <a href="/team/dashboard">
-                <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Dashboard widget
-              </a>
-            </Button>
             <Button variant="ghost" size="sm" onClick={refreshAll} disabled={isLoading}>
               <RefreshCw className={`w-4 h-4 mr-1.5 ${isLoading ? "animate-spin" : ""}`} />
               Refresh
@@ -224,6 +220,11 @@ export default function TeamSmartTasks() {
             {trello.error && <p>Trello inbox: {trello.error}</p>}
           </div>
         )}
+
+        {/* Quick SMART-ify composer (moved here from the dashboard, 2026-06-21). */}
+        <div className="mb-6">
+          <SmartTaskWidget />
+        </div>
 
         <div className="space-y-6">
           {SMART_VENTURES.map((venture) => {
