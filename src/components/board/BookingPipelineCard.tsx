@@ -1,4 +1,4 @@
-import { ExternalLink, Calendar, MessageSquare } from "lucide-react";
+import { ExternalLink, Calendar, MessageSquare, CheckCircle2 } from "lucide-react";
 
 export type BookingPipelineCardData = {
   id: string;
@@ -31,12 +31,18 @@ export function BookingPipelineCard({
   sheetFallbackUrl: string;
 }) {
   const age = daysSince(card.lastContact);
+  const isDone = card.columnId === "Done";
   return (
-    <div className="px-3 py-2.5 space-y-1.5">
+    <div className={`px-3 py-2.5 space-y-1.5 ${isDone ? "bg-emerald-500/5" : ""}`}>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">
-          {card.name}
-        </p>
+        <div className="flex items-start gap-1.5 flex-1 min-w-0">
+          {isDone && (
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" aria-label="Done" />
+          )}
+          <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">
+            {card.name}
+          </p>
+        </div>
         <a
           href={card.link || sheetFallbackUrl}
           target="_blank"

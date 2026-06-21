@@ -57,7 +57,9 @@ export default function TeamBookingPipeline() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
-  const [showDone, setShowDone] = useState(false);
+  // Default ON: closed leads stay visible in the Done column (with a check) so
+  // the board shows accumulated wins, not an empty space. Toggle still hides them.
+  const [showDone, setShowDone] = useState(true);
 
   const loadRows = useCallback(async () => {
     setLoading(true);
