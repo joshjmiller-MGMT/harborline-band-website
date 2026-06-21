@@ -24,6 +24,7 @@ type ChartRow = {
   filename: string;
   reference: string | null;
   drive_web_view_link: string | null;
+  storage_path: string | null;
   setlists: string[] | null;
   ireal_pro: string[] | null;
   tags: string[] | null;
@@ -35,12 +36,25 @@ type FolderCount = { folder_top: string; total: number };
 
 const TOP_FOLDERS = [
   { slug: "fake-books", label: "Fake Books", icon: Music },
+  { slug: "Bb-charts", label: "B♭ Charts", icon: Music },
+  { slug: "Eb-charts", label: "E♭ Charts", icon: Music },
   { slug: "single-charts", label: "Single Charts", icon: FileText },
   { slug: "chord-charts", label: "Chord Charts", icon: FileText },
   { slug: "originals", label: "Originals", icon: Music },
   { slug: "parts", label: "Parts", icon: FileText },
   { slug: "setlists", label: "Setlists", icon: FolderOpen },
 ];
+
+// Transposition editions, derived from the top-level folder server-side.
+const EDITIONS = [
+  { value: "C", label: "Concert (C)" },
+  { value: "Bb", label: "B♭" },
+  { value: "Eb", label: "E♭" },
+] as const;
+type Edition = (typeof EDITIONS)[number]["value"];
+
+const CHARTS_BUCKET = "charts";
+const SIGNED_URL_TTL = 3600; // 1 hour
 
 const PAGE_SIZE = 50;
 
@@ -59,6 +73,8 @@ export default function TeamResources() {
 
   const [topFolder, setTopFolder] = useState<string | null>(null);
   const [subFolder, setSubFolder] = useState<string | null>(null);
+  const [genre, setGenre] = useState<string | null>(null);
+  const [edition, setEdition] = useState<Edition | null>(null);
 
   const [results, setResults] = useState<ChartRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -69,6 +85,9 @@ export default function TeamResources() {
   const [subFolderOptions, setSubFolderOptions] = useState<
     { sub: string; count: number }[]
   >([]);
+  const [genres, setGenres] = useState<string[]>([]);
+  // storage_path -> signed URL, populated after each result page loads.
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
   const folderPath = useMemo(() => {
     if (subFolder && topFolder) return `${topFolder}/${subFolder}`;
@@ -87,6 +106,18 @@ export default function TeamResources() {
         counts.push({ folder_top: top.slug, total: count || 0 });
       }
       setFolderCounts(counts);
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.rpc("chart_index_genres");
+      if (error) return;
+      setGenres(
+        ((data as { genre: string }[] | null) || [])
+          .map((r) => r.genre)
+          .filter(Boolean),
+      );
     })();
   }, []);
 
@@ -126,6 +157,8 @@ export default function TeamResources() {
           body: {
             query: query || undefined,
             folder_path: folderPath || undefined,
+            genre: genre || undefined,
+            edition: edition || undefined,
             limit: PAGE_SIZE,
             offset: 0,
           },
@@ -136,8 +169,28 @@ export default function TeamResources() {
           results: ChartRow[];
           total: number;
         };
-        setResults(payload.results || []);
+        const rows = payload.results || [];
+        setResults(rows);
         setTotal(payload.total || 0);
+
+        // Batch-sign the storage objects for this page (copyright-gated bucket).
+        const paths = rows
+          .map((r) => r.storage_path)
+          .filter((p): p is string => !!p);
+        if (paths.length) {
+          const { data: signed } = await supabase.storage
+            .from(CHARTS_BUCKET)
+            .createSignedUrls(paths, SIGNED_URL_TTL);
+          if (!cancelled && signed) {
+            setSignedUrls((prev) => {
+              const next = { ...prev };
+              for (const s of signed) {
+                if (s.path && s.signedUrl) next[s.path] = s.signedUrl;
+              }
+              return next;
+            });
+          }
+        }
       } catch (e) {
         if (!cancelled) setError((e as Error).message || "Search failed");
       } finally {
@@ -147,7 +200,7 @@ export default function TeamResources() {
     return () => {
       cancelled = true;
     };
-  }, [query, folderPath]);
+  }, [query, folderPath, genre, edition]);
 
   const isEmptyLibrary =
     folderCounts.length > 0 && folderCounts.every((f) => f.total === 0);
@@ -160,8 +213,8 @@ export default function TeamResources() {
             Resources
           </h1>
           <p className="text-muted-foreground mt-2">
-            Sheet music library — fake books, single charts, originals, parts,
-            setlists. Backed by Google Drive.
+            Sheet music library — fake books (concert, B♭, E♭), single charts,
+            originals, parts, setlists. Team-only, served from secure storage.
           </p>
         </div>
 
@@ -215,6 +268,56 @@ export default function TeamResources() {
               </Button>
             );
           })}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-xs font-medium text-muted-foreground mr-1">
+            Edition
+          </span>
+          <Button
+            variant={edition === null ? "default" : "outline"}
+            size="sm"
+            onClick={() => setEdition(null)}
+          >
+            All
+          </Button>
+          {EDITIONS.map((ed) => (
+            <Button
+              key={ed.value}
+              variant={edition === ed.value ? "default" : "outline"}
+              size="sm"
+              onClick={() =>
+                setEdition(edition === ed.value ? null : ed.value)
+              }
+            >
+              {ed.label}
+            </Button>
+          ))}
+
+          {genres.length > 0 && (
+            <>
+              <span className="text-xs font-medium text-muted-foreground ml-3 mr-1">
+                Genre
+              </span>
+              <Button
+                variant={genre === null ? "default" : "outline"}
+                size="sm"
+                onClick={() => setGenre(null)}
+              >
+                All
+              </Button>
+              {genres.map((g) => (
+                <Button
+                  key={g}
+                  variant={genre === g ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setGenre(genre === g ? null : g)}
+                >
+                  {g}
+                </Button>
+              ))}
+            </>
+          )}
         </div>
 
         {topFolder && subFolderOptions.length > 0 && (
@@ -279,7 +382,11 @@ export default function TeamResources() {
             </div>
 
             <div className="space-y-2">
-              {results.map((r) => (
+              {results.map((r) => {
+                const openUrl =
+                  (r.storage_path && signedUrls[r.storage_path]) ||
+                  r.drive_web_view_link;
+                return (
                 <Card
                   key={r.id}
                   className="border-border bg-card hover:border-primary/30 transition-colors"
@@ -287,12 +394,12 @@ export default function TeamResources() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <a
-                        href={r.drive_web_view_link || undefined}
-                        target={r.drive_web_view_link ? "_blank" : undefined}
-                        rel={r.drive_web_view_link ? "noopener noreferrer" : undefined}
-                        aria-disabled={!r.drive_web_view_link}
+                        href={openUrl || undefined}
+                        target={openUrl ? "_blank" : undefined}
+                        rel={openUrl ? "noopener noreferrer" : undefined}
+                        aria-disabled={!openUrl}
                         className={
-                          r.drive_web_view_link
+                          openUrl
                             ? "flex-1 min-w-0 hover:opacity-80 transition-opacity cursor-pointer"
                             : "flex-1 min-w-0 pointer-events-none"
                         }
@@ -370,10 +477,10 @@ export default function TeamResources() {
                         </div>
                       </a>
                       <div className="flex-shrink-0">
-                        {r.drive_web_view_link ? (
+                        {openUrl ? (
                           <Button variant="outline" size="sm" asChild>
                             <a
-                              href={r.drive_web_view_link}
+                              href={openUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
@@ -383,14 +490,15 @@ export default function TeamResources() {
                           </Button>
                         ) : (
                           <Badge variant="outline" className="text-xs opacity-60">
-                            no Drive link
+                            unavailable
                           </Badge>
                         )}
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
 
             {!loading && results.length === 0 && (

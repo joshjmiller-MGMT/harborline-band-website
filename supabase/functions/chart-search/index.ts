@@ -9,6 +9,9 @@
 //     query?:        string,   // websearch syntax — phrases, AND, OR
 //     folder_path?:  string,   // prefix filter, e.g. "fake-books/real-book-6th-ed"
 //     genre?:        string,   // exact match (Jazz / Pop / Classical / etc.)
+//     edition?:      string,   // transposition: "C" (concert) | "Bb" | "Eb".
+//                              //   Derived from the top-level folder: Bb-charts/* = Bb,
+//                              //   Eb-charts/* = Eb, everything else = concert (C).
 //     limit?:        number,   // default 50, max 200
 //     offset?:       number,   // default 0
 //   }
@@ -16,8 +19,8 @@
 // Response:
 //   {
 //     results: [{ id, title, composer, genre, folder_path, filename,
-//                 reference, drive_web_view_link, setlists, ireal_pro,
-//                 tags, key_signature, time_signature, rank }],
+//                 reference, drive_web_view_link, storage_path, setlists,
+//                 ireal_pro, tags, key_signature, time_signature, rank }],
 //     total:  number,
 //     query:  string,
 //     folder_path: string|null,
@@ -53,6 +56,8 @@ Deno.serve(async (req) => {
       typeof body?.folder_path === "string" ? body.folder_path.trim() : "";
     const genre =
       typeof body?.genre === "string" ? body.genre.trim() : "";
+    const edition =
+      typeof body?.edition === "string" ? body.edition.trim() : "";
     const limit = Math.min(
       Math.max(parseInt(body?.limit) || 50, 1),
       200
@@ -61,20 +66,34 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    const COLUMNS =
+      "id, title, composer, genre, folder_path, filename, reference, drive_web_view_link, storage_path, setlists, ireal_pro, tags, key_signature, time_signature";
+
+    // Transposition edition maps to the top-level folder bucket.
+    // Bb-charts/* = Bb, Eb-charts/* = Eb, everything else = concert (C).
+    // deno-lint-ignore no-explicit-any
+    const applyFilters = (q: any) => {
+      if (folderPath) q = q.like("folder_path", `${folderPath}%`);
+      if (genre) q = q.eq("genre", genre);
+      if (edition === "Bb") q = q.like("folder_path", "Bb-charts%");
+      else if (edition === "Eb") q = q.like("folder_path", "Eb-charts%");
+      else if (edition === "C")
+        q = q
+          .not("folder_path", "like", "Bb-charts%")
+          .not("folder_path", "like", "Eb-charts%");
+      return q;
+    };
+
     // websearch_to_tsquery handles phrases ("john coltrane") + AND/OR + -negation
     // For browse mode (empty query), order by folder_path/filename.
     if (!query) {
       let q = supabase
         .from("chart_index")
-        .select(
-          "id, title, composer, genre, folder_path, filename, reference, drive_web_view_link, setlists, ireal_pro, tags, key_signature, time_signature",
-          { count: "exact" }
-        )
+        .select(COLUMNS, { count: "exact" })
         .order("folder_path", { ascending: true })
         .order("filename", { ascending: true })
         .range(offset, offset + limit - 1);
-      if (folderPath) q = q.like("folder_path", `${folderPath}%`);
-      if (genre) q = q.eq("genre", genre);
+      q = applyFilters(q);
       const { data, error, count } = await q;
       if (error) throw error;
       return jsonResponse({
@@ -91,17 +110,13 @@ Deno.serve(async (req) => {
     // then re-rank client-side. PostgREST supports websearch type.
     let q = supabase
       .from("chart_index")
-      .select(
-        "id, title, composer, genre, folder_path, filename, reference, drive_web_view_link, setlists, ireal_pro, tags, key_signature, time_signature",
-        { count: "exact" }
-      )
+      .select(COLUMNS, { count: "exact" })
       .textSearch("search_tsv", query, {
         type: "websearch",
         config: "english",
       })
       .range(offset, offset + limit - 1);
-    if (folderPath) q = q.like("folder_path", `${folderPath}%`);
-    if (genre) q = q.eq("genre", genre);
+    q = applyFilters(q);
     const { data, error, count } = await q;
     if (error) throw error;
     return jsonResponse({
