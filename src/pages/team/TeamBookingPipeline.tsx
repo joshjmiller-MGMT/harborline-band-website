@@ -17,6 +17,7 @@ import {
   type BookingPipelineCardData,
 } from "@/components/board/BookingPipelineCard";
 import BookingEmailComposer from "@/components/booking/BookingEmailComposer";
+import OutreachDraftsSection from "@/components/booking/OutreachDraftsSection";
 
 type ApiRow = {
   id: string;
@@ -227,6 +228,8 @@ export default function TeamBookingPipeline() {
           )}
           emptyColumnLabel="No leads"
         />
+
+        <OutreachDraftsSection />
       </div>
     </TeamLayout>
   );
