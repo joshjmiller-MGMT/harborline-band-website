@@ -25,9 +25,11 @@ import {
   X,
   ArrowDownToLine,
   Inbox,
+  ScrollText,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { DecisionLog } from "@/components/admin/DecisionLog";
 
 type MediaKind = "image" | "video" | "screenshot";
 type ItemType =
@@ -528,6 +530,17 @@ export default function TeamReviewQueue() {
             )}
           </Card>
         </div>
+
+        {/* Decision log — moved here from Brand Studio (this page is becoming "Admin"). */}
+        <section className="mt-10 pt-8 border-t border-border">
+          <div className="flex items-center gap-3 mb-5">
+            <ScrollText className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-display tracking-wide-custom">
+              Decision Log
+            </h2>
+          </div>
+          <DecisionLog />
+        </section>
       </div>
     </TeamLayout>
   );
