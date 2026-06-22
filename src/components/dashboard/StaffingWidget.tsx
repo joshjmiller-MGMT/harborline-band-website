@@ -15,8 +15,11 @@ import {
   Pencil,
   Save,
   X,
+  CalendarClock,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { CalendarColorLegend } from "./CalendarColorLegend";
+import { HOLD_COLOR_ID } from "@/lib/calendar-color-scheme";
 
 type StaffEntry = {
   name: string;
@@ -424,6 +427,12 @@ export default function StaffingWidget({
                 <EventRow key={ev.id} ev={ev} onSaved={load} />
               ))}
             </div>
+
+            {data && data.connected && (
+              <div className="pt-3 mt-1 border-t border-border/40">
+                <CalendarColorLegend />
+              </div>
+            )}
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
@@ -502,6 +511,77 @@ export function StaffingNeedsAction() {
         })}
         {unstaffed.length > top.length && (
           <li className="italic">+ {unstaffed.length - top.length} more…</li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * Compact "holds need a confirm" alert for NeedsActionWidget. A hold (Banana/5)
+ * is a tentative gig that hasn't been confirmed yet — distinct from the
+ * needs-staffing alert above. Reuses the staffing-snapshot feed (which returns
+ * the booked green/yellow events with their colorId) and filters for holds.
+ */
+export function HoldsNeedsAction() {
+  const [data, setData] = useState<StaffingResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: resp } = await supabase.functions.invoke("staffing-snapshot", {
+          method: "POST",
+          body: { days: 730 },
+        });
+        if (!cancelled) setData(resp as StaffingResponse);
+      } catch {
+        // Silently swallow; widget just hides if it can't load.
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) return null;
+  if (!data || !data.connected) return null;
+
+  const holds = (data.events || []).filter((e) => e.colorId === HOLD_COLOR_ID);
+  if (holds.length === 0) return null;
+
+  const top = holds.slice(0, 3);
+
+  return (
+    <div className="border border-yellow-500/40 rounded-lg p-3 bg-yellow-500/5">
+      <a
+        href="/team/scheduler"
+        className="flex items-center justify-between gap-2 group"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <CalendarClock className="w-4 h-4 text-yellow-600 shrink-0" />
+          <span className="text-sm font-medium">
+            {holds.length} gig hold{holds.length === 1 ? "" : "s"} need{holds.length === 1 ? "s" : ""} a confirm
+          </span>
+        </div>
+        <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-foreground shrink-0" />
+      </a>
+      <ul className="mt-2 space-y-1 text-xs text-muted-foreground pl-6">
+        {top.map((ev) => {
+          const date = ev.start ? parseEventDate(ev.start) : null;
+          return (
+            <li key={ev.id} className="flex items-center gap-2">
+              {date && <span className="tabular-nums">{format(date, "MMM d")}</span>}
+              <span className="truncate">{ev.title}</span>
+              <span className="ml-auto shrink-0">tentative</span>
+            </li>
+          );
+        })}
+        {holds.length > top.length && (
+          <li className="italic">+ {holds.length - top.length} more…</li>
         )}
       </ul>
     </div>

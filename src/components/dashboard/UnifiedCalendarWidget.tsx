@@ -6,6 +6,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 
 import { supabase } from "@/integrations/supabase/client";
 import { operatorAuthHeader } from "@/integrations/supabase/operator-fetch";
+import { CalendarColorLegend } from "./CalendarColorLegend";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1574,6 +1575,10 @@ export default function UnifiedCalendarWidget() {
             </TooltipProvider>
           </div>
         )}
+
+        <div className="pt-3 mt-3 border-t border-border/40">
+          <CalendarColorLegend />
+        </div>
       </CardContent>
 
       {/* Settings dialog */}
