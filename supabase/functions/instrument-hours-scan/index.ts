@@ -28,13 +28,19 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CALENDAR_CLIENT_SECRET");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Color hints — green = gig (Basil/Sage from P11 staffing), orange = rehearsal
-// (Tangerine, Josh's typical rehearsal color, unconfirmed first scan will validate).
-const GREEN_COLOR_IDS = new Set(["10", "2"]);
-const ORANGE_COLOR_IDS = new Set(["6"]);
-// Tomato (11) = canceled; Flamingo (4) = personal/non-work. Both → instant exclude,
-// regardless of what the title says. Higher precedence than any rule.
-const EXCLUDE_COLOR_IDS = new Set(["11", "4"]);
+// Color hints — Josh's calendar color scheme (2026-06-22). Gig = Sage (light
+// green, "2") only; Basil (dark green, "10") is now warehouse/BSE-admin and does
+// NOT count toward instrument hours.
+const GREEN_COLOR_IDS = new Set(["2"]);
+// Rehearsal = Blueberry ("9") under the new scheme (was Tangerine "6"). Note:
+// rehearsals are classified by keyword rules, not color, so this set is reference
+// only (no code path reads it today) — kept in sync with the scheme.
+const ORANGE_COLOR_IDS = new Set(["9"]);
+// Instant-exclude colors (skip regardless of title): Grape ("3", personal/
+// development), Flamingo ("4", personal/fun), Graphite ("8", canceled). Tomato
+// ("11") is NO LONGER excluded — it now means "confirmed gig that needs staffing"
+// (a real gig); it just isn't counted as gig hours until it flips to Sage ("2").
+const EXCLUDE_COLOR_IDS = new Set(["3", "4", "8"]);
 
 interface Rule {
   id: string;
@@ -115,17 +121,21 @@ function classify(
 ): ClassificationVerdict {
   const haystack = `${title}\n${description}`.toLowerCase();
 
-  // Pass 0 — color exclude. Tomato/Flamingo events drop out regardless of title.
+  // Pass 0 — color exclude. Grape/Flamingo/Graphite events drop out regardless of title.
   if (colorId && EXCLUDE_COLOR_IDS.has(colorId)) {
+    const reason =
+      colorId === "8"
+        ? "color=graphite — canceled"
+        : colorId === "3"
+          ? "color=grape — personal/development"
+          : "color=flamingo — personal/non-work";
     return {
       classified_as: "none",
       confidence: "high",
       matched_rule_id: null,
       matched_rule_pattern: null,
       estimated_hours: 0,
-      estimation_source: colorId === "11"
-        ? "color=tomato — canceled"
-        : "color=flamingo — personal/non-work",
+      estimation_source: reason,
     };
   }
 
