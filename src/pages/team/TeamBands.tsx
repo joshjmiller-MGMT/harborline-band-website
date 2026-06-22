@@ -20,10 +20,14 @@ import {
   Instagram,
   Users,
   Loader2,
+  Info,
 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ScrumBoard, type ScrumColumn } from "@/components/board/ScrumBoard";
 
 type BandRow = { id: string; rowIndex: number; fields: Record<string, string> };
+type BandCardData = { id: string; columnId: string; band: BandRow };
 
 // Match a sheet header case-insensitively against a set of aliases, so a rename
 // on the JJMM "Artists" tab (e.g. "Artist Fit" → "Fit") doesn't blank the view.
@@ -97,6 +101,22 @@ const TIERS: Record<
 // Display order: best fit first, unrated last.
 const TIER_ORDER = [5, 4, 3, 2, 1, 0];
 
+// The exact string written back to the "Artist Fit" cell for a tier (em-dash to
+// match the sheet's existing format, e.g. "4 — Strong Yes"). Tier 0 clears it.
+function fitValueForTier(tier: number): string {
+  return tier >= 1 && tier <= 5 ? `${tier} — ${TIERS[tier].label}` : "";
+}
+
+// Return a copy of the row with its Artist-Fit field set to `fit` (optimistic).
+function withFit(row: BandRow, fit: string): BandRow {
+  const fields = { ...row.fields };
+  const key =
+    Object.keys(fields).find((k) => ["artist fit", "fit"].includes(k.trim().toLowerCase())) ||
+    "Artist Fit";
+  fields[key] = fit;
+  return { ...row, fields };
+}
+
 function formatFollowers(raw: string): string {
   if (!raw) return "";
   const n = parseInt(raw.replace(/[^0-9]/g, ""), 10);
@@ -110,6 +130,21 @@ function igHref(ig: string): string | null {
   if (/^https?:\/\//i.test(v)) return v;
   const handle = v.replace(/^@/, "");
   return `https://instagram.com/${handle}`;
+}
+
+// Pull a useful message out of a supabase.functions error (non-2xx bodies are
+// stashed on error.context as a Response).
+async function errorMessage(error: unknown, fallback: string): Promise<string> {
+  const ctx = (error as { context?: Response } | null)?.context;
+  if (ctx && typeof ctx.json === "function") {
+    try {
+      const body = await ctx.json();
+      if (body?.message || body?.error) return body.message || body.error;
+    } catch {
+      /* not json */
+    }
+  }
+  return error instanceof Error ? error.message : fallback;
 }
 
 export default function TeamBands() {
@@ -170,36 +205,72 @@ export default function TeamBands() {
     return bands.filter((r) => Object.values(r.fields).join(" ").toLowerCase().includes(q));
   }, [bands, search]);
 
-  const grouped = useMemo(() => {
-    const g = new Map<number, BandRow[]>();
-    for (const t of TIER_ORDER) g.set(t, []);
-    for (const r of filtered) {
-      const t = fitTier(pick(r.fields, ["Artist Fit", "Fit"]));
-      g.get(t)!.push(r);
-    }
-    for (const [, list] of g) {
-      list.sort((a, b) =>
-        pick(a.fields, ["Name"]).localeCompare(pick(b.fields, ["Name"])),
-      );
-    }
-    return g;
-  }, [filtered]);
+  const columns: ScrumColumn[] = useMemo(
+    () =>
+      TIER_ORDER.map((t) => ({
+        id: String(t),
+        title: t > 0 ? `${t} · ${TIERS[t].label}` : TIERS[t].label,
+        accent: TIERS[t].head,
+      })),
+    [],
+  );
+
+  const cards: BandCardData[] = useMemo(
+    () =>
+      filtered.map((b) => ({
+        id: b.id,
+        columnId: String(fitTier(pick(b.fields, ["Artist Fit", "Fit"]))),
+        band: b,
+      })),
+    [filtered],
+  );
+
+  // Drag a band to a new Fit column → optimistic recolor + write the new rating
+  // back to the sheet; roll back (reload) on failure.
+  const handleCardMove = useCallback(
+    async (cardId: string, _from: string, to: string) => {
+      const tier = parseInt(to, 10);
+      const fit = fitValueForTier(tier);
+      const band = rows.find((r) => r.id === cardId);
+      if (!band) return;
+      const name = pick(band.fields, ["Name"]) || "Band";
+
+      const prevRows = rows;
+      setRows((rs) => rs.map((r) => (r.id === cardId ? withFit(r, fit) : r)));
+
+      try {
+        const { data, error } = await supabase.functions.invoke("bands-set-fit", {
+          body: { row_index: band.rowIndex, fit },
+        });
+        if (error) throw error;
+        const d = data as { ok?: boolean; error?: string; message?: string };
+        if (d?.error) throw new Error(d.message || d.error);
+        toast.success(tier > 0 ? `${name} → ${tier} ${TIERS[tier].label}` : `${name} → Unrated`);
+      } catch (e) {
+        const msg = await errorMessage(e, "Couldn't save to the sheet");
+        toast.error(msg);
+        setRows(prevRows); // rollback the optimistic move
+      }
+    },
+    [rows],
+  );
 
   return (
     <TeamLayout>
       <Helmet>
         <title>Bands · Team</title>
       </Helmet>
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
+      <div className="container mx-auto px-6 py-8 max-w-[88rem]">
         <div className="flex items-start justify-between gap-4 mb-2 flex-wrap">
           <div>
             <h1 className="font-display tracking-wide-custom text-2xl flex items-center gap-2">
               <Handshake className="w-6 h-6 text-primary" /> Bands
             </h1>
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-              Relationship board of bands for show swaps, support slots, and bills —
-              color-coded by <strong>Artist Fit</strong>. Sourced live from the JJMM
-              <em> Artists</em> tab; edit the sheet to change a rating.
+              Relationship board of bands for show swaps, support slots, and bills.
+              <strong> Drag a band between columns</strong> to re-rate its{" "}
+              <strong>Artist Fit</strong> — the new rating writes straight back to the JJMM
+              <em> Artists</em> tab.
             </p>
           </div>
           <div className="flex items-center gap-1">
@@ -265,29 +336,15 @@ export default function TeamBands() {
             No bands found on the JJMM Artists tab.
           </div>
         ) : (
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {TIER_ORDER.map((t) => {
-              const list = grouped.get(t) || [];
-              if (list.length === 0) return null;
-              const tier = TIERS[t];
-              return (
-                <div key={t} className="flex-shrink-0 w-[270px]">
-                  <div className="flex items-center justify-between mb-2 px-1">
-                    <h2 className={`text-sm font-display tracking-wide-custom flex items-center gap-2 ${tier.head}`}>
-                      <span className={`w-2.5 h-2.5 rounded-full ${tier.dot}`} />
-                      {t > 0 ? `${t} · ${tier.label}` : tier.label}
-                    </h2>
-                    <Badge variant="outline" className="text-[10px]">{list.length}</Badge>
-                  </div>
-                  <div className="space-y-2">
-                    {list.map((r) => (
-                      <BandCard key={r.id} row={r} tierClass={tier.col} onClick={() => setDetail(r)} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <ScrumBoard<BandCardData>
+            columns={columns}
+            cards={cards}
+            onCardMove={handleCardMove}
+            emptyColumnLabel="No bands"
+            renderCard={(card) => (
+              <BandCard band={card.band} onInfo={() => setDetail(card.band)} />
+            )}
+          />
         )}
 
         <BandDialog row={detail} sheetUrl={sheetUrl} onClose={() => setDetail(null)} />
@@ -296,33 +353,38 @@ export default function TeamBands() {
   );
 }
 
-function BandCard({
-  row,
-  tierClass,
-  onClick,
-}: {
-  row: BandRow;
-  tierClass: string;
-  onClick: () => void;
-}) {
-  const f = row.fields;
+function BandCard({ band, onInfo }: { band: BandRow; onInfo: () => void }) {
+  const f = band.fields;
   const name = pick(f, ["Name"]);
   const location = pick(f, ["Location"]);
   const followers = formatFollowers(pick(f, ["# IG Followers", "IG Followers", "Followers"]));
   const ig = pick(f, ["IG / Website", "IG", "Instagram"]);
+  const igLink = igHref(ig);
   const notes = pick(f, ["Notes"]);
   const status = pick(f, ["Status"]);
+  const tier = fitTier(pick(f, ["Artist Fit", "Fit"]));
 
   return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left rounded-lg border bg-card hover:border-primary/40 transition-colors p-3 ${tierClass}`}
-    >
+    <div className={`p-3 border-l-2 ${TIERS[tier].col} rounded-md`}>
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-medium text-foreground text-sm leading-snug">{name}</h3>
-        {status && (
-          <Badge variant="outline" className="text-[9px] flex-shrink-0">{status}</Badge>
-        )}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {status && (
+            <Badge variant="outline" className="text-[9px]">{status}</Badge>
+          )}
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onInfo();
+            }}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label={`Details for ${name}`}
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
       <div className="mt-1.5 flex flex-col gap-1 text-[11px] text-muted-foreground">
         {location && (
@@ -331,11 +393,23 @@ function BandCard({
           </span>
         )}
         <div className="flex items-center gap-3">
-          {ig && (
-            <span className="inline-flex items-center gap-1 truncate">
-              <Instagram className="w-3 h-3" /> {ig}
-            </span>
-          )}
+          {ig &&
+            (igLink ? (
+              <a
+                href={igLink}
+                target="_blank"
+                rel="noreferrer"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 truncate hover:text-foreground"
+              >
+                <Instagram className="w-3 h-3" /> {ig}
+              </a>
+            ) : (
+              <span className="inline-flex items-center gap-1 truncate">
+                <Instagram className="w-3 h-3" /> {ig}
+              </span>
+            ))}
           {followers && (
             <span className="inline-flex items-center gap-1">
               <Users className="w-3 h-3" /> {followers}
@@ -344,7 +418,7 @@ function BandCard({
         </div>
         {notes && <p className="text-foreground/70 italic line-clamp-2 mt-0.5">“{notes}”</p>}
       </div>
-    </button>
+    </div>
   );
 }
 
