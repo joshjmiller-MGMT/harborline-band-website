@@ -47,8 +47,9 @@ type MegaMenu = {
   items: NavItem[];
 };
 
-// Nav grouping: Marketing / Events / Music / Brand (Josh-approved 2026-06-21, Legion-3's
-// recommended mapping). Supersedes the prior Pipeline / Ops / Brand & People / Music structure.
+// Nav grouping: Marketing / Ops / Music / Brand (Josh-approved 2026-06-21, Legion-3's
+// recommended mapping; Josh renamed the "Events" group → "Ops"). Supersedes the prior
+// Pipeline / Ops / Brand & People / Music structure.
 const marketingMenu: MegaMenu = {
   label: "Marketing",
   icon: Megaphone,
@@ -59,8 +60,8 @@ const marketingMenu: MegaMenu = {
   ],
 };
 
-const eventsMenu: MegaMenu = {
-  label: "Events",
+const opsMenu: MegaMenu = {
+  label: "Ops",
   icon: Calendar,
   items: [
     { name: "Doc Generator", href: "/team/run-of-show", icon: FileText, description: "Run of show & client docs" },
@@ -92,7 +93,7 @@ const brandMenu: MegaMenu = {
   ],
 };
 
-const megaMenus: MegaMenu[] = [marketingMenu, eventsMenu, musicMenu, brandMenu];
+const megaMenus: MegaMenu[] = [marketingMenu, opsMenu, musicMenu, brandMenu];
 
 // Direct-link nav (no dropdown). Dashboard first, Review at the tail.
 const directLinks: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[] = [
