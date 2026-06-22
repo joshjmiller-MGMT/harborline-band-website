@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
+import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import TeamLayout from "@/components/TeamLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,7 +56,7 @@ async function parseEdgeError(error: unknown): Promise<string> {
   return (error as Error).message ?? "Unknown error";
 }
 
-export default function TeamAdminUsers() {
+export function TeamAccessPanel() {
   const [users, setUsers] = useState<TeamUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>("");
@@ -138,8 +138,7 @@ export default function TeamAdminUsers() {
   };
 
   return (
-    <TeamLayout>
-      <div className="container mx-auto px-6 py-8 space-y-6 max-w-5xl">
+    <div className="space-y-6">
         <div className="flex items-center gap-3">
           <Users className="w-6 h-6 text-primary" />
           <h1 className="font-display text-2xl tracking-wide-custom">
@@ -300,7 +299,10 @@ export default function TeamAdminUsers() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </TeamLayout>
+    </div>
   );
+}
+
+export default function TeamAdminUsers() {
+  return <Navigate to="/team/members?tab=access" replace />;
 }

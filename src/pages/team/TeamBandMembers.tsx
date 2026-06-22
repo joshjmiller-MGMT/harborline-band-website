@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import TeamLayout from "@/components/TeamLayout";
-import { Helmet } from "react-helmet-async";
+import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +32,7 @@ function publicUrl(path: string): string {
   return `${SUPABASE_URL}/storage/v1/object/public/visual-assets/${path}`;
 }
 
-export default function TeamBandMembers() {
+export function BandMembersPanel() {
   const [members, setMembers] = useState<BandMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<BandMember | "new" | null>(null);
@@ -63,12 +62,8 @@ export default function TeamBandMembers() {
   );
 
   return (
-    <TeamLayout>
-      <Helmet>
-        <title>Band Members · Team</title>
-      </Helmet>
-      <div className="container mx-auto px-6 py-8 max-w-5xl">
-        <div className="flex items-center justify-between gap-4 mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="font-display tracking-wide-custom text-2xl flex items-center gap-2">
               <Users className="w-6 h-6 text-primary" /> Band Members
@@ -120,9 +115,12 @@ export default function TeamBandMembers() {
             }}
           />
         )}
-      </div>
-    </TeamLayout>
+    </div>
   );
+}
+
+export default function TeamBandMembers() {
+  return <Navigate to="/team/members?tab=roster" replace />;
 }
 
 function MemberCard({ member, onClick }: { member: BandMember; onClick: () => void }) {
