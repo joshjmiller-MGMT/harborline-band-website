@@ -25,11 +25,9 @@ import {
   X,
   ArrowDownToLine,
   Inbox,
-  ScrollText,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { DecisionLog } from "@/components/admin/DecisionLog";
 import LaneLogWidget from "@/components/team/LaneLogWidget";
 
 type MediaKind = "image" | "video" | "screenshot";
@@ -537,17 +535,6 @@ export default function TeamReviewQueue() {
         <div className="mt-8">
           <LaneLogWidget />
         </div>
-
-        {/* Decision log — moved here from Brand Studio (this page is becoming "Admin"). */}
-        <section className="mt-10 pt-8 border-t border-border">
-          <div className="flex items-center gap-3 mb-5">
-            <ScrollText className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-display tracking-wide-custom">
-              Decision Log
-            </h2>
-          </div>
-          <DecisionLog />
-        </section>
       </div>
     </TeamLayout>
   );
