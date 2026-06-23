@@ -16,11 +16,15 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CALENDAR_CLIENT_SECRET");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// "Green" in Google's per-event palette: Basil ("10", the default dark green)
-// and Sage ("2", the lighter green). Both are user-pickable as "green" in the
-// GCal UI on different surfaces, so we accept either. Narrow this set if it
-// over-captures.
-const GREEN_COLOR_IDS = new Set(["10", "2"]);
+// Gig-lifecycle colors under Josh's 2026-06-22 scheme: a gig is either
+// Sage ("2", confirmed + fully staffed) or Tomato ("11", confirmed but still
+// needs staffing). Basil ("10", dark green) is now warehouse/BSE-admin, not a gig.
+const GIG_COLOR_IDS = new Set(["2", "11"]);
+// Holds (Banana "5") = not-yet-confirmed gigs. Surfaced too, but flagged
+// `is_hold` so the dashboard lists them as "awaiting confirmation" rather than
+// as staffing work (staffing a hold is premature).
+const HOLD_COLOR_ID = "5";
+const SNAPSHOT_COLOR_IDS = new Set([...GIG_COLOR_IDS, HOLD_COLOR_ID]);
 
 async function ensureFreshToken(supabase: any, row: any): Promise<string> {
   const expiresAt = new Date(row.expires_at).getTime();
@@ -476,7 +480,8 @@ Deno.serve(async (req) => {
               if (!evRes.ok) return;
 
               for (const e of ev.items || []) {
-                if (!e.colorId || !GREEN_COLOR_IDS.has(String(e.colorId))) continue;
+                if (!e.colorId || !SNAPSHOT_COLOR_IDS.has(String(e.colorId))) continue;
+                const is_hold = String(e.colorId) === HOLD_COLOR_ID;
 
                 const title = e.summary || "(no title)";
 
@@ -530,6 +535,7 @@ Deno.serve(async (req) => {
                   allDay: !!e.start?.date,
                   htmlLink: e.htmlLink,
                   colorId: e.colorId,
+                  is_hold,
                   expected_headcount: expected,
                   expected_source: inference.source,
                   staffed_count,

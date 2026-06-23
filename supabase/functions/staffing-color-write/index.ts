@@ -4,12 +4,14 @@
 // `/team/scheduler`. Writes back to the originating Google Calendar event:
 //   1. updates the event description to reflect the new staff list (replaces
 //      any existing `Staff:` line; appends if absent).
-//   2. sets the event colorId based on the new staffed_count vs expected:
-//        - staffed_count >= expected → colorId "2"  (Sage  — fully staffed)
-//        - staffed_count <  expected → colorId "5"  (Banana — partially staffed)
-//      Red (`colorId "11"`) is NOT set here — that's the "gig not confirmed"
-//      state which lives on Josh's side in GCal directly (events with red
-//      colorId are pre-filtered OUT of staffing-snapshot via GREEN_COLOR_IDS).
+//   2. sets the event colorId based on the new staffed_count vs expected
+//      (Josh's 2026-06-22 color scheme):
+//        - staffed_count >= expected → colorId "2"  (Sage  — confirmed + fully staffed)
+//        - staffed_count <  expected → colorId "11" (Tomato — confirmed, needs staffing)
+//      A confirmed gig stays Tomato (red, "needs staffing") until fully staffed,
+//      then flips to Sage. Partial vs zero staffing are the same color (both
+//      "needs staffing") per Josh. Yellow ("5", Banana) = a not-yet-confirmed hold,
+//      set on Josh's side in GCal, not here.
 //
 // Inputs (POST body):
 //   { accountEmail, calendarId, eventId, newStaffNames: string[], expected: number | null }
@@ -35,8 +37,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // Color IDs match Google Calendar's documented "1".."11" event colors.
-const COLOR_SAGE_FULLY_STAFFED = "2";        // "Sage"
-const COLOR_BANANA_PARTIALLY_STAFFED = "5";  // "Banana"
+const COLOR_SAGE_FULLY_STAFFED = "2";        // "Sage" — confirmed + fully staffed
+const COLOR_TOMATO_NEEDS_STAFFING = "11";    // "Tomato" — confirmed, needs staffing
 
 // Matches `Staff:` / `Staffing:` / `Staffed:` (case-insensitive) at line start,
 // the rest of that line is the existing staff list. Used to replace.
@@ -84,15 +86,13 @@ function mergeDescription(existing: string, newStaffNames: string[]): string {
 function colorForStaffing(staffed: number, expected: number | null): string {
   // No headcount rule matched the title (e.g. "JMT @ BB" — band name we don't
   // have an inferExpectedHeadcount rule for). The user is manually editing
-  // this list — trust them: non-empty = staffed = sage; empty = banana.
-  // Previously this branch always returned banana, leaving manually-confirmed
-  // gigs stuck on yellow in GCal even after Josh saved the right names.
+  // this list — trust them: non-empty = staffed = sage; empty = needs-staffing.
   if (expected === null || expected <= 0) {
-    return staffed > 0 ? COLOR_SAGE_FULLY_STAFFED : COLOR_BANANA_PARTIALLY_STAFFED;
+    return staffed > 0 ? COLOR_SAGE_FULLY_STAFFED : COLOR_TOMATO_NEEDS_STAFFING;
   }
   return staffed >= expected
     ? COLOR_SAGE_FULLY_STAFFED
-    : COLOR_BANANA_PARTIALLY_STAFFED;
+    : COLOR_TOMATO_NEEDS_STAFFING;
 }
 
 Deno.serve(async (req) => {

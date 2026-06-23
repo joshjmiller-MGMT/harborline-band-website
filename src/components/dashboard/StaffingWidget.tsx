@@ -37,6 +37,7 @@ type StaffingEvent = {
   allDay: boolean;
   htmlLink: string;
   colorId: string;
+  is_hold?: boolean;
   expected_headcount: number | null;
   expected_source: string;
   staffed_count: number;
@@ -337,10 +338,19 @@ export default function StaffingWidget({
 
   const events = data?.events || [];
   const grouped = useMemo(() => {
-    const out = { unstaffed: [] as StaffingEvent[], staffed: [] as StaffingEvent[] };
+    const out = {
+      holds: [] as StaffingEvent[],
+      unstaffed: [] as StaffingEvent[],
+      staffed: [] as StaffingEvent[],
+    };
     for (const ev of events) {
-      const s = eventStatus(ev);
-      out[s].push(ev);
+      // Holds (yellow) aren't confirmed yet — they're a "confirm?" follow-up,
+      // not staffing work, so keep them out of the staffed/unstaffed split.
+      if (ev.is_hold) {
+        out.holds.push(ev);
+        continue;
+      }
+      out[eventStatus(ev)].push(ev);
     }
     return out;
   }, [events]);
@@ -350,6 +360,11 @@ export default function StaffingWidget({
 
   const summary = (
     <div className="flex items-center gap-2 flex-wrap text-xs">
+      {grouped.holds.length > 0 && (
+        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+          {grouped.holds.length} hold{grouped.holds.length === 1 ? "" : "s"}
+        </Badge>
+      )}
       <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
         {grouped.unstaffed.length} need staff
       </Badge>
@@ -413,9 +428,31 @@ export default function StaffingWidget({
               </div>
             )}
 
-            {data && data.connected && visible.length === 0 && (
+            {data && data.connected && visible.length === 0 && grouped.holds.length === 0 && (
               <div className="text-sm text-muted-foreground py-4 text-center">
-                No green-colored events found in this window.
+                No gigs or holds found in this window.
+              </div>
+            )}
+
+            {grouped.holds.length > 0 && (
+              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3 space-y-1.5">
+                <p className="text-xs font-medium text-yellow-700 dark:text-yellow-500">
+                  {grouped.holds.length} hold{grouped.holds.length === 1 ? "" : "s"} awaiting confirmation
+                </p>
+                {grouped.holds.map((ev) => (
+                  <a
+                    key={ev.id}
+                    href={ev.htmlLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-3 text-sm hover:underline"
+                  >
+                    <span className="truncate">{ev.title}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {new Date(ev.start).toLocaleDateString()}
+                    </span>
+                  </a>
+                ))}
               </div>
             )}
 
