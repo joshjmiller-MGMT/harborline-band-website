@@ -33,7 +33,7 @@ function publicUrl(path: string): string {
   return `${SUPABASE_URL}/storage/v1/object/public/visual-assets/${path}`;
 }
 
-export default function TeamBandMembers() {
+export default function TeamBandMembers({ embedded = false }: { embedded?: boolean } = {}) {
   const [members, setMembers] = useState<BandMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<BandMember | "new" | null>(null);
@@ -62,11 +62,13 @@ export default function TeamBandMembers() {
     [members],
   );
 
-  return (
-    <TeamLayout>
-      <Helmet>
-        <title>Band Members · Team</title>
-      </Helmet>
+  const content = (
+    <>
+      {!embedded && (
+        <Helmet>
+          <title>Band Members · Team</title>
+        </Helmet>
+      )}
       <div className="container mx-auto px-6 py-8 max-w-5xl">
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>
@@ -121,8 +123,11 @@ export default function TeamBandMembers() {
           />
         )}
       </div>
-    </TeamLayout>
+    </>
   );
+
+  if (embedded) return content;
+  return <TeamLayout>{content}</TeamLayout>;
 }
 
 function MemberCard({ member, onClick }: { member: BandMember; onClick: () => void }) {

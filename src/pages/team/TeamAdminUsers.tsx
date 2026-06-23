@@ -56,7 +56,7 @@ async function parseEdgeError(error: unknown): Promise<string> {
   return (error as Error).message ?? "Unknown error";
 }
 
-export default function TeamAdminUsers() {
+export default function TeamAdminUsers({ embedded = false }: { embedded?: boolean } = {}) {
   const [users, setUsers] = useState<TeamUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>("");
@@ -137,9 +137,8 @@ export default function TeamAdminUsers() {
     return "Active";
   };
 
-  return (
-    <TeamLayout>
-      <div className="container mx-auto px-6 py-8 space-y-6 max-w-5xl">
+  const content = (
+    <div className="container mx-auto px-6 py-8 space-y-6 max-w-5xl">
         <div className="flex items-center gap-3">
           <Users className="w-6 h-6 text-primary" />
           <h1 className="font-display text-2xl tracking-wide-custom">
@@ -300,7 +299,9 @@ export default function TeamAdminUsers() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </TeamLayout>
+    </div>
   );
+
+  if (embedded) return content;
+  return <TeamLayout>{content}</TeamLayout>;
 }
