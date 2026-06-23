@@ -364,53 +364,6 @@ export type Database = {
         }
         Relationships: []
       }
-      brand_decisions: {
-        Row: {
-          created_at: string
-          decided_at: string
-          decided_by: string | null
-          decision: string
-          id: string
-          rationale: string | null
-          related_assets: string[] | null
-          superseded_by: string | null
-          title: string
-          ventures: string[]
-        }
-        Insert: {
-          created_at?: string
-          decided_at?: string
-          decided_by?: string | null
-          decision: string
-          id?: string
-          rationale?: string | null
-          related_assets?: string[] | null
-          superseded_by?: string | null
-          title: string
-          ventures?: string[]
-        }
-        Update: {
-          created_at?: string
-          decided_at?: string
-          decided_by?: string | null
-          decision?: string
-          id?: string
-          rationale?: string | null
-          related_assets?: string[] | null
-          superseded_by?: string | null
-          title?: string
-          ventures?: string[]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "brand_decisions_superseded_by_fkey"
-            columns: ["superseded_by"]
-            isOneToOne: false
-            referencedRelation: "brand_decisions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       brand_releases: {
         Row: {
           blockers: string | null
