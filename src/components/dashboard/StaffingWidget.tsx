@@ -19,7 +19,14 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { CalendarColorLegend } from "./CalendarColorLegend";
-import { HOLD_COLOR_ID } from "@/lib/calendar-color-scheme";
+import { HOLD_COLOR_ID, NEEDS_STAFFING_COLOR_ID } from "@/lib/calendar-color-scheme";
+
+// Josh 2026-06-22: the staffing board surfaces ONLY needs-staffing items =
+// red (Tomato/11) + orange (Tangerine/6). Everything else (warehouse dark-green,
+// gig light-green, yellow holds) is excluded. NB: the staffing-snapshot edge fn
+// currently only fetches {2, 11, 5}, so orange(6) won't appear on the board until
+// that fn is extended to include it — flagged to JARSH in the handoff.
+const NEEDS_STAFFING_BOARD_COLOR_IDS = new Set([NEEDS_STAFFING_COLOR_ID, "6"]);
 
 type StaffEntry = {
   name: string;
@@ -340,39 +347,18 @@ export default function StaffingWidget({
   }, [windowDays]);
 
   const events = data?.events || [];
-  const grouped = useMemo(() => {
-    const out = {
-      holds: [] as StaffingEvent[],
-      unstaffed: [] as StaffingEvent[],
-      staffed: [] as StaffingEvent[],
-    };
-    for (const ev of events) {
-      // Holds (yellow) aren't confirmed yet — they're a "confirm?" follow-up,
-      // not staffing work, so keep them out of the staffed/unstaffed split.
-      if (ev.is_hold) {
-        out.holds.push(ev);
-        continue;
-      }
-      out[eventStatus(ev)].push(ev);
-    }
-    return out;
-  }, [events]);
-
-  // Unstaffed first (the work to do), then staffed (the goal state).
-  const visible = [...grouped.unstaffed, ...grouped.staffed];
+  // The board shows ONLY needs-staffing items (red + orange). Holds (yellow),
+  // staffed gigs (light-green), and warehouse/admin (dark-green) are excluded
+  // — holds still surface on the dashboard via HoldsNeedsAction.
+  const visible = useMemo(
+    () => events.filter((ev) => NEEDS_STAFFING_BOARD_COLOR_IDS.has(ev.colorId)),
+    [events],
+  );
 
   const summary = (
     <div className="flex items-center gap-2 flex-wrap text-xs">
-      {grouped.holds.length > 0 && (
-        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
-          {grouped.holds.length} hold{grouped.holds.length === 1 ? "" : "s"}
-        </Badge>
-      )}
-      <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-        {grouped.unstaffed.length} need staff
-      </Badge>
-      <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
-        {grouped.staffed.length} staffed
+      <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30">
+        {visible.length} need{visible.length === 1 ? "s" : ""} staffing
       </Badge>
     </div>
   );
@@ -385,10 +371,10 @@ export default function StaffingWidget({
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <CardTitle className="font-display text-lg tracking-wide-custom flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" /> Staffing — all upcoming
+                  <Users className="w-5 h-5 text-primary" /> Staffing — needs attention
                 </CardTitle>
                 <CardDescription>
-                  Every booked (green/yellow) calendar event going forward, parsed for staff coverage.
+                  Calendar items that need staffing (red + orange), going forward. Holds and staffed gigs are excluded.
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -431,31 +417,9 @@ export default function StaffingWidget({
               </div>
             )}
 
-            {data && data.connected && visible.length === 0 && grouped.holds.length === 0 && (
+            {data && data.connected && visible.length === 0 && (
               <div className="text-sm text-muted-foreground py-4 text-center">
-                No gigs or holds found in this window.
-              </div>
-            )}
-
-            {grouped.holds.length > 0 && (
-              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3 space-y-1.5">
-                <p className="text-xs font-medium text-yellow-700 dark:text-yellow-500">
-                  {grouped.holds.length} hold{grouped.holds.length === 1 ? "" : "s"} awaiting confirmation
-                </p>
-                {grouped.holds.map((ev) => (
-                  <a
-                    key={ev.id}
-                    href={ev.htmlLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-3 text-sm hover:underline"
-                  >
-                    <span className="truncate">{ev.title}</span>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      {new Date(ev.start).toLocaleDateString()}
-                    </span>
-                  </a>
-                ))}
+                Nothing needs staffing (red / orange) in this window.
               </div>
             )}
 
