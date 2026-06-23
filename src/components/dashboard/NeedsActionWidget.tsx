@@ -8,7 +8,7 @@ import TodaysActionItemsWidget from "./TodaysActionItemsWidget";
 import BookingAgentActionWidget from "./BookingAgentActionWidget";
 import UrgentAlertsWidget from "./UrgentAlertsWidget";
 import WaitingOnJoshWidget from "./WaitingOnJoshWidget";
-import { StaffingNeedsAction } from "./StaffingWidget";
+import { StaffingNeedsAction, HoldsNeedsAction } from "./StaffingWidget";
 import { EveningAvailabilityNeedsAction } from "./EveningAvailabilityWidget";
 import { EmailNeedsAction } from "./EmailNeedsActionWidget";
 
@@ -40,6 +40,7 @@ export default function NeedsActionWidget() {
             <WaitingOnJoshWidget />
             <TodaysActionItemsWidget />
             <StaffingNeedsAction />
+            <HoldsNeedsAction />
             <EveningAvailabilityNeedsAction />
             <EmailNeedsAction />
             <BookingAgentActionWidget />
