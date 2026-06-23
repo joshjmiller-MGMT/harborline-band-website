@@ -40,7 +40,60 @@ const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
 
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 50;
-const DEFAULT_VENTURE = "Personal";
+
+// Canonical board vocab — mirror of src/components/board/smartTaskBuckets.ts
+// (the /team/smart-tasks SmartTaskWidget reads these EXACT values; keep in sync).
+// board_venture ∈ SMART_VENTURES; board_bucket ∈ {Needs SMART, Pending approval,
+// Active, Done} — a kanban column, NEVER the Trello list name.
+const SMART_VENTURES = [
+  "Harborline",
+  "Economy",
+  "JMJ",
+  "Personal",
+  "BSE",
+  "Brand Studio",
+] as const;
+type SmartVenture = (typeof SMART_VENTURES)[number];
+const DEFAULT_VENTURE: SmartVenture = "Personal";
+
+// Map a Trello list name (or a loose/legacy venture string) to a canonical
+// board_venture, case-insensitively. Unknown → Personal. This is the fix for
+// the re-normalization treadmill: emit valid vocab at the source.
+const VENTURE_ALIASES: Record<string, SmartVenture> = {
+  "harborline": "Harborline",
+  "economy": "Economy",
+  "the economy": "Economy",
+  "econ": "Economy",
+  "jmj": "JMJ",
+  "josh miller jazz": "JMJ",
+  "personal": "Personal",
+  "solo / personal dev / jazz": "Personal",
+  "bse": "BSE",
+  "brand studio": "Brand Studio",
+  // Legacy loose board_venture values seen in manual backfills (decided 2026-06-23,
+  // flagged to Josh): audio/studio "Production" → BSE (the production company);
+  // "Tech/AI" → Personal (Josh's personal tech exploration).
+  "production": "BSE",
+  "tech/ai": "Personal",
+};
+
+function mapVenture(listOrVenture: string | null | undefined): SmartVenture {
+  if (!listOrVenture) return DEFAULT_VENTURE;
+  const key = listOrVenture.trim().toLowerCase();
+  const canonical = SMART_VENTURES.find((v) => v.toLowerCase() === key);
+  if (canonical) return canonical;
+  return VENTURE_ALIASES[key] ?? DEFAULT_VENTURE;
+}
+
+// board_bucket = 'Needs SMART' when the rewrite is incomplete (Josh finishes it
+// on the board), else 'Pending approval'. Never the list name.
+function smartIsComplete(
+  s: { revised_title?: string; definition_of_done?: string; measure?: string },
+): boolean {
+  return Boolean(
+    s.revised_title?.trim() && s.definition_of_done?.trim() && s.measure?.trim(),
+  );
+}
 
 type QueueRow = {
   id: string;
@@ -191,8 +244,10 @@ async function insertEnrichment(
   row: QueueRow,
   smart: SmartRewriteResult,
 ): Promise<string> {
-  // board_bucket starts at 'Pending approval'. If we successfully create a
-  // GCal event afterwards we flip it to 'Active' in a follow-up update.
+  // board_bucket starts at 'Needs SMART' (incomplete rewrite) or 'Pending
+  // approval' (complete). If we successfully create a GCal event afterwards we
+  // flip it to 'Active' in a follow-up update. board_venture is mapped from the
+  // card's Trello list to a canonical venture (case-insensitive; default Personal).
   const { data, error } = await supabase
     .from("smart_task_enrichments")
     .insert({
@@ -205,8 +260,8 @@ async function insertEnrichment(
       due_date: smart.due_date,
       trello_card_id: row.trello_card_id,
       trello_card_url: row.card_url,
-      board_bucket: "Pending approval",
-      board_venture: DEFAULT_VENTURE,
+      board_bucket: smartIsComplete(smart) ? "Pending approval" : "Needs SMART",
+      board_venture: mapVenture(row.list_name),
     })
     .select("id")
     .single();
