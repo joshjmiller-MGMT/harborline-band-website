@@ -9,6 +9,7 @@
 // deadlines" rule still holds.
 //
 
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireOperator } from "../_shared/require-operator.ts";
 // Pattern mirrors social-ai/index.ts: tool_use for guaranteed JSON shape.
 
@@ -16,6 +17,37 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+// x-cron-secret bypass — same pattern as trello-route-cards. Lets internal
+// server-to-server callers (smart-task-autoenrich / smart-task-queue-drain,
+// invoked headless by pg_cron) reach this fn WITHOUT an operator JWT. Needed
+// because the SUPABASE_SERVICE_ROLE_KEY edge fns receive is now the non-JWT
+// `sb_secret_` format, which requireOperator cannot decode (it threw
+// jwt_decode_failed when callers presented it as a Bearer token). Secret lives
+// in public.cron_secrets (RLS-on, service-role read only); reuse the existing
+// 'trello_route_cron_secret' so no new secret needs provisioning.
+let cachedCronSecret: string | null = null;
+async function loadCronSecret(supabase: SupabaseClient): Promise<string | null> {
+  if (cachedCronSecret !== null) return cachedCronSecret;
+  const { data, error } = await supabase
+    .from("cron_secrets")
+    .select("secret")
+    .eq("name", "trello_route_cron_secret")
+    .maybeSingle();
+  if (error || !data?.secret) return null;
+  cachedCronSecret = data.secret as string;
+  return cachedCronSecret;
+}
+
+function constantTimeEquals(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return result === 0;
+}
 
 const SMART_TOOL = {
   name: "smart_task",
@@ -117,8 +149,22 @@ function formatCardContext(ctx: CardContext): string {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const denial = await requireOperator(req);
-  if (denial) return denial;
+  // Internal cron-secret bypass: a matching x-cron-secret header lets headless
+  // pipeline callers skip requireOperator (see header comment). Operator/JWT
+  // callers (the frontend) carry no such header and fall through to the gate.
+  const cronHeader = req.headers.get("x-cron-secret");
+  let isCron = false;
+  if (cronHeader) {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+    const expected = await loadCronSecret(supabase);
+    if (expected && constantTimeEquals(cronHeader, expected)) isCron = true;
+  }
+  if (!isCron) {
+    const denial = await requireOperator(req);
+    if (denial) return denial;
+  }
 
   try {
     const { input, card_context, answers } = await req.json();
