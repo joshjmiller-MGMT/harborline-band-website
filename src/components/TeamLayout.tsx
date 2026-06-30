@@ -18,7 +18,6 @@ import {
   Kanban,
   Sparkles,
   Megaphone,
-  Shield,
   Users,
   ListMusic,
   Inbox,
@@ -87,9 +86,8 @@ const brandMenu: MegaMenu = {
   items: [
     { name: "Brand Studio", href: "/team/brand-studio", icon: Palette, description: "People, decisions, releases, EPKs" },
     { name: "Visual Assets", href: "/team/visual-assets", icon: Images, description: "Photos, logos, design files" },
-    { name: "Band Members", href: "/team/band-members", icon: Users, description: "Roster + reference images for visual-asset face recognition" },
+    { name: "Members", href: "/team/members", icon: Users, description: "Band roster + team logins (tabbed — one page)" },
     { name: "Bands", href: "/team/bands", icon: Handshake, description: "Relationship board — bands for show swaps & support slots, by Artist Fit" },
-    { name: "Team Members", href: "/team/admin/users", icon: Shield, description: "Invite + manage team logins" },
   ],
 };
 
