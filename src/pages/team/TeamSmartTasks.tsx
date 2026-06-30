@@ -1,6 +1,6 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
-import { Sparkles, RefreshCw } from "lucide-react";
+import { Sparkles, RefreshCw, CheckCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SmartTaskWidget from "@/components/dashboard/SmartTaskWidget";
 import { toast } from "sonner";
@@ -53,6 +53,10 @@ export default function TeamSmartTasks() {
     refreshTrello: _refreshTrello,
   } = useSmartTaskBoardData();
   void _refreshTrello;
+
+  const [ventureFilter, setVentureFilter] = useState<"All" | SmartVenture>("All");
+  const [bucketFilter, setBucketFilter] = useState<"All" | SmartBucket>("All");
+  const [approving, setApproving] = useState(false);
 
   // Trello cards with a matching SMART row (already SMART-ified) are excluded
   // from the Trello inbox column — their canonical position is the SMART row.
@@ -192,6 +196,62 @@ export default function TeamSmartTasks() {
   const totalTrello = trello.cards.length - smartifiedTrelloCardIds.size;
   const isLoading = smartRowsLoading || trello.loading;
 
+  // Bucket counts (from the same derived board cards, so the banner matches the
+  // columns). Pending-approval is the headline backlog the lane surfaces.
+  const bucketCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const c of cards) m[c.columnId] = (m[c.columnId] ?? 0) + 1;
+    return m;
+  }, [cards]);
+  const pendingTotal = bucketCounts["Pending approval"] ?? 0;
+  const pendingByVenture = useMemo(() => {
+    const m = new Map<SmartVenture, number>();
+    for (const c of cards) {
+      if (c.columnId === "Pending approval") m.set(c.venture, (m.get(c.venture) ?? 0) + 1);
+    }
+    return m;
+  }, [cards]);
+
+  // Bulk-approve: move Pending-approval rows → Active in one batched DB update
+  // (RLS allows the authenticated operator; update-smart-task-bucket has no
+  // calendar side-effect, and neither does this, so it's safe at scale). Pass a
+  // venture to scope it, or omit for all ventures. For Personal we also sweep
+  // board_venture IS NULL, since those rows render under Personal.
+  const approvePending = useCallback(
+    async (venture?: SmartVenture) => {
+      const n = venture ? pendingByVenture.get(venture) ?? 0 : pendingTotal;
+      if (n === 0) return;
+      const where = venture ?? "all ventures";
+      if (!window.confirm(`Approve ${n} pending task${n === 1 ? "" : "s"} (${where}) → move to Active?`)) {
+        return;
+      }
+      setApproving(true);
+      try {
+        let q = supabase
+          .from("smart_task_enrichments")
+          .update({ board_bucket: "Active" })
+          .eq("board_bucket", "Pending approval");
+        if (venture === "Personal") {
+          q = q.or("board_venture.is.null,board_venture.eq.Personal");
+        } else if (venture) {
+          q = q.eq("board_venture", venture);
+        }
+        const { error } = await q;
+        if (error) throw error;
+        toast.success(`Approved ${n} → Active`);
+        await refreshSmartRows();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Bulk approve failed");
+        await refreshSmartRows();
+      } finally {
+        setApproving(false);
+      }
+    },
+    [pendingByVenture, pendingTotal, refreshSmartRows],
+  );
+
+  const venturesToRender = ventureFilter === "All" ? SMART_VENTURES : [ventureFilter];
+
   return (
     <TeamLayout>
       <div className="container mx-auto px-6 py-8">
@@ -207,11 +267,58 @@ export default function TeamSmartTasks() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={ventureFilter}
+              onChange={(e) => setVentureFilter(e.target.value as "All" | SmartVenture)}
+              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+              title="Filter by venture"
+            >
+              <option value="All">All ventures</option>
+              {SMART_VENTURES.map((v) => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+            <select
+              value={bucketFilter}
+              onChange={(e) => setBucketFilter(e.target.value as "All" | SmartBucket)}
+              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+              title="Filter by bucket"
+            >
+              <option value="All">All buckets</option>
+              {SMART_BUCKET_COLUMNS.map((c) => (
+                <option key={c.id} value={c.id}>{c.title}</option>
+              ))}
+            </select>
             <Button variant="ghost" size="sm" onClick={refreshAll} disabled={isLoading}>
               <RefreshCw className={`w-4 h-4 mr-1.5 ${isLoading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
           </div>
+        </div>
+
+        {/* Approval backlog banner — the headline count + one-tap bulk approve. */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-sky-500/30 bg-sky-500/10 p-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <span className="font-medium text-foreground">
+              {pendingTotal} pending approval
+            </span>
+            <span className="text-muted-foreground">{bucketCounts["Needs SMART"] ?? 0} needs SMART</span>
+            <span className="text-muted-foreground">{bucketCounts["Active"] ?? 0} active</span>
+            <span className="text-muted-foreground">{totalTrello} in Trello inbox</span>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => approvePending()}
+            disabled={approving || pendingTotal === 0}
+            className="shrink-0"
+          >
+            {approving ? (
+              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+            ) : (
+              <CheckCheck className="w-4 h-4 mr-1.5" />
+            )}
+            Approve all pending ({pendingTotal})
+          </Button>
         </div>
 
         {(smartRowsError || trello.error) && (
@@ -227,18 +334,41 @@ export default function TeamSmartTasks() {
         </div>
 
         <div className="space-y-6">
-          {SMART_VENTURES.map((venture) => {
-            const ventureCards = cardsByVenture.get(venture) ?? [];
+          {venturesToRender.map((venture) => {
+            const allVentureCards = cardsByVenture.get(venture) ?? [];
+            const ventureCards =
+              bucketFilter === "All"
+                ? allVentureCards
+                : allVentureCards.filter((c) => c.columnId === bucketFilter);
             const count = ventureCards.length;
+            const venturePending = pendingByVenture.get(venture) ?? 0;
+            // When a venture filter is active, hide empty sections only if the
+            // venture genuinely has no cards (so an explicitly-picked empty
+            // venture still shows its board).
+            if (ventureFilter === "All" && allVentureCards.length === 0) return null;
             return (
               <section key={venture} className="space-y-2">
                 <header className="flex items-center justify-between border-b border-border pb-1">
                   <h2 className="font-display text-lg tracking-wide-custom text-foreground">
                     {venture}
                   </h2>
-                  <span className="text-xs text-muted-foreground tabular-nums">
-                    {count} {count === 1 ? "card" : "cards"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {venturePending > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => approvePending(venture)}
+                        disabled={approving}
+                      >
+                        <CheckCheck className="w-3.5 h-3.5 mr-1" />
+                        Approve {venturePending}
+                      </Button>
+                    )}
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {count} {count === 1 ? "card" : "cards"}
+                    </span>
+                  </div>
                 </header>
                 <ScrumBoard
                   columns={SMART_BUCKET_COLUMNS}

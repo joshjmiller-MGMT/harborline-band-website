@@ -2,6 +2,7 @@ import TeamLayout from "@/components/TeamLayout";
 import AvailabilityCheckerWidget from "@/components/dashboard/AvailabilityCheckerWidget";
 import IntegrationHealthWidget from "@/components/dashboard/IntegrationHealthWidget";
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
+import PendingApprovalAlert from "@/components/dashboard/PendingApprovalAlert";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
 import { LayoutDashboard } from "lucide-react";
 
@@ -17,6 +18,11 @@ export default function TeamDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* SMART-board approval backlog — surfaces the "where did it all go" count. */}
+          <div className="lg:col-span-2">
+            <PendingApprovalAlert />
+          </div>
+
           {/* Needs-action goes first — pins urgent + everything that needs Josh. */}
           <div className="lg:col-span-2">
             <NeedsActionWidget />
