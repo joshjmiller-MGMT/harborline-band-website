@@ -25,6 +25,7 @@ import {
   X,
   ArrowDownToLine,
   Inbox,
+  Info,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -36,7 +37,12 @@ type ItemType =
   | "sidecar_classification"
   | "brand_voice"
   | "visual_review"
-  | "decision";
+  | "decision"
+  | "choice";
+
+// One tappable answer on a multiple-choice escalation. `recommended` flags the
+// branch's suggested default (the one mirrored in assumed_default).
+type ChoiceOption = { label: string; recommended?: boolean };
 
 type MediaRef = {
   kind: MediaKind;
@@ -60,6 +66,10 @@ interface ReviewItem {
   source_session: string | null;
   priority: string;
   item_type: ItemType;
+  // Multiple-choice escalation: one-tap answer options + the non-blocking
+  // default the branch already proceeded with (null for plain questions).
+  options: ChoiceOption[] | null;
+  assumed_default: string | null;
   queued_at: string;
   resolved_at: string | null;
 }
@@ -70,6 +80,7 @@ const TYPE_LABELS: Record<ItemType, string> = {
   brand_voice: "Voice",
   visual_review: "Visual",
   decision: "Decision",
+  choice: "Choice",
 };
 
 const PRIORITY_RANK: Record<string, number> = { high: 0, normal: 1, low: 2 };
@@ -97,7 +108,7 @@ export default function TeamReviewQueue() {
     const { data, error } = await supabase
       .from("waiting_on_josh")
       .select(
-        "id, title, prompt, detail, context_md, media_refs, triangulation_loops, source_ref, source_session, priority, item_type, queued_at, resolved_at",
+        "id, title, prompt, detail, context_md, media_refs, triangulation_loops, source_ref, source_session, priority, item_type, options, assumed_default, queued_at, resolved_at",
       )
       .is("resolved_at", null);
     if (error) {
@@ -176,21 +187,12 @@ export default function TeamReviewQueue() {
     return counts;
   }, [items]);
 
-  async function resolveItem(action: "resolved" | "rejected") {
+  // Shared close-out: stamp the row resolved with `note`, advance selection,
+  // reload. `toastTitle` distinguishes Resolve / Reject / a tapped choice.
+  async function commitResolution(note: string, toastTitle: string) {
     if (!current) return;
-    if (!resolution.trim() && action === "resolved") {
-      toast({
-        title: "Need a resolution note",
-        description: "Enter a brief answer or context line before resolving.",
-        variant: "destructive",
-      });
-      return;
-    }
     setResolving(true);
     try {
-      const note =
-        resolution.trim() ||
-        (action === "rejected" ? "Marked non-actionable" : "");
       const { error } = await supabase
         .from("waiting_on_josh")
         .update({
@@ -201,11 +203,10 @@ export default function TeamReviewQueue() {
         .eq("id", current.id);
       if (error) throw error;
       toast({
-        title: action === "resolved" ? "Resolved" : "Rejected",
-        description:
-          current.source_ref
-            ? `Lock answer into ${current.source_ref} in the next Claude session — the row is now closed.`
-            : "Row closed.",
+        title: toastTitle,
+        description: current.source_ref
+          ? `Lock answer into ${current.source_ref} in the next Claude session — the row is now closed.`
+          : "Row closed.",
       });
       setResolution("");
       const remaining = items.filter((i) => i.id !== current.id);
@@ -217,6 +218,27 @@ export default function TeamReviewQueue() {
     } finally {
       setResolving(false);
     }
+  }
+
+  async function resolveItem(action: "resolved" | "rejected") {
+    if (!current) return;
+    if (!resolution.trim() && action === "resolved") {
+      toast({
+        title: "Need a resolution note",
+        description: "Enter a brief answer or context line before resolving.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const note =
+      resolution.trim() || (action === "rejected" ? "Marked non-actionable" : "");
+    await commitResolution(note, action === "resolved" ? "Resolved" : "Rejected");
+  }
+
+  // One-tap multiple-choice answer: resolve the row with the chosen option's
+  // label as the resolution note.
+  async function resolveChoice(label: string) {
+    await commitResolution(label, "Answered");
   }
 
   async function deferItem() {
@@ -375,6 +397,17 @@ export default function TeamReviewQueue() {
                   {current.prompt && (
                     <p className="text-base text-foreground">{current.prompt}</p>
                   )}
+                  {current.assumed_default && (
+                    <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                      <Info className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-foreground/90">
+                        <span className="font-medium">Non-blocking —</span>{" "}
+                        Claude is proceeding with:{" "}
+                        <span className="font-medium">{current.assumed_default}</span>.
+                        Your answer below confirms or overrides it.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {current.context_md && (
@@ -471,59 +504,115 @@ export default function TeamReviewQueue() {
 
                 {/* Resolution */}
                 <div className="border-t border-border/40 pt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Your answer
-                    </h3>
-                    <MicButton
-                      label
-                      title="Dictate your answer"
-                      onText={(t) => setResolution((p) => appendDictation(p, t))}
-                    />
-                  </div>
-                  <Textarea
-                    value={resolution}
-                    onChange={(e) => setResolution(e.target.value)}
-                    placeholder="Lock the answer into the source artifact. E.g. 'Erica Hoffman wedding cocktail hour — Gramercy, A1 role.' — or tap Dictate and talk."
-                    rows={4}
-                    className="mb-3"
-                  />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      onClick={() => resolveItem("resolved")}
-                      disabled={resolving || !resolution.trim()}
-                    >
-                      {resolving ? (
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 mr-1" />
-                      )}
-                      Resolve
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={deferItem}
-                      disabled={resolving}
-                    >
-                      <ArrowDownToLine className="w-4 h-4 mr-1" />
-                      Defer
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => resolveItem("rejected")}
-                      disabled={resolving}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="w-4 h-4 mr-1" />
-                      Reject
-                    </Button>
-                    {current.source_ref && current.source_ref.startsWith("wiki/") && (
-                      <span className="text-[11px] text-muted-foreground ml-auto inline-flex items-center gap-1">
-                        <ExternalLink className="w-3 h-3" />
-                        write-back via next Claude session
-                      </span>
-                    )}
-                  </div>
+                  {current.options && current.options.length > 0 ? (
+                    // Multiple-choice: one tap per option resolves the row with
+                    // that label. The recommended option is visually primary.
+                    <>
+                      <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                        Pick an answer
+                      </h3>
+                      <div className="flex flex-col gap-2 mb-3">
+                        {current.options.map((opt, i) => (
+                          <Button
+                            key={`${opt.label}-${i}`}
+                            variant={opt.recommended ? "default" : "outline"}
+                            onClick={() => resolveChoice(opt.label)}
+                            disabled={resolving}
+                            className="justify-start h-auto py-2.5 text-left whitespace-normal"
+                          >
+                            {resolving ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" />
+                            ) : (
+                              <CheckCircle2 className="w-4 h-4 mr-2 flex-shrink-0" />
+                            )}
+                            <span>{opt.label}</span>
+                            {opt.recommended && (
+                              <Badge
+                                variant="secondary"
+                                className="ml-2 text-[10px] uppercase tracking-wider"
+                              >
+                                Recommended
+                              </Badge>
+                            )}
+                          </Button>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button variant="outline" onClick={deferItem} disabled={resolving}>
+                          <ArrowDownToLine className="w-4 h-4 mr-1" />
+                          Defer
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() => resolveItem("rejected")}
+                          disabled={resolving}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Reject
+                        </Button>
+                        {current.source_ref && current.source_ref.startsWith("wiki/") && (
+                          <span className="text-[11px] text-muted-foreground ml-auto inline-flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" />
+                            write-back via next Claude session
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    // Free-text fallback (no options on this row).
+                    <>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
+                          Your answer
+                        </h3>
+                        <MicButton
+                          label
+                          title="Dictate your answer"
+                          onText={(t) => setResolution((p) => appendDictation(p, t))}
+                        />
+                      </div>
+                      <Textarea
+                        value={resolution}
+                        onChange={(e) => setResolution(e.target.value)}
+                        placeholder="Lock the answer into the source artifact. E.g. 'Erica Hoffman wedding cocktail hour — Gramercy, A1 role.' — or tap Dictate and talk."
+                        rows={4}
+                        className="mb-3"
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          onClick={() => resolveItem("resolved")}
+                          disabled={resolving || !resolution.trim()}
+                        >
+                          {resolving ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4 mr-1" />
+                          )}
+                          Resolve
+                        </Button>
+                        <Button variant="outline" onClick={deferItem} disabled={resolving}>
+                          <ArrowDownToLine className="w-4 h-4 mr-1" />
+                          Defer
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() => resolveItem("rejected")}
+                          disabled={resolving}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Reject
+                        </Button>
+                        {current.source_ref && current.source_ref.startsWith("wiki/") && (
+                          <span className="text-[11px] text-muted-foreground ml-auto inline-flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" />
+                            write-back via next Claude session
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
