@@ -97,6 +97,7 @@ const megaMenus: MegaMenu[] = [marketingMenu, opsMenu, musicMenu, brandMenu];
 const directLinks: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { name: "Dashboard", href: "/team/dashboard", icon: LayoutDashboard },
   { name: "Review", href: "/team/review", icon: Inbox },
+  { name: "Finances", href: "/team/finances", icon: Wallet },
 ];
 
 export default function TeamLayout({ children }: { children: React.ReactNode }) {
