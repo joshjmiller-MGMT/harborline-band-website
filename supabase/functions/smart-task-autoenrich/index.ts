@@ -222,13 +222,32 @@ function rawInputFor(row: CandidateCard): string {
   return desc ? `${title}\n\n${desc}` : title;
 }
 
-async function callSmartRewrite(row: CandidateCard): Promise<SmartRewriteResult> {
+// Auth for internal fn-to-fn calls (smart-task-rewrite, google-calendar-events).
+// The proven cron pattern (trigger_trello_route): present a real anon JWT as the
+// Bearer — which passes the platform gateway AND decodes cleanly in
+// requireOperator — plus the x-cron-secret header that the callee's cron bypass
+// matches to skip the operator gate. We do NOT use SUPABASE_SERVICE_ROLE_KEY as
+// the Bearer: it is now the non-JWT `sb_secret_` format and requireOperator
+// throws jwt_decode_failed on it (the bug this fix closes).
+type InternalAuth = { anonJwt: string | null; cronSecret: string | null };
+
+function internalHeaders(auth: InternalAuth): Record<string, string> {
+  const bearer = auth.anonJwt ?? SUPABASE_SERVICE_ROLE_KEY; // fallback if anon JWT missing
+  const h: Record<string, string> = {
+    Authorization: `Bearer ${bearer}`,
+    "Content-Type": "application/json",
+  };
+  if (auth.cronSecret) h["x-cron-secret"] = auth.cronSecret;
+  return h;
+}
+
+async function callSmartRewrite(
+  row: CandidateCard,
+  auth: InternalAuth,
+): Promise<SmartRewriteResult> {
   const resp = await fetch(`${FUNCTIONS_BASE}/smart-task-rewrite`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
-    },
+    headers: internalHeaders(auth),
     body: JSON.stringify({
       input: rawInputFor(row),
       card_context: { list: row.list_name },
@@ -288,6 +307,7 @@ type GcalAttemptResult =
 async function createGcalEvent(
   smart: SmartRewriteResult,
   row: CandidateCard,
+  auth: InternalAuth,
 ): Promise<GcalAttemptResult> {
   if (!smart.due_date) return { ok: false, status: "no_due_date" };
   const startIso = `${smart.due_date}T00:00:00.000Z`;
@@ -310,10 +330,12 @@ async function createGcalEvent(
   try {
     resp = await fetch(`${FUNCTIONS_BASE}/google-calendar-events?action=create`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        "Content-Type": "application/json",
-      },
+      // NOTE: google-calendar-events does NOT yet honor x-cron-secret (only
+      // requireOperator). This call therefore only succeeds once that fn gets
+      // the same bypass — which is the gate for enabling AUTOENRICH_AUTO_GCAL
+      // (default off). See the handoff note. A failure here is non-fatal: the
+      // enrichment row still lands; only the calendar stamp is skipped.
+      headers: internalHeaders(auth),
       body: JSON.stringify({
         summary: smart.revised_title,
         description,
@@ -365,12 +387,13 @@ async function attachGcalToEnrichment(
 async function processOne(
   supabase: SupabaseClient,
   row: CandidateCard,
+  auth: InternalAuth,
 ): Promise<EnrichOutcome> {
   const venture = mapVenture(row.list_name);
 
   let smart: SmartRewriteResult;
   try {
-    smart = await callSmartRewrite(row);
+    smart = await callSmartRewrite(row, auth);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { trello_card_id: row.trello_card_id, list_name: row.list_name, status: "failed", error: msg };
@@ -403,7 +426,7 @@ async function processOne(
   // Set AUTOENRICH_AUTO_GCAL=true to restore full auto-to-calendar.
   const AUTO_GCAL = (Deno.env.get("AUTOENRICH_AUTO_GCAL") ?? "false") === "true";
   if (AUTO_GCAL && bucket === "Pending approval" && smart.due_date) {
-    const gcalRes = await createGcalEvent(smart, row);
+    const gcalRes = await createGcalEvent(smart, row, auth);
     if (gcalRes.ok) {
       try {
         await attachGcalToEnrichment(supabase, enrichmentId, gcalRes.eventId, gcalRes.htmlLink);
@@ -458,6 +481,22 @@ function constantTimeEquals(a: string, b: string): boolean {
   return result === 0;
 }
 
+// Anon JWT used as the Bearer on internal fn-to-fn calls (see internalHeaders).
+// Lives in public.cron_secrets alongside the cron secret; the working crons use
+// the same value.
+let cachedAnonJwt: string | null = null;
+async function loadAnonJwt(supabase: SupabaseClient): Promise<string | null> {
+  if (cachedAnonJwt !== null) return cachedAnonJwt;
+  const { data, error } = await supabase
+    .from("cron_secrets")
+    .select("secret")
+    .eq("name", "supabase_anon_jwt")
+    .maybeSingle();
+  if (error || !data?.secret) return null;
+  cachedAnonJwt = data.secret as string;
+  return cachedAnonJwt;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -465,16 +504,22 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
 
+  const cronSecret = await loadCronSecret(supabase);
   const cronHeader = req.headers.get("x-cron-secret");
   let isCron = false;
-  if (cronHeader) {
-    const expected = await loadCronSecret(supabase);
-    if (expected && constantTimeEquals(cronHeader, expected)) isCron = true;
+  if (cronHeader && cronSecret && constantTimeEquals(cronHeader, cronSecret)) {
+    isCron = true;
   }
   if (!isCron) {
     const denial = await requireOperator(req);
     if (denial) return denial;
   }
+
+  // Auth for the internal calls this fn makes (smart-task-rewrite / gcal).
+  const internalAuth: InternalAuth = {
+    anonJwt: await loadAnonJwt(supabase),
+    cronSecret,
+  };
 
   try {
     const url = new URL(req.url);
@@ -513,7 +558,7 @@ Deno.serve(async (req) => {
 
     const outcomes: EnrichOutcome[] = [];
     for (const row of candidates) {
-      outcomes.push(await processOne(supabase, row));
+      outcomes.push(await processOne(supabase, row, internalAuth));
     }
 
     return json(200, {
