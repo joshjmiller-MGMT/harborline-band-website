@@ -19,7 +19,8 @@ import {
   Image as ImageIcon,
   Video as VideoIcon,
   FileText,
-  ExternalLink,
+  Upload,
+  Paperclip,
   RefreshCw,
   ChevronRight,
   X,
@@ -54,6 +55,15 @@ type MediaRef = {
 };
 type TriLoop = { label: string; description: string };
 
+// A file Josh uploaded on a card as part of resolving it (review-uploads bucket).
+type UploadRef = {
+  path: string;
+  name: string;
+  size: number;
+  mime: string;
+  uploaded_at: string;
+};
+
 interface ReviewItem {
   id: string;
   title: string;
@@ -70,6 +80,8 @@ interface ReviewItem {
   // default the branch already proceeded with (null for plain questions).
   options: ChoiceOption[] | null;
   assumed_default: string | null;
+  // Files Josh attached on this card as part of resolving it.
+  uploads: UploadRef[] | null;
   queued_at: string;
   resolved_at: string | null;
 }
@@ -94,6 +106,14 @@ function ageLabel(ts: string): string {
   return `${Math.floor(hr / 24)}d ago`;
 }
 
+function humanSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+const MAX_UPLOAD_BYTES = 104857600; // 100 MB — matches the review-uploads bucket limit.
+
 export default function TeamReviewQueue() {
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -102,13 +122,14 @@ export default function TeamReviewQueue() {
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [resolution, setResolution] = useState("");
   const [resolving, setResolving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("waiting_on_josh")
       .select(
-        "id, title, prompt, detail, context_md, media_refs, triangulation_loops, source_ref, source_session, priority, item_type, options, assumed_default, queued_at, resolved_at",
+        "id, title, prompt, detail, context_md, media_refs, triangulation_loops, source_ref, source_session, priority, item_type, options, assumed_default, uploads, queued_at, resolved_at",
       )
       .is("resolved_at", null);
     if (error) {
@@ -262,6 +283,86 @@ export default function TeamReviewQueue() {
       toast({ title: "Failed", description: msg, variant: "destructive" });
     } finally {
       setResolving(false);
+    }
+  }
+
+  // Upload one or more files as part of resolving a card (e.g. an iReal HTML
+  // export, a bank statement). Stored in the private review-uploads bucket;
+  // metadata recorded on the card's uploads[] so a Claude session can pull it.
+  async function handleUpload(files: FileList | null) {
+    if (!current || !files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const added: UploadRef[] = [];
+      for (const file of Array.from(files)) {
+        if (file.size > MAX_UPLOAD_BYTES) {
+          toast({
+            title: "File too large",
+            description: `${file.name} is ${humanSize(file.size)} — the limit is 100 MB.`,
+            variant: "destructive",
+          });
+          continue;
+        }
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${current.id}/${Date.now()}-${safe}`;
+        const { error } = await supabase.storage
+          .from("review-uploads")
+          .upload(path, file, { upsert: false });
+        if (error) {
+          toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+          continue;
+        }
+        added.push({
+          path,
+          name: file.name,
+          size: file.size,
+          mime: file.type || "application/octet-stream",
+          uploaded_at: new Date().toISOString(),
+        });
+      }
+      if (added.length) {
+        const next = [...(current.uploads ?? []), ...added];
+        const { error } = await supabase
+          .from("waiting_on_josh")
+          .update({ uploads: next })
+          .eq("id", current.id);
+        if (error) throw error;
+        toast({ title: "Uploaded", description: `${added.length} file(s) attached to this card.` });
+        await load();
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      toast({ title: "Failed", description: msg, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function downloadUpload(path: string) {
+    const { data, error } = await supabase.storage
+      .from("review-uploads")
+      .createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) {
+      toast({ title: "Couldn't open file", description: error?.message, variant: "destructive" });
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function removeUpload(path: string) {
+    if (!current) return;
+    try {
+      await supabase.storage.from("review-uploads").remove([path]);
+      const next = (current.uploads ?? []).filter((u) => u.path !== path);
+      const { error } = await supabase
+        .from("waiting_on_josh")
+        .update({ uploads: next })
+        .eq("id", current.id);
+      if (error) throw error;
+      await load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      toast({ title: "Failed", description: msg, variant: "destructive" });
     }
   }
 
@@ -504,6 +605,64 @@ export default function TeamReviewQueue() {
 
                 {/* Resolution */}
                 <div className="border-t border-border/40 pt-4">
+                  {/* Attach a file as part of resolving — any type, ≤100 MB
+                      (e.g. an iReal HTML export, a bank statement, a doc). */}
+                  <div className="mb-4">
+                    <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                      <Paperclip className="w-3.5 h-3.5" />
+                      Attach a file
+                    </h3>
+                    {current.uploads && current.uploads.length > 0 && (
+                      <ul className="mb-2 space-y-1">
+                        {current.uploads.map((u) => (
+                          <li
+                            key={u.path}
+                            className="flex items-center gap-2 text-sm bg-muted/20 rounded px-2 py-1.5 border border-border/30"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                            <button
+                              onClick={() => downloadUpload(u.path)}
+                              className="truncate hover:underline text-left flex-1"
+                              title={`Open ${u.name}`}
+                            >
+                              {u.name}
+                            </button>
+                            <span className="text-[11px] text-muted-foreground flex-shrink-0">
+                              {humanSize(u.size)}
+                            </span>
+                            <button
+                              onClick={() => removeUpload(u.path)}
+                              title="Remove file"
+                              className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <label className="inline-flex items-center gap-2 cursor-pointer text-sm rounded-md border border-border/50 px-3 py-2 hover:bg-muted/50 transition-colors">
+                      {uploading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4" />
+                      )}
+                      <span>{uploading ? "Uploading…" : "Choose file"}</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        disabled={uploading}
+                        onChange={(e) => {
+                          handleUpload(e.target.files);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Any file type, up to 100 MB. Stored privately.
+                    </p>
+                  </div>
+
                   {current.options && current.options.length > 0 ? (
                     // Multiple-choice: one tap per option resolves the row with
                     // that label. The recommended option is visually primary.
@@ -551,12 +710,6 @@ export default function TeamReviewQueue() {
                           <X className="w-4 h-4 mr-1" />
                           Reject
                         </Button>
-                        {current.source_ref && current.source_ref.startsWith("wiki/") && (
-                          <span className="text-[11px] text-muted-foreground ml-auto inline-flex items-center gap-1">
-                            <ExternalLink className="w-3 h-3" />
-                            write-back via next Claude session
-                          </span>
-                        )}
                       </div>
                     </>
                   ) : (
@@ -604,12 +757,6 @@ export default function TeamReviewQueue() {
                           <X className="w-4 h-4 mr-1" />
                           Reject
                         </Button>
-                        {current.source_ref && current.source_ref.startsWith("wiki/") && (
-                          <span className="text-[11px] text-muted-foreground ml-auto inline-flex items-center gap-1">
-                            <ExternalLink className="w-3 h-3" />
-                            write-back via next Claude session
-                          </span>
-                        )}
                       </div>
                     </>
                   )}
