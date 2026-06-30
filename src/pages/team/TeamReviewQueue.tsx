@@ -26,6 +26,9 @@ import {
   ArrowDownToLine,
   Inbox,
   Info,
+  Paperclip,
+  Download,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -54,6 +57,16 @@ type MediaRef = {
 };
 type TriLoop = { label: string; description: string };
 
+// A file Josh attached to a review item (stored in the private review-uploads
+// bucket; download via a signed URL). path is the storage object key.
+type Upload = {
+  path: string;
+  name: string;
+  size: number;
+  mime: string;
+  uploaded_at: string;
+};
+
 interface ReviewItem {
   id: string;
   title: string;
@@ -70,6 +83,9 @@ interface ReviewItem {
   // default the branch already proceeded with (null for plain questions).
   options: ChoiceOption[] | null;
   assumed_default: string | null;
+  // Files Josh attached to this item (e.g. an iReal Pro HTML export). Null/[]
+  // when nothing has been uploaded.
+  uploads: Upload[] | null;
   queued_at: string;
   resolved_at: string | null;
 }
@@ -94,6 +110,14 @@ function ageLabel(ts: string): string {
   return `${Math.floor(hr / 24)}d ago`;
 }
 
+function humanSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(0)} KB`;
+  const mb = kb / 1024;
+  return `${mb.toFixed(mb < 10 ? 1 : 0)} MB`;
+}
+
 export default function TeamReviewQueue() {
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -102,13 +126,14 @@ export default function TeamReviewQueue() {
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [resolution, setResolution] = useState("");
   const [resolving, setResolving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("waiting_on_josh")
       .select(
-        "id, title, prompt, detail, context_md, media_refs, triangulation_loops, source_ref, source_session, priority, item_type, options, assumed_default, queued_at, resolved_at",
+        "id, title, prompt, detail, context_md, media_refs, triangulation_loops, source_ref, source_session, priority, item_type, options, assumed_default, uploads, queued_at, resolved_at",
       )
       .is("resolved_at", null);
     if (error) {
@@ -143,16 +168,18 @@ export default function TeamReviewQueue() {
 
   const current = items.find((i) => i.id === selectedId) || null;
 
-  // Resolve a stable key for each ref + populate URLs (signed for storage_path, passthrough for external_url).
+  // Resolve a stable key for each media ref + each uploaded file and populate
+  // signed/passthrough URLs. media_refs live in review-media; uploads live in
+  // review-uploads — both private buckets, so both get a 1-hour signed URL.
   useEffect(() => {
-    if (!current || !current.media_refs?.length) {
+    if (!current || (!current.media_refs?.length && !current.uploads?.length)) {
       setSignedUrls({});
       return;
     }
     let cancelled = false;
     (async () => {
       const next: Record<string, string> = {};
-      for (const ref of current.media_refs) {
+      for (const ref of current.media_refs ?? []) {
         if (ref.external_url) {
           next[ref.external_url] = ref.external_url;
           continue;
@@ -166,6 +193,16 @@ export default function TeamReviewQueue() {
           continue;
         }
         if (data?.signedUrl) next[ref.storage_path] = data.signedUrl;
+      }
+      for (const up of current.uploads ?? []) {
+        const { data, error } = await supabase.storage
+          .from("review-uploads")
+          .createSignedUrl(up.path, 3600);
+        if (error) {
+          console.error("createSignedUrl error", up.path, error);
+          continue;
+        }
+        if (data?.signedUrl) next[up.path] = data.signedUrl;
       }
       if (!cancelled) setSignedUrls(next);
     })();
@@ -262,6 +299,85 @@ export default function TeamReviewQueue() {
       toast({ title: "Failed", description: msg, variant: "destructive" });
     } finally {
       setResolving(false);
+    }
+  }
+
+  const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // mirrors the bucket's 100MB limit
+
+  // Persist the uploads array to the row + update local state in place (no full
+  // reload, so selection + scroll stay put while Josh attaches files).
+  async function persistUploads(itemId: string, nextUploads: Upload[]) {
+    const { error } = await supabase
+      .from("waiting_on_josh")
+      .update({ uploads: nextUploads })
+      .eq("id", itemId);
+    if (error) throw error;
+    setItems((prev) =>
+      prev.map((it) => (it.id === itemId ? { ...it, uploads: nextUploads } : it)),
+    );
+  }
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // reset so re-picking the same file fires onChange again
+    if (!file || !current) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast({
+        title: "File too large",
+        description: `${file.name} is ${humanSize(file.size)} — the limit is 100MB. Try a smaller export or split it.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setUploading(true);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${current.id}/${Date.now()}-${safeName}`;
+      const { error: upErr } = await supabase.storage
+        .from("review-uploads")
+        .upload(path, file, { upsert: false });
+      if (upErr) throw upErr;
+      const next: Upload[] = [
+        ...(current.uploads ?? []),
+        {
+          path,
+          name: file.name,
+          size: file.size,
+          mime: file.type || "application/octet-stream",
+          uploaded_at: new Date().toISOString(),
+        },
+      ];
+      await persistUploads(current.id, next);
+      toast({ title: "Attached", description: file.name });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast({ title: "Upload failed", description: msg, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removeUpload(up: Upload) {
+    if (!current) return;
+    setUploading(true);
+    try {
+      const { error: rmErr } = await supabase.storage
+        .from("review-uploads")
+        .remove([up.path]);
+      if (rmErr) throw rmErr;
+      const next = (current.uploads ?? []).filter((u) => u.path !== up.path);
+      await persistUploads(current.id, next);
+      setSignedUrls((prev) => {
+        const copy = { ...prev };
+        delete copy[up.path];
+        return copy;
+      });
+      toast({ title: "Removed", description: up.name });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast({ title: "Remove failed", description: msg, variant: "destructive" });
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -501,6 +617,88 @@ export default function TeamReviewQueue() {
                     </code>
                   </div>
                 )}
+
+                {/* Attachments — Josh can attach files (e.g. an iReal Pro HTML
+                    export) from desktop or phone; a branch picks them up from
+                    the review-uploads bucket on the next session. */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Paperclip className="w-3.5 h-3.5" />
+                      Attachments
+                      {current.uploads && current.uploads.length > 0 && (
+                        <span className="text-muted-foreground/70">
+                          ({current.uploads.length})
+                        </span>
+                      )}
+                    </h3>
+                    <label
+                      className={`inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm cursor-pointer hover:bg-muted/50 transition-colors ${
+                        uploading ? "pointer-events-none opacity-60" : ""
+                      }`}
+                    >
+                      {uploading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Paperclip className="w-4 h-4" />
+                      )}
+                      {uploading ? "Uploading…" : "Attach file"}
+                      <input
+                        type="file"
+                        className="sr-only"
+                        onChange={handleFileSelected}
+                        disabled={uploading}
+                      />
+                    </label>
+                  </div>
+                  {current.uploads && current.uploads.length > 0 ? (
+                    <ul className="space-y-1.5">
+                      {current.uploads.map((up) => {
+                        const url = signedUrls[up.path];
+                        return (
+                          <li
+                            key={up.path}
+                            className="flex items-center gap-2 rounded border border-border/40 bg-muted/20 px-3 py-2 text-sm"
+                          >
+                            <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <span className="min-w-0 flex-1 truncate" title={up.name}>
+                              {up.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              {humanSize(up.size)}
+                            </span>
+                            {url ? (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={up.name}
+                                className="text-muted-foreground hover:text-foreground flex-shrink-0"
+                                title="Download"
+                              >
+                                <Download className="w-4 h-4" />
+                              </a>
+                            ) : (
+                              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground flex-shrink-0" />
+                            )}
+                            <button
+                              onClick={() => removeUpload(up)}
+                              disabled={uploading}
+                              className="text-muted-foreground hover:text-destructive flex-shrink-0 disabled:opacity-50"
+                              title="Remove"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      No files attached. Tap “Attach file” to add one (up to 100MB) — works from your phone.
+                    </p>
+                  )}
+                </div>
 
                 {/* Resolution */}
                 <div className="border-t border-border/40 pt-4">
