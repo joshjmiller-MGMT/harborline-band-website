@@ -398,7 +398,11 @@ async function processOne(
   // to the calendar yet — Josh finishes it first.
   let gcalStatus: EnrichOutcome["gcal_status"] = "skipped_no_due_date";
   let gcalEventId: string | undefined;
-  if (bucket === "Pending approval" && smart.due_date) {
+  // Approval-gated by default (Josh 2026-06-29): autoenrich lands cards as
+  // Pending approval WITHOUT a calendar event; gcal happens on approval.
+  // Set AUTOENRICH_AUTO_GCAL=true to restore full auto-to-calendar.
+  const AUTO_GCAL = (Deno.env.get("AUTOENRICH_AUTO_GCAL") ?? "false") === "true";
+  if (AUTO_GCAL && bucket === "Pending approval" && smart.due_date) {
     const gcalRes = await createGcalEvent(smart, row);
     if (gcalRes.ok) {
       try {
@@ -528,3 +532,4 @@ Deno.serve(async (req) => {
     return json(500, { error: "unhandled", message: msg });
   }
 });
+
