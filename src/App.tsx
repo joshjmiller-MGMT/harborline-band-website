@@ -82,6 +82,7 @@ const TeamAdminUsers = lazy(() => import("./pages/team/TeamAdminUsers"));
 const TeamMembers = lazy(() => import("./pages/team/TeamMembers"));
 const TeamSetlistBuilder = lazy(() => import("./pages/team/TeamSetlistBuilder"));
 const TeamReviewQueue = lazy(() => import("./pages/team/TeamReviewQueue"));
+const TeamFinances = lazy(() => import("./pages/team/TeamFinances"));
 
 const queryClient = new QueryClient();
 
@@ -170,6 +171,7 @@ const App = () => (
                 <Route path="/team/members" element={<TeamMembers />} />
                 <Route path="/team/setlist-builder" element={<TeamSetlistBuilder />} />
                 <Route path="/team/review" element={<TeamReviewQueue />} />
+                <Route path="/team/finances" element={<TeamFinances />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
