@@ -7,7 +7,10 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    # microphone=(self): the /team review board uses the Web Speech API for
+    # dictation; microphone=() blocked it site-wide (threw not-allowed before any
+    # prompt). (self) lets our own origin use the mic; camera/geolocation stay off.
+    Permissions-Policy = "camera=(), microphone=(self), geolocation=(), interest-cohort=()"
     # EMERGENCY HOTFIX 2026-05-22: switched from blocking-mode to Report-Only
     # because the blocking CSP from P332r3d crashed React mount across the
     # entire site (black screen, no content). Most likely cause: P334 React.lazy()
