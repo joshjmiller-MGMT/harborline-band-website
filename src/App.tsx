@@ -9,6 +9,7 @@ import { HelmetProvider } from "react-helmet-async";
 import ScrollToTopOnNavigate from "./components/ScrollToTopOnNavigate";
 import PageLoadingSpinner from "./components/PageLoadingSpinner";
 import { TeamNoindex } from "./components/TeamNoindex";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Eager: canonical landing surfaces + 404 (small, first-paint critical)
 import Index from "./pages/Index";
@@ -96,6 +97,7 @@ const App = () => (
           <ScrollToTopOnNavigate />
           <TeamNoindex />
           <TeamAuthProvider>
+            <ErrorBoundary label="the app">
             <Suspense fallback={<PageLoadingSpinner />}>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -176,6 +178,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </ErrorBoundary>
           </TeamAuthProvider>
         </BrowserRouter>
       </TooltipProvider>

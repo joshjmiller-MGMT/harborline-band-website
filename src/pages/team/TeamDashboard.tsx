@@ -4,6 +4,7 @@ import IntegrationHealthWidget from "@/components/dashboard/IntegrationHealthWid
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
 import { LayoutDashboard } from "lucide-react";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default function TeamDashboard() {
   return (
@@ -19,23 +20,31 @@ export default function TeamDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Needs-action goes first — pins urgent + everything that needs Josh. */}
           <div className="lg:col-span-2">
-            <NeedsActionWidget />
+            <ErrorBoundary compact label="Needs Action">
+              <NeedsActionWidget />
+            </ErrorBoundary>
           </div>
 
           {/* Calendar — daily-driver surface, full width. */}
           <div className="lg:col-span-2">
-            <UnifiedCalendarWidget />
+            <ErrorBoundary compact label="Calendar">
+              <UnifiedCalendarWidget />
+            </ErrorBoundary>
           </div>
 
           {/* AvailabilityChecker — full width. (SmartTaskWidget moved to the SMART Tasks
               page 2026-06-21; the 2026-05-24 card had paired them here — flagged in the PR.) */}
           <div className="lg:col-span-2">
-            <AvailabilityCheckerWidget />
+            <ErrorBoundary compact label="Availability">
+              <AvailabilityCheckerWidget />
+            </ErrorBoundary>
           </div>
 
           {/* Integration health goes last — it's read-only diagnostics, not a daily-driver. */}
           <div className="lg:col-span-2">
-            <IntegrationHealthWidget />
+            <ErrorBoundary compact label="Integration health">
+              <IntegrationHealthWidget />
+            </ErrorBoundary>
           </div>
         </div>
       </div>
