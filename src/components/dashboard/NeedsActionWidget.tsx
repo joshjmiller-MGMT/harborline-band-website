@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertTriangle, ChevronDown } from "lucide-react";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import MissingDatesWidget from "./MissingDatesWidget";
 import TodaysActionItemsWidget from "./TodaysActionItemsWidget";
 import BookingAgentActionWidget from "./BookingAgentActionWidget";
@@ -36,15 +37,17 @@ export default function NeedsActionWidget() {
         <CollapsibleContent>
           <CardContent className="space-y-4">
             {/* Urgent pin sits at the very top of Needs Action (P341, 2026-05-25). */}
-            <UrgentAlertsWidget />
-            <WaitingOnJoshWidget />
-            <TodaysActionItemsWidget />
-            <StaffingNeedsAction />
-            <HoldsNeedsAction />
-            <EveningAvailabilityNeedsAction />
-            <EmailNeedsAction />
-            <BookingAgentActionWidget />
-            <MissingDatesWidget />
+            {/* Each sub-widget is boundary-guarded so one failing fetch shows an inline
+                error (and names the culprit) instead of blanking the whole card/page. */}
+            <ErrorBoundary compact label="Urgent alerts"><UrgentAlertsWidget /></ErrorBoundary>
+            <ErrorBoundary compact label="Waiting on Josh"><WaitingOnJoshWidget /></ErrorBoundary>
+            <ErrorBoundary compact label="Today's action items"><TodaysActionItemsWidget /></ErrorBoundary>
+            <ErrorBoundary compact label="Staffing"><StaffingNeedsAction /></ErrorBoundary>
+            <ErrorBoundary compact label="Holds"><HoldsNeedsAction /></ErrorBoundary>
+            <ErrorBoundary compact label="Evening availability"><EveningAvailabilityNeedsAction /></ErrorBoundary>
+            <ErrorBoundary compact label="Email needs-action"><EmailNeedsAction /></ErrorBoundary>
+            <ErrorBoundary compact label="Booking agent"><BookingAgentActionWidget /></ErrorBoundary>
+            <ErrorBoundary compact label="Missing dates"><MissingDatesWidget /></ErrorBoundary>
             {/* More action items can be slotted in here as they come up. */}
           </CardContent>
         </CollapsibleContent>
