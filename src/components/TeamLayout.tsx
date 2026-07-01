@@ -22,6 +22,7 @@ import {
   ListMusic,
   Inbox,
   Handshake,
+  Wallet,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
