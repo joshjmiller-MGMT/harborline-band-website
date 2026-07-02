@@ -39,9 +39,7 @@ type ItemType =
   | "brand_voice"
   | "visual_review"
   | "decision"
-  | "choice"
-  | "outreach"
-  | "content";
+  | "choice";
 
 // One tappable answer on a multiple-choice escalation. `recommended` flags the
 // branch's suggested default (the one mirrored in assumed_default).
@@ -95,8 +93,6 @@ const TYPE_LABELS: Record<ItemType, string> = {
   visual_review: "Visual",
   decision: "Decision",
   choice: "Choice",
-  outreach: "📣 Outreach",
-  content: "🎬 Content",
 };
 
 const PRIORITY_RANK: Record<string, number> = { high: 0, normal: 1, low: 2 };
