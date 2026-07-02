@@ -85,6 +85,7 @@ const TeamSetlistBuilder = lazy(() => import("./pages/team/TeamSetlistBuilder"))
 const TeamReviewQueue = lazy(() => import("./pages/team/TeamReviewQueue"));
 const TeamFinances = lazy(() => import("./pages/team/TeamFinances"));
 const TeamReleasePipeline = lazy(() => import("./pages/team/TeamReleasePipeline"));
+const TeamOutreach = lazy(() => import("./pages/team/TeamOutreach"));
 
 const queryClient = new QueryClient();
 
@@ -176,6 +177,7 @@ const App = () => (
                 <Route path="/team/review" element={<TeamReviewQueue />} />
                 <Route path="/team/finances" element={<TeamFinances />} />
                 <Route path="/team/release-pipeline" element={<TeamReleasePipeline />} />
+                <Route path="/team/outreach" element={<TeamOutreach />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
