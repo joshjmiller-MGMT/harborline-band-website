@@ -23,6 +23,7 @@ import {
   Inbox,
   Handshake,
   Wallet,
+  Rocket,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ const marketingMenu: MegaMenu = {
   label: "Marketing",
   icon: Megaphone,
   items: [
+    { name: "Release Pipeline", href: "/team/release-pipeline", icon: Rocket, description: "JMJ EP waterfall — singles + per-release checklist" },
     { name: "Lead Pipeline", href: "/team/booking-pipeline", icon: Kanban, description: "Scrum board — drag leads across buckets" },
     { name: "Booking", href: "/team/booking", icon: Phone, description: "Lead intake & venue tracker" },
     { name: "Social", href: "/team/social", icon: Share2, description: "Posting times, content queue, handoff to Des" },
