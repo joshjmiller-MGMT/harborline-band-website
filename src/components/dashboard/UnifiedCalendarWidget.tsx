@@ -680,15 +680,10 @@ export default function UnifiedCalendarWidget() {
         : event.color;
     const stripe = (overrideKey && colorOverrides[overrideKey]) || naturalStripe;
 
-    let body = stripe;
-    if (event.source === "google") {
-      const m = event.meta || {};
-      const colorId = m.preferredColorId || m.eventColorId;
-      if (colorId && GOOGLE_EVENT_COLORS[colorId]) {
-        body = GOOGLE_EVENT_COLORS[colorId];
-      }
-    }
-    return { body, stripe };
+    // Both the top tag (stripe) and the fill (body) reflect the SOURCE the event came from,
+    // NOT the event's own Google color-id. Josh's calendar color-coding (warehouse/gig/hold/etc.)
+    // is his INPUT language for me to read/classify — it must not be painted back onto this view.
+    return { body: stripe, stripe };
   };
 
   const eventStyleGetter = (event: UnifiedEvent) => {
