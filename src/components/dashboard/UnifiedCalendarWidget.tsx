@@ -863,6 +863,9 @@ export default function UnifiedCalendarWidget() {
     // 1. Filter by account/source toggles
     const filtered = events.filter((e) => {
       if (e.source === "google") {
+        // Josh: drop the "Jonathan Personal" calendar entirely from the unified view.
+        const calName = (e.meta?.calendarName || "").toLowerCase();
+        if (calName.includes("jonathan") && calName.includes("personal")) return false;
         return !e.accountEmail || !hiddenAccounts.has(e.accountEmail);
       }
       if (e.source === "monday") {

@@ -69,6 +69,8 @@ export interface UseDictationOptions {
   onFinal: (text: string) => void;
   onInterim?: (text: string) => void;
   lang?: string;
+  /** Auto-stop after this many ms of silence, so the mic turns itself off when you're done (default 10000). 0 disables. */
+  autoStopMs?: number;
 }
 
 export interface UseDictationResult {
@@ -81,12 +83,13 @@ export interface UseDictationResult {
 }
 
 export function useDictation(opts: UseDictationOptions): UseDictationResult {
-  const { onFinal, onInterim, lang = "en-US" } = opts;
+  const { onFinal, onInterim, lang = "en-US", autoStopMs = 10000 } = opts;
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const wantOnRef = useRef(false);
+  const silenceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onFinalRef = useRef(onFinal);
   const onInterimRef = useRef(onInterim);
   onFinalRef.current = onFinal;
@@ -95,12 +98,22 @@ export function useDictation(opts: UseDictationOptions): UseDictationResult {
   const stop = useCallback(() => {
     wantOnRef.current = false;
     setListening(false);
+    if (silenceRef.current) {
+      clearTimeout(silenceRef.current);
+      silenceRef.current = null;
+    }
     try {
       recRef.current?.stop();
     } catch {
       /* stop() throws if not started — ignore */
     }
   }, []);
+
+  // Auto-off: reset a silence timer on every bit of speech; if it fires, stop.
+  const armSilence = useCallback(() => {
+    if (silenceRef.current) clearTimeout(silenceRef.current);
+    if (autoStopMs > 0) silenceRef.current = setTimeout(() => stop(), autoStopMs);
+  }, [autoStopMs, stop]);
 
   const start = useCallback(() => {
     const Ctor = getSRCtor();
@@ -117,6 +130,7 @@ export function useDictation(opts: UseDictationOptions): UseDictationResult {
     rec.lang = lang;
 
     rec.onresult = (e) => {
+      armSilence(); // speech came in — reset the auto-off timer
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i];
@@ -142,6 +156,7 @@ export function useDictation(opts: UseDictationOptions): UseDictationResult {
       if (wantOnRef.current) {
         try {
           rec.start();
+          armSilence();
         } catch {
           /* double-start — ignore */
         }
@@ -155,10 +170,11 @@ export function useDictation(opts: UseDictationOptions): UseDictationResult {
     try {
       rec.start();
       setListening(true);
+      armSilence();
     } catch {
       /* start() throws if already running — ignore */
     }
-  }, [lang]);
+  }, [lang, armSilence]);
 
   const toggle = useCallback(() => {
     if (wantOnRef.current) stop();
