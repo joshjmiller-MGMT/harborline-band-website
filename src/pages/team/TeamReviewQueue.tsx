@@ -164,6 +164,11 @@ export default function TeamReviewQueue() {
 
   const current = items.find((i) => i.id === selectedId) || null;
 
+  // Clear the typed answer when switching cards (fix: the typed answer used to carry from card to card).
+  useEffect(() => {
+    setResolution("");
+  }, [selectedId]);
+
   // Resolve a stable key for each ref + populate URLs (signed for storage_path, passthrough for external_url).
   useEffect(() => {
     if (!current || !current.media_refs?.length) {
@@ -696,6 +701,27 @@ export default function TeamReviewQueue() {
                           </Button>
                         ))}
                       </div>
+                      {/* "Other" — type a custom answer instead of picking an option. */}
+                      <details className="mb-3 rounded-md border border-border p-2">
+                        <summary className="cursor-pointer text-xs text-muted-foreground">
+                          Other — type your own answer
+                        </summary>
+                        <div className="mt-2 flex items-center justify-between mb-1">
+                          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Your answer</span>
+                          <MicButton label title="Dictate your answer" onText={(t) => setResolution((p) => appendDictation(p, t))} />
+                        </div>
+                        <Textarea
+                          value={resolution}
+                          onChange={(e) => setResolution(e.target.value)}
+                          placeholder="Type a custom answer (used instead of the options above)…"
+                          rows={3}
+                          className="mb-2"
+                        />
+                        <Button size="sm" onClick={() => resolveItem("resolved")} disabled={resolving || !resolution.trim()}>
+                          {resolving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
+                          Submit answer
+                        </Button>
+                      </details>
                       <div className="flex flex-wrap items-center gap-2">
                         <Button variant="outline" onClick={deferItem} disabled={resolving}>
                           <ArrowDownToLine className="w-4 h-4 mr-1" />
