@@ -23,7 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Activity, Flame, Calendar, BarChart3, Clock, Plus } from "lucide-react";
+import { Activity, Flame, Calendar, BarChart3, Clock, Plus, Sparkles, Loader2 } from "lucide-react";
 
 interface SessionRow {
   id: string;
@@ -82,6 +82,8 @@ export default function TeamPractice() {
   const [logNotes, setLogNotes] = useState("");
   const [logSong, setLogSong] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
+  const [quickText, setQuickText] = useState("");
+  const [parsing, setParsing] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -136,7 +138,50 @@ export default function TeamPractice() {
     setLogMinutes("");
     setLogNotes("");
     setLogSong("");
+    setQuickText("");
     load();
+  };
+
+  // Card [1]: type or dictate a free-form note; Claude breaks it into the
+  // structured fields, which we drop into the form for Josh to review + save.
+  const parseQuick = async () => {
+    const text = quickText.trim();
+    if (!text) {
+      toast({ title: "Type or dictate something first", variant: "destructive" });
+      return;
+    }
+    setParsing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("parse-practice-log", {
+        method: "POST",
+        body: { text, today: dayKey(new Date()) },
+      });
+      if (error) throw error;
+      const p = (data as { parsed?: { total_minutes: number; song_of_the_day: string; notes: string; date: string; focus_areas: string[] }; error?: string })?.parsed;
+      if (!p) throw new Error((data as { error?: string })?.error || "Couldn't parse that");
+      const mins = Math.max(0, Math.round(Number(p.total_minutes) || 0));
+      setLogHours(String(Math.floor(mins / 60)));
+      setLogMinutes(String(mins % 60));
+      if (p.song_of_the_day) setLogSong(p.song_of_the_day);
+      if (p.date && /^\d{4}-\d{2}-\d{2}$/.test(p.date)) setLogDate(p.date);
+      const focus =
+        Array.isArray(p.focus_areas) && p.focus_areas.length
+          ? `\n\nFocus: ${p.focus_areas.join(", ")}`
+          : "";
+      setLogNotes((p.notes || "") + focus);
+      toast({
+        title: "Parsed — review & save",
+        description: `${fmtMin(mins)}${p.song_of_the_day ? ` · ${p.song_of_the_day}` : ""}`,
+      });
+    } catch (e) {
+      toast({
+        title: "Couldn't parse",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    } finally {
+      setParsing(false);
+    }
   };
 
   useEffect(() => {
@@ -309,6 +354,41 @@ export default function TeamPractice() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-2">
+                {/* Quick entry — type or dictate; Claude breaks it into the fields below. */}
+                <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="quick-log" className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-primary" /> Quick entry — type or dictate
+                    </Label>
+                    <MicButton onText={(t) => setQuickText((p) => appendDictation(p, t))} />
+                  </div>
+                  <Textarea
+                    id="quick-log"
+                    rows={3}
+                    placeholder="e.g. Practiced about an hour and a half on Giant Steps — ii-V-I patterns, left-hand voicings, 15 min sight reading…"
+                    value={quickText}
+                    onChange={(e) => setQuickText(e.target.value)}
+                  />
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] text-muted-foreground">
+                      Fills the fields below — review, then save.
+                    </p>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="gap-2"
+                      onClick={parseQuick}
+                      disabled={parsing || !quickText.trim()}
+                    >
+                      {parsing ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5" />
+                      )}
+                      {parsing ? "Parsing…" : "Parse & fill"}
+                    </Button>
+                  </div>
+                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="log-date">Date</Label>
                   <Input
