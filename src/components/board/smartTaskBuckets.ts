@@ -47,3 +47,14 @@ export const SMART_BUCKET_COLUMNS: ScrumColumn[] = [
   { id: "Active", title: "Active (calendar)", accent: "text-emerald-400" },
   { id: "Done", title: "Done", accent: "text-muted-foreground" },
 ];
+
+// One color per venture — color is processed faster than text, so the eye
+// learns "purple = Economy" etc. without reading (kanban-swimlane best practice).
+export const VENTURE_COLORS: Record<SmartVenture, string> = {
+  Harborline: "bg-sky-500",
+  Economy: "bg-violet-500",
+  JMJ: "bg-amber-500",
+  Personal: "bg-emerald-500",
+  BSE: "bg-rose-500",
+  "Brand Studio": "bg-fuchsia-500",
+};

@@ -1,7 +1,12 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
-import { Sparkles, RefreshCw } from "lucide-react";
+import { Sparkles, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import SmartTaskWidget from "@/components/dashboard/SmartTaskWidget";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +14,7 @@ import { ScrumBoard } from "@/components/board/ScrumBoard";
 import {
   SMART_BUCKET_COLUMNS,
   SMART_VENTURES,
+  VENTURE_COLORS,
   type SmartBucket,
   type SmartVenture,
   normalizeVenture,
@@ -187,6 +193,47 @@ export default function TeamSmartTasks() {
     return map;
   }, [cards]);
 
+  // Per-venture, per-bucket counts — powers the overview matrix + the header chips.
+  const bucketCountsByVenture = useMemo(() => {
+    const m = new Map<SmartVenture, Record<string, number>>();
+    for (const v of SMART_VENTURES) {
+      const rec: Record<string, number> = {};
+      for (const col of SMART_BUCKET_COLUMNS) rec[col.id] = 0;
+      m.set(v, rec);
+    }
+    for (const card of cards) {
+      const rec = m.get(card.venture);
+      if (rec) rec[card.columnId] = (rec[card.columnId] ?? 0) + 1;
+    }
+    return m;
+  }, [cards]);
+
+  // Venture sections default OPEN when they have cards; the user can override
+  // either way (collapse what you're not working on — kanban best practice).
+  const [openOverrides, setOpenOverrides] = useState<
+    Partial<Record<SmartVenture, boolean>>
+  >({});
+  const isVentureOpen = (v: SmartVenture, count: number) =>
+    openOverrides[v] ?? count > 0;
+  const toggleVenture = (v: SmartVenture, count: number) =>
+    setOpenOverrides((prev) => ({ ...prev, [v]: !(prev[v] ?? count > 0) }));
+  const expandVenture = (v: SmartVenture) => {
+    setOpenOverrides((prev) => ({ ...prev, [v]: true }));
+    setTimeout(
+      () =>
+        document
+          .getElementById(`venture-${v}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      0,
+    );
+  };
+  const setAllVentures = (open: boolean) =>
+    setOpenOverrides(
+      Object.fromEntries(
+        SMART_VENTURES.map((v) => [v, open]),
+      ) as Partial<Record<SmartVenture, boolean>>,
+    );
+
   const totalCards = cards.length;
   const totalSmart = smartRows.length;
   const totalTrello = trello.cards.length - smartifiedTrelloCardIds.size;
@@ -207,6 +254,12 @@ export default function TeamSmartTasks() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="ghost" size="sm" onClick={() => setAllVentures(true)}>
+              Expand all
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setAllVentures(false)}>
+              Collapse all
+            </Button>
             <Button variant="ghost" size="sm" onClick={refreshAll} disabled={isLoading}>
               <RefreshCw className={`w-4 h-4 mr-1.5 ${isLoading ? "animate-spin" : ""}`} />
               Refresh
@@ -226,30 +279,138 @@ export default function TeamSmartTasks() {
           <SmartTaskWidget />
         </div>
 
-        <div className="space-y-6">
+        {/* At-a-glance overview — venture × bucket counts. Click a row to jump. */}
+        <div className="mb-6 overflow-x-auto rounded-lg border border-border bg-card/40">
+          <table className="w-full text-sm min-w-[560px]">
+            <thead>
+              <tr className="border-b border-border text-xs text-muted-foreground">
+                <th className="text-left font-medium px-3 py-2">Venture</th>
+                {SMART_BUCKET_COLUMNS.map((col) => (
+                  <th
+                    key={col.id}
+                    className={`px-2 py-2 font-medium text-center ${col.accent}`}
+                  >
+                    {col.title}
+                  </th>
+                ))}
+                <th className="px-3 py-2 text-center font-medium text-foreground">
+                  Total
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {SMART_VENTURES.map((v) => {
+                const counts = bucketCountsByVenture.get(v)!;
+                const total = cardsByVenture.get(v)?.length ?? 0;
+                return (
+                  <tr
+                    key={v}
+                    className="border-b border-border/40 last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
+                    onClick={() => expandVenture(v)}
+                  >
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className={`w-2.5 h-2.5 rounded-full ${VENTURE_COLORS[v]}`}
+                        />
+                        <span className="font-medium text-foreground">{v}</span>
+                      </span>
+                    </td>
+                    {SMART_BUCKET_COLUMNS.map((col) => {
+                      const n = counts[col.id] ?? 0;
+                      return (
+                        <td
+                          key={col.id}
+                          className="px-2 py-2 text-center tabular-nums"
+                        >
+                          {n > 0 ? (
+                            <span className="inline-block min-w-[1.6rem] rounded bg-muted/70 px-1.5 py-0.5 text-xs font-semibold text-foreground">
+                              {n}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/30">·</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    <td className="px-3 py-2 text-center tabular-nums font-semibold text-foreground">
+                      {total || <span className="text-muted-foreground/30">·</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Collapsible, color-coded venture boards — collapse what you're not working on. */}
+        <div className="space-y-3">
           {SMART_VENTURES.map((venture) => {
             const ventureCards = cardsByVenture.get(venture) ?? [];
             const count = ventureCards.length;
+            const counts = bucketCountsByVenture.get(venture)!;
+            const open = isVentureOpen(venture, count);
             return (
-              <section key={venture} className="space-y-2">
-                <header className="flex items-center justify-between border-b border-border pb-1">
-                  <h2 className="font-display text-lg tracking-wide-custom text-foreground">
-                    {venture}
-                  </h2>
-                  <span className="text-xs text-muted-foreground tabular-nums">
-                    {count} {count === 1 ? "card" : "cards"}
-                  </span>
-                </header>
-                <ScrumBoard
-                  columns={SMART_BUCKET_COLUMNS}
-                  cards={ventureCards}
-                  onCardMove={handleCardMove}
-                  renderCard={(card) => (
-                    <SmartTaskCard card={card} onChangeVenture={handleChangeVenture} />
+              <Collapsible
+                key={venture}
+                open={open}
+                onOpenChange={() => toggleVenture(venture, count)}
+                className="rounded-lg border border-border bg-card/40"
+              >
+                <CollapsibleTrigger asChild>
+                  <button
+                    id={`venture-${venture}`}
+                    className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/30 rounded-lg text-left scroll-mt-20"
+                  >
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className={`w-3 h-3 rounded-full shrink-0 ${VENTURE_COLORS[venture]}`}
+                      />
+                      <span className="font-display text-lg tracking-wide-custom text-foreground">
+                        {venture}
+                      </span>
+                      <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                        {count} {count === 1 ? "card" : "cards"}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      {SMART_BUCKET_COLUMNS.map((col) =>
+                        (counts[col.id] ?? 0) > 0 ? (
+                          <span
+                            key={col.id}
+                            className={`hidden md:inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-muted/50 ${col.accent}`}
+                          >
+                            {col.title.split(" ")[0]} {counts[col.id]}
+                          </span>
+                        ) : null,
+                      )}
+                      <ChevronDown
+                        className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+                      />
+                    </span>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-3 pb-3">
+                  {count === 0 ? (
+                    <p className="text-xs text-muted-foreground py-3 text-center">
+                      No cards in this venture.
+                    </p>
+                  ) : (
+                    <ScrumBoard
+                      columns={SMART_BUCKET_COLUMNS}
+                      cards={ventureCards}
+                      onCardMove={handleCardMove}
+                      renderCard={(card) => (
+                        <SmartTaskCard
+                          card={card}
+                          onChangeVenture={handleChangeVenture}
+                        />
+                      )}
+                      emptyColumnLabel="—"
+                    />
                   )}
-                  emptyColumnLabel="—"
-                />
-              </section>
+                </CollapsibleContent>
+              </Collapsible>
             );
           })}
         </div>
