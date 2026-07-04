@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ExternalLink, Inbox, Loader2, RefreshCw } from "lucide-react";
+import { ExternalLink, Inbox, Loader2, RefreshCw, Eye, CheckCircle2, Circle } from "lucide-react";
 
 type IngestRow = {
   id: string;
@@ -112,6 +112,25 @@ export default function ContentIngestLogWidget() {
   const [items, setItems] = useState<IngestRow[]>([]);
   const [summary, setSummary] = useState<IngestSummary | null>(null);
   const [loading, setLoading] = useState(false);
+  const [openPreview, setOpenPreview] = useState<Set<string>>(new Set());
+
+  const togglePreview = (id: string) =>
+    setOpenPreview((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  // "Done?" = the item has been actioned/routed somewhere (a card, brain note,
+  // etc.). Raw ingested rows are still Pending.
+  const isDone = (r: IngestRow) =>
+    r.status === "routed" || !!r.processed_at || !!r.routed_ref;
+
+  // Instagram's public embed — the real reference thumbnail, loaded on demand.
+  const embedUrl = (r: IngestRow) =>
+    r.url
+      ? r.url.replace(/\/?$/, "/") + "embed"
+      : `https://www.instagram.com/p/${r.shortcode}/embed`;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -213,81 +232,116 @@ export default function ContentIngestLogWidget() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Account</TableHead>
-                <TableHead>Purpose</TableHead>
-                <TableHead>When</TableHead>
-                <TableHead>Summary</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Route</TableHead>
-                <TableHead>Ingested</TableHead>
-                <TableHead className="text-right">Reel</TableHead>
+                <TableHead>Reference</TableHead>
+                <TableHead>Overview</TableHead>
+                <TableHead>Actionable</TableHead>
+                <TableHead>Done?</TableHead>
+                <TableHead className="text-right">Preview</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <Badge variant="outline" className={accountBadgeClass(item.source_account)}>
-                      {item.source_account ?? "—"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {item.purpose ? (
-                      <Badge variant="secondary">
-                        {PURPOSE_LABEL[item.purpose] ?? item.purpose}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {item.time_sensitivity && item.time_sensitivity !== "none" ? (
-                      <span className="flex items-center gap-1.5">
-                        <Badge
-                          variant="outline"
-                          className={SENSITIVITY_STYLES[item.time_sensitivity] ?? "text-muted-foreground"}
-                        >
-                          {item.time_sensitivity}
-                        </Badge>
-                        {item.deadline && (
-                          <span className="text-xs text-muted-foreground">{formatDay(item.deadline)}</span>
+              {items.map((item) => {
+                const done = isDone(item);
+                const previewing = openPreview.has(item.id);
+                return (
+                  <Fragment key={item.id}>
+                    <TableRow>
+                      {/* Reference — link on the left, plus account + ingested time */}
+                      <TableCell className="align-top whitespace-nowrap">
+                        {item.url ? (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-primary hover:underline"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span className="font-mono text-xs">{item.shortcode}</span>
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
                         )}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <Badge variant="outline" className={accountBadgeClass(item.source_account)}>
+                            {item.source_account ?? "—"}
+                          </Badge>
+                          {item.purpose && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              {PURPOSE_LABEL[item.purpose] ?? item.purpose}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-1">
+                          {formatTimestamp(item.ingested_at)}
+                        </div>
+                      </TableCell>
+                      {/* Overview */}
+                      <TableCell className="max-w-xs align-top">
+                        <span className="line-clamp-3 text-foreground">
+                          {item.summary || item.caption || "—"}
+                        </span>
+                      </TableCell>
+                      {/* Actionable — the review on what to do + where it routed */}
+                      <TableCell className="max-w-xs align-top">
+                        <div className="text-foreground">{item.action || "—"}</div>
+                        {item.route && (
+                          <Badge variant="secondary" className="mt-1 text-xs">
+                            {ROUTE_LABEL[item.route] ?? item.route}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      {/* Done? */}
+                      <TableCell className="align-top whitespace-nowrap">
+                        {done ? (
+                          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                            <CheckCircle2 className="w-3 h-3 mr-1" /> Done
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            <Circle className="w-3 h-3 mr-1" /> Pending
+                          </Badge>
+                        )}
+                        {item.time_sensitivity && item.time_sensitivity !== "none" && (
+                          <div className="mt-1">
+                            <Badge
+                              variant="outline"
+                              className={SENSITIVITY_STYLES[item.time_sensitivity] ?? "text-muted-foreground"}
+                            >
+                              {item.time_sensitivity}
+                              {item.deadline ? ` · ${formatDay(item.deadline)}` : ""}
+                            </Badge>
+                          </div>
+                        )}
+                      </TableCell>
+                      {/* Preview — loads the IG embed (the reference thumbnail) on demand */}
+                      <TableCell className="text-right align-top">
+                        <Button
+                          variant={previewing ? "secondary" : "ghost"}
+                          size="sm"
+                          onClick={() => togglePreview(item.id)}
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1.5" />
+                          {previewing ? "Hide" : "Preview"}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    {previewing && (
+                      <TableRow>
+                        <TableCell colSpan={5}>
+                          <div className="flex justify-center py-2">
+                            <iframe
+                              src={embedUrl(item)}
+                              title={`Preview ${item.shortcode}`}
+                              loading="lazy"
+                              className="w-[340px] h-[480px] rounded border border-border bg-white"
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </TableCell>
-                  <TableCell className="max-w-xs">
-                    <span className="line-clamp-2 text-foreground">
-                      {item.summary || item.caption || "—"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {item.action || "—"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {item.route ? ROUTE_LABEL[item.route] ?? item.route : "—"}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">
-                    {formatTimestamp(item.ingested_at)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {item.url ? (
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span className="font-mono text-xs">{item.shortcode}</span>
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                  </Fragment>
+                );
+              })}
             </TableBody>
           </Table>
         )}
