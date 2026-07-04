@@ -160,6 +160,18 @@ export default function TeamBookingPipeline() {
   const totalLeads = rows.length;
   const visibleLeads = cards.length;
 
+  // Stage counts across ALL leads (incl. Done, even when the Done column is
+  // hidden) — the pipeline funnel at a glance.
+  const bucketCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const col of BOOKING_BUCKET_COLUMNS) c[col.id] = 0;
+    for (const r of rows) {
+      const b = normalizeBucket(r.bucket);
+      c[b] = (c[b] ?? 0) + 1;
+    }
+    return c;
+  }, [rows]);
+
   return (
     <TeamLayout>
       <div className="container mx-auto px-6 py-8">
@@ -218,6 +230,26 @@ export default function TeamBookingPipeline() {
             No leads yet — the buckets below show where leads will land once you
             configure your Booking Agent sheet from the dashboard widget settings.
           </p>
+        )}
+        {totalLeads > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground mr-1">
+              Pipeline
+            </span>
+            {BOOKING_BUCKET_COLUMNS.map((col) => (
+              <div
+                key={col.id}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-card/40"
+              >
+                <span className={`text-xs font-medium ${col.accent}`}>
+                  {col.title}
+                </span>
+                <span className="text-xs font-semibold tabular-nums text-foreground">
+                  {bucketCounts[col.id] ?? 0}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
         <ScrumBoard
           columns={BOOKING_BUCKET_COLUMNS}
