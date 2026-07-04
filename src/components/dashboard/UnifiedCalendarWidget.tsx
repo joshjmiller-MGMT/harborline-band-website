@@ -1574,7 +1574,11 @@ export default function UnifiedCalendarWidget() {
           </div>
         )}
 
-        <div className="pt-3 mt-3 border-t border-border/40">
+        <div className="pt-3 mt-3 border-t border-border/40 space-y-1.5">
+          <p className="text-[11px] font-medium text-muted-foreground">
+            Your Google Calendar color-coding — how you tag events, for reading your
+            calendar. (Items above are tinted by their source, not by this scheme.)
+          </p>
           <CalendarColorLegend />
         </div>
       </CardContent>
