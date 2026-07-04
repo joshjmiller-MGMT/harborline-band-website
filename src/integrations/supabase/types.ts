@@ -655,12 +655,17 @@ export type Database = {
           caption: string | null
           collection_name: string | null
           confidence: number | null
+          deadline: string | null
+          deadline_raw: string | null
           duration_sec: number | null
           id: string
           ingested_at: string
           platform: string
+          process_insight: string | null
           processed_at: string | null
           purpose: string | null
+          realms: string[] | null
+          recurring: boolean | null
           route: string | null
           routed_ref: string | null
           shortcode: string
@@ -668,6 +673,7 @@ export type Database = {
           status: string
           summary: string | null
           tags: string[]
+          time_sensitivity: string | null
           transcript: string | null
           uploader: string | null
           url: string
@@ -679,12 +685,17 @@ export type Database = {
           caption?: string | null
           collection_name?: string | null
           confidence?: number | null
+          deadline?: string | null
+          deadline_raw?: string | null
           duration_sec?: number | null
           id?: string
           ingested_at?: string
           platform?: string
+          process_insight?: string | null
           processed_at?: string | null
           purpose?: string | null
+          realms?: string[] | null
+          recurring?: boolean | null
           route?: string | null
           routed_ref?: string | null
           shortcode: string
@@ -692,6 +703,7 @@ export type Database = {
           status?: string
           summary?: string | null
           tags?: string[]
+          time_sensitivity?: string | null
           transcript?: string | null
           uploader?: string | null
           url: string
@@ -703,12 +715,17 @@ export type Database = {
           caption?: string | null
           collection_name?: string | null
           confidence?: number | null
+          deadline?: string | null
+          deadline_raw?: string | null
           duration_sec?: number | null
           id?: string
           ingested_at?: string
           platform?: string
+          process_insight?: string | null
           processed_at?: string | null
           purpose?: string | null
+          realms?: string[] | null
+          recurring?: boolean | null
           route?: string | null
           routed_ref?: string | null
           shortcode?: string
@@ -716,9 +733,64 @@ export type Database = {
           status?: string
           summary?: string | null
           tags?: string[]
+          time_sensitivity?: string | null
           transcript?: string | null
           uploader?: string | null
           url?: string
+          venture?: string | null
+        }
+        Relationships: []
+      }
+      content_smart_goals: {
+        Row: {
+          created_at: string
+          definition_of_done: string | null
+          earliest_deadline: string | null
+          id: string
+          measure: string | null
+          member_count: number | null
+          member_shortcodes: string[]
+          priority: number | null
+          rationale: string | null
+          status: string
+          suggested_due_date: string | null
+          title: string
+          trello_url: string | null
+          urgency: string | null
+          venture: string | null
+        }
+        Insert: {
+          created_at?: string
+          definition_of_done?: string | null
+          earliest_deadline?: string | null
+          id?: string
+          measure?: string | null
+          member_count?: number | null
+          member_shortcodes?: string[]
+          priority?: number | null
+          rationale?: string | null
+          status?: string
+          suggested_due_date?: string | null
+          title: string
+          trello_url?: string | null
+          urgency?: string | null
+          venture?: string | null
+        }
+        Update: {
+          created_at?: string
+          definition_of_done?: string | null
+          earliest_deadline?: string | null
+          id?: string
+          measure?: string | null
+          member_count?: number | null
+          member_shortcodes?: string[]
+          priority?: number | null
+          rationale?: string | null
+          status?: string
+          suggested_due_date?: string | null
+          title?: string
+          trello_url?: string | null
+          urgency?: string | null
           venture?: string | null
         }
         Relationships: []
@@ -777,6 +849,194 @@ export type Database = {
           raw?: Json | null
           refreshed_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_accounts: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          drive_folder_id: string | null
+          id: string
+          institution: string | null
+          kind: string | null
+          last4: string | null
+          name: string
+          notes: string | null
+          venture_default: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          drive_folder_id?: string | null
+          id?: string
+          institution?: string | null
+          kind?: string | null
+          last4?: string | null
+          name: string
+          notes?: string | null
+          venture_default?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          drive_folder_id?: string | null
+          id?: string
+          institution?: string | null
+          kind?: string | null
+          last4?: string | null
+          name?: string
+          notes?: string | null
+          venture_default?: string | null
+        }
+        Relationships: []
+      }
+      finance_statements: {
+        Row: {
+          account_id: string | null
+          created_at: string | null
+          drive_file_id: string | null
+          file_name: string | null
+          id: string
+          ingest_status: string | null
+          ingested_at: string | null
+          period_date: string | null
+          transaction_count: number | null
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string | null
+          drive_file_id?: string | null
+          file_name?: string | null
+          id?: string
+          ingest_status?: string | null
+          ingested_at?: string | null
+          period_date?: string | null
+          transaction_count?: number | null
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string | null
+          drive_file_id?: string | null
+          file_name?: string | null
+          id?: string
+          ingest_status?: string | null
+          ingested_at?: string | null
+          period_date?: string | null
+          transaction_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_statements_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_transactions: {
+        Row: {
+          account_id: string | null
+          amount: number | null
+          category: string | null
+          created_at: string | null
+          description: string | null
+          direction: string | null
+          id: string
+          merchant_normalized: string | null
+          notes: string | null
+          raw_description: string | null
+          statement_id: string | null
+          sub_category: string | null
+          txn_date: string | null
+          venture: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          direction?: string | null
+          id?: string
+          merchant_normalized?: string | null
+          notes?: string | null
+          raw_description?: string | null
+          statement_id?: string | null
+          sub_category?: string | null
+          txn_date?: string | null
+          venture?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          direction?: string | null
+          id?: string
+          merchant_normalized?: string | null
+          notes?: string | null
+          raw_description?: string | null
+          statement_id?: string | null
+          sub_category?: string | null
+          txn_date?: string | null
+          venture?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_statement_id_fkey"
+            columns: ["statement_id"]
+            isOneToOne: false
+            referencedRelation: "finance_statements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_vendors: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          normalized_name: string | null
+          notes: string | null
+          raw_name: string | null
+          recurring: boolean | null
+          status: string | null
+          sub_category: string | null
+          venture: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          normalized_name?: string | null
+          notes?: string | null
+          raw_name?: string | null
+          recurring?: boolean | null
+          status?: string | null
+          sub_category?: string | null
+          venture?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          normalized_name?: string | null
+          notes?: string | null
+          raw_name?: string | null
+          recurring?: boolean | null
+          status?: string | null
+          sub_category?: string | null
+          venture?: string | null
         }
         Relationships: []
       }
@@ -1046,6 +1306,45 @@ export type Database = {
           person_id?: string | null
           skip_groups?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      outreach_targets: {
+        Row: {
+          act: string | null
+          created_at: string
+          id: number
+          next_action: string | null
+          sort: number
+          source: string | null
+          status: string
+          target: string
+          type: string | null
+          why: string | null
+        }
+        Insert: {
+          act?: string | null
+          created_at?: string
+          id?: never
+          next_action?: string | null
+          sort?: number
+          source?: string | null
+          status?: string
+          target: string
+          type?: string | null
+          why?: string | null
+        }
+        Update: {
+          act?: string | null
+          created_at?: string
+          id?: never
+          next_action?: string | null
+          sort?: number
+          source?: string | null
+          status?: string
+          target?: string
+          type?: string | null
+          why?: string | null
         }
         Relationships: []
       }
@@ -1421,6 +1720,72 @@ export type Database = {
           player_name?: string
           rehearsal_id?: string
           status?: string
+        }
+        Relationships: []
+      }
+      release_singles: {
+        Row: {
+          created_at: string
+          id: number
+          notes: string | null
+          release_date: string | null
+          single_no: number
+          status: string
+          working_title: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          notes?: string | null
+          release_date?: string | null
+          single_no: number
+          status?: string
+          working_title?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          notes?: string | null
+          release_date?: string | null
+          single_no?: number
+          status?: string
+          working_title?: string | null
+        }
+        Relationships: []
+      }
+      release_tasks: {
+        Row: {
+          created_at: string
+          id: number
+          notes: string | null
+          phase: string | null
+          single_no: number | null
+          sort: number
+          status: string
+          target_date: string | null
+          task: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          notes?: string | null
+          phase?: string | null
+          single_no?: number | null
+          sort?: number
+          status?: string
+          target_date?: string | null
+          task: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          notes?: string | null
+          phase?: string | null
+          single_no?: number | null
+          sort?: number
+          status?: string
+          target_date?: string | null
+          task?: string
         }
         Relationships: []
       }
@@ -2139,11 +2504,13 @@ export type Database = {
       }
       waiting_on_josh: {
         Row: {
+          assumed_default: string | null
           context_md: string | null
           detail: string | null
           id: string
           item_type: string
           media_refs: Json
+          options: Json | null
           priority: string
           prompt: string | null
           queued_at: string
@@ -2154,13 +2521,16 @@ export type Database = {
           source_session: string | null
           title: string
           triangulation_loops: Json
+          uploads: Json | null
         }
         Insert: {
+          assumed_default?: string | null
           context_md?: string | null
           detail?: string | null
           id?: string
           item_type?: string
           media_refs?: Json
+          options?: Json | null
           priority?: string
           prompt?: string | null
           queued_at?: string
@@ -2171,13 +2541,16 @@ export type Database = {
           source_session?: string | null
           title: string
           triangulation_loops?: Json
+          uploads?: Json | null
         }
         Update: {
+          assumed_default?: string | null
           context_md?: string | null
           detail?: string | null
           id?: string
           item_type?: string
           media_refs?: Json
+          options?: Json | null
           priority?: string
           prompt?: string | null
           queued_at?: string
@@ -2188,6 +2561,43 @@ export type Database = {
           source_session?: string | null
           title?: string
           triangulation_loops?: Json
+          uploads?: Json | null
+        }
+        Relationships: []
+      }
+      work_claim_events: {
+        Row: {
+          changed_at: string
+          claimed_by: string | null
+          done_evidence: string | null
+          id: number
+          new_status: string
+          note: string | null
+          old_status: string | null
+          pr_url: string | null
+          work_key: string
+        }
+        Insert: {
+          changed_at?: string
+          claimed_by?: string | null
+          done_evidence?: string | null
+          id?: never
+          new_status: string
+          note?: string | null
+          old_status?: string | null
+          pr_url?: string | null
+          work_key: string
+        }
+        Update: {
+          changed_at?: string
+          claimed_by?: string | null
+          done_evidence?: string | null
+          id?: never
+          new_status?: string
+          note?: string | null
+          old_status?: string | null
+          pr_url?: string | null
+          work_key?: string
         }
         Relationships: []
       }
@@ -2196,11 +2606,14 @@ export type Database = {
           branch: string | null
           claimed_at: string
           claimed_by: string
+          done_evidence: string | null
           heartbeat_at: string
           machine: string | null
           notes: string | null
           pr_url: string | null
+          priority: number
           released_at: string | null
+          spec_ref: string | null
           status: string
           title: string | null
           work_key: string
@@ -2209,11 +2622,14 @@ export type Database = {
           branch?: string | null
           claimed_at?: string
           claimed_by: string
+          done_evidence?: string | null
           heartbeat_at?: string
           machine?: string | null
           notes?: string | null
           pr_url?: string | null
+          priority?: number
           released_at?: string | null
+          spec_ref?: string | null
           status?: string
           title?: string | null
           work_key: string
@@ -2222,11 +2638,14 @@ export type Database = {
           branch?: string | null
           claimed_at?: string
           claimed_by?: string
+          done_evidence?: string | null
           heartbeat_at?: string
           machine?: string | null
           notes?: string | null
           pr_url?: string | null
+          priority?: number
           released_at?: string | null
+          spec_ref?: string | null
           status?: string
           title?: string | null
           work_key?: string
@@ -2235,7 +2654,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_suspect_done_lanes: {
+        Row: {
+          claimed_by: string | null
+          heartbeat_at: string | null
+          notes_snippet: string | null
+          priority: number | null
+          work_key: string | null
+        }
+        Insert: {
+          claimed_by?: string | null
+          heartbeat_at?: string | null
+          notes_snippet?: never
+          priority?: number | null
+          work_key?: string | null
+        }
+        Update: {
+          claimed_by?: string | null
+          heartbeat_at?: string | null
+          notes_snippet?: never
+          priority?: number | null
+          work_key?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       chart_index_build_tsv: {
@@ -2252,11 +2694,17 @@ export type Database = {
         }
         Returns: unknown
       }
-      chart_index_genres: { Args: never; Returns: { genre: string }[] }
+      chart_index_genres: {
+        Args: never
+        Returns: {
+          genre: string
+        }[]
+      }
       cleanup_old_posting_times_sources: { Args: never; Returns: undefined }
       refresh_djep_calendar_events_cache: { Args: never; Returns: number }
       refresh_djep_past_events_cache: { Args: never; Returns: number }
       trigger_availability_prefetch: { Args: never; Returns: undefined }
+      trigger_claude_action_smartify: { Args: never; Returns: number }
       trigger_integration_health_check: { Args: never; Returns: number }
       trigger_posting_times_refresh: { Args: never; Returns: number }
       trigger_trello_mark_done: { Args: { p_card_id: string }; Returns: number }
