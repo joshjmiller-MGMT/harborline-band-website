@@ -78,6 +78,24 @@ export default function TeamOutreach() {
           )}
         </div>
 
+        {/* Outreach funnel at a glance — color-coded status counts. */}
+        {!loading && items.length > 0 && (
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            {STATUS_FLOW.map((s) => {
+              const n = items.filter((t) => t.status === s).length;
+              return (
+                <span
+                  key={s}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLE[s] ?? "bg-muted"}`}
+                >
+                  {STATUS_LABEL[s]}{" "}
+                  <span className="tabular-nums font-semibold">{n}</span>
+                </span>
+              );
+            })}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
