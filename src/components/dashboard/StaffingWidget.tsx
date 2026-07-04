@@ -72,6 +72,23 @@ type StaffingResponse = {
   error?: string;
 };
 
+// The CRM Events board's "NEED TO STAFF" gigs, from monday-events-staffing.
+type MondayStaffEvent = {
+  id: string;
+  name: string;
+  url: string;
+  employeeStatus: string;
+  eventStage: string;
+  eventDate: string | null;
+};
+type MondayStaffResponse = {
+  configured: boolean;
+  connected: boolean;
+  count: number;
+  events: MondayStaffEvent[];
+  error?: string;
+};
+
 function parseEventDate(value: string): Date {
   // GCal returns YYYY-MM-DD for all-day events and full ISO for timed events.
   return value.length === 10 ? new Date(`${value}T00:00:00`) : parseISO(value);
@@ -325,6 +342,9 @@ export default function StaffingWidget({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(true);
+  // Monday events-board "NEED TO STAFF" list — fetched independently so a Monday
+  // hiccup never breaks the (primary) Google-Calendar staffing list.
+  const [mondayStaff, setMondayStaff] = useState<MondayStaffResponse | null>(null);
 
   async function load() {
     setLoading(true);
@@ -350,6 +370,24 @@ export default function StaffingWidget({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [windowDays]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: resp } = await supabase.functions.invoke(
+          "monday-events-staffing",
+          { method: "POST", body: {} },
+        );
+        if (!cancelled) setMondayStaff(resp as MondayStaffResponse);
+      } catch {
+        // Isolated — the GCal staffing list above still works.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const events = data?.events || [];
   // The board shows ONLY needs-staffing items (red + orange). Holds (yellow),
   // staffed gigs (light-green), and warehouse/admin (dark-green) are excluded
@@ -359,11 +397,17 @@ export default function StaffingWidget({
     [events],
   );
 
+  const mondayNeeds = mondayStaff?.events || [];
   const summary = (
     <div className="flex items-center gap-2 flex-wrap text-xs">
       <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30">
-        {visible.length} need{visible.length === 1 ? "s" : ""} staffing
+        {visible.length} calendar
       </Badge>
+      {mondayNeeds.length > 0 && (
+        <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30">
+          {mondayNeeds.length} events board
+        </Badge>
+      )}
     </div>
   );
 
@@ -378,7 +422,8 @@ export default function StaffingWidget({
                   <Users className="w-5 h-5 text-primary" /> Staffing — needs attention
                 </CardTitle>
                 <CardDescription>
-                  Calendar items that need staffing (red + orange), going forward. Holds and staffed gigs are excluded.
+                  Calendar items that need staffing (red + orange) plus the Monday
+                  events board's “NEED TO STAFF” gigs, going forward. Holds and staffed gigs are excluded.
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -433,6 +478,55 @@ export default function StaffingWidget({
               ))}
             </div>
 
+            {/* Monday CRM Events board — items whose Employee Status = NEED TO
+                STAFF (upcoming; cancelled/postponed excluded). Josh 2026-07. */}
+            {mondayNeeds.length > 0 && (
+              <div className="pt-3 mt-1 border-t border-border/40 space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-medium text-foreground">
+                    Events board — needs staffing
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="bg-red-500/10 text-red-600 border-red-500/30 text-xs"
+                  >
+                    {mondayNeeds.length}
+                  </Badge>
+                  <span className="text-[11px] text-muted-foreground">
+                    from Monday (Employee Status = “NEED TO STAFF”)
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {mondayNeeds.map((e) => (
+                    <a
+                      key={e.id}
+                      href={e.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-muted/10 px-2.5 py-2 hover:border-primary/30 transition-colors"
+                    >
+                      <div className="min-w-0 flex items-center gap-2">
+                        {e.eventDate && (
+                          <span className="text-xs tabular-nums text-muted-foreground shrink-0">
+                            {format(parseEventDate(e.eventDate), "EEE MMM d")}
+                          </span>
+                        )}
+                        <span className="text-sm truncate">{e.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {e.eventStage && (
+                          <Badge variant="outline" className="text-[10px] opacity-70">
+                            {e.eventStage}
+                          </Badge>
+                        )}
+                        <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {data && data.connected && (
               <div className="pt-3 mt-1 border-t border-border/40 space-y-1.5">
                 <p className="text-[11px] font-medium text-muted-foreground">
@@ -461,19 +555,31 @@ export default function StaffingWidget({
  */
 export function StaffingNeedsAction() {
   const [data, setData] = useState<StaffingResponse | null>(null);
+  const [monday, setMonday] = useState<MondayStaffResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        // 730 days = max the staffing-snapshot edge fn allows. Surfaces every
-        // future unstaffed gig, not just a near-term slice.
-        const { data: resp } = await supabase.functions.invoke("staffing-snapshot", {
-          method: "POST",
-          body: { days: 730 },
-        });
-        if (!cancelled) setData(resp as StaffingResponse);
+        // Mirror the scheduler's staffing widget: GCal red/orange items PLUS the
+        // Monday events-board "NEED TO STAFF" gigs, so the dashboard summary
+        // reflects the same total the scheduler shows (Josh 2026-07).
+        // 730 days = max the staffing-snapshot edge fn allows.
+        const [snap, mon] = await Promise.all([
+          supabase.functions.invoke("staffing-snapshot", {
+            method: "POST",
+            body: { days: 730 },
+          }),
+          supabase.functions.invoke("monday-events-staffing", {
+            method: "POST",
+            body: {},
+          }),
+        ]);
+        if (!cancelled) {
+          setData(snap.data as StaffingResponse);
+          setMonday(mon.data as MondayStaffResponse);
+        }
       } catch {
         // Silently swallow; widget just hides if it can't load.
       } finally {
@@ -486,12 +592,41 @@ export function StaffingNeedsAction() {
   }, []);
 
   if (loading) return null;
-  if (!data || !data.connected) return null;
 
-  const unstaffed = (data.events || []).filter((e) => eventStatus(e) === "unstaffed");
-  if (unstaffed.length === 0) return null;
+  const unstaffed =
+    data && data.connected
+      ? (data.events || []).filter((e) => eventStatus(e) === "unstaffed")
+      : [];
+  const mondayNeeds = monday?.events || [];
 
-  const top = unstaffed.slice(0, 3);
+  // One combined, date-sorted list so the dashboard mirrors the scheduler.
+  type Row = { key: string; date: Date | null; title: string; note: string };
+  const rows: Row[] = [
+    ...unstaffed.map((ev) => ({
+      key: ev.id,
+      date: ev.start ? parseEventDate(ev.start) : null,
+      title: ev.title,
+      note:
+        ev.expected_headcount !== null && ev.missing_count
+          ? `needs ${ev.missing_count}`
+          : "needs staff",
+    })),
+    ...mondayNeeds.map((e) => ({
+      key: `monday-${e.id}`,
+      date: e.eventDate ? parseEventDate(e.eventDate) : null,
+      title: e.name,
+      note: "events board",
+    })),
+  ].sort((a, b) => {
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return a.date.getTime() - b.date.getTime();
+  });
+
+  if (rows.length === 0) return null;
+
+  const top = rows.slice(0, 3);
 
   return (
     <div className="border border-amber-500/40 rounded-lg p-3 bg-amber-500/5">
@@ -502,28 +637,21 @@ export function StaffingNeedsAction() {
         <div className="flex items-center gap-2 min-w-0">
           <Users className="w-4 h-4 text-amber-600 shrink-0" />
           <span className="text-sm font-medium">
-            {unstaffed.length} upcoming event{unstaffed.length === 1 ? "" : "s"} need{unstaffed.length === 1 ? "s" : ""} staff
+            {rows.length} upcoming event{rows.length === 1 ? "" : "s"} need{rows.length === 1 ? "s" : ""} staff
           </span>
         </div>
         <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-foreground shrink-0" />
       </a>
       <ul className="mt-2 space-y-1 text-xs text-muted-foreground pl-6">
-        {top.map((ev) => {
-          const date = ev.start ? parseEventDate(ev.start) : null;
-          const label =
-            ev.expected_headcount !== null && ev.missing_count
-              ? `needs ${ev.missing_count}`
-              : "needs staff";
-          return (
-            <li key={ev.id} className="flex items-center gap-2">
-              {date && <span className="tabular-nums">{format(date, "MMM d")}</span>}
-              <span className="truncate">{ev.title}</span>
-              <span className="ml-auto shrink-0">{label}</span>
-            </li>
-          );
-        })}
-        {unstaffed.length > top.length && (
-          <li className="italic">+ {unstaffed.length - top.length} more…</li>
+        {top.map((r) => (
+          <li key={r.key} className="flex items-center gap-2">
+            {r.date && <span className="tabular-nums">{format(r.date, "MMM d")}</span>}
+            <span className="truncate">{r.title}</span>
+            <span className="ml-auto shrink-0">{r.note}</span>
+          </li>
+        ))}
+        {rows.length > top.length && (
+          <li className="italic">+ {rows.length - top.length} more…</li>
         )}
       </ul>
     </div>
