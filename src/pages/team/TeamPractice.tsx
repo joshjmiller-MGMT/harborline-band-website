@@ -84,10 +84,13 @@ export default function TeamPractice() {
   const [logSubmitting, setLogSubmitting] = useState(false);
   const [quickText, setQuickText] = useState("");
   const [parsing, setParsing] = useState(false);
+  // Card [10]: "Song of the day" suggests from the JMJ practice repertoire
+  // (practice_songs) — distinct from the Harborline catalog + chart library.
+  const [practiceSongTitles, setPracticeSongTitles] = useState<string[]>([]);
 
   const load = async () => {
     setLoading(true);
-    const [s, seg] = await Promise.all([
+    const [s, seg, ps] = await Promise.all([
       supabase
         .from("practice_sessions")
         .select("id, preset_name, started_at, ended_at, total_minutes, status")
@@ -96,9 +99,18 @@ export default function TeamPractice() {
         .from("practice_session_segments")
         .select("id, session_id, category, actual_seconds, created_at")
         .order("created_at", { ascending: false }),
+      supabase
+        .from("practice_songs")
+        .select("title")
+        .order("title", { ascending: true }),
     ]);
     setSessions((s.data as SessionRow[]) || []);
     setSegments((seg.data as SegmentRow[]) || []);
+    setPracticeSongTitles(
+      ((ps.data as { title: string }[]) || [])
+        .map((r) => r.title)
+        .filter(Boolean),
+    );
     setLoading(false);
   };
 
@@ -429,9 +441,19 @@ export default function TeamPractice() {
                   <Label htmlFor="log-song">Song of the day (optional)</Label>
                   <Input
                     id="log-song"
+                    list="practice-songs-list"
+                    placeholder="Start typing — suggests from your practice repertoire"
                     value={logSong}
                     onChange={(e) => setLogSong(e.target.value)}
                   />
+                  <datalist id="practice-songs-list">
+                    {practiceSongTitles.map((t) => (
+                      <option key={t} value={t} />
+                    ))}
+                  </datalist>
+                  <p className="text-[11px] text-muted-foreground">
+                    From your JMJ practice repertoire ({practiceSongTitles.length}) — or type a new one.
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
