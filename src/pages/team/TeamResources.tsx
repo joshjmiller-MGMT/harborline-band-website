@@ -13,6 +13,9 @@ import {
   FileText,
   ChevronRight,
   Loader2,
+  Eye,
+  X,
+  Layers,
 } from "lucide-react";
 
 type ChartRow = {
@@ -33,6 +36,15 @@ type ChartRow = {
 };
 
 type FolderCount = { folder_top: string; total: number };
+
+// One song, with all its book/edition versions folded together.
+type SongGroup = {
+  key: string;
+  title: string;
+  composer: string | null;
+  genre: string | null;
+  versions: ChartRow[];
+};
 
 const TOP_FOLDERS = [
   { slug: "fake-books", label: "Fake Books", icon: Music },
@@ -67,6 +79,55 @@ function useDebounced<T>(value: T, ms: number): T {
   return v;
 }
 
+// Titles carry a "[BookCode]" suffix (e.g. "Autumn Leaves [RB6]", and sometimes
+// a trailing composer like "Autumn Leaves [CCB] - Johnny Mercer"). The song name
+// always comes FIRST, so we key on the text before the first "[" — that folds
+// every book version + any composer annotation into ONE "Autumn Leaves" group.
+// Titles with no book tag (some originals) group on their whole name.
+function cleanSongTitle(title: string): string {
+  let t = (title || "").replace(/\.pdf$/i, "");
+  const br = t.indexOf("[");
+  if (br >= 0) t = t.slice(0, br); // drop the [BookCode] and anything after it
+  return t
+    .replace(/\s*\(\d+\)\s*$/, "") // trailing " (2)" dup marker
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Short label that distinguishes one version from another inside a song group:
+// prefer the [BookCode] tag, then the reference, then the leaf folder.
+function versionLabel(r: ChartRow): string {
+  const m = (r.title || "").match(/\[([^\]]+)\]/);
+  if (m) return m[1];
+  if (r.reference) return r.reference;
+  const parts = (r.folder_path || "").split("/").filter(Boolean);
+  return parts[parts.length - 1] || "version";
+}
+
+// Fold a flat result list into one entry per song, preserving result order.
+function groupBySong(rows: ChartRow[]): SongGroup[] {
+  const map = new Map<string, SongGroup>();
+  for (const r of rows) {
+    const clean = cleanSongTitle(r.title) || r.title || r.filename;
+    const key = clean.toLowerCase();
+    let g = map.get(key);
+    if (!g) {
+      g = {
+        key,
+        title: clean,
+        composer: r.composer,
+        genre: r.genre,
+        versions: [],
+      };
+      map.set(key, g);
+    }
+    g.versions.push(r);
+    if (!g.composer && r.composer) g.composer = r.composer;
+    if (!g.genre && r.genre) g.genre = r.genre;
+  }
+  return Array.from(map.values());
+}
+
 export default function TeamResources() {
   const [rawQuery, setRawQuery] = useState("");
   const query = useDebounced(rawQuery, 200);
@@ -88,6 +149,22 @@ export default function TeamResources() {
   const [genres, setGenres] = useState<string[]>([]);
   // storage_path -> signed URL, populated after each result page loads.
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  // Which song groups are expanded, and which individual versions are previewed.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [previews, setPreviews] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (key: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  const togglePreview = (id: string) =>
+    setPreviews((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const folderPath = useMemo(() => {
     if (subFolder && topFolder) return `${topFolder}/${subFolder}`;
@@ -204,6 +281,9 @@ export default function TeamResources() {
 
   const isEmptyLibrary =
     folderCounts.length > 0 && folderCounts.every((f) => f.total === 0);
+
+  // Collapse the flat result page into one row per song.
+  const groups = useMemo(() => groupBySong(results), [results]);
 
   return (
     <TeamLayout>
@@ -375,128 +455,270 @@ export default function TeamResources() {
             <div className="text-xs text-muted-foreground mb-3">
               {loading
                 ? "Searching…"
-                : query
-                  ? `${total} match${total === 1 ? "" : "es"} for "${query}"${folderPath ? ` in ${folderPath}` : ""}`
-                  : `${total} charts${folderPath ? ` in ${folderPath}` : ""}`}
-              {total > PAGE_SIZE && ` — showing first ${PAGE_SIZE}`}
+                : `${groups.length} song${groups.length === 1 ? "" : "s"} · ${total} chart${total === 1 ? "" : "s"}${query ? ` for "${query}"` : ""}${folderPath ? ` in ${folderPath}` : ""}`}
+              {total > PAGE_SIZE &&
+                ` — showing first ${PAGE_SIZE} charts, grouped`}
             </div>
 
             <div className="space-y-2">
-              {results.map((r) => {
-                const openUrl =
-                  (r.storage_path && signedUrls[r.storage_path]) ||
-                  r.drive_web_view_link;
+              {groups.map((g) => {
+                const multi = g.versions.length > 1;
+                const isOpen = expanded.has(g.key);
+                const only = g.versions[0];
+                const onlyUrl =
+                  (only.storage_path && signedUrls[only.storage_path]) ||
+                  only.drive_web_view_link;
+                const openPreviews = g.versions.filter(
+                  (v) =>
+                    previews.has(v.id) &&
+                    ((v.storage_path && signedUrls[v.storage_path]) ||
+                      v.drive_web_view_link),
+                );
                 return (
-                <Card
-                  key={r.id}
-                  className="border-border bg-card hover:border-primary/30 transition-colors"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <a
-                        href={openUrl || undefined}
-                        target={openUrl ? "_blank" : undefined}
-                        rel={openUrl ? "noopener noreferrer" : undefined}
-                        aria-disabled={!openUrl}
-                        className={
-                          openUrl
-                            ? "flex-1 min-w-0 hover:opacity-80 transition-opacity cursor-pointer"
-                            : "flex-1 min-w-0 pointer-events-none"
-                        }
-                      >
-                        <div className="flex items-baseline gap-2 flex-wrap">
-                          <h3 className="font-medium text-foreground truncate">
-                            {r.title}
-                          </h3>
-                          {r.composer && (
-                            <span className="text-sm text-muted-foreground truncate">
-                              {r.composer}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
-                          <span className="truncate">{r.folder_path}/</span>
-                          <span className="opacity-60">·</span>
-                          <span className="truncate">{r.filename}</span>
-                          {r.reference && (
-                            <>
-                              <span className="opacity-60">·</span>
-                              <span className="truncate">{r.reference}</span>
-                            </>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                          {r.genre && (
-                            <Badge variant="outline" className="text-xs">
-                              {r.genre}
-                            </Badge>
-                          )}
-                          {r.key_signature && (
-                            <Badge variant="outline" className="text-xs">
-                              Key: {r.key_signature}
-                            </Badge>
-                          )}
-                          {r.time_signature && (
-                            <Badge variant="outline" className="text-xs">
-                              Time: {r.time_signature}
-                            </Badge>
-                          )}
-                          {(r.setlists || []).slice(0, 3).map((s) => (
-                            <Badge
-                              key={`sl-${s}`}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {s}
-                            </Badge>
-                          ))}
-                          {(r.ireal_pro || []).slice(0, 3).map((p) => (
-                            <Badge
-                              key={`ir-${p}`}
-                              variant="secondary"
-                              className="text-xs opacity-80"
-                            >
-                              iReal: {p}
-                            </Badge>
-                          ))}
-                          {(r.tags || [])
-                            .filter(
-                              (t) =>
-                                !t.startsWith("realbook") && t !== "fake-book",
-                            )
-                            .slice(0, 3)
-                            .map((t) => (
+                  <Card
+                    key={g.key}
+                    className="border-border bg-card hover:border-primary/30 transition-colors"
+                  >
+                    <CardContent className="p-4">
+                      {/* Header: one row per song */}
+                      <div className="flex items-start justify-between gap-4">
+                        <button
+                          type="button"
+                          onClick={
+                            multi ? () => toggleExpanded(g.key) : undefined
+                          }
+                          className={`flex-1 min-w-0 text-left ${multi ? "cursor-pointer" : "cursor-default"}`}
+                        >
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {multi && (
+                              <ChevronRight
+                                className={`w-4 h-4 flex-shrink-0 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`}
+                              />
+                            )}
+                            <h3 className="font-medium text-foreground">
+                              {g.title}
+                            </h3>
+                            {g.composer && (
+                              <span className="text-sm text-muted-foreground truncate">
+                                {g.composer}
+                              </span>
+                            )}
+                            {multi && (
                               <Badge
-                                key={`tag-${t}`}
-                                variant="outline"
-                                className="text-xs opacity-70"
+                                variant="secondary"
+                                className="text-xs gap-1"
                               >
-                                {t}
+                                <Layers className="w-3 h-3" />
+                                {g.versions.length} versions
                               </Badge>
-                            ))}
-                        </div>
-                      </a>
-                      <div className="flex-shrink-0">
-                        {openUrl ? (
-                          <Button variant="outline" size="sm" asChild>
-                            <a
-                              href={openUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            )}
+                          </div>
+                          {!multi && (
+                            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
+                              <span className="truncate">
+                                {only.folder_path}/
+                              </span>
+                              <span className="opacity-60">·</span>
+                              <span className="truncate">{only.filename}</span>
+                              {only.reference && (
+                                <>
+                                  <span className="opacity-60">·</span>
+                                  <span className="truncate">
+                                    {only.reference}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                            {g.genre && (
+                              <Badge variant="outline" className="text-xs">
+                                {g.genre}
+                              </Badge>
+                            )}
+                            {!multi && only.key_signature && (
+                              <Badge variant="outline" className="text-xs">
+                                Key: {only.key_signature}
+                              </Badge>
+                            )}
+                            {!multi &&
+                              (only.setlists || []).slice(0, 3).map((s) => (
+                                <Badge
+                                  key={`sl-${s}`}
+                                  variant="secondary"
+                                  className="text-xs"
+                                >
+                                  {s}
+                                </Badge>
+                              ))}
+                            {multi &&
+                              g.versions.slice(0, 6).map((v) => (
+                                <Badge
+                                  key={`vl-${v.id}`}
+                                  variant="outline"
+                                  className="text-xs opacity-70"
+                                >
+                                  {versionLabel(v)}
+                                </Badge>
+                              ))}
+                          </div>
+                        </button>
+                        <div className="flex-shrink-0">
+                          {multi ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleExpanded(g.key)}
                             >
-                              <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                              Open
-                            </a>
-                          </Button>
-                        ) : (
-                          <Badge variant="outline" className="text-xs opacity-60">
-                            unavailable
-                          </Badge>
-                        )}
+                              <Layers className="w-3.5 h-3.5 mr-1.5" />
+                              {isOpen ? "Hide" : "Versions"}
+                            </Button>
+                          ) : onlyUrl ? (
+                            <Button variant="outline" size="sm" asChild>
+                              <a
+                                href={onlyUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                                Open
+                              </a>
+                            </Button>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-xs opacity-60"
+                            >
+                              unavailable
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+
+                      {/* Expanded: the versions + inline compare */}
+                      {multi && isOpen && (
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <div className="space-y-1.5">
+                            {g.versions.map((v) => {
+                              const url =
+                                (v.storage_path && signedUrls[v.storage_path]) ||
+                                v.drive_web_view_link;
+                              const on = previews.has(v.id);
+                              return (
+                                <div
+                                  key={v.id}
+                                  className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/20 px-2.5 py-2"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs font-medium"
+                                      >
+                                        {versionLabel(v)}
+                                      </Badge>
+                                      {v.key_signature && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
+                                          Key: {v.key_signature}
+                                        </Badge>
+                                      )}
+                                      {v.reference && (
+                                        <span className="text-xs text-muted-foreground truncate">
+                                          {v.reference}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                                      {v.folder_path}/{v.filename}
+                                    </div>
+                                  </div>
+                                  <div className="flex-shrink-0 flex items-center gap-1.5">
+                                    {url && (
+                                      <Button
+                                        variant={on ? "secondary" : "ghost"}
+                                        size="sm"
+                                        onClick={() => togglePreview(v.id)}
+                                      >
+                                        <Eye className="w-3.5 h-3.5 mr-1.5" />
+                                        {on ? "Hide" : "Preview"}
+                                      </Button>
+                                    )}
+                                    {url ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        asChild
+                                      >
+                                        <a
+                                          href={url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        >
+                                          <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                                          Open
+                                        </a>
+                                      </Button>
+                                    ) : (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs opacity-60"
+                                      >
+                                        unavailable
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Side-by-side previews of whichever versions are toggled on */}
+                          {openPreviews.length > 0 && (
+                            <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                              {openPreviews.map((v) => {
+                                const url =
+                                  (v.storage_path &&
+                                    signedUrls[v.storage_path]) ||
+                                  v.drive_web_view_link!;
+                                return (
+                                  <div
+                                    key={`pv-${v.id}`}
+                                    className="rounded border border-border overflow-hidden"
+                                  >
+                                    <div className="flex items-center justify-between px-2 py-1 bg-muted/40 text-xs">
+                                      <span className="font-medium truncate">
+                                        {versionLabel(v)}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => togglePreview(v.id)}
+                                        className="text-muted-foreground hover:text-foreground"
+                                        aria-label="Close preview"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                    <iframe
+                                      src={url}
+                                      title={`${g.title} — ${versionLabel(v)}`}
+                                      className="w-full h-[520px] bg-white"
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <p className="text-[11px] text-muted-foreground mt-2">
+                            Tip: preview two versions to compare them side by
+                            side.
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>
