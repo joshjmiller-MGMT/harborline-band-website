@@ -439,9 +439,13 @@ export default function TeamReviewQueue() {
                     <li key={item.id}>
                       <button
                         onClick={() => setSelectedId(item.id)}
-                        className={`w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors ${
-                          isSelected ? "bg-primary/10" : ""
-                        }`}
+                        className={`w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors border-l-2 ${
+                          item.priority === "high"
+                            ? "border-l-red-500"
+                            : item.priority === "low"
+                              ? "border-l-border/40"
+                              : "border-l-sky-500/50"
+                        } ${isSelected ? "bg-primary/10" : ""}`}
                       >
                         <div className="flex items-start gap-2">
                           <div className="min-w-0 flex-1">
