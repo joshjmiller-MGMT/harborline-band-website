@@ -19,7 +19,11 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { CalendarColorLegend } from "./CalendarColorLegend";
-import { HOLD_COLOR_ID, NEEDS_STAFFING_COLOR_ID } from "@/lib/calendar-color-scheme";
+import {
+  HOLD_COLOR_ID,
+  NEEDS_STAFFING_COLOR_ID,
+  GIG_COLOR_ID,
+} from "@/lib/calendar-color-scheme";
 
 // Josh 2026-06-22: the staffing board surfaces ONLY needs-staffing items =
 // red (Tomato/11) + orange (Tangerine/6). Everything else (warehouse dark-green,
@@ -430,8 +434,16 @@ export default function StaffingWidget({
             </div>
 
             {data && data.connected && (
-              <div className="pt-3 mt-1 border-t border-border/40">
-                <CalendarColorLegend />
+              <div className="pt-3 mt-1 border-t border-border/40 space-y-1.5">
+                <p className="text-[11px] font-medium text-muted-foreground">
+                  Staffing statuses
+                </p>
+                {/* Just the 3 staffing-lifecycle colors — NOT the whole calendar
+                    scheme (that legend lives on the unified calendar). Josh 2026-07: the
+                    scheduler's staffing section should show only staffing statuses. */}
+                <CalendarColorLegend
+                  colorIds={[HOLD_COLOR_ID, NEEDS_STAFFING_COLOR_ID, GIG_COLOR_ID]}
+                />
               </div>
             )}
           </CardContent>
