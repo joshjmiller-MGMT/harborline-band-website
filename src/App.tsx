@@ -80,6 +80,7 @@ const TeamBrandStudio = lazy(() => import("./pages/team/TeamBrandStudio"));
 const TeamBandMembers = lazy(() => import("./pages/team/TeamBandMembers"));
 const TeamBands = lazy(() => import("./pages/team/TeamBands"));
 const TeamSmartTasks = lazy(() => import("./pages/team/TeamSmartTasks"));
+const TeamMedia = lazy(() => import("./pages/team/TeamMedia"));
 const TeamAdminUsers = lazy(() => import("./pages/team/TeamAdminUsers"));
 const TeamMembers = lazy(() => import("./pages/team/TeamMembers"));
 const TeamSetlistBuilder = lazy(() => import("./pages/team/TeamSetlistBuilder"));
@@ -174,6 +175,7 @@ const App = () => (
                 <Route path="/team/band-members" element={<TeamBandMembers />} />
                 <Route path="/team/bands" element={<TeamBands />} />
                 <Route path="/team/smart-tasks" element={<TeamSmartTasks />} />
+                <Route path="/team/media" element={<TeamMedia />} />
                 <Route path="/team/admin/users" element={<TeamAdminUsers />} />
                 <Route path="/team/members" element={<TeamMembers />} />
                 <Route path="/team/setlist-builder" element={<TeamSetlistBuilder />} />
