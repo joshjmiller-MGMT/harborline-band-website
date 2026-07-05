@@ -22,6 +22,9 @@ MGMT_SQL_URL = f"https://api.supabase.com/v1/projects/{PROJECT_REF}/database/que
 
 # ── roots (path, venture-default, location_kind) ───────────────────────────
 SMALL_ROOTS = [
+    # Forward-capture feed: phone + Meta-glasses media auto-lands here (Dropbox
+    # Camera Uploads ON + Meta AI auto-import ON). Raw, pre-classification.
+    ("/c/Users/joshj/Dropbox/Camera Uploads", "Personal", "dropbox"),
     ("/c/Users/joshj/Dropbox/photos/gigs", None,         "dropbox"),
     ("/i/My Drive/Pictures",               "Economy",    "gdrive-mydrive"),
     ("/i/My Drive/Band Assets",            "Economy",    "gdrive-mydrive"),
@@ -191,7 +194,8 @@ def main():
     else:
         roots = [(mode, sys.argv[2] if len(sys.argv)>2 else None, "gdrive-mydrive")]
     os.makedirs(os.path.expanduser("~/.config/harborline/media-catalogue"), exist_ok=True)
-    mpath = os.path.expanduser(f"~/.config/harborline/media-catalogue/manifest_{mode}.jsonl")
+    safe_mode = re.sub(r"[^A-Za-z0-9]+", "_", mode)[:40] or "run"
+    mpath = os.path.expanduser(f"~/.config/harborline/media-catalogue/manifest_{safe_mode}.jsonl")
     grand = 0
     with open(mpath,"w",encoding="utf-8") as manifest:
         for root, venture, kind in roots:
