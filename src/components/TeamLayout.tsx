@@ -91,6 +91,7 @@ const brandMenu: MegaMenu = {
   items: [
     { name: "Brand Studio", href: "/team/brand-studio", icon: Palette, description: "People, decisions, releases, EPKs" },
     { name: "Visual Assets", href: "/team/visual-assets", icon: Images, description: "Photos, logos, design files" },
+    { name: "Media Library", href: "/team/media", icon: FolderOpen, description: "Catalogue of all photo/video/audio across drives — filter, triage, route" },
     { name: "Members", href: "/team/members", icon: Users, description: "Band roster + team logins (tabbed — one page)" },
     { name: "Bands", href: "/team/bands", icon: Handshake, description: "Relationship board — bands for show swaps & support slots, by Artist Fit" },
   ],

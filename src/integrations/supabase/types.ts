@@ -1357,6 +1357,99 @@ export type Database = {
         }
         Relationships: []
       }
+      media_assets: {
+        Row: {
+          ai_caption: string | null
+          ai_tags: Json | null
+          captured_on: string | null
+          content_hash: string | null
+          description: string | null
+          duration_sec: number | null
+          exif: Json | null
+          ext: string | null
+          file_mtime: string | null
+          filename: string
+          first_seen_at: string
+          full_path: string
+          height: number | null
+          id: string
+          location_kind: string | null
+          media_type: string
+          reachable_from: string | null
+          rel_path: string | null
+          size_bytes: number | null
+          source_root: string
+          status: string
+          status_note: string | null
+          suggested_output: string | null
+          thumbnail_path: string | null
+          updated_at: string
+          venture: string | null
+          venue: string | null
+          width: number | null
+        }
+        Insert: {
+          ai_caption?: string | null
+          ai_tags?: Json | null
+          captured_on?: string | null
+          content_hash?: string | null
+          description?: string | null
+          duration_sec?: number | null
+          exif?: Json | null
+          ext?: string | null
+          file_mtime?: string | null
+          filename: string
+          first_seen_at?: string
+          full_path: string
+          height?: number | null
+          id?: string
+          location_kind?: string | null
+          media_type?: string
+          reachable_from?: string | null
+          rel_path?: string | null
+          size_bytes?: number | null
+          source_root: string
+          status?: string
+          status_note?: string | null
+          suggested_output?: string | null
+          thumbnail_path?: string | null
+          updated_at?: string
+          venture?: string | null
+          venue?: string | null
+          width?: number | null
+        }
+        Update: {
+          ai_caption?: string | null
+          ai_tags?: Json | null
+          captured_on?: string | null
+          content_hash?: string | null
+          description?: string | null
+          duration_sec?: number | null
+          exif?: Json | null
+          ext?: string | null
+          file_mtime?: string | null
+          filename?: string
+          first_seen_at?: string
+          full_path?: string
+          height?: number | null
+          id?: string
+          location_kind?: string | null
+          media_type?: string
+          reachable_from?: string | null
+          rel_path?: string | null
+          size_bytes?: number | null
+          source_root?: string
+          status?: string
+          status_note?: string | null
+          suggested_output?: string | null
+          thumbnail_path?: string | null
+          updated_at?: string
+          venture?: string | null
+          venue?: string | null
+          width?: number | null
+        }
+        Relationships: []
+      }
       monday_calendar_sources: {
         Row: {
           board_id: string
