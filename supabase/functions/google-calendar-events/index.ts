@@ -39,6 +39,59 @@ async function ensureFreshToken(supabase: any, row: any): Promise<string> {
   return refreshed.access_token;
 }
 
+// ── open-slot finder for auto-scheduled SMART tasks ────────────────────────
+// US-East offset for a date (EDT most of the year, EST in deep winter). Good
+// enough for Baltimore; freeBusy is the source of truth for conflicts.
+function etOffset(dateStr: string): string {
+  const m = parseInt(dateStr.slice(5, 7), 10);
+  return m >= 4 && m <= 10 ? "-04:00" : "-05:00";
+}
+
+// First open `slotMin`-minute window on `dateStr`, preferring mid-afternoon
+// (13:00–17:30) then late-morning (10:00–11:30), always skipping the 12–1 lunch
+// hour, within 10:00–18:00. null if the mid-day band is busy (caller falls back
+// to all-day so nothing is lost).
+async function findOpenSlot(
+  token: string,
+  dateStr: string,
+  slotMin: number,
+  tz: string,
+): Promise<{ start: string; end: string } | null> {
+  const off = etOffset(dateStr);
+  let busy: [number, number][] = [];
+  try {
+    const fb = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        timeMin: `${dateStr}T00:00:00${off}`,
+        timeMax: `${dateStr}T23:59:59${off}`,
+        timeZone: tz,
+        items: [{ id: "primary" }],
+      }),
+    });
+    const j = await fb.json();
+    busy = ((j.calendars?.primary?.busy as { start: string; end: string }[]) || []).map(
+      (b) => [Date.parse(b.start), Date.parse(b.end)] as [number, number],
+    );
+  } catch {
+    /* no busy info → treat the day as free */
+  }
+  const cands: number[] = [];
+  for (let h = 13; h < 18; h++) for (const mm of [0, 30]) cands.push(h * 60 + mm); // afternoon first
+  for (let h = 10; h < 12; h++) for (const mm of [0, 30]) cands.push(h * 60 + mm); // then late morning
+  for (const startMin of cands) {
+    const endMin = startMin + slotMin;
+    if (endMin > 18 * 60) continue;
+    const p = (n: number) => String(n).padStart(2, "0");
+    const startIso = `${dateStr}T${p(Math.floor(startMin / 60))}:${p(startMin % 60)}:00${off}`;
+    const endIso = `${dateStr}T${p(Math.floor(endMin / 60))}:${p(endMin % 60)}:00${off}`;
+    const s = Date.parse(startIso), e = Date.parse(endIso);
+    if (!busy.some(([bs, be]) => s < be && e > bs)) return { start: startIso, end: endIso };
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -79,6 +132,28 @@ Deno.serve(async (req) => {
         : tokenRows[0];
       const token = await ensureFreshToken(supabase, row);
 
+      // Build the start/end. findSlot → auto-pick an open mid-day 30-min block
+      // (Josh's rule for sub-hour tasks); else honor allDay / explicit times.
+      const tz = body.timeZone || "America/New_York";
+      let startField: Record<string, string>;
+      let endField: Record<string, string>;
+      if (body.findSlot && body.date) {
+        const slot = await findOpenSlot(token, body.date, body.slotMinutes || 30, tz);
+        if (slot) {
+          startField = { dateTime: slot.start, timeZone: tz };
+          endField = { dateTime: slot.end, timeZone: tz };
+        } else {
+          startField = { date: body.date }; // mid-day full → all-day pin, nothing lost
+          endField = { date: body.date };
+        }
+      } else if (body.allDay) {
+        startField = { date: body.start.slice(0, 10) };
+        endField = { date: body.end.slice(0, 10) };
+      } else {
+        startField = { dateTime: body.start, timeZone: tz };
+        endField = { dateTime: body.end, timeZone: tz };
+      }
+
       const createRes = await fetch(
         "https://www.googleapis.com/calendar/v3/calendars/primary/events",
         {
@@ -91,12 +166,8 @@ Deno.serve(async (req) => {
             summary: body.summary,
             description: body.description || "",
             location: body.location || "",
-            start: body.allDay
-              ? { date: body.start.slice(0, 10) }
-              : { dateTime: body.start, timeZone: body.timeZone || "America/New_York" },
-            end: body.allDay
-              ? { date: body.end.slice(0, 10) }
-              : { dateTime: body.end, timeZone: body.timeZone || "America/New_York" },
+            start: startField,
+            end: endField,
           }),
         },
       );

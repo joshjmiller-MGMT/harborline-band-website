@@ -218,6 +218,24 @@ type GcalAttemptResult =
   | { ok: true; eventId: string; htmlLink: string }
   | { ok: false; status: "no_due_date" | "no_account" | "failed"; error?: string };
 
+// Route SMART calendar events to Josh's MANAGEMENT calendar (his central hub),
+// not the first-connected (BSE) account. joshmillermanagement@ is connected +
+// calendar-write-scoped (verified 2026-07-05).
+const MGMT_CALENDAR_EMAIL = "joshmillermanagement@gmail.com";
+
+// Rough effort → minutes so we can apply Josh's "<1hr = 30-min mid-day block" rule.
+function effortMinutes(effort: string | null | undefined): number | null {
+  if (!effort) return null;
+  const s = effort.toLowerCase();
+  const hr = s.match(/([\d.]+)\s*(hours?|hrs?|h)\b/);
+  if (hr) return Math.round(parseFloat(hr[1]) * 60);
+  const min = s.match(/([\d.]+)\s*(minutes?|mins?|m)\b/);
+  if (min) return Math.round(parseFloat(min[1]));
+  if (/half\s*hour|30\s*min/.test(s)) return 30;
+  if (/quick|trivial|small/.test(s)) return 15;
+  return null;
+}
+
 async function createGcalEvent(
   smart: SmartRewriteResult,
   row: QueueRow,
@@ -243,22 +261,33 @@ async function createGcalEvent(
     .filter(Boolean)
     .join("\n");
 
-  let resp: Response;
-  try {
-    resp = await fetch(`${FUNCTIONS_BASE}/google-calendar-events?action=create`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+  // Sub-hour tasks → a 30-min timed block in an open mid-day slot; larger tasks
+  // stay all-day. Everything lands on the management calendar.
+  const mins = effortMinutes(smart.effort);
+  const subHour = mins !== null && mins < 60;
+  const createBody = subHour
+    ? {
         summary: smart.revised_title,
         description,
-        start: startIso,
-        end: endIso,
-        allDay: true,
-      }),
-    });
+        findSlot: true,
+        date: smart.due_date,
+        slotMinutes: 30,
+        timeZone: "America/New_York",
+      }
+    : { summary: smart.revised_title, description, start: startIso, end: endIso, allDay: true };
+  let resp: Response;
+  try {
+    resp = await fetch(
+      `${FUNCTIONS_BASE}/google-calendar-events?action=create&account=${encodeURIComponent(MGMT_CALENDAR_EMAIL)}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(createBody),
+      },
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { ok: false, status: "failed", error: `fetch_threw: ${msg}` };
