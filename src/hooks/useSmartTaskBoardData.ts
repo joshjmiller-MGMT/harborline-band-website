@@ -46,6 +46,7 @@ export type SmartTaskRow = {
   google_calendar_html_link: string | null;
   board_bucket: string | null;
   board_venture: string | null;
+  recurring_followup: boolean;
   created_at: string;
 };
 
@@ -113,7 +114,7 @@ export function useSmartTaskBoardData(): SmartTaskBoardData {
       const { data, error } = await supabase
         .from("smart_task_enrichments")
         .select(
-          "id, raw_input, revised_title, definition_of_done, measure, blockers, effort, due_date, trello_card_id, trello_card_url, google_calendar_event_id, google_calendar_html_link, board_bucket, board_venture, created_at",
+          "id, raw_input, revised_title, definition_of_done, measure, blockers, effort, due_date, trello_card_id, trello_card_url, google_calendar_event_id, google_calendar_html_link, board_bucket, board_venture, recurring_followup, created_at",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
