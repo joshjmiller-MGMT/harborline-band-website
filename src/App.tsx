@@ -20,6 +20,7 @@ import SongListPage from "./pages/SongList";
 import WhereWePerformPage from "./pages/WhereWePerform";
 
 // Lazy: SEO landing pages (occasions / ensembles / locations / venues / quote / schedule)
+const EPKPage = lazy(() => import("./pages/EPK"));
 const WeddingsPage = lazy(() => import("./pages/services/Weddings"));
 const CorporatePage = lazy(() => import("./pages/services/Corporate"));
 const GalasPage = lazy(() => import("./pages/services/Galas"));
@@ -108,6 +109,8 @@ const App = () => (
                 <Route path="/songs" element={<SongListPage />} />
                 <Route path="/where-we-perform" element={<WhereWePerformPage />} />
                 <Route path="/request-a-quote" element={<RequestQuotePage />} />
+                <Route path="/epk" element={<EPKPage />} />
+                <Route path="/press" element={<EPKPage />} />
 
                 {/* Occasion Routes */}
                 <Route path="/weddings" element={<WeddingsPage />} />

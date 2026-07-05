@@ -12,6 +12,7 @@ const routes = [
   { path: "/", priority: "1.0" },
 
   { path: "/about", priority: "0.8" },
+  { path: "/epk", priority: "0.8" },
   { path: "/faq", priority: "0.8" },
   { path: "/songs", priority: "0.8" },
   { path: "/where-we-perform", priority: "0.8" },
