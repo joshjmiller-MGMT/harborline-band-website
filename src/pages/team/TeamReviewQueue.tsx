@@ -39,7 +39,8 @@ type ItemType =
   | "brand_voice"
   | "visual_review"
   | "decision"
-  | "choice";
+  | "choice"
+  | "smartify-context";
 
 // One tappable answer on a multiple-choice escalation. `recommended` flags the
 // branch's suggested default (the one mirrored in assumed_default).
@@ -93,6 +94,7 @@ const TYPE_LABELS: Record<ItemType, string> = {
   visual_review: "Visual",
   decision: "Decision",
   choice: "Choice",
+  "smartify-context": "Add context",
 };
 
 const PRIORITY_RANK: Record<string, number> = { high: 0, normal: 1, low: 2 };
@@ -228,6 +230,18 @@ export default function TeamReviewQueue() {
         })
         .eq("id", current.id);
       if (error) throw error;
+      // Review↔smartify loop: a resolved 'smartify-context' item flows back to the
+      // SMART board's Needs SMART bucket, now carrying Josh's context (skip rejects).
+      if (
+        current.item_type === "smartify-context" &&
+        note.trim() &&
+        note.trim() !== "Marked non-actionable"
+      ) {
+        await supabase.from("smart_task_enrichments").insert({
+          raw_input: `${current.title}\n\nContext from Josh: ${note.trim()}`,
+          board_bucket: "Needs SMART",
+        });
+      }
       toast({
         title: toastTitle,
         description: current.source_ref

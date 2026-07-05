@@ -1,4 +1,4 @@
-import { ExternalLink, Calendar, Target, Clock } from "lucide-react";
+import { ExternalLink, Calendar, Target, Clock, MessageSquarePlus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,11 +43,17 @@ export function ageFromCreatedAt(createdAt: string): number | null {
 export function SmartTaskCard({
   card,
   onChangeVenture,
+  onSendToReview,
 }: {
   card: SmartTaskCardData;
   onChangeVenture: (cardId: string, venture: SmartVenture) => void;
+  onSendToReview?: (card: SmartTaskCardData) => void;
 }) {
   const ventureChangeable = card.source === "smart";
+  // "Add context → Review" appears on cards that still need smartifying — the
+  // Trello inbox + the Needs SMART bucket. Sends the card to the review board so
+  // Josh can add context, which flows back to Needs SMART (review↔smartify loop).
+  const needsContext = card.source === "trello" || card.columnId === "Needs SMART";
 
   return (
     <div className="px-3 py-2.5 space-y-1.5">
@@ -149,6 +155,19 @@ export function SmartTaskCard({
           </span>
         )}
       </div>
+
+      {needsContext && onSendToReview && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onSendToReview(card);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 text-[10px] font-medium text-sky-400 hover:text-sky-300 hover:underline"
+        >
+          <MessageSquarePlus className="w-3 h-3" /> Add context → Review
+        </button>
+      )}
     </div>
   );
 }

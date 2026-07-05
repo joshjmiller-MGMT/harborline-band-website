@@ -183,6 +183,25 @@ export default function TeamSmartTasks() {
     [refreshSmartRows],
   );
 
+  // Review↔smartify loop: send a card that needs smartifying to the review board
+  // so Josh can add context. On resolve there, the context flows back to Needs SMART.
+  const handleSendToReview = useCallback(async (card: SmartTaskCardData) => {
+    try {
+      const { error } = await supabase.from("waiting_on_josh").insert({
+        title: card.title,
+        prompt: "Add what you know about this so it can be turned into a SMART action.",
+        item_type: "smartify-context",
+        priority: "normal",
+        source_session: "smart-board",
+        source_ref: card.source === "trello" ? card.externalUrl : card.id,
+      });
+      if (error) throw error;
+      toast.success("Sent to Review for context");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to send to review");
+    }
+  }, []);
+
   const cardsByVenture = useMemo(() => {
     const map = new Map<SmartVenture, SmartTaskCardData[]>();
     for (const v of SMART_VENTURES) map.set(v, []);
@@ -404,6 +423,7 @@ export default function TeamSmartTasks() {
                         <SmartTaskCard
                           card={card}
                           onChangeVenture={handleChangeVenture}
+                          onSendToReview={handleSendToReview}
                         />
                       )}
                       emptyColumnLabel="—"
