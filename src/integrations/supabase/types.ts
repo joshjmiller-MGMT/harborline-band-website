@@ -589,6 +589,99 @@ export type Database = {
         }
         Relationships: []
       }
+      chart_index_backup_20260705: {
+        Row: {
+          composer: string | null
+          created_at: string | null
+          difficulty: string | null
+          drive_account_email: string | null
+          drive_id: string | null
+          drive_uploaded_at: string | null
+          drive_web_view_link: string | null
+          duration: string | null
+          file_size: number | null
+          filename: string | null
+          folder_path: string | null
+          genre: string | null
+          id: string | null
+          ireal_pro: string[] | null
+          key_signature: string | null
+          keywords: string | null
+          last_synced_at: string | null
+          metadata_csv_row: Json | null
+          rating: string | null
+          reference: string | null
+          search_tsv: unknown
+          setlists: string[] | null
+          sha256: string | null
+          storage_path: string | null
+          tags: string[] | null
+          time_signature: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          composer?: string | null
+          created_at?: string | null
+          difficulty?: string | null
+          drive_account_email?: string | null
+          drive_id?: string | null
+          drive_uploaded_at?: string | null
+          drive_web_view_link?: string | null
+          duration?: string | null
+          file_size?: number | null
+          filename?: string | null
+          folder_path?: string | null
+          genre?: string | null
+          id?: string | null
+          ireal_pro?: string[] | null
+          key_signature?: string | null
+          keywords?: string | null
+          last_synced_at?: string | null
+          metadata_csv_row?: Json | null
+          rating?: string | null
+          reference?: string | null
+          search_tsv?: unknown
+          setlists?: string[] | null
+          sha256?: string | null
+          storage_path?: string | null
+          tags?: string[] | null
+          time_signature?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          composer?: string | null
+          created_at?: string | null
+          difficulty?: string | null
+          drive_account_email?: string | null
+          drive_id?: string | null
+          drive_uploaded_at?: string | null
+          drive_web_view_link?: string | null
+          duration?: string | null
+          file_size?: number | null
+          filename?: string | null
+          folder_path?: string | null
+          genre?: string | null
+          id?: string | null
+          ireal_pro?: string[] | null
+          key_signature?: string | null
+          keywords?: string | null
+          last_synced_at?: string | null
+          metadata_csv_row?: Json | null
+          rating?: string | null
+          reference?: string | null
+          search_tsv?: unknown
+          setlists?: string[] | null
+          sha256?: string | null
+          storage_path?: string | null
+          tags?: string[] | null
+          time_signature?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       claude_action_queue: {
         Row: {
           card_desc: string | null
@@ -1938,11 +2031,14 @@ export type Database = {
           definition_of_done: string | null
           due_date: string | null
           effort: string | null
+          followup_cadence_days: number | null
+          followup_last_surfaced_at: string | null
           google_calendar_event_id: string | null
           google_calendar_html_link: string | null
           id: string
           measure: string | null
           raw_input: string
+          recurring_followup: boolean
           revised_title: string | null
           trello_card_id: string | null
           trello_card_url: string | null
@@ -1955,11 +2051,14 @@ export type Database = {
           definition_of_done?: string | null
           due_date?: string | null
           effort?: string | null
+          followup_cadence_days?: number | null
+          followup_last_surfaced_at?: string | null
           google_calendar_event_id?: string | null
           google_calendar_html_link?: string | null
           id?: string
           measure?: string | null
           raw_input: string
+          recurring_followup?: boolean
           revised_title?: string | null
           trello_card_id?: string | null
           trello_card_url?: string | null
@@ -1972,11 +2071,14 @@ export type Database = {
           definition_of_done?: string | null
           due_date?: string | null
           effort?: string | null
+          followup_cadence_days?: number | null
+          followup_last_surfaced_at?: string | null
           google_calendar_event_id?: string | null
           google_calendar_html_link?: string | null
           id?: string
           measure?: string | null
           raw_input?: string
+          recurring_followup?: boolean
           revised_title?: string | null
           trello_card_id?: string | null
           trello_card_url?: string | null
@@ -2707,6 +2809,7 @@ export type Database = {
       trigger_claude_action_smartify: { Args: never; Returns: number }
       trigger_integration_health_check: { Args: never; Returns: number }
       trigger_posting_times_refresh: { Args: never; Returns: number }
+      trigger_smart_followup_repin: { Args: never; Returns: number }
       trigger_trello_mark_done: { Args: { p_card_id: string }; Returns: number }
       trigger_trello_route: { Args: never; Returns: number }
     }

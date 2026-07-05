@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
-import { Sparkles, RefreshCw, ChevronDown } from "lucide-react";
+import { Sparkles, RefreshCw, ChevronDown, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -88,6 +88,7 @@ export default function TeamSmartTasks() {
         measure: null,
         effort: card.desc ? card.desc.slice(0, 80) : null,
         externalUrl: card.url,
+        recurringFollowup: false,
       });
     }
 
@@ -105,6 +106,7 @@ export default function TeamSmartTasks() {
         measure: row.measure,
         effort: row.effort,
         externalUrl: row.google_calendar_html_link || row.trello_card_url,
+        recurringFollowup: !!row.recurring_followup,
       });
     }
 
@@ -202,6 +204,34 @@ export default function TeamSmartTasks() {
     }
   }, []);
 
+  // Recurring follow-up: keep re-surfacing this task on the management calendar
+  // (daily, via smart-followup-repin) until Josh moves it to Done. The "Caitlyn"
+  // pattern — a follow-up that shouldn't silently vanish after one attempt.
+  const handleToggleFollowup = useCallback(
+    async (cardId: string, next: boolean) => {
+      try {
+        const { error } = await supabase.functions.invoke("update-smart-task-bucket", {
+          body: { id: cardId, recurring_followup: next },
+        });
+        if (error) throw error;
+        await refreshSmartRows();
+        toast.success(next ? "Following up until done" : "Follow-up stopped");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to update follow-up");
+        await refreshSmartRows();
+      }
+    },
+    [refreshSmartRows],
+  );
+
+  // The "Follow-ups" view — every recurring follow-up in one place, across
+  // ventures, so nothing being chased slips out of sight.
+  const followupCards = useMemo(
+    () => cards.filter((c) => c.recurringFollowup),
+    [cards],
+  );
+  const [followupsOpen, setFollowupsOpen] = useState(true);
+
   const cardsByVenture = useMemo(() => {
     const map = new Map<SmartVenture, SmartTaskCardData[]>();
     for (const v of SMART_VENTURES) map.set(v, []);
@@ -297,6 +327,51 @@ export default function TeamSmartTasks() {
         <div className="mb-6">
           <SmartTaskWidget />
         </div>
+
+        {/* Follow-ups view — every recurring follow-up in one place. These
+            re-surface on the management calendar daily (7:30am) until moved to
+            Done, so nothing being chased slips out of sight. */}
+        {followupCards.length > 0 && (
+          <Collapsible
+            open={followupsOpen}
+            onOpenChange={setFollowupsOpen}
+            className="mb-6 rounded-lg border border-indigo-500/30 bg-indigo-500/5"
+          >
+            <CollapsibleTrigger asChild>
+              <button className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-indigo-500/10 rounded-lg text-left">
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <Repeat className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span className="font-display text-lg tracking-wide-custom text-foreground">
+                    Follow-ups
+                  </span>
+                  <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                    {followupCards.length} re-surfacing until done
+                  </span>
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-muted-foreground transition-transform ${followupsOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="px-3 pb-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+                {followupCards.map((card) => (
+                  <div
+                    key={card.id}
+                    className="rounded-lg border border-border bg-card/60"
+                  >
+                    <SmartTaskCard
+                      card={card}
+                      onChangeVenture={handleChangeVenture}
+                      onSendToReview={handleSendToReview}
+                      onToggleFollowup={handleToggleFollowup}
+                    />
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
         {/* At-a-glance overview — venture × bucket counts. Click a row to jump. */}
         <div className="mb-6 overflow-x-auto rounded-lg border border-border bg-card/40">
@@ -424,6 +499,7 @@ export default function TeamSmartTasks() {
                           card={card}
                           onChangeVenture={handleChangeVenture}
                           onSendToReview={handleSendToReview}
+                          onToggleFollowup={handleToggleFollowup}
                         />
                       )}
                       emptyColumnLabel="—"

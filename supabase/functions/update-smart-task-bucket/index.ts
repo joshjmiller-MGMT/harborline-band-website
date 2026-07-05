@@ -42,7 +42,12 @@ Deno.serve(async (req) => {
     });
   }
 
-  let body: { id?: string; bucket?: string | null; venture?: string | null };
+  let body: {
+    id?: string;
+    bucket?: string | null;
+    venture?: string | null;
+    recurring_followup?: boolean;
+  };
   try {
     body = await req.json();
   } catch {
@@ -60,7 +65,11 @@ Deno.serve(async (req) => {
     });
   }
 
-  const patch: Record<string, string | null> = {};
+  const patch: Record<string, string | null | boolean> = {};
+
+  if (body.recurring_followup !== undefined) {
+    patch.recurring_followup = Boolean(body.recurring_followup);
+  }
 
   if (body.bucket !== undefined) {
     const bucket = body.bucket === null ? null : String(body.bucket).trim();
@@ -92,7 +101,7 @@ Deno.serve(async (req) => {
 
   if (Object.keys(patch).length === 0) {
     return new Response(
-      JSON.stringify({ error: "no_fields", detail: "send at least one of bucket or venture" }),
+      JSON.stringify({ error: "no_fields", detail: "send at least one of bucket, venture, or recurring_followup" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

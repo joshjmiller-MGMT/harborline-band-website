@@ -1,4 +1,4 @@
-import { ExternalLink, Calendar, Target, Clock, MessageSquarePlus } from "lucide-react";
+import { ExternalLink, Calendar, Target, Clock, MessageSquarePlus, Repeat } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +25,7 @@ export type SmartTaskCardData = {
   measure: string | null;
   effort: string | null;
   externalUrl: string | null;
+  recurringFollowup: boolean;
 };
 
 function daysSince(dateStr: string | null): number | null {
@@ -44,16 +45,22 @@ export function SmartTaskCard({
   card,
   onChangeVenture,
   onSendToReview,
+  onToggleFollowup,
 }: {
   card: SmartTaskCardData;
   onChangeVenture: (cardId: string, venture: SmartVenture) => void;
   onSendToReview?: (card: SmartTaskCardData) => void;
+  onToggleFollowup?: (cardId: string, next: boolean) => void;
 }) {
   const ventureChangeable = card.source === "smart";
   // "Add context → Review" appears on cards that still need smartifying — the
   // Trello inbox + the Needs SMART bucket. Sends the card to the review board so
   // Josh can add context, which flows back to Needs SMART (review↔smartify loop).
   const needsContext = card.source === "trello" || card.columnId === "Needs SMART";
+  // "Follow up until done" applies to SMART tasks that live on the calendar
+  // (Active). Toggling it on tells the daily repin job to keep re-surfacing the
+  // task until Josh moves it to Done (the "Caitlyn" pattern).
+  const followupToggleable = card.source === "smart" && card.columnId === "Active";
 
   return (
     <div className="px-3 py-2.5 space-y-1.5">
@@ -123,6 +130,14 @@ export function SmartTaskCard({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+        {card.recurringFollowup && (
+          <span
+            className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-400"
+            title="Recurring follow-up — re-surfaces daily until moved to Done"
+          >
+            <Repeat className="w-3 h-3" /> follow-up
+          </span>
+        )}
       </div>
 
       {(card.definitionOfDone || card.measure || card.effort) && (
@@ -156,18 +171,42 @@ export function SmartTaskCard({
         )}
       </div>
 
-      {needsContext && onSendToReview && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onSendToReview(card);
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 text-[10px] font-medium text-sky-400 hover:text-sky-300 hover:underline"
-        >
-          <MessageSquarePlus className="w-3 h-3" /> Add context → Review
-        </button>
-      )}
+      <div className="flex items-center gap-3 flex-wrap">
+        {needsContext && onSendToReview && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSendToReview(card);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 text-[10px] font-medium text-sky-400 hover:text-sky-300 hover:underline"
+          >
+            <MessageSquarePlus className="w-3 h-3" /> Add context → Review
+          </button>
+        )}
+        {followupToggleable && onToggleFollowup && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFollowup(card.id, !card.recurringFollowup);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className={`inline-flex items-center gap-1 text-[10px] font-medium hover:underline ${
+              card.recurringFollowup
+                ? "text-indigo-400 hover:text-indigo-300"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            title={
+              card.recurringFollowup
+                ? "Stop re-surfacing this follow-up"
+                : "Keep re-surfacing daily until done"
+            }
+          >
+            <Repeat className="w-3 h-3" />{" "}
+            {card.recurringFollowup ? "Stop follow-up" : "Follow up until done"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -178,6 +178,63 @@ Deno.serve(async (req) => {
       });
     }
 
+    // POST update — PATCH an existing event's date/time. Used by
+    // smart-followup-repin to walk a recurring follow-up's block forward to an
+    // open slot on a new day (one event that moves, not a trail of stale ones).
+    // Same start-field logic as create: findSlot → open mid-day block, else
+    // allDay / explicit times.
+    if (req.method === "POST" && action === "update") {
+      const body = await req.json();
+      const eventId = body.eventId;
+      if (!eventId) throw new Error("update requires eventId");
+      const targetEmail = url.searchParams.get("account") || body.account;
+      const row = targetEmail
+        ? tokenRows.find((r: any) => r.account_email === targetEmail) || tokenRows[0]
+        : tokenRows[0];
+      const token = await ensureFreshToken(supabase, row);
+
+      const tz = body.timeZone || "America/New_York";
+      let startField: Record<string, string>;
+      let endField: Record<string, string>;
+      if (body.findSlot && body.date) {
+        const slot = await findOpenSlot(token, body.date, body.slotMinutes || 30, tz);
+        if (slot) {
+          startField = { dateTime: slot.start, timeZone: tz };
+          endField = { dateTime: slot.end, timeZone: tz };
+        } else {
+          startField = { date: body.date };
+          endField = { date: body.date };
+        }
+      } else if (body.allDay) {
+        startField = { date: body.start.slice(0, 10) };
+        endField = { date: body.end.slice(0, 10) };
+      } else {
+        startField = { dateTime: body.start, timeZone: tz };
+        endField = { dateTime: body.end, timeZone: tz };
+      }
+
+      const patchBody: Record<string, unknown> = { start: startField, end: endField };
+      if (typeof body.summary === "string") patchBody.summary = body.summary;
+      if (typeof body.description === "string") patchBody.description = body.description;
+
+      const patchRes = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(patchBody),
+        },
+      );
+      const patched = await patchRes.json();
+      if (!patchRes.ok) throw new Error(`Update failed: ${JSON.stringify(patched)}`);
+      return new Response(JSON.stringify({ event: patched, account: row.account_email }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // List events: default = past 365 days through next 90 days. Wide past
     // window so the month-grid + 6-week views can scroll back roughly a year
     // without hitting blank cells. Callers can still narrow via ?timeMin=.
