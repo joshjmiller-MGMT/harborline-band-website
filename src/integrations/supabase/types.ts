@@ -1450,6 +1450,90 @@ export type Database = {
         }
         Relationships: []
       }
+      media_folders: {
+        Row: {
+          audio_count: number
+          context_md: string | null
+          date_max: string | null
+          date_min: string | null
+          editor: string | null
+          event_date: string | null
+          event_name: string | null
+          file_count: number
+          first_seen_at: string
+          folder_class: string
+          folder_path: string
+          id: string
+          image_count: number
+          name: string
+          sidecar_path: string | null
+          sidecar_written_at: string | null
+          source_root: string | null
+          sphere: string | null
+          status: string
+          status_note: string | null
+          top_venture: string | null
+          total_bytes: number
+          updated_at: string
+          ventures: string[] | null
+          video_count: number
+        }
+        Insert: {
+          audio_count?: number
+          context_md?: string | null
+          date_max?: string | null
+          date_min?: string | null
+          editor?: string | null
+          event_date?: string | null
+          event_name?: string | null
+          file_count?: number
+          first_seen_at?: string
+          folder_class?: string
+          folder_path: string
+          id?: string
+          image_count?: number
+          name: string
+          sidecar_path?: string | null
+          sidecar_written_at?: string | null
+          source_root?: string | null
+          sphere?: string | null
+          status?: string
+          status_note?: string | null
+          top_venture?: string | null
+          total_bytes?: number
+          updated_at?: string
+          ventures?: string[] | null
+          video_count?: number
+        }
+        Update: {
+          audio_count?: number
+          context_md?: string | null
+          date_max?: string | null
+          date_min?: string | null
+          editor?: string | null
+          event_date?: string | null
+          event_name?: string | null
+          file_count?: number
+          first_seen_at?: string
+          folder_class?: string
+          folder_path?: string
+          id?: string
+          image_count?: number
+          name?: string
+          sidecar_path?: string | null
+          sidecar_written_at?: string | null
+          source_root?: string | null
+          sphere?: string | null
+          status?: string
+          status_note?: string | null
+          top_venture?: string | null
+          total_bytes?: number
+          updated_at?: string
+          ventures?: string[] | null
+          video_count?: number
+        }
+        Relationships: []
+      }
       monday_calendar_sources: {
         Row: {
           board_id: string
