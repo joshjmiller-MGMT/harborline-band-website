@@ -25,6 +25,10 @@ type MediaRow = {
   location_kind: string | null;
   status: string;
   status_note: string | null;
+  thumbnail_path: string | null;
+  ai_caption: string | null;
+  ai_tags: string[] | null;
+  suggested_output: string | null;
 };
 
 const VENTURES = ["Harborline", "Economy", "JMJ", "Personal", "BSE", "Brand Studio", "Unknown"];
@@ -105,7 +109,7 @@ export default function TeamMedia() {
       let query = supabase
         .from("media_assets")
         .select(
-          "id, filename, ext, media_type, venture, venue, description, captured_on, size_bytes, full_path, location_kind, status, status_note",
+          "id, filename, ext, media_type, venture, venue, description, captured_on, size_bytes, full_path, location_kind, status, status_note, thumbnail_path, ai_caption, ai_tags, suggested_output",
           { count: "exact" },
         )
         .order("captured_on", { ascending: false, nullsFirst: false })
@@ -113,7 +117,7 @@ export default function TeamMedia() {
       if (venture) query = query.eq("venture", venture);
       if (type) query = query.eq("media_type", type);
       if (status) query = query.eq("status", status);
-      if (qDebounced) query = query.or(`filename.ilike.%${qDebounced}%,description.ilike.%${qDebounced}%`);
+      if (qDebounced) query = query.or(`filename.ilike.%${qDebounced}%,description.ilike.%${qDebounced}%,ai_caption.ilike.%${qDebounced}%`);
       const { data, error, count } = await query;
       if (error) throw error;
       setRows((data ?? []) as MediaRow[]);
@@ -230,10 +234,24 @@ export default function TeamMedia() {
           <div className="divide-y divide-border/50">
             {rows.map((r) => (
               <div key={r.id} className="px-3 py-2 flex items-center gap-3 hover:bg-muted/20">
-                <TypeIcon t={r.media_type} />
+                {r.thumbnail_path ? (
+                  <img src={r.thumbnail_path} alt="" loading="lazy" className="w-12 h-12 rounded object-cover bg-muted shrink-0" />
+                ) : (
+                  <span className="w-12 h-12 rounded bg-muted/40 flex items-center justify-center shrink-0"><TypeIcon t={r.media_type} /></span>
+                )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-foreground truncate">{r.description || r.filename}</p>
-                  <p className="text-[11px] text-muted-foreground truncate flex items-center gap-2">
+                  <p className="text-sm text-foreground truncate">{r.ai_caption || r.description || r.filename}</p>
+                  {r.ai_tags && r.ai_tags.length > 0 && (
+                    <p className="flex items-center gap-1 flex-wrap mt-0.5">
+                      {r.suggested_output && r.suggested_output !== "none" && (
+                        <span className="text-[9px] uppercase tracking-wider px-1 py-0.5 rounded bg-primary/15 text-primary">{r.suggested_output}</span>
+                      )}
+                      {r.ai_tags.slice(0, 5).map((t) => (
+                        <span key={t} className="text-[10px] px-1 py-0.5 rounded bg-muted/60 text-muted-foreground">{t}</span>
+                      ))}
+                    </p>
+                  )}
+                  <p className="text-[11px] text-muted-foreground truncate flex items-center gap-2 mt-0.5">
                     <span className="inline-flex items-center gap-1">
                       <span className={`w-2 h-2 rounded-full ${VENTURE_DOT[r.venture || "Unknown"] ?? "bg-muted-foreground"}`} />
                       {r.venture || "Unknown"}
@@ -414,7 +432,14 @@ function FoldersView() {
                   {f.context_md || "(no context generated)"}
                 </pre>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] text-muted-foreground">Pipeline:</span>
+                  <button
+                    onClick={() => { void updateFolder(f.id, { status: "enrich_requested" }); toast.success("Queued for enrichment (thumbnails + AI tags)"); }}
+                    className="text-[10px] px-1.5 py-0.5 rounded border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+                    title="Generate thumbnails + EXIF + AI captions for this folder on the next enrich run"
+                  >
+                    ⚡ enrich media
+                  </button>
+                  <span className="text-[11px] text-muted-foreground ml-1">Pipeline:</span>
                   {FOLDER_STATUSES.map((s) => (
                     <button
                       key={s}
