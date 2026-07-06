@@ -158,6 +158,7 @@ def main():
     limit = 25
     folder = venture = None
     drain = "--drain-requests" in args
+    force = "--force" in args
     for i,a in enumerate(args):
         if a=="--limit" and i+1<len(args): limit=int(args[i+1])
         if a=="--folder" and i+1<len(args): folder=args[i+1]
@@ -174,7 +175,9 @@ def main():
         folders = [r["folder_path"] for r in rows]
         print(f"drain: {len(folders)} folders flagged", flush=True)
 
-    where = ["thumbnail_path is null", "media_type in ('image','video')"]
+    where = ["media_type in ('image','video')"]
+    if not force:
+        where.append("thumbnail_path is null")
     if venture: where.append(f"venture={sql_str(venture)}")
     if folders is not None:
         if not folders: print("nothing to enrich"); return
