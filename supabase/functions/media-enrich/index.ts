@@ -46,14 +46,29 @@ function b64ToBytes(b64: string): Uint8Array {
   return out;
 }
 
+// Roster context so Claude can tell the ventures apart from the visual + filename.
+const ROSTER = `Josh Miller's ventures (pick the best-fit "venture"):
+- Harborline: his polished event/wedding/corporate cover band — formal/outdoor-tent/ballroom settings, dressed-up, dance-floor crowds, often with horns/multiple vocalists.
+- Economy: his original electronic-rock band ("The Economy") — clubs, festivals, DIY/amphitheater stages, edgier/artier vibe, original-music energy.
+- JMJ: Josh Miller Jazz — small jazz combo in restaurants/lounges/cocktail settings.
+- BSE: Baltimore Sound Entertainment (his agency's OTHER acts/DJs/operations) — use when it's clearly another act or backline/production, not his own bands.
+- Brand Studio: logos, brand graphics, design assets.
+- Personal: personal/non-gig (family, travel, incidental) or knowledge-capture screenshots.
+Use "Unknown" only if there is genuinely no signal.`;
+
 const TOOL = {
   name: "record_media",
-  description: "Record the caption, tags, and best output lane for a piece of media in a working musician/bandleader's content library.",
+  description: "Record the caption, tags, venture, and best output lane for a piece of media in a working musician/bandleader's content library.",
   input_schema: {
     type: "object",
     properties: {
       caption: { type: "string", description: "One concise sentence describing what this is (subjects, setting, action)." },
       tags: { type: "array", items: { type: "string" }, description: "3-8 lowercase keywords: subjects, setting, mood, and what it's usable for." },
+      venture: {
+        type: "string",
+        enum: ["Harborline", "Economy", "JMJ", "BSE", "Brand Studio", "Personal", "Unknown"],
+        description: "Which venture this media belongs to, inferred from the visual + filename + folder. See the roster in the prompt.",
+      },
       suggested_output: {
         type: "string",
         enum: ["economy-social", "harborline-epk", "harborline-social", "joshjmiller", "youtube", "knowledge", "archive", "none"],
@@ -61,15 +76,16 @@ const TOOL = {
       },
       quality: { type: "string", enum: ["hero", "good", "usable", "reject"], description: "Rough usability for content." },
     },
-    required: ["caption", "tags", "suggested_output"],
+    required: ["caption", "tags", "venture", "suggested_output"],
   },
 };
 
 async function captionWithClaude(thumbB64: string, ctx: { filename: string; venture: string | null; folder: string | null }) {
   const prompt =
-    `This media is from ${ctx.venture || "an unknown"} venture, file "${ctx.filename}"` +
-    (ctx.folder ? `, in folder "${ctx.folder}".` : ".") +
-    ` Caption it for the content library and record it via the tool.`;
+    `${ROSTER}\n\nThis media's file is "${ctx.filename}"` +
+    (ctx.folder ? `, in folder "${ctx.folder}"` : "") +
+    (ctx.venture && ctx.venture !== "Personal" ? `; a rough prior guess of the venture is "${ctx.venture}" (override if the image says otherwise).` : ".") +
+    ` Caption it for the content library, infer the venture, and record everything via the tool.`;
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
@@ -91,7 +107,7 @@ async function captionWithClaude(thumbB64: string, ctx: { filename: string; vent
   const data = await resp.json();
   const tool = (data.content || []).find((c: { type: string }) => c.type === "tool_use");
   if (!tool) throw new Error("no_tool_use_in_response");
-  return tool.input as { caption: string; tags: string[]; suggested_output: string; quality?: string };
+  return tool.input as { caption: string; tags: string[]; venture?: string; suggested_output: string; quality?: string };
 }
 
 Deno.serve(async (req) => {
@@ -111,6 +127,9 @@ Deno.serve(async (req) => {
     const { asset_id, thumb_b64, filename, venture, folder } = body as {
       asset_id: string; thumb_b64: string; filename: string; venture?: string; folder?: string;
     };
+    // Only let the AI correct a weak default; a path/folder-derived venture is
+    // usually reliable, so keep it unless it was the "Personal"/"Unknown" fallback.
+    const ventureIsWeak = !venture || venture === "Personal" || venture === "Unknown";
     if (!asset_id || !thumb_b64) return json(400, { error: "asset_id and thumb_b64 required" });
 
     // 1) store thumbnail
@@ -122,7 +141,7 @@ Deno.serve(async (req) => {
     const thumbnail_url = pub.publicUrl;
 
     // 2) caption + tag
-    let ai: { caption: string; tags: string[]; suggested_output: string; quality?: string } | null = null;
+    let ai: { caption: string; tags: string[]; venture?: string; suggested_output: string; quality?: string } | null = null;
     let aiError: string | null = null;
     try {
       ai = await captionWithClaude(thumb_b64, { filename, venture: venture ?? null, folder: folder ?? null });
@@ -137,6 +156,7 @@ Deno.serve(async (req) => {
       patch.ai_tags = ai.tags;
       patch.suggested_output = ai.suggested_output;
       if (ai.quality) patch.status_note = `quality:${ai.quality}`;
+      if (ventureIsWeak && ai.venture && ai.venture !== "Unknown") patch.venture = ai.venture;
     }
     const { error: upErr } = await supabase.from("media_assets").update(patch).eq("id", asset_id);
     if (upErr) throw new Error(`row_update: ${upErr.message}`);
