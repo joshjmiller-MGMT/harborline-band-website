@@ -34,6 +34,7 @@ type MediaRow = {
 const VENTURES = ["Harborline", "Economy", "JMJ", "Personal", "BSE", "Brand Studio", "Unknown"];
 const TYPES = ["image", "video", "audio", "other"];
 const STATUSES = ["new", "keep", "routed", "archive", "junk"];
+const LANES = ["harborline-epk", "harborline-social", "economy-social", "joshjmiller", "youtube", "knowledge", "archive", "none"];
 const PAGE = 200;
 
 const VENTURE_DOT: Record<string, string> = {
@@ -74,6 +75,7 @@ export default function TeamMedia() {
   const [venture, setVenture] = useState<string>("");
   const [type, setType] = useState<string>("");
   const [status, setStatus] = useState<string>("");
+  const [lane, setLane] = useState<string>("");
   const [q, setQ] = useState<string>("");
   const [qDebounced, setQDebounced] = useState<string>("");
   const [page, setPage] = useState(0);
@@ -85,7 +87,7 @@ export default function TeamMedia() {
   }, [q]);
 
   // Reset to first page when filters change.
-  useEffect(() => { setPage(0); }, [venture, type, status, qDebounced]);
+  useEffect(() => { setPage(0); }, [venture, type, status, lane, qDebounced]);
 
   const loadSummary = useCallback(async () => {
     // Per-venture rollup for the header. Small table; fetch venture+size and reduce.
@@ -117,6 +119,7 @@ export default function TeamMedia() {
       if (venture) query = query.eq("venture", venture);
       if (type) query = query.eq("media_type", type);
       if (status) query = query.eq("status", status);
+      if (lane) query = query.eq("suggested_output", lane);
       if (qDebounced) query = query.or(`filename.ilike.%${qDebounced}%,description.ilike.%${qDebounced}%,ai_caption.ilike.%${qDebounced}%`);
       const { data, error, count } = await query;
       if (error) throw error;
@@ -128,7 +131,7 @@ export default function TeamMedia() {
     } finally {
       setLoading(false);
     }
-  }, [venture, type, status, qDebounced, page]);
+  }, [venture, type, status, lane, qDebounced, page]);
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { void loadSummary(); }, [loadSummary]);
@@ -218,6 +221,10 @@ export default function TeamMedia() {
           <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border border-border bg-card px-2 text-sm">
             <option value="">All statuses</option>
             {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={lane} onChange={(e) => setLane(e.target.value)} className="h-9 rounded-md border border-border bg-card px-2 text-sm">
+            <option value="">All lanes</option>
+            {LANES.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
         </div>
 
@@ -344,28 +351,105 @@ const CLASS_STYLE: Record<string, string> = {
 };
 const FOLDER_STATUSES = ["catalogued", "organized", "ported", "editing", "scheduled", "done"];
 
+// The category framework — folders are grouped into these sections (in order),
+// so the library reviews as a structure, not a flat list. Events further split
+// by venture and sort newest-first.
+const CLASS_ORDER = ["event", "session", "reference", "knowledge", "mixed", "other"] as const;
+const CLASS_LABEL: Record<string, string> = {
+  event: "Events", session: "Sessions (audio)", reference: "Reference & assets",
+  knowledge: "Knowledge captures", mixed: "Mixed", other: "Uncategorized",
+};
+const CLASS_ACCENT: Record<string, string> = {
+  event: "text-sky-400", session: "text-amber-400", reference: "text-fuchsia-400",
+  knowledge: "text-emerald-400", mixed: "text-muted-foreground", other: "text-muted-foreground",
+};
+
+function FolderCard({ f, open, onOpenChange, updateFolder }: {
+  f: FolderRow; open: boolean; onOpenChange: (o: boolean) => void;
+  updateFolder: (id: string, patch: Partial<FolderRow>) => void;
+}) {
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange}>
+      <CollapsibleTrigger asChild>
+        <button className="w-full px-3 py-2 flex items-center gap-3 hover:bg-muted/20 text-left">
+          <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${CLASS_STYLE[f.folder_class] ?? CLASS_STYLE.other}`}>
+            {f.folder_class}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="text-sm text-foreground truncate block">{f.event_name || f.name}</span>
+            <span className="text-[11px] text-muted-foreground truncate block">
+              <span className="inline-flex items-center gap-1">
+                <span className={`w-2 h-2 rounded-full ${VENTURE_DOT[f.top_venture || "Unknown"] ?? "bg-muted-foreground"}`} />
+                {f.top_venture || "Unknown"}
+              </span>
+              {" · "}{f.file_count} files ({f.video_count}v/{f.image_count}p/{f.audio_count}a) · {humanSize(f.total_bytes)}
+              {f.event_date ? ` · ${f.event_date}` : f.date_min ? ` · ${f.date_min}` : ""}
+            </span>
+          </span>
+          <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground shrink-0">{f.status}</span>
+          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform shrink-0 ${open ? "rotate-180" : ""}`} />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="px-3 pb-3">
+        <pre className="text-[11px] text-muted-foreground whitespace-pre-wrap font-sans bg-background/40 rounded p-2.5 border border-border/50 overflow-x-auto">
+          {f.context_md || "(no context generated)"}
+        </pre>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => { void updateFolder(f.id, { status: "enrich_requested" }); toast.success("Queued for enrichment (thumbnails + AI tags)"); }}
+            className="text-[10px] px-1.5 py-0.5 rounded border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+            title="Generate thumbnails + EXIF + AI captions for this folder on the next enrich run"
+          >
+            ⚡ enrich media
+          </button>
+          <span className="text-[11px] text-muted-foreground ml-1">Pipeline:</span>
+          {FOLDER_STATUSES.map((s) => (
+            <button
+              key={s}
+              onClick={() => updateFolder(f.id, { status: s })}
+              className={`text-[10px] px-1.5 py-0.5 rounded border ${f.status === s ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/60"}`}
+            >
+              {s}
+            </button>
+          ))}
+          <Input
+            defaultValue={f.editor ?? ""}
+            onBlur={(e) => { if (e.target.value !== (f.editor ?? "")) void updateFolder(f.id, { editor: e.target.value || null }); }}
+            placeholder="editor…"
+            className="h-7 w-32 text-xs ml-auto"
+          />
+          <button
+            onClick={() => { void navigator.clipboard.writeText(f.folder_path); toast.success("Path copied"); }}
+            className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            <Copy className="w-3 h-3" /> path
+          </button>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 function FoldersView() {
   const [folders, setFolders] = useState<FolderRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [cls, setCls] = useState("");
   const [venture, setVenture] = useState("");
   const [q, setQ] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [closedSections, setClosedSections] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
     let query = supabase
       .from("media_folders")
       .select("id, folder_path, name, file_count, image_count, video_count, audio_count, total_bytes, date_min, date_max, top_venture, folder_class, sphere, event_name, event_date, context_md, status, editor")
-      .order("file_count", { ascending: false })
-      .limit(500);
-    if (cls) query = query.eq("folder_class", cls);
+      .limit(1000);
     if (venture) query = query.eq("top_venture", venture);
     if (q.trim()) query = query.ilike("name", `%${q.trim()}%`);
     const { data } = await query;
     setFolders((data ?? []) as FolderRow[]);
     setLoading(false);
-  }, [cls, venture, q]);
+  }, [venture, q]);
 
   useEffect(() => { const h = setTimeout(() => void load(), 200); return () => clearTimeout(h); }, [load]);
 
@@ -375,10 +459,32 @@ function FoldersView() {
     if (error) { toast.error("Failed to save"); void load(); }
   }, [load]);
 
-  const counts = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const f of folders) m.set(f.folder_class, (m.get(f.folder_class) ?? 0) + 1);
-    return m;
+  // Category framework: group by class; Events sub-group by venture (newest first).
+  const sections = useMemo(() => {
+    const byClass = new Map<string, FolderRow[]>();
+    for (const f of folders) {
+      const k = CLASS_ORDER.includes(f.folder_class as typeof CLASS_ORDER[number]) ? f.folder_class : "other";
+      (byClass.get(k) ?? byClass.set(k, []).get(k)!).push(f);
+    }
+    const dateKey = (f: FolderRow) => f.event_date || f.date_max || f.date_min || "";
+    return CLASS_ORDER.filter((c) => byClass.get(c)?.length).map((c) => {
+      const items = byClass.get(c)!;
+      const bytes = items.reduce((a, f) => a + (f.total_bytes ?? 0), 0);
+      let groups: { label: string | null; items: FolderRow[] }[];
+      if (c === "event") {
+        const byVenture = new Map<string, FolderRow[]>();
+        for (const f of items) {
+          const v = f.top_venture || "Unknown";
+          (byVenture.get(v) ?? byVenture.set(v, []).get(v)!).push(f);
+        }
+        groups = [...byVenture.entries()]
+          .sort((a, b) => b[1].length - a[1].length)
+          .map(([label, its]) => ({ label, items: its.sort((a, b) => dateKey(b).localeCompare(dateKey(a))) }));
+      } else {
+        groups = [{ label: null, items: items.sort((a, b) => (b.file_count) - (a.file_count)) }];
+      }
+      return { cls: c, count: items.length, bytes, groups };
+    });
   }, [folders]);
 
   return (
@@ -386,89 +492,61 @@ function FoldersView() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[220px]">
           <Search className="w-4 h-4 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search folder name…" className="pl-8 h-9" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search folder / event name…" className="pl-8 h-9" />
         </div>
-        <select value={cls} onChange={(e) => setCls(e.target.value)} className="h-9 rounded-md border border-border bg-card px-2 text-sm">
-          <option value="">All classes</option>
-          {["event", "session", "reference", "knowledge", "mixed", "other"].map((c) => (
-            <option key={c} value={c}>{c}{counts.get(c) ? ` (${counts.get(c)})` : ""}</option>
-          ))}
-        </select>
         <select value={venture} onChange={(e) => setVenture(e.target.value)} className="h-9 rounded-md border border-border bg-card px-2 text-sm">
           <option value="">All ventures</option>
           {VENTURES.map((v) => <option key={v} value={v}>{v}</option>)}
         </select>
       </div>
 
-      <div className="rounded-lg border border-border bg-card/40 overflow-hidden">
-        <div className="px-3 py-2 border-b border-border text-xs text-muted-foreground">
-          {loading ? "…" : `${folders.length} folders — each self-documents (mirrors its _FOLDER-CONTEXT.md)`}
-        </div>
-        <div className="divide-y divide-border/50">
-          {folders.map((f) => (
-            <Collapsible key={f.id} open={openId === f.id} onOpenChange={(o) => setOpenId(o ? f.id : null)}>
+      {loading && <p className="text-sm text-muted-foreground px-1 py-4">Loading…</p>}
+      {!loading && sections.length === 0 && (
+        <p className="px-3 py-8 text-center text-sm text-muted-foreground rounded-lg border border-border bg-card/40">No folders match.</p>
+      )}
+
+      <div className="space-y-3">
+        {sections.map((sec) => {
+          const open = !closedSections.has(sec.cls);
+          return (
+            <Collapsible
+              key={sec.cls}
+              open={open}
+              onOpenChange={() => setClosedSections((prev) => { const n = new Set(prev); n.has(sec.cls) ? n.delete(sec.cls) : n.add(sec.cls); return n; })}
+              className="rounded-lg border border-border bg-card/40 overflow-hidden"
+            >
               <CollapsibleTrigger asChild>
-                <button className="w-full px-3 py-2 flex items-center gap-3 hover:bg-muted/20 text-left">
-                  <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${CLASS_STYLE[f.folder_class] ?? CLASS_STYLE.other}`}>
-                    {f.folder_class}
+                <button className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/30 text-left">
+                  <span className={`font-display text-lg tracking-wide-custom ${CLASS_ACCENT[sec.cls]}`}>
+                    {CLASS_LABEL[sec.cls]}
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="text-sm text-foreground truncate block">{f.name}</span>
-                    <span className="text-[11px] text-muted-foreground truncate block">
-                      <span className="inline-flex items-center gap-1">
-                        <span className={`w-2 h-2 rounded-full ${VENTURE_DOT[f.top_venture || "Unknown"] ?? "bg-muted-foreground"}`} />
-                        {f.top_venture || "Unknown"}
-                      </span>
-                      {" · "}{f.file_count} files ({f.video_count}v/{f.image_count}p/{f.audio_count}a) · {humanSize(f.total_bytes)}
-                      {f.event_date ? ` · ${f.event_date}` : f.date_min ? ` · ${f.date_min}` : ""}
-                    </span>
+                  <span className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                    {sec.count} {sec.count === 1 ? "folder" : "folders"} · {humanSize(sec.bytes)}
+                    <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
                   </span>
-                  <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground shrink-0">{f.status}</span>
-                  <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform shrink-0 ${openId === f.id ? "rotate-180" : ""}`} />
                 </button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="px-3 pb-3">
-                <pre className="text-[11px] text-muted-foreground whitespace-pre-wrap font-sans bg-background/40 rounded p-2.5 border border-border/50 overflow-x-auto">
-                  {f.context_md || "(no context generated)"}
-                </pre>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => { void updateFolder(f.id, { status: "enrich_requested" }); toast.success("Queued for enrichment (thumbnails + AI tags)"); }}
-                    className="text-[10px] px-1.5 py-0.5 rounded border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
-                    title="Generate thumbnails + EXIF + AI captions for this folder on the next enrich run"
-                  >
-                    ⚡ enrich media
-                  </button>
-                  <span className="text-[11px] text-muted-foreground ml-1">Pipeline:</span>
-                  {FOLDER_STATUSES.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => updateFolder(f.id, { status: s })}
-                      className={`text-[10px] px-1.5 py-0.5 rounded border ${f.status === s ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/60"}`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                  <Input
-                    defaultValue={f.editor ?? ""}
-                    onBlur={(e) => { if (e.target.value !== (f.editor ?? "")) void updateFolder(f.id, { editor: e.target.value || null }); }}
-                    placeholder="editor…"
-                    className="h-7 w-32 text-xs ml-auto"
-                  />
-                  <button
-                    onClick={() => { void navigator.clipboard.writeText(f.folder_path); toast.success("Path copied"); }}
-                    className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground"
-                  >
-                    <Copy className="w-3 h-3" /> path
-                  </button>
-                </div>
+              <CollapsibleContent>
+                {sec.groups.map((g) => (
+                  <div key={g.label ?? "_"}>
+                    {g.label && (
+                      <div className="px-3 py-1.5 bg-muted/20 border-y border-border/50 flex items-center gap-1.5">
+                        <span className={`w-2 h-2 rounded-full ${VENTURE_DOT[g.label] ?? "bg-muted-foreground"}`} />
+                        <span className="text-xs font-medium text-foreground">{g.label}</span>
+                        <span className="text-[11px] text-muted-foreground">· {g.items.length}</span>
+                      </div>
+                    )}
+                    <div className="divide-y divide-border/50">
+                      {g.items.map((f) => (
+                        <FolderCard key={f.id} f={f} open={openId === f.id} onOpenChange={(o) => setOpenId(o ? f.id : null)} updateFolder={updateFolder} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </CollapsibleContent>
             </Collapsible>
-          ))}
-          {!loading && folders.length === 0 && (
-            <p className="px-3 py-8 text-center text-sm text-muted-foreground">No folders match.</p>
-          )}
-        </div>
+          );
+        })}
       </div>
     </div>
   );
