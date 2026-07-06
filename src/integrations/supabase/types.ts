@@ -2593,6 +2593,60 @@ export type Database = {
         }
         Relationships: []
       }
+      systems_registry: {
+        Row: {
+          backend_path: string | null
+          brain_ref: string | null
+          category: string
+          created_at: string
+          description: string | null
+          health: string | null
+          id: string
+          key: string
+          last_activity: string | null
+          name: string
+          pinned: boolean
+          security_note: string | null
+          sort_order: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          backend_path?: string | null
+          brain_ref?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          health?: string | null
+          id?: string
+          key: string
+          last_activity?: string | null
+          name: string
+          pinned?: boolean
+          security_note?: string | null
+          sort_order?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          backend_path?: string | null
+          brain_ref?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          health?: string | null
+          id?: string
+          key?: string
+          last_activity?: string | null
+          name?: string
+          pinned?: boolean
+          security_note?: string | null
+          sort_order?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       trello_bucket_routes: {
         Row: {
           action_handler: string

@@ -25,6 +25,7 @@ import {
   Wallet,
   Rocket,
   Send,
+  LayoutGrid,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -102,6 +103,7 @@ const megaMenus: MegaMenu[] = [marketingMenu, opsMenu, musicMenu, brandMenu];
 // Direct-link nav (no dropdown). Dashboard first, Review at the tail.
 const directLinks: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { name: "Dashboard", href: "/team/dashboard", icon: LayoutDashboard },
+  { name: "Systems", href: "/team/systems", icon: LayoutGrid },
   { name: "Review", href: "/team/review", icon: Inbox },
   { name: "Finances", href: "/team/finances", icon: Wallet },
 ];
