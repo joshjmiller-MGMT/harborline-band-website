@@ -1202,6 +1202,60 @@ export type Database = {
         }
         Relationships: []
       }
+      grants: {
+        Row: {
+          act: string | null
+          award_range: string | null
+          brain_ref: string | null
+          created_at: string
+          deadline: string | null
+          deadline_note: string | null
+          fit: string | null
+          id: string
+          materials_status: string | null
+          name: string
+          notes: string | null
+          sort_order: number
+          status: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          act?: string | null
+          award_range?: string | null
+          brain_ref?: string | null
+          created_at?: string
+          deadline?: string | null
+          deadline_note?: string | null
+          fit?: string | null
+          id?: string
+          materials_status?: string | null
+          name: string
+          notes?: string | null
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          act?: string | null
+          award_range?: string | null
+          brain_ref?: string | null
+          created_at?: string
+          deadline?: string | null
+          deadline_note?: string | null
+          fit?: string | null
+          id?: string
+          materials_status?: string | null
+          name?: string
+          notes?: string | null
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       instrument_classifier_rules: {
         Row: {
           active: boolean
