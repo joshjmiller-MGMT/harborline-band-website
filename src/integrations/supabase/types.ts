@@ -1411,6 +1411,69 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          budget: string | null
+          created_at: string
+          email: string | null
+          event_date: string | null
+          event_type: string | null
+          first_seen: string | null
+          genres: string | null
+          gmail_thread_id: string | null
+          guest_count: string | null
+          id: string
+          name: string | null
+          notes: string | null
+          phone: string | null
+          source: string
+          status: string
+          updated_at: string
+          venture: string | null
+          venue: string | null
+        }
+        Insert: {
+          budget?: string | null
+          created_at?: string
+          email?: string | null
+          event_date?: string | null
+          event_type?: string | null
+          first_seen?: string | null
+          genres?: string | null
+          gmail_thread_id?: string | null
+          guest_count?: string | null
+          id?: string
+          name?: string | null
+          notes?: string | null
+          phone?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          venture?: string | null
+          venue?: string | null
+        }
+        Update: {
+          budget?: string | null
+          created_at?: string
+          email?: string | null
+          event_date?: string | null
+          event_type?: string | null
+          first_seen?: string | null
+          genres?: string | null
+          gmail_thread_id?: string | null
+          guest_count?: string | null
+          id?: string
+          name?: string | null
+          notes?: string | null
+          phone?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          venture?: string | null
+          venue?: string | null
+        }
+        Relationships: []
+      }
       media_assets: {
         Row: {
           ai_caption: string | null
