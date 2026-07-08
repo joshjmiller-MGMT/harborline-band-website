@@ -108,11 +108,11 @@ const runHub: MegaMenu = {
 
 const megaMenus: MegaMenu[] = [bookHub, createHub, musicHub, runHub];
 
-// Command surfaces (direct links): the daily loop — Dashboard → SMART → Review.
+// Command surfaces (direct links): the daily loop — Dashboard → Review (which
+// now contains the SMART board at top; review + smartify = ONE surface).
 const directLinks: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { name: "Dashboard", href: "/team/dashboard", icon: LayoutDashboard },
-  { name: "SMART", href: "/team/smart-tasks", icon: Sparkles },
-  { name: "Review", href: "/team/review", icon: Inbox },
+  { name: "Review · SMART", href: "/team/review", icon: Sparkles },
   { name: "Systems", href: "/team/systems", icon: LayoutGrid },
 ];
 

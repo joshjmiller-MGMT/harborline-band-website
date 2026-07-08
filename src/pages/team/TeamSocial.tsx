@@ -6,6 +6,15 @@ import ContentIngestLogWidget from "@/components/social/ContentIngestLogWidget";
 import ContentSmartGoalsWidget from "@/components/social/ContentSmartGoalsWidget";
 import { Share2 } from "lucide-react";
 
+// Social page IA (Josh as social-media-manager, 2026-07-07):
+// 1. Social Media MANAGER is the main hub → TOP. Its Ideas→Drafting→Scheduled→
+//    Posted pipeline is the working surface; ingested/feed ideas belong in its
+//    Ideas column.
+// 2. Content queue (Des handoff) + posting times = supporting tools, below.
+// 3. Content SMART goals stay, but they're big goals — break down ONE AT A TIME
+//    through smartification (via /team/review), not all at once.
+// 4. Content ingest log = raw intake at the bottom; actionable items flow
+//    through review/smartification, not worked from here.
 export default function TeamSocial() {
   return (
     <TeamLayout>
@@ -15,15 +24,22 @@ export default function TeamSocial() {
             <Share2 className="w-7 h-7 text-primary" /> Social
           </h1>
           <p className="text-muted-foreground mt-2">
-            Workflow tracker, posting times, and social media manager.
+            The manager is the hub — ideas land in its Ideas column, everything else supports it.
           </p>
         </div>
 
         <div className="space-y-6">
-          <SocialContentQueueManager />
+          {/* 1 — THE HUB */}
           <SocialManagerWidget />
+
+          {/* 2 — supporting tools */}
+          <SocialContentQueueManager />
           <PostingTimesWidget />
+
+          {/* 3 — big goals (break down one at a time via review/smartify) */}
           <ContentSmartGoalsWidget />
+
+          {/* 4 — raw intake; actionable items flow to review/smartification */}
           <ContentIngestLogWidget />
         </div>
       </div>

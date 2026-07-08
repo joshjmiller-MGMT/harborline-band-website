@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import TeamLayout from "@/components/TeamLayout";
+import SmartBoardPanel from "@/pages/team/TeamSmartTasks";
 import { Helmet } from "react-helmet-async";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -391,6 +392,12 @@ export default function TeamReviewQueue() {
         <title>Review Queue — Harborline</title>
       </Helmet>
       <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Review + smartification are ONE surface (Josh, 2026-07-07): the SMART
+            board lives at the top of the review page. Understand → smartify → act. */}
+        <div className="mb-8 pb-6 border-b border-border">
+          <SmartBoardPanel />
+        </div>
+
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Inbox className="w-5 h-5 text-primary" />
