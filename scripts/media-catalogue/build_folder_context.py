@@ -24,6 +24,23 @@ PRO_VENTURES = {"Harborline", "Economy", "JMJ", "BSE", "Brand Studio"}
 REFERENCE_WORDS = {"asset","assets","logo","logos","brand","branding","epk","press",
                    "graphics","design","designs","headshot","headshots","artwork","template","templates"}
 DATE_IN_NAME = re.compile(r"(20\d{2})[-_. ]?(\d{2})[-_. ]?(\d{2})")
+# Josh's rule (2026-07-07): EVENT folders START with a date and are followed by
+# something gig-like (venue/occasion). Date-prefixed folders that aren't gig-like
+# (e.g. a song name — "Peg", "Incandescence") are SHOOTs (content/shoot folders).
+DATE_PREFIX = re.compile(r"^\s*(20\d{2})[-_. ]?(\d{2})[-_. ]?(\d{2})")
+GIG_WORDS = {"wedding","club","bar","pub","gala","corporate","party","fest","festival",
+             "hall","ballroom","golf","brewery","winery","lounge","hotel","inn","church",
+             "bash","birthday","anniversary","mitzvah","ceremony","reception","event",
+             "gig","show","concert","private","country club","overlook","manor","mansion",
+             "farm","estate","yacht","pier","tavern","grill","cafe","restaurant"}
+
+def source_of(path):
+    p = path.replace("\\", "/")
+    if p.startswith("C:/Users/joshj/Dropbox"): return "Dropbox"
+    m = re.match(r"^([A-Z]):/", p)
+    if m and m.group(1) in "GHIJ": return f"Google Drive ({m.group(1)}:)"
+    if m and m.group(1) == "C": return "Local (C:)"
+    return "Other"
 
 def load_token():
     with open(os.path.expanduser("~/.config/harborline/supabase.env"), encoding="utf-8") as f:
@@ -54,8 +71,14 @@ def classify(name, counts, audio, image, video, has_date, screenshot_ratio):
         return "reference"
     if audio > (image + video):
         return "session"
-    if has_date or (counts >= 4):
-        return "event"
+    # date-PREFIXED folders split: gig-like → event, otherwise → shoot (song
+    # names etc). Josh will call out misfiles; non-date folders are never
+    # event/shoot — they stay untagged (other/mixed) rather than mislabeled.
+    if DATE_PREFIX.match(name):
+        rest = DATE_PREFIX.sub("", name).lower()
+        if any(w in rest for w in GIG_WORDS):
+            return "event"
+        return "shoot"
     if image and screenshot_ratio >= 0.6:
         return "knowledge"
     if sum(1 for x in (image, video, audio) if x) > 1:
@@ -66,6 +89,8 @@ def summarize(cls, name, top_venture, dmin, dmax, img, vid, aud):
     span = dmin if dmin == dmax else f"{dmin} → {dmax}"
     if cls == "event":
         return f"Event media from **{name}** ({span}), {top_venture}. {vid} video / {img} photo. Candidate for the professional pipeline (tag → port → edit → schedule)."
+    if cls == "shoot":
+        return f"Content/shoot folder — **{name}** ({span}), {top_venture}. {vid} video / {img} photo. Dated shoot (song/content), not a gig."
     if cls == "session":
         return f"Audio session/rehearsal takes — **{name}** ({span}), {top_venture}. {aud} recordings."
     if cls == "reference":
@@ -75,6 +100,8 @@ def summarize(cls, name, top_venture, dmin, dmax, img, vid, aud):
     return f"Mixed media — **{name}** ({span}), {top_venture}."
 
 def next_actions(cls, sphere, top_venture):
+    if cls == "shoot":
+        return "→ content shoot: review takes → pick selects → edit → schedule/post."
     if cls == "event" and sphere == "professional":
         return f"→ tag as event → port to `Dropbox/Professional/{top_venture}/new/` → assign editor → schedule."
     if cls == "event":
@@ -180,15 +207,15 @@ def main():
         screenshot_ratio = pngs/len(items) if items else 0
         cls = classify(name, len(items), aud, img, vid, has_date, screenshot_ratio)
         sphere = "professional" if top_venture in PRO_VENTURES else ("personal" if top_venture=="Personal" else "unknown")
-        event_name = name if cls=="event" else None
+        event_name = name if cls in ("event","shoot") else None
         event_date = None
-        if cls=="event":
-            m = DATE_IN_NAME.search(name)
+        if cls in ("event","shoot"):
+            m = DATE_PREFIX.match(name)
             event_date = f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else dmin
         samples = sorted(i["filename"] for i in items)[:8]
 
         f = {
-            "folder_path": fpath, "name": name, "source_root": None,
+            "folder_path": fpath, "name": name, "source_root": source_of(fpath),
             "file_count": len(items), "image_count": img, "video_count": vid, "audio_count": aud,
             "total_bytes": total, "date_min": dmin, "date_max": dmax,
             "top_venture": top_venture, "ventures": ventures,

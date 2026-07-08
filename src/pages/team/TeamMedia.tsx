@@ -324,6 +324,7 @@ type FolderRow = {
   id: string;
   folder_path: string;
   name: string;
+  source_root: string | null;
   file_count: number;
   image_count: number;
   video_count: number;
@@ -343,6 +344,7 @@ type FolderRow = {
 
 const CLASS_STYLE: Record<string, string> = {
   event: "bg-sky-500/15 text-sky-400",
+  shoot: "bg-violet-500/15 text-violet-400",
   session: "bg-amber-500/15 text-amber-400",
   reference: "bg-fuchsia-500/15 text-fuchsia-400",
   knowledge: "bg-emerald-500/15 text-emerald-400",
@@ -351,18 +353,16 @@ const CLASS_STYLE: Record<string, string> = {
 };
 const FOLDER_STATUSES = ["catalogued", "organized", "ported", "editing", "scheduled", "done"];
 
-// The category framework — folders are grouped into these sections (in order),
-// so the library reviews as a structure, not a flat list. Events further split
-// by venture and sort newest-first.
-const CLASS_ORDER = ["event", "session", "reference", "knowledge", "mixed", "other"] as const;
-const CLASS_LABEL: Record<string, string> = {
-  event: "Events", session: "Sessions (audio)", reference: "Reference & assets",
-  knowledge: "Knowledge captures", mixed: "Mixed", other: "Uncategorized",
-};
-const CLASS_ACCENT: Record<string, string> = {
-  event: "text-sky-400", session: "text-amber-400", reference: "text-fuchsia-400",
-  knowledge: "text-emerald-400", mixed: "text-muted-foreground", other: "text-muted-foreground",
-};
+// Folders view v2 (Josh, 2026-07-07): show the SOURCE (Google Drive / Dropbox…)
+// and the folder structure all the way down — no auto-splitting by class.
+// Classes + media types are FILTERS. event = date-prefixed + gig-like;
+// shoot = date-prefixed content (song name etc); untagged stays untagged.
+const CLASS_FILTERS = ["event", "shoot", "session", "reference", "knowledge", "mixed", "other"] as const;
+const TYPE_FILTERS = [
+  { key: "video", label: "Video" },
+  { key: "image", label: "Photos" },
+  { key: "audio", label: "Audio" },
+] as const;
 
 function FolderCard({ f, open, onOpenChange, updateFolder }: {
   f: FolderRow; open: boolean; onOpenChange: (o: boolean) => void;
@@ -430,19 +430,27 @@ function FolderCard({ f, open, onOpenChange, updateFolder }: {
   );
 }
 
+// Rel-path (minus the drive/source prefix) → breadcrumb + depth for the tree.
+function relParts(path: string): string[] {
+  const p = path.replace(/\\/g, "/").replace(/^C:\/Users\/joshj\/Dropbox\/?/, "").replace(/^[A-Z]:\/?/, "");
+  return p.split("/").filter(Boolean);
+}
+
 function FoldersView() {
   const [folders, setFolders] = useState<FolderRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [venture, setVenture] = useState("");
   const [q, setQ] = useState("");
+  const [clsFilter, setClsFilter] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>("");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [closedSections, setClosedSections] = useState<Set<string>>(new Set());
+  const [closedSources, setClosedSources] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
     let query = supabase
       .from("media_folders")
-      .select("id, folder_path, name, file_count, image_count, video_count, audio_count, total_bytes, date_min, date_max, top_venture, folder_class, sphere, event_name, event_date, context_md, status, editor")
+      .select("id, folder_path, name, source_root, file_count, image_count, video_count, audio_count, total_bytes, date_min, date_max, top_venture, folder_class, sphere, event_name, event_date, context_md, status, editor")
       .limit(1000);
     if (venture) query = query.eq("top_venture", venture);
     if (q.trim()) query = query.ilike("name", `%${q.trim()}%`);
@@ -459,40 +467,29 @@ function FoldersView() {
     if (error) { toast.error("Failed to save"); void load(); }
   }, [load]);
 
-  // Category framework: group by class; Events sub-group by venture (newest first).
-  const sections = useMemo(() => {
-    const byClass = new Map<string, FolderRow[]>();
-    for (const f of folders) {
-      const k = CLASS_ORDER.includes(f.folder_class as typeof CLASS_ORDER[number]) ? f.folder_class : "other";
-      (byClass.get(k) ?? byClass.set(k, []).get(k)!).push(f);
+  // Filters (class + media type), then group by SOURCE and sort by full path —
+  // the folder structure reads all the way down from each source.
+  const bySource = useMemo(() => {
+    let v = folders;
+    if (clsFilter) v = v.filter((f) => (f.folder_class || "other") === clsFilter);
+    if (typeFilter === "video") v = v.filter((f) => f.video_count > 0);
+    if (typeFilter === "image") v = v.filter((f) => f.image_count > 0);
+    if (typeFilter === "audio") v = v.filter((f) => f.audio_count > 0);
+    const m = new Map<string, FolderRow[]>();
+    for (const f of v) {
+      const s = f.source_root || "Other";
+      (m.get(s) ?? m.set(s, []).get(s)!).push(f);
     }
-    const dateKey = (f: FolderRow) => f.event_date || f.date_max || f.date_min || "";
-    return CLASS_ORDER.filter((c) => byClass.get(c)?.length).map((c) => {
-      const items = byClass.get(c)!;
-      const bytes = items.reduce((a, f) => a + (f.total_bytes ?? 0), 0);
-      let groups: { label: string | null; items: FolderRow[] }[];
-      if (c === "event") {
-        const byVenture = new Map<string, FolderRow[]>();
-        for (const f of items) {
-          const v = f.top_venture || "Unknown";
-          (byVenture.get(v) ?? byVenture.set(v, []).get(v)!).push(f);
-        }
-        groups = [...byVenture.entries()]
-          .sort((a, b) => b[1].length - a[1].length)
-          .map(([label, its]) => ({ label, items: its.sort((a, b) => dateKey(b).localeCompare(dateKey(a))) }));
-      } else {
-        groups = [{ label: null, items: items.sort((a, b) => (b.file_count) - (a.file_count)) }];
-      }
-      return { cls: c, count: items.length, bytes, groups };
-    });
-  }, [folders]);
+    for (const arr of m.values()) arr.sort((a, b) => a.folder_path.localeCompare(b.folder_path));
+    return [...m.entries()].sort((a, b) => b[1].length - a[1].length);
+  }, [folders, clsFilter, typeFilter]);
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[220px]">
           <Search className="w-4 h-4 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search folder / event name…" className="pl-8 h-9" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search folder name…" className="pl-8 h-9" />
         </div>
         <select value={venture} onChange={(e) => setVenture(e.target.value)} className="h-9 rounded-md border border-border bg-card px-2 text-sm">
           <option value="">All ventures</option>
@@ -500,49 +497,63 @@ function FoldersView() {
         </select>
       </div>
 
+      {/* Filter chips: media type + class. No auto-sections — just filters. */}
+      <div className="mb-4 flex flex-wrap items-center gap-1.5">
+        {TYPE_FILTERS.map((t) => (
+          <button key={t.key} onClick={() => setTypeFilter(typeFilter === t.key ? "" : t.key)}
+            className={`text-xs px-2 py-1 rounded border ${typeFilter === t.key ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/40"}`}>
+            {t.label}
+          </button>
+        ))}
+        <span className="w-px h-4 bg-border mx-1" />
+        {CLASS_FILTERS.map((c) => (
+          <button key={c} onClick={() => setClsFilter(clsFilter === c ? "" : c)}
+            className={`text-xs px-2 py-1 rounded border capitalize ${clsFilter === c ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/40"}`}>
+            {c}
+          </button>
+        ))}
+      </div>
+
       {loading && <p className="text-sm text-muted-foreground px-1 py-4">Loading…</p>}
-      {!loading && sections.length === 0 && (
+      {!loading && bySource.length === 0 && (
         <p className="px-3 py-8 text-center text-sm text-muted-foreground rounded-lg border border-border bg-card/40">No folders match.</p>
       )}
 
       <div className="space-y-3">
-        {sections.map((sec) => {
-          const open = !closedSections.has(sec.cls);
+        {bySource.map(([source, items]) => {
+          const open = !closedSources.has(source);
+          const bytes = items.reduce((a, f) => a + (f.total_bytes ?? 0), 0);
           return (
-            <Collapsible
-              key={sec.cls}
-              open={open}
-              onOpenChange={() => setClosedSections((prev) => { const n = new Set(prev); n.has(sec.cls) ? n.delete(sec.cls) : n.add(sec.cls); return n; })}
-              className="rounded-lg border border-border bg-card/40 overflow-hidden"
-            >
+            <Collapsible key={source} open={open}
+              onOpenChange={() => setClosedSources((prev) => { const n = new Set(prev); n.has(source) ? n.delete(source) : n.add(source); return n; })}
+              className="rounded-lg border border-border bg-card/40 overflow-hidden">
               <CollapsibleTrigger asChild>
                 <button className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/30 text-left">
-                  <span className={`font-display text-lg tracking-wide-custom ${CLASS_ACCENT[sec.cls]}`}>
-                    {CLASS_LABEL[sec.cls]}
+                  <span className="font-display text-lg tracking-wide-custom text-foreground flex items-center gap-2">
+                    <Folder className="w-4 h-4 text-primary" /> {source}
                   </span>
                   <span className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
-                    {sec.count} {sec.count === 1 ? "folder" : "folders"} · {humanSize(sec.bytes)}
+                    {items.length} folders · {humanSize(bytes)}
                     <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
                   </span>
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                {sec.groups.map((g) => (
-                  <div key={g.label ?? "_"}>
-                    {g.label && (
-                      <div className="px-3 py-1.5 bg-muted/20 border-y border-border/50 flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${VENTURE_DOT[g.label] ?? "bg-muted-foreground"}`} />
-                        <span className="text-xs font-medium text-foreground">{g.label}</span>
-                        <span className="text-[11px] text-muted-foreground">· {g.items.length}</span>
+                <div className="divide-y divide-border/40 border-t border-border/60">
+                  {items.map((f) => {
+                    const parts = relParts(f.folder_path);
+                    const depth = Math.min(parts.length - 1, 6);
+                    const crumbs = parts.slice(0, -1).join(" / ");
+                    return (
+                      <div key={f.id} style={{ paddingLeft: `${depth * 14}px` }}>
+                        {crumbs && (
+                          <p className="text-[10px] text-muted-foreground/60 px-3 pt-1 truncate">{crumbs} /</p>
+                        )}
+                        <FolderCard f={f} open={openId === f.id} onOpenChange={(o) => setOpenId(o ? f.id : null)} updateFolder={updateFolder} />
                       </div>
-                    )}
-                    <div className="divide-y divide-border/50">
-                      {g.items.map((f) => (
-                        <FolderCard key={f.id} f={f} open={openId === f.id} onOpenChange={(o) => setOpenId(o ? f.id : null)} updateFolder={updateFolder} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
               </CollapsibleContent>
             </Collapsible>
           );

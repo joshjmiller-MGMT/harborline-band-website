@@ -13,6 +13,8 @@ type FeedItem = {
   note: string | null;
   venture: string | null;
   consumed: boolean;
+  blurb: string | null;
+  link: string | null;
 };
 
 const KINDS: { key: string; label: string; icon: typeof Film; accent: string }[] = [
@@ -30,7 +32,7 @@ export default function TeamFeed() {
     setLoading(true);
     const { data, error } = await supabase
       .from("feed_items")
-      .select("id, kind, title, url, note, venture, consumed")
+      .select("id, kind, title, url, note, venture, consumed, blurb, link")
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
     setRows((data ?? []) as FeedItem[]);
@@ -81,34 +83,63 @@ export default function TeamFeed() {
           {KINDS.map(({ key, label, icon: Icon, accent }) => {
             const items = byKind.get(key) ?? [];
             if (items.length === 0) return null;
+            const asGrid = key === "watch"; // trailer-card grid for watchables
             return (
               <div key={key}>
                 <h2 className={`font-display text-lg tracking-wide-custom mb-2 flex items-center gap-2 ${accent}`}>
                   <Icon className="w-5 h-5" /> {label}
                   <span className="text-xs text-muted-foreground">({items.length})</span>
                 </h2>
-                <div className="rounded-lg border border-border bg-card/40 divide-y divide-border/50">
-                  {items.map((r) => (
-                    <div key={r.id} className={`px-3 py-2 flex items-center gap-3 ${r.consumed ? "opacity-50" : ""}`}>
-                      <button
-                        onClick={() => toggleConsumed(r.id, !r.consumed)}
-                        className={`w-5 h-5 rounded border shrink-0 flex items-center justify-center ${r.consumed ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "border-border hover:border-foreground"}`}
-                        title={r.consumed ? "Mark not done" : "Mark done"}
-                      >
-                        {r.consumed && <Check className="w-3 h-3" />}
-                      </button>
-                      <div className="min-w-0 flex-1">
-                        <p className={`text-sm text-foreground truncate ${r.consumed ? "line-through" : ""}`}>{r.title}</p>
-                        {r.note && <p className="text-[11px] text-muted-foreground truncate">{r.note}</p>}
+                {asGrid ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {items.map((r) => (
+                      <div key={r.id} className={`rounded-lg border border-border bg-card/40 p-3.5 flex flex-col ${r.consumed ? "opacity-50" : ""}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className={`text-sm font-medium text-foreground ${r.consumed ? "line-through" : ""}`}>{r.title}</p>
+                          <button
+                            onClick={() => toggleConsumed(r.id, !r.consumed)}
+                            className={`w-5 h-5 rounded border shrink-0 flex items-center justify-center ${r.consumed ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "border-border hover:border-foreground"}`}
+                            title={r.consumed ? "Mark not watched" : "Mark watched"}
+                          >
+                            {r.consumed && <Check className="w-3 h-3" />}
+                          </button>
+                        </div>
+                        {r.blurb && <p className="text-[11px] text-muted-foreground mt-1.5 flex-1">{r.blurb}</p>}
+                        {!r.blurb && r.note && <p className="text-[11px] text-muted-foreground mt-1.5 flex-1">{r.note}</p>}
+                        {(r.link || r.url) && (
+                          <a href={r.link || r.url || "#"} target="_blank" rel="noreferrer"
+                            className="mt-2.5 inline-flex items-center justify-center gap-1.5 text-xs font-medium rounded border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 px-2 py-1.5">
+                            ▶ Trailer / watch
+                          </a>
+                        )}
                       </div>
-                      {r.url && (
-                        <a href={r.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Open">
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-border bg-card/40 divide-y divide-border/50">
+                    {items.map((r) => (
+                      <div key={r.id} className={`px-3 py-2 flex items-center gap-3 ${r.consumed ? "opacity-50" : ""}`}>
+                        <button
+                          onClick={() => toggleConsumed(r.id, !r.consumed)}
+                          className={`w-5 h-5 rounded border shrink-0 flex items-center justify-center ${r.consumed ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "border-border hover:border-foreground"}`}
+                          title={r.consumed ? "Mark not done" : "Mark done"}
+                        >
+                          {r.consumed && <Check className="w-3 h-3" />}
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm text-foreground truncate ${r.consumed ? "line-through" : ""}`}>{r.title}</p>
+                          {(r.blurb || r.note) && <p className="text-[11px] text-muted-foreground truncate">{r.blurb || r.note}</p>}
+                        </div>
+                        {(r.link || r.url) && (
+                          <a href={r.link || r.url || "#"} target="_blank" rel="noreferrer"
+                            className={`shrink-0 text-xs inline-flex items-center gap-1 px-2 py-1 rounded border border-border hover:bg-muted/40 ${accent}`}>
+                            ▶ {key === "listen" ? "Listen" : "Open"}
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}

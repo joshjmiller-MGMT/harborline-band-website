@@ -1004,10 +1004,12 @@ export type Database = {
       }
       feed_items: {
         Row: {
+          blurb: string | null
           consumed: boolean
           created_at: string
           id: string
           kind: string
+          link: string | null
           note: string | null
           source: string
           title: string
@@ -1017,10 +1019,12 @@ export type Database = {
           venture: string | null
         }
         Insert: {
+          blurb?: string | null
           consumed?: boolean
           created_at?: string
           id?: string
           kind?: string
+          link?: string | null
           note?: string | null
           source?: string
           title: string
@@ -1030,10 +1034,12 @@ export type Database = {
           venture?: string | null
         }
         Update: {
+          blurb?: string | null
           consumed?: boolean
           created_at?: string
           id?: string
           kind?: string
+          link?: string | null
           note?: string | null
           source?: string
           title?: string
