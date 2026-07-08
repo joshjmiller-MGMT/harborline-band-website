@@ -741,6 +741,63 @@ export type Database = {
           },
         ]
       }
+      contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          followup: boolean
+          followup_note: string | null
+          id: string
+          name: string
+          notes: string | null
+          org: string | null
+          phone: string | null
+          role: string | null
+          sheet_synced: boolean
+          source: string
+          tags: string[] | null
+          trello_card_id: string | null
+          updated_at: string
+          venture: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          followup?: boolean
+          followup_note?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          org?: string | null
+          phone?: string | null
+          role?: string | null
+          sheet_synced?: boolean
+          source?: string
+          tags?: string[] | null
+          trello_card_id?: string | null
+          updated_at?: string
+          venture?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          followup?: boolean
+          followup_note?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          org?: string | null
+          phone?: string | null
+          role?: string | null
+          sheet_synced?: boolean
+          source?: string
+          tags?: string[] | null
+          trello_card_id?: string | null
+          updated_at?: string
+          venture?: string | null
+        }
+        Relationships: []
+      }
       content_ingest_log: {
         Row: {
           action: string | null
