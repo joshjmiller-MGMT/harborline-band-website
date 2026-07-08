@@ -66,9 +66,11 @@ const MAX_LIMIT = 50;
 // buckets + Contacts are intentionally excluded; Urgent is already handled by
 // smart-task-queue-drain via smart_task_queue). Lower-cased for case-insensitive
 // matching. PENDING JOSH CONFIRM (non-blocking waiting_on_josh) — tune freely.
+// Final routing (Josh spec 2026-07-07, smartify-canonical-and-routing-spec):
+// STAY-on-board buckets only. REMOVED: "to claude" + "website fixes" (Claude-
+// execution — their queue rows stay in claude_action_queue as Claude's work
+// list, NOT smartified) and "poc - f/u" (→ contacts hub).
 const SMARTIFY_LISTS = new Set<string>([
-  "to claude",
-  "website fixes",
   "harborline",
   "econ",
   "bse",
@@ -78,7 +80,7 @@ const SMARTIFY_LISTS = new Set<string>([
   "tasks random",
   "social / media / content",
   "other projects",
-  "poc - f/u",
+  "urgent",
 ]);
 
 // Canonical board vocab — mirror of src/components/board/smartTaskBuckets.ts

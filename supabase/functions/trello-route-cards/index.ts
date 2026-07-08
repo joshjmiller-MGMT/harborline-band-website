@@ -64,6 +64,11 @@ const ROUTED_LABEL_NAME = "✅ routed";
 const ROUTED_LABEL_COLOR = "blue";
 const DONE_LABEL_NAME = "✅ done by claude";
 const DONE_LABEL_COLOR = "purple";
+// Consent gate (Josh, 2026-07-07): the router once grabbed a card mid-typing
+// ("Calendar Fix"). Cards are ONLY routed after Josh applies the ready label —
+// no label, no routing. Ever.
+const READY_LABEL_NAME = "🟢 ready to route";
+const READY_LABEL_COLOR = "green";
 const CLAUDE_HANDLER = "route_to_claude_action_queue";
 const SMART_HANDLER = "route_to_smart_board";
 const DISPATCH_HANDLERS = new Set([CLAUDE_HANDLER, SMART_HANDLER]);
@@ -226,6 +231,12 @@ function selectCandidates(
       (l: TrelloLabel) => l.name === ROUTED_LABEL_NAME,
     );
     if (hasRoutedLabel) continue;
+    // Consent gate: only cards Josh has explicitly marked ready get routed.
+    // Prevents the router racing a card he's still writing.
+    const isReady = (card.labels || []).some(
+      (l: TrelloLabel) => l.name === READY_LABEL_NAME,
+    );
+    if (!isReady) continue;
     out.push({ card, listName, route });
   }
   return out;
