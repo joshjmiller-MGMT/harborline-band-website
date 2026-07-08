@@ -63,6 +63,7 @@ const marketingMenu: MegaMenu = {
     { name: "Grants", href: "/team/grants", icon: Landmark, description: "Grant & funding opportunities — deadlines, fit, status (JSJA, MSAC…)" },
     { name: "Outreach", href: "/team/outreach", icon: Send, description: "Proactive targets — venues, festivals, radio, playlists, press, collabs" },
     { name: "Leads", href: "/team/leads", icon: Inbox, description: "Booking inquiries across all sources — status-tracked" },
+    { name: "Contacts", href: "/team/contacts", icon: Users, description: "Central contact hub — mirror of the JJMM sheet; follow-up flags" },
     { name: "Lead Pipeline", href: "/team/booking-pipeline", icon: Kanban, description: "Scrum board — drag leads across buckets" },
     { name: "Booking", href: "/team/booking", icon: Phone, description: "Lead intake & venue tracker" },
     { name: "Social", href: "/team/social", icon: Share2, description: "Posting times, content queue, handoff to Des" },
