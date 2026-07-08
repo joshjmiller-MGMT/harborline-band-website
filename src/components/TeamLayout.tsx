@@ -52,67 +52,99 @@ type MegaMenu = {
   items: NavItem[];
 };
 
-// Nav grouping: Marketing / Ops / Music / Brand (Josh-approved 2026-06-21, Legion-3's
-// recommended mapping; Josh renamed the "Events" group → "Ops"). Supersedes the prior
-// Pipeline / Ops / Brand & People / Music structure.
-const marketingMenu: MegaMenu = {
-  label: "Marketing",
-  icon: Megaphone,
+// Nav = 4 WORKFLOW HUBS (Book / Create / Music / Run) + 4 command surfaces
+// (Dashboard, SMART, Review, Systems). IA consolidation 2026-07-07: pages are
+// grouped by workflow adjacency, and every page in a hub renders a persistent
+// HubTabs bar — one click between adjacent tools, no menu-diving. ADD-ergonomic:
+// fewer top-level choices, consistent stages toward actionability.
+const bookHub: MegaMenu = {
+  label: "Book",
+  icon: Phone,
   items: [
-    { name: "Release Pipeline", href: "/team/release-pipeline", icon: Rocket, description: "JMJ EP waterfall — singles + per-release checklist" },
-    { name: "Grants", href: "/team/grants", icon: Landmark, description: "Grant & funding opportunities — deadlines, fit, status (JSJA, MSAC…)" },
-    { name: "Outreach", href: "/team/outreach", icon: Send, description: "Proactive targets — venues, festivals, radio, playlists, press, collabs" },
     { name: "Leads", href: "/team/leads", icon: Inbox, description: "Booking inquiries across all sources — status-tracked" },
-    { name: "Contacts", href: "/team/contacts", icon: Users, description: "Central contact hub — mirror of the JJMM sheet; follow-up flags" },
-    { name: "Lead Pipeline", href: "/team/booking-pipeline", icon: Kanban, description: "Scrum board — drag leads across buckets" },
+    { name: "Pipeline", href: "/team/booking-pipeline", icon: Kanban, description: "Scrum board — drag leads across buckets" },
     { name: "Booking", href: "/team/booking", icon: Phone, description: "Lead intake & venue tracker" },
-    { name: "Social", href: "/team/social", icon: Share2, description: "Posting times, content queue, handoff to Des" },
+    { name: "Outreach", href: "/team/outreach", icon: Send, description: "Proactive targets — venues, festivals, radio, playlists, press, collabs" },
+    { name: "Contacts", href: "/team/contacts", icon: Users, description: "Central contact hub — mirror of the JJMM sheet; follow-up flags" },
+    { name: "Bands", href: "/team/bands", icon: Handshake, description: "Relationship board — bands for show swaps & support slots" },
+    { name: "Grants", href: "/team/grants", icon: Landmark, description: "Grant & funding opportunities — deadlines, fit, status" },
   ],
 };
 
-const opsMenu: MegaMenu = {
-  label: "Ops",
-  icon: Calendar,
+const createHub: MegaMenu = {
+  label: "Create",
+  icon: Share2,
   items: [
-    { name: "Doc Generator", href: "/team/run-of-show", icon: FileText, description: "Run of show & client docs" },
-    { name: "Scheduler", href: "/team/scheduler", icon: Calendar, description: "Rehearsal & event scheduling" },
-    { name: "SMART Tasks", href: "/team/smart-tasks", icon: Sparkles, description: "Trello inbox → SMART → Active across ventures" },
+    { name: "Social", href: "/team/social", icon: Share2, description: "Posting times, content queue, handoff" },
+    { name: "Feed", href: "/team/feed", icon: Rss, description: "Watch / listen / learn — everything to consume" },
+    { name: "Media Library", href: "/team/media", icon: FolderOpen, description: "Catalogue of all photo/video/audio — filter, triage, route" },
+    { name: "Visual Assets", href: "/team/visual-assets", icon: Images, description: "Photos, logos, design files" },
+    { name: "Brand Studio", href: "/team/brand-studio", icon: Palette, description: "People, decisions, releases, EPKs" },
+    { name: "Releases", href: "/team/release-pipeline", icon: Rocket, description: "JMJ EP waterfall — singles + per-release checklist" },
   ],
 };
 
-const musicMenu: MegaMenu = {
+const musicHub: MegaMenu = {
   label: "Music",
   icon: Music,
   items: [
     { name: "Songs", href: "/team/songs", icon: Music, description: "Master song catalog with tags + keys" },
-    { name: "Setlist Builder", href: "/team/setlist-builder", icon: ListMusic, description: "Build & save setlists for any ensemble" },
+    { name: "Setlists", href: "/team/setlist-builder", icon: ListMusic, description: "Build & save setlists for any ensemble" },
     { name: "Practice", href: "/team/practice", icon: Activity, description: "Practice tracker + instrument hours" },
-    { name: "Feed", href: "/team/feed", icon: Rss, description: "Watch / listen / learn — everything to consume" },
-    { name: "Resources", href: "/team/resources", icon: FolderOpen, description: "Sheet music library — fake books, charts, parts, setlists" },
+    { name: "Charts", href: "/team/resources", icon: FolderOpen, description: "Sheet music library — fake books, charts, parts, setlists" },
   ],
 };
 
-const brandMenu: MegaMenu = {
-  label: "Brand",
-  icon: Palette,
+const runHub: MegaMenu = {
+  label: "Run",
+  icon: Calendar,
   items: [
-    { name: "Brand Studio", href: "/team/brand-studio", icon: Palette, description: "People, decisions, releases, EPKs" },
-    { name: "Visual Assets", href: "/team/visual-assets", icon: Images, description: "Photos, logos, design files" },
-    { name: "Media Library", href: "/team/media", icon: FolderOpen, description: "Catalogue of all photo/video/audio across drives — filter, triage, route" },
-    { name: "Members", href: "/team/members", icon: Users, description: "Band roster + team logins (tabbed — one page)" },
-    { name: "Bands", href: "/team/bands", icon: Handshake, description: "Relationship board — bands for show swaps & support slots, by Artist Fit" },
+    { name: "Scheduler", href: "/team/scheduler", icon: Calendar, description: "Rehearsal & event scheduling" },
+    { name: "Doc Generator", href: "/team/run-of-show", icon: FileText, description: "Run of show & client docs" },
+    { name: "Finances", href: "/team/finances", icon: Wallet, description: "Every purchase classified by venture + business-vs-personal" },
+    { name: "Members", href: "/team/members", icon: Users, description: "Band roster + team logins" },
   ],
 };
 
-const megaMenus: MegaMenu[] = [marketingMenu, opsMenu, musicMenu, brandMenu];
+const megaMenus: MegaMenu[] = [bookHub, createHub, musicHub, runHub];
 
-// Direct-link nav (no dropdown). Dashboard first, Review at the tail.
+// Command surfaces (direct links): the daily loop — Dashboard → SMART → Review.
 const directLinks: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { name: "Dashboard", href: "/team/dashboard", icon: LayoutDashboard },
-  { name: "Systems", href: "/team/systems", icon: LayoutGrid },
+  { name: "SMART", href: "/team/smart-tasks", icon: Sparkles },
   { name: "Review", href: "/team/review", icon: Inbox },
-  { name: "Finances", href: "/team/finances", icon: Wallet },
+  { name: "Systems", href: "/team/systems", icon: LayoutGrid },
 ];
+
+// HubTabs — the ergonomic core: when the current page belongs to a hub, render
+// its sibling tools as a persistent tab bar so switching is ONE click.
+function HubTabs({ pathname }: { pathname: string }) {
+  const hub = megaMenus.find((m) => m.items.some((i) => i.href === pathname));
+  if (!hub) return null;
+  return (
+    <div className="border-b border-border bg-card/30">
+      <div className="container mx-auto px-6 flex items-center gap-1 overflow-x-auto">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground pr-2 shrink-0">{hub.label}</span>
+        {hub.items.map((i) => {
+          const active = pathname === i.href;
+          return (
+            <Link
+              key={i.href}
+              to={i.href}
+              className={`px-3 py-2 text-sm whitespace-nowrap border-b-2 -mb-px transition-colors ${
+                active
+                  ? "border-primary text-primary font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {i.name}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function TeamLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, logout } = useTeamAuth();
@@ -240,6 +272,8 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
           </nav>
         </div>
       </header>
+
+      <HubTabs pathname={location.pathname} />
 
       <main>{children}</main>
     </div>
