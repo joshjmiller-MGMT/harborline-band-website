@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
-import { Sparkles, RefreshCw, ChevronDown } from "lucide-react";
+import { Sparkles, RefreshCw, ChevronDown, Repeat, MessageSquarePlus, ExternalLink, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -10,25 +10,34 @@ import {
 import SmartTaskWidget from "@/components/dashboard/SmartTaskWidget";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ScrumBoard } from "@/components/board/ScrumBoard";
 import {
-  SMART_BUCKET_COLUMNS,
   SMART_VENTURES,
   VENTURE_COLORS,
+  PERSISTABLE_SMART_BUCKETS,
   type SmartBucket,
   type SmartVenture,
   normalizeVenture,
 } from "@/components/board/smartTaskBuckets";
 import {
-  SmartTaskCard,
-  ageFromCreatedAt,
-  type SmartTaskCardData,
-} from "@/components/board/SmartTaskCard";
-import {
   useSmartTaskBoardData,
   type SmartTaskRow,
   type TrelloCard,
 } from "@/hooks/useSmartTaskBoardData";
+
+// SMART board v3 (Josh spec 2026-07-07): NO scrum boards. Two clean sections —
+// (1) Trello inbox mirroring the SOURCE bucket structure (only buckets that
+// still feed the board; routed/done/ported buckets filtered out), and
+// (2) SMART tasks as compact rows grouped by stage, with dropdowns instead of
+// drag. Built to de-overwhelm: collapse everything you're not working.
+
+// Buckets that still feed the board (the STAY set). Cards from ported buckets
+// (Daily's → Day plan, Contacts/POC-F/U → Contacts, To Listen/Learn/Watch →
+// Feed) and Claude-execution buckets (website fixes, To Claude) never show.
+const INBOX_BUCKETS = new Set([
+  "notes", "tasks random", "urgent", "other projects", "web & tech",
+  "social / media / content", "harborline", "econ", "bse",
+  "solo / personal dev / jazz",
+]);
 
 function deriveBucket(row: SmartTaskRow): SmartBucket {
   if (row.board_bucket && row.board_bucket !== "Trello inbox") {
@@ -38,15 +47,18 @@ function deriveBucket(row: SmartTaskRow): SmartBucket {
   return "Pending approval";
 }
 
-function daysSinceTrello(card: TrelloCard): number | null {
-  if (typeof card.age_days === "number") return card.age_days;
-  if (!card.date_last_activity) return null;
-  const parsed = new Date(card.date_last_activity);
-  if (Number.isNaN(parsed.getTime())) return null;
-  const diff = Date.now() - parsed.getTime();
-  if (diff < 0) return null;
-  return Math.floor(diff / (1000 * 60 * 60 * 24));
-}
+const STAGE_ACCENT: Record<string, string> = {
+  "Needs SMART": "text-orange-400",
+  "Pending approval": "text-sky-400",
+  "Active": "text-emerald-400",
+  "Done": "text-muted-foreground",
+};
+const STAGE_LABEL: Record<string, string> = {
+  "Needs SMART": "Needs SMART",
+  "Pending approval": "Pending approval",
+  "Active": "Active (calendar)",
+  "Done": "Done",
+};
 
 export default function TeamSmartTasks() {
   const {
@@ -56,146 +68,66 @@ export default function TeamSmartTasks() {
     smartRowsError,
     refreshAll,
     refreshSmartRows,
-    refreshTrello: _refreshTrello,
   } = useSmartTaskBoardData();
-  void _refreshTrello;
 
-  // Trello cards with a matching SMART row (already SMART-ified) are excluded
-  // from the Trello inbox column — their canonical position is the SMART row.
   const smartifiedTrelloCardIds = useMemo(() => {
     const s = new Set<string>();
-    for (const row of smartRows) {
-      if (row.trello_card_id) s.add(row.trello_card_id);
-    }
+    for (const row of smartRows) if (row.trello_card_id) s.add(row.trello_card_id);
     return s;
   }, [smartRows]);
 
-  const cards: SmartTaskCardData[] = useMemo(() => {
-    const out: SmartTaskCardData[] = [];
-
+  // ── Trello inbox: mirror the source buckets, accurately ──────────────────
+  const inboxByBucket = useMemo(() => {
+    const m = new Map<string, TrelloCard[]>();
     for (const card of trello.cards) {
-      if (smartifiedTrelloCardIds.has(card.id)) continue;
-      out.push({
-        id: `trello-${card.id}`,
-        columnId: "Trello inbox",
-        venture: "Personal",
-        source: "trello",
-        title: card.name,
-        bucketLabel: card.list_name || "Trello",
-        ageDays: daysSinceTrello(card),
-        dueDate: card.due ? card.due.slice(0, 10) : null,
-        definitionOfDone: null,
-        measure: null,
-        effort: card.desc ? card.desc.slice(0, 80) : null,
-        externalUrl: card.url,
-        recurringFollowup: false,
-      });
+      const ln = (card.list_name || "").trim();
+      if (!INBOX_BUCKETS.has(ln.toLowerCase())) continue;           // ported/exec buckets out
+      if (smartifiedTrelloCardIds.has(card.id)) continue;            // already on the board
+      const labels = (card.labels || []).map((l) => (l.name || "").toLowerCase());
+      if (labels.some((n) => n.includes("routed") || n.includes("done by claude"))) continue;
+      (m.get(ln) ?? m.set(ln, []).get(ln)!).push(card);
     }
+    return [...m.entries()].sort((a, b) => b[1].length - a[1].length);
+  }, [trello.cards, smartifiedTrelloCardIds]);
+  const inboxCount = useMemo(() => inboxByBucket.reduce((a, [, c]) => a + c.length, 0), [inboxByBucket]);
 
+  // ── SMART rows grouped by stage ───────────────────────────────────────────
+  const rowsByStage = useMemo(() => {
+    const m = new Map<string, SmartTaskRow[]>();
+    for (const b of PERSISTABLE_SMART_BUCKETS) m.set(b, []);
     for (const row of smartRows) {
-      out.push({
-        id: row.id,
-        columnId: deriveBucket(row),
-        venture: normalizeVenture(row.board_venture),
-        source: "smart",
-        title: row.revised_title || row.raw_input,
-        bucketLabel: row.board_bucket || (row.google_calendar_event_id ? "Active" : "Pending"),
-        ageDays: ageFromCreatedAt(row.created_at),
-        dueDate: row.due_date,
-        definitionOfDone: row.definition_of_done,
-        measure: row.measure,
-        effort: row.effort,
-        externalUrl: row.google_calendar_html_link || row.trello_card_url,
-        recurringFollowup: !!row.recurring_followup,
-      });
+      const b = deriveBucket(row);
+      (m.get(b) ?? m.set(b, []).get(b)!).push(row);
     }
+    return m;
+  }, [smartRows]);
 
-    return out;
-  }, [trello.cards, smartRows, smartifiedTrelloCardIds]);
-
-  const handleCardMove = useCallback(
-    async (cardId: string, _from: string, to: string) => {
-      // Trello-source cards can't change bucket from the board (they go
-      // through Make-SMART). Drop the operation with a toast hint.
-      if (cardId.startsWith("trello-")) {
-        toast.info("Use Make-SMART on the dashboard widget to move a Trello card.");
-        return;
-      }
-      if (to === "Trello inbox") {
-        toast.info("Trello inbox is read-only — drag back via the SMART buckets.");
-        return;
-      }
-
+  const patchRow = useCallback(
+    async (id: string, body: Record<string, unknown>, okMsg: string) => {
       try {
         const { error } = await supabase.functions.invoke("update-smart-task-bucket", {
-          body: { id: cardId, bucket: to },
+          body: { id, ...body },
         });
-        if (error) {
-          const ctx = (error as unknown as { context?: Response }).context;
-          let detail = error.message;
-          if (ctx) {
-            try {
-              const body = await ctx.json();
-              detail = body.detail || body.error || body.message || detail;
-            } catch {
-              /* swallow */
-            }
-          }
-          throw new Error(detail);
-        }
-        // Refresh SMART rows to pick up the new bucket; Trello fetch is
-        // expensive, so leave it alone.
+        if (error) throw error;
         await refreshSmartRows();
-        toast.success(`Moved to ${to}`);
+        toast.success(okMsg);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to save bucket");
+        toast.error(e instanceof Error ? e.message : "Failed to save");
         await refreshSmartRows();
       }
     },
     [refreshSmartRows],
   );
 
-  const handleChangeVenture = useCallback(
-    async (cardId: string, venture: SmartVenture) => {
-      if (cardId.startsWith("trello-")) return;
-      try {
-        const { error } = await supabase.functions.invoke("update-smart-task-bucket", {
-          body: { id: cardId, venture },
-        });
-        if (error) {
-          const ctx = (error as unknown as { context?: Response }).context;
-          let detail = error.message;
-          if (ctx) {
-            try {
-              const body = await ctx.json();
-              detail = body.detail || body.error || body.message || detail;
-            } catch {
-              /* swallow */
-            }
-          }
-          throw new Error(detail);
-        }
-        await refreshSmartRows();
-        toast.success(`Moved to ${venture}`);
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to update venture");
-        await refreshSmartRows();
-      }
-    },
-    [refreshSmartRows],
-  );
-
-  // Review↔smartify loop: send a card that needs smartifying to the review board
-  // so Josh can add context. On resolve there, the context flows back to Needs SMART.
-  const handleSendToReview = useCallback(async (card: SmartTaskCardData) => {
+  const sendToReview = useCallback(async (title: string, ref: string | null) => {
     try {
       const { error } = await supabase.from("waiting_on_josh").insert({
-        title: card.title,
+        title,
         prompt: "Add what you know about this so it can be turned into a SMART action.",
         item_type: "smartify-context",
         priority: "normal",
         source_session: "smart-board",
-        source_ref: card.source === "trello" ? card.externalUrl : card.id,
+        source_ref: ref,
       });
       if (error) throw error;
       toast.success("Sent to Review for context");
@@ -204,81 +136,13 @@ export default function TeamSmartTasks() {
     }
   }, []);
 
-  // Recurring follow-up: keep re-surfacing this task on the management calendar
-  // (daily, via smart-followup-repin) until Josh moves it to Done. The "Caitlyn"
-  // pattern — a follow-up that shouldn't silently vanish after one attempt.
-  const handleToggleFollowup = useCallback(
-    async (cardId: string, next: boolean) => {
-      try {
-        const { error } = await supabase.functions.invoke("update-smart-task-bucket", {
-          body: { id: cardId, recurring_followup: next },
-        });
-        if (error) throw error;
-        await refreshSmartRows();
-        toast.success(next ? "Following up until done" : "Follow-up stopped");
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to update follow-up");
-        await refreshSmartRows();
-      }
-    },
-    [refreshSmartRows],
-  );
+  // Collapse state: stages default open only for Needs SMART + Active (the
+  // working set); Pending approval + Done start closed (bulk lives there).
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    inbox: true, "Needs SMART": true, "Pending approval": false, Active: true, Done: false,
+  });
+  const toggle = (k: string) => setOpenSections((p) => ({ ...p, [k]: !p[k] }));
 
-
-  const cardsByVenture = useMemo(() => {
-    const map = new Map<SmartVenture, SmartTaskCardData[]>();
-    for (const v of SMART_VENTURES) map.set(v, []);
-    for (const card of cards) {
-      const arr = map.get(card.venture);
-      if (arr) arr.push(card);
-    }
-    return map;
-  }, [cards]);
-
-  // Per-venture, per-bucket counts — powers the overview matrix + the header chips.
-  const bucketCountsByVenture = useMemo(() => {
-    const m = new Map<SmartVenture, Record<string, number>>();
-    for (const v of SMART_VENTURES) {
-      const rec: Record<string, number> = {};
-      for (const col of SMART_BUCKET_COLUMNS) rec[col.id] = 0;
-      m.set(v, rec);
-    }
-    for (const card of cards) {
-      const rec = m.get(card.venture);
-      if (rec) rec[card.columnId] = (rec[card.columnId] ?? 0) + 1;
-    }
-    return m;
-  }, [cards]);
-
-  // Venture sections default OPEN when they have cards; the user can override
-  // either way (collapse what you're not working on — kanban best practice).
-  const [openOverrides, setOpenOverrides] = useState<
-    Partial<Record<SmartVenture, boolean>>
-  >({});
-  const isVentureOpen = (v: SmartVenture, count: number) =>
-    openOverrides[v] ?? count > 0;
-  const toggleVenture = (v: SmartVenture, count: number) =>
-    setOpenOverrides((prev) => ({ ...prev, [v]: !(prev[v] ?? count > 0) }));
-  const expandVenture = (v: SmartVenture) => {
-    setOpenOverrides((prev) => ({ ...prev, [v]: true }));
-    setTimeout(
-      () =>
-        document
-          .getElementById(`venture-${v}`)
-          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-      0,
-    );
-  };
-  const setAllVentures = (open: boolean) =>
-    setOpenOverrides(
-      Object.fromEntries(
-        SMART_VENTURES.map((v) => [v, open]),
-      ) as Partial<Record<SmartVenture, boolean>>,
-    );
-
-  const totalCards = cards.length;
-  const totalSmart = smartRows.length;
-  const totalTrello = trello.cards.length - smartifiedTrelloCardIds.size;
   const isLoading = smartRowsLoading || trello.loading;
 
   return (
@@ -290,23 +154,13 @@ export default function TeamSmartTasks() {
               <Sparkles className="w-7 h-7 text-primary" /> SMART Tasks
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              {totalCards
-                ? `${totalCards} cards · ${totalTrello} in Trello inbox · ${totalSmart} SMART-ified`
-                : "Cards flow Trello inbox → Needs SMART → Pending approval → Active → Done"}
+              {inboxCount} in Trello inbox · {smartRows.length} SMART-ified
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="ghost" size="sm" onClick={() => setAllVentures(true)}>
-              Expand all
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setAllVentures(false)}>
-              Collapse all
-            </Button>
-            <Button variant="ghost" size="sm" onClick={refreshAll} disabled={isLoading}>
-              <RefreshCw className={`w-4 h-4 mr-1.5 ${isLoading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-          </div>
+          <Button variant="ghost" size="sm" onClick={refreshAll} disabled={isLoading}>
+            <RefreshCw className={`w-4 h-4 mr-1.5 ${isLoading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
         </div>
 
         {(smartRowsError || trello.error) && (
@@ -316,147 +170,135 @@ export default function TeamSmartTasks() {
           </div>
         )}
 
-        {/* Quick SMART-ify composer (moved here from the dashboard, 2026-06-21). */}
+        {/* Quick SMART-ify composer */}
         <div className="mb-6">
           <SmartTaskWidget />
         </div>
 
-        {/* Follow-ups moved to the dashboard alert section (2026-07-07). The
-            per-card "Follow up until done" toggle stays; the aggregated view
-            now lives on /team/dashboard. */}
+        {/* ── Trello inbox — mirrors the source buckets ── */}
+        <Collapsible open={openSections.inbox} onOpenChange={() => toggle("inbox")}
+          className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+          <CollapsibleTrigger asChild>
+            <button className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-amber-500/10 rounded-lg text-left">
+              <span className="flex items-center gap-2 min-w-0">
+                <Inbox className="w-4 h-4 text-amber-500 shrink-0" />
+                <span className="font-display text-lg tracking-wide-custom text-foreground">Trello inbox</span>
+                <span className="text-xs text-muted-foreground">{inboxCount} unrouted · grouped by source bucket · tag 🟢 in Trello to route</span>
+              </span>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${openSections.inbox ? "rotate-180" : ""}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-3 pb-3 space-y-2">
+            {inboxByBucket.length === 0 && (
+              <p className="text-xs text-muted-foreground py-2 text-center">Inbox is clear — everything is routed or ported.</p>
+            )}
+            {inboxByBucket.map(([bucket, cards]) => (
+              <div key={bucket}>
+                <p className="text-[11px] uppercase tracking-wider text-amber-500/90 font-medium px-1 py-1">
+                  {bucket} <span className="text-muted-foreground">({cards.length})</span>
+                </p>
+                <div className="rounded border border-border/60 bg-card/40 divide-y divide-border/40">
+                  {cards.map((c) => (
+                    <div key={c.id} className="px-2.5 py-1.5 flex items-center gap-2">
+                      <span className="text-sm text-foreground truncate flex-1">{c.name}</span>
+                      {c.due && <span className="text-[11px] text-muted-foreground shrink-0">{c.due.slice(0, 10)}</span>}
+                      <a href={c.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                        className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Open in Trello">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
 
-        {/* At-a-glance overview — venture × bucket counts. Click a row to jump. */}
-        <div className="mb-6 overflow-x-auto rounded-lg border border-border bg-card/40">
-          <table className="w-full text-sm min-w-[560px]">
-            <thead>
-              <tr className="border-b border-border text-xs text-muted-foreground">
-                <th className="text-left font-medium px-3 py-2">Venture</th>
-                {SMART_BUCKET_COLUMNS.map((col) => (
-                  <th
-                    key={col.id}
-                    className={`px-2 py-2 font-medium text-center ${col.accent}`}
-                  >
-                    {col.title}
-                  </th>
-                ))}
-                <th className="px-3 py-2 text-center font-medium text-foreground">
-                  Total
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {SMART_VENTURES.map((v) => {
-                const counts = bucketCountsByVenture.get(v)!;
-                const total = cardsByVenture.get(v)?.length ?? 0;
-                return (
-                  <tr
-                    key={v}
-                    className="border-b border-border/40 last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
-                    onClick={() => expandVenture(v)}
-                  >
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-2">
-                        <span
-                          className={`w-2.5 h-2.5 rounded-full ${VENTURE_COLORS[v]}`}
-                        />
-                        <span className="font-medium text-foreground">{v}</span>
-                      </span>
-                    </td>
-                    {SMART_BUCKET_COLUMNS.map((col) => {
-                      const n = counts[col.id] ?? 0;
-                      return (
-                        <td
-                          key={col.id}
-                          className="px-2 py-2 text-center tabular-nums"
-                        >
-                          {n > 0 ? (
-                            <span className="inline-block min-w-[1.6rem] rounded bg-muted/70 px-1.5 py-0.5 text-xs font-semibold text-foreground">
-                              {n}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/30">·</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                    <td className="px-3 py-2 text-center tabular-nums font-semibold text-foreground">
-                      {total || <span className="text-muted-foreground/30">·</span>}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Collapsible, color-coded venture boards — collapse what you're not working on. */}
+        {/* ── SMART tasks by stage — compact rows, no scrum ── */}
         <div className="space-y-3">
-          {SMART_VENTURES.map((venture) => {
-            const ventureCards = cardsByVenture.get(venture) ?? [];
-            const count = ventureCards.length;
-            const counts = bucketCountsByVenture.get(venture)!;
-            const open = isVentureOpen(venture, count);
+          {PERSISTABLE_SMART_BUCKETS.map((stage) => {
+            const rows = rowsByStage.get(stage) ?? [];
+            const open = openSections[stage] ?? false;
             return (
-              <Collapsible
-                key={venture}
-                open={open}
-                onOpenChange={() => toggleVenture(venture, count)}
-                className="rounded-lg border border-border bg-card/40"
-              >
+              <Collapsible key={stage} open={open} onOpenChange={() => toggle(stage)}
+                className="rounded-lg border border-border bg-card/40">
                 <CollapsibleTrigger asChild>
-                  <button
-                    id={`venture-${venture}`}
-                    className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/30 rounded-lg text-left scroll-mt-20"
-                  >
-                    <span className="flex items-center gap-2.5 min-w-0">
-                      <span
-                        className={`w-3 h-3 rounded-full shrink-0 ${VENTURE_COLORS[venture]}`}
-                      />
-                      <span className="font-display text-lg tracking-wide-custom text-foreground">
-                        {venture}
-                      </span>
-                      <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                        {count} {count === 1 ? "card" : "cards"}
-                      </span>
+                  <button className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/30 rounded-lg text-left">
+                    <span className={`font-display text-lg tracking-wide-custom ${STAGE_ACCENT[stage]}`}>
+                      {STAGE_LABEL[stage]}
                     </span>
-                    <span className="flex items-center gap-1.5">
-                      {SMART_BUCKET_COLUMNS.map((col) =>
-                        (counts[col.id] ?? 0) > 0 ? (
-                          <span
-                            key={col.id}
-                            className={`hidden md:inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-muted/50 ${col.accent}`}
-                          >
-                            {col.title.split(" ")[0]} {counts[col.id]}
-                          </span>
-                        ) : null,
-                      )}
-                      <ChevronDown
-                        className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
-                      />
+                    <span className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                      {rows.length}
+                      <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
                     </span>
                   </button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="px-3 pb-3">
-                  {count === 0 ? (
-                    <p className="text-xs text-muted-foreground py-3 text-center">
-                      No cards in this venture.
-                    </p>
-                  ) : (
-                    <ScrumBoard
-                      columns={SMART_BUCKET_COLUMNS}
-                      cards={ventureCards}
-                      onCardMove={handleCardMove}
-                      renderCard={(card) => (
-                        <SmartTaskCard
-                          card={card}
-                          onChangeVenture={handleChangeVenture}
-                          onSendToReview={handleSendToReview}
-                          onToggleFollowup={handleToggleFollowup}
-                        />
-                      )}
-                      emptyColumnLabel="—"
-                    />
-                  )}
+                <CollapsibleContent>
+                  <div className="divide-y divide-border/40 border-t border-border/60">
+                    {rows.length === 0 && (
+                      <p className="text-xs text-muted-foreground py-3 text-center">Nothing here.</p>
+                    )}
+                    {rows.map((row) => {
+                      const venture = normalizeVenture(row.board_venture);
+                      return (
+                        <div key={row.id} className="px-3 py-1.5 flex items-center gap-2.5">
+                          {/* venture (color dot + select) */}
+                          <select
+                            value={venture}
+                            onChange={(e) => patchRow(row.id, { venture: e.target.value }, `→ ${e.target.value}`)}
+                            title="Venture"
+                            className="text-[10px] uppercase tracking-wide bg-transparent border-0 cursor-pointer text-muted-foreground w-[4.5rem] shrink-0"
+                            style={{ appearance: "none" }}
+                          >
+                            {SMART_VENTURES.map((v) => <option key={v} value={v}>{v}</option>)}
+                          </select>
+                          <span className={`w-2 h-2 rounded-full shrink-0 -ml-1 ${VENTURE_COLORS[venture]}`} />
+                          <span className="text-sm text-foreground truncate flex-1" title={row.revised_title || row.raw_input}>
+                            {row.revised_title || row.raw_input}
+                          </span>
+                          {row.due_date && (
+                            <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{row.due_date}</span>
+                          )}
+                          {/* follow-up toggle (Active only) */}
+                          {stage === "Active" && (
+                            <button
+                              onClick={() => patchRow(row.id, { recurring_followup: !row.recurring_followup },
+                                row.recurring_followup ? "Follow-up stopped" : "Following up until done")}
+                              className={`shrink-0 ${row.recurring_followup ? "text-indigo-400" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                              title={row.recurring_followup ? "Stop follow-up" : "Follow up until done"}
+                            >
+                              <Repeat className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {/* send to review (Needs SMART only) */}
+                          {stage === "Needs SMART" && (
+                            <button
+                              onClick={() => sendToReview(row.revised_title || row.raw_input, row.id)}
+                              className="text-sky-400/70 hover:text-sky-300 shrink-0"
+                              title="Add context → Review"
+                            >
+                              <MessageSquarePlus className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {/* stage select */}
+                          <select
+                            value={stage}
+                            onChange={(e) => patchRow(row.id, { bucket: e.target.value }, `Moved to ${e.target.value}`)}
+                            className="text-[11px] bg-card border border-border rounded px-1 py-0.5 cursor-pointer text-muted-foreground shrink-0"
+                            title="Move stage"
+                          >
+                            {PERSISTABLE_SMART_BUCKETS.map((b) => <option key={b} value={b}>{b}</option>)}
+                          </select>
+                          {(row.google_calendar_html_link || row.trello_card_url) && (
+                            <a href={row.google_calendar_html_link || row.trello_card_url || "#"} target="_blank" rel="noreferrer"
+                              className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Open source">
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </CollapsibleContent>
               </Collapsible>
             );
