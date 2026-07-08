@@ -2863,6 +2863,54 @@ export type Database = {
         }
         Relationships: []
       }
+      time_blocks: {
+        Row: {
+          active: boolean
+          created_at: string
+          days_of_week: string[] | null
+          duration_min: number
+          id: string
+          kind: string
+          note: string | null
+          preferred_time: string | null
+          sort_order: number
+          source: string
+          title: string
+          trello_card_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          days_of_week?: string[] | null
+          duration_min?: number
+          id?: string
+          kind?: string
+          note?: string | null
+          preferred_time?: string | null
+          sort_order?: number
+          source?: string
+          title: string
+          trello_card_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          days_of_week?: string[] | null
+          duration_min?: number
+          id?: string
+          kind?: string
+          note?: string | null
+          preferred_time?: string | null
+          sort_order?: number
+          source?: string
+          title?: string
+          trello_card_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       trello_bucket_routes: {
         Row: {
           action_handler: string

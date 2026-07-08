@@ -4,6 +4,7 @@ import IntegrationHealthWidget from "@/components/dashboard/IntegrationHealthWid
 import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
 import PendingApprovalAlert from "@/components/dashboard/PendingApprovalAlert";
 import FollowupsAlert from "@/components/dashboard/FollowupsAlert";
+import DayPlanWidget from "@/components/dashboard/DayPlanWidget";
 import BoardsOverviewWidget from "@/components/dashboard/BoardsOverviewWidget";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
 import { LayoutDashboard } from "lucide-react";
@@ -32,6 +33,13 @@ export default function TeamDashboard() {
           <div className="lg:col-span-2">
             <ErrorBoundary compact label="Follow-ups">
               <FollowupsAlert />
+            </ErrorBoundary>
+          </div>
+
+          {/* Day plan — time-blocked day template from the Daily's bucket (P4, 2026-07-07). */}
+          <div className="lg:col-span-2">
+            <ErrorBoundary compact label="Day plan">
+              <DayPlanWidget />
             </ErrorBoundary>
           </div>
 
