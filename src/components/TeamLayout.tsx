@@ -27,6 +27,7 @@ import {
   Send,
   LayoutGrid,
   Landmark,
+  Rss,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,7 @@ const musicMenu: MegaMenu = {
     { name: "Songs", href: "/team/songs", icon: Music, description: "Master song catalog with tags + keys" },
     { name: "Setlist Builder", href: "/team/setlist-builder", icon: ListMusic, description: "Build & save setlists for any ensemble" },
     { name: "Practice", href: "/team/practice", icon: Activity, description: "Practice tracker + instrument hours" },
+    { name: "Feed", href: "/team/feed", icon: Rss, description: "Watch / listen / learn — everything to consume" },
     { name: "Resources", href: "/team/resources", icon: FolderOpen, description: "Sheet music library — fake books, charts, parts, setlists" },
   ],
 };

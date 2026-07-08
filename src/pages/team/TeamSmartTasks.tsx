@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
-import { Sparkles, RefreshCw, ChevronDown, Repeat } from "lucide-react";
+import { Sparkles, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -224,13 +224,6 @@ export default function TeamSmartTasks() {
     [refreshSmartRows],
   );
 
-  // The "Follow-ups" view — every recurring follow-up in one place, across
-  // ventures, so nothing being chased slips out of sight.
-  const followupCards = useMemo(
-    () => cards.filter((c) => c.recurringFollowup),
-    [cards],
-  );
-  const [followupsOpen, setFollowupsOpen] = useState(true);
 
   const cardsByVenture = useMemo(() => {
     const map = new Map<SmartVenture, SmartTaskCardData[]>();
@@ -328,50 +321,9 @@ export default function TeamSmartTasks() {
           <SmartTaskWidget />
         </div>
 
-        {/* Follow-ups view — every recurring follow-up in one place. These
-            re-surface on the management calendar daily (7:30am) until moved to
-            Done, so nothing being chased slips out of sight. */}
-        {followupCards.length > 0 && (
-          <Collapsible
-            open={followupsOpen}
-            onOpenChange={setFollowupsOpen}
-            className="mb-6 rounded-lg border border-indigo-500/30 bg-indigo-500/5"
-          >
-            <CollapsibleTrigger asChild>
-              <button className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-indigo-500/10 rounded-lg text-left">
-                <span className="flex items-center gap-2.5 min-w-0">
-                  <Repeat className="w-4 h-4 text-indigo-400 shrink-0" />
-                  <span className="font-display text-lg tracking-wide-custom text-foreground">
-                    Follow-ups
-                  </span>
-                  <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                    {followupCards.length} re-surfacing until done
-                  </span>
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-muted-foreground transition-transform ${followupsOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="px-3 pb-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
-                {followupCards.map((card) => (
-                  <div
-                    key={card.id}
-                    className="rounded-lg border border-border bg-card/60"
-                  >
-                    <SmartTaskCard
-                      card={card}
-                      onChangeVenture={handleChangeVenture}
-                      onSendToReview={handleSendToReview}
-                      onToggleFollowup={handleToggleFollowup}
-                    />
-                  </div>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
+        {/* Follow-ups moved to the dashboard alert section (2026-07-07). The
+            per-card "Follow up until done" toggle stays; the aggregated view
+            now lives on /team/dashboard. */}
 
         {/* At-a-glance overview — venture × bucket counts. Click a row to jump. */}
         <div className="mb-6 overflow-x-auto rounded-lg border border-border bg-card/40">
