@@ -945,6 +945,48 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_items: {
+        Row: {
+          consumed: boolean
+          created_at: string
+          id: string
+          kind: string
+          note: string | null
+          source: string
+          title: string
+          trello_card_id: string | null
+          updated_at: string
+          url: string | null
+          venture: string | null
+        }
+        Insert: {
+          consumed?: boolean
+          created_at?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          source?: string
+          title: string
+          trello_card_id?: string | null
+          updated_at?: string
+          url?: string | null
+          venture?: string | null
+        }
+        Update: {
+          consumed?: boolean
+          created_at?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          source?: string
+          title?: string
+          trello_card_id?: string | null
+          updated_at?: string
+          url?: string | null
+          venture?: string | null
+        }
+        Relationships: []
+      }
       finance_accounts: {
         Row: {
           active: boolean | null
