@@ -129,10 +129,23 @@ async function pollBoard(): Promise<unknown> {
     commentsByCard.set(cardId, bucket);
   }
 
-  // Per Josh: all lists, skip cards already SMART-ified.
-  const pending = allCards.filter(
-    (c) => !(c.labels || []).some((l) => l.name === SMART_LABEL_NAME),
-  );
+  // Pending = the genuinely unprocessed inbox (fixed 2026-07-07 — the old
+  // filter only knew the legacy "SMART-ified" label, so it counted nearly
+  // every open card and the UI showed ~392):
+  //   - only the STAY buckets (ported buckets — Daily's / Contacts / POC-F/U /
+  //     To Listen/Learn/Watch — and Claude-execution buckets don't belong here)
+  //   - exclude anything already routed / done-by-claude / legacy SMART-ified
+  const INBOX_LISTS = new Set([
+    "notes", "tasks random", "urgent", "other projects", "web & tech",
+    "social / media / content", "harborline", "econ", "bse",
+    "solo / personal dev / jazz",
+  ]);
+  const PROCESSED_LABELS = new Set([SMART_LABEL_NAME, "✅ routed", "✅ done by claude"]);
+  const pending = allCards.filter((c) => {
+    const listName = (listNameById.get(c.idList) || "").trim().toLowerCase();
+    if (!INBOX_LISTS.has(listName)) return false;
+    return !(c.labels || []).some((l) => l.name && PROCESSED_LABELS.has(l.name));
+  });
 
   const now = new Date();
 
