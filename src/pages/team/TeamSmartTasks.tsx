@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from "react";
-import TeamLayout from "@/components/TeamLayout";
 import { Sparkles, RefreshCw, ChevronDown, Repeat, MessageSquarePlus, ExternalLink, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,7 +59,10 @@ const STAGE_LABEL: Record<string, string> = {
   "Done": "Done",
 };
 
-export default function TeamSmartTasks() {
+// Exported as a PANEL (no TeamLayout/page chrome): the smartify board now lives
+// at the top of /team/review — review + smartification are ONE surface (Josh,
+// 2026-07-07: "review board and smartification board should be the same").
+export default function SmartBoardPanel() {
   const {
     trello,
     smartRows,
@@ -146,13 +148,12 @@ export default function TeamSmartTasks() {
   const isLoading = smartRowsLoading || trello.loading;
 
   return (
-    <TeamLayout>
-      <div className="container mx-auto px-6 py-8">
+    <div>
         <div className="mb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
           <div>
-            <h1 className="font-display text-3xl tracking-wide-custom text-foreground flex items-center gap-3">
-              <Sparkles className="w-7 h-7 text-primary" /> SMART Tasks
-            </h1>
+            <h2 className="font-display text-2xl tracking-wide-custom text-foreground flex items-center gap-3">
+              <Sparkles className="w-6 h-6 text-primary" /> SMART Tasks
+            </h2>
             <p className="text-muted-foreground mt-1 text-sm">
               {inboxCount} in Trello inbox · {smartRows.length} SMART-ified
             </p>
@@ -304,7 +305,6 @@ export default function TeamSmartTasks() {
             );
           })}
         </div>
-      </div>
-    </TeamLayout>
+    </div>
   );
 }

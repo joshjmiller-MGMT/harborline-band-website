@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import ScrollToTopOnNavigate from "./components/ScrollToTopOnNavigate";
 import PageLoadingSpinner from "./components/PageLoadingSpinner";
@@ -79,7 +79,6 @@ const TeamVisualAssets = lazy(() => import("./pages/team/TeamVisualAssets"));
 const TeamBrandStudio = lazy(() => import("./pages/team/TeamBrandStudio"));
 const TeamBandMembers = lazy(() => import("./pages/team/TeamBandMembers"));
 const TeamBands = lazy(() => import("./pages/team/TeamBands"));
-const TeamSmartTasks = lazy(() => import("./pages/team/TeamSmartTasks"));
 const TeamMedia = lazy(() => import("./pages/team/TeamMedia"));
 const TeamSystems = lazy(() => import("./pages/team/TeamSystems"));
 const TeamGrants = lazy(() => import("./pages/team/TeamGrants"));
@@ -179,7 +178,8 @@ const App = () => (
                 <Route path="/team/brand-studio" element={<TeamBrandStudio />} />
                 <Route path="/team/band-members" element={<TeamBandMembers />} />
                 <Route path="/team/bands" element={<TeamBands />} />
-                <Route path="/team/smart-tasks" element={<TeamSmartTasks />} />
+                {/* SMART board merged into /team/review (2026-07-07) — redirect keeps old links alive. */}
+                <Route path="/team/smart-tasks" element={<Navigate to="/team/review" replace />} />
                 <Route path="/team/media" element={<TeamMedia />} />
                 <Route path="/team/systems" element={<TeamSystems />} />
                 <Route path="/team/grants" element={<TeamGrants />} />
