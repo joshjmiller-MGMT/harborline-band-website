@@ -63,7 +63,7 @@ const bookHub: MegaMenu = {
   items: [
     { name: "Leads", href: "/team/leads", icon: Inbox, description: "Booking inquiries across all sources — status-tracked" },
     { name: "Pipeline", href: "/team/booking-pipeline", icon: Kanban, description: "Scrum board — drag leads across buckets" },
-    { name: "Booking", href: "/team/booking", icon: Phone, description: "Lead intake & venue tracker" },
+    { name: "Venues", href: "/team/venues", icon: Phone, description: "Venue & Festival Tracker — rooms and stages by act fit" },
     { name: "Outreach", href: "/team/outreach", icon: Send, description: "Proactive targets — venues, festivals, radio, playlists, press, collabs" },
     { name: "Contacts", href: "/team/contacts", icon: Users, description: "Central contact hub — mirror of the JJMM sheet; follow-up flags" },
     { name: "Bands", href: "/team/bands", icon: Handshake, description: "Relationship board — bands for show swaps & support slots" },

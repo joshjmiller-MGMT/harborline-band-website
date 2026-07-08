@@ -73,7 +73,7 @@ const TeamDashboard = lazy(() => import("./pages/team/TeamDashboard"));
 const TeamPractice = lazy(() => import("./pages/team/TeamPractice"));
 const TeamSocial = lazy(() => import("./pages/team/TeamSocial"));
 const TeamSocialHandoff = lazy(() => import("./pages/team/TeamSocialHandoff"));
-const TeamBooking = lazy(() => import("./pages/team/TeamBooking"));
+const TeamVenues = lazy(() => import("./pages/team/TeamVenues"));
 const TeamBookingPipeline = lazy(() => import("./pages/team/TeamBookingPipeline"));
 const TeamVisualAssets = lazy(() => import("./pages/team/TeamVisualAssets"));
 const TeamBrandStudio = lazy(() => import("./pages/team/TeamBrandStudio"));
@@ -172,7 +172,9 @@ const App = () => (
                 <Route path="/team/practice" element={<TeamPractice />} />
                 <Route path="/team/social" element={<TeamSocial />} />
                 <Route path="/team/social-handoff/:week" element={<TeamSocialHandoff />} />
-                <Route path="/team/booking" element={<TeamBooking />} />
+                {/* Booking page retired (2026-07-07) — Venue & Festival Tracker extracted to /team/venues. */}
+                <Route path="/team/booking" element={<Navigate to="/team/venues" replace />} />
+                <Route path="/team/venues" element={<TeamVenues />} />
                 <Route path="/team/booking-pipeline" element={<TeamBookingPipeline />} />
                 <Route path="/team/visual-assets" element={<TeamVisualAssets />} />
                 <Route path="/team/brand-studio" element={<TeamBrandStudio />} />
