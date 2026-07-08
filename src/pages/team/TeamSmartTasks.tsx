@@ -46,6 +46,16 @@ function deriveBucket(row: SmartTaskRow): SmartBucket {
   return "Pending approval";
 }
 
+// Sticky undo toast (Josh, 2026-07-08: accidentally sent a card to review —
+// every board action gets an Undo popup that STAYS until clicked away).
+function undoToast(message: string, onUndo: () => void | Promise<void>) {
+  toast(message, {
+    duration: Infinity,               // stays until the user clicks it away
+    action: { label: "Undo", onClick: () => void onUndo() },
+    cancel: { label: "✕", onClick: () => {} },
+  });
+}
+
 const STAGE_ACCENT: Record<string, string> = {
   "Needs SMART": "text-orange-400",
   "Pending approval": "text-sky-400",
@@ -104,15 +114,27 @@ export default function SmartBoardPanel() {
     return m;
   }, [smartRows]);
 
+  // undoBody = the patch that reverts this action; every action gets a sticky
+  // Undo toast that only goes away when clicked.
   const patchRow = useCallback(
-    async (id: string, body: Record<string, unknown>, okMsg: string) => {
+    async (id: string, body: Record<string, unknown>, okMsg: string, undoBody?: Record<string, unknown>) => {
       try {
         const { error } = await supabase.functions.invoke("update-smart-task-bucket", {
           body: { id, ...body },
         });
         if (error) throw error;
         await refreshSmartRows();
-        toast.success(okMsg);
+        if (undoBody) {
+          undoToast(okMsg, async () => {
+            const { error: e2 } = await supabase.functions.invoke("update-smart-task-bucket", {
+              body: { id, ...undoBody },
+            });
+            if (e2) toast.error("Undo failed");
+            else { await refreshSmartRows(); toast.success("Undone"); }
+          });
+        } else {
+          toast.success(okMsg);
+        }
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Failed to save");
         await refreshSmartRows();
@@ -123,16 +145,25 @@ export default function SmartBoardPanel() {
 
   const sendToReview = useCallback(async (title: string, ref: string | null) => {
     try {
-      const { error } = await supabase.from("waiting_on_josh").insert({
-        title,
-        prompt: "Add what you know about this so it can be turned into a SMART action.",
-        item_type: "smartify-context",
-        priority: "normal",
-        source_session: "smart-board",
-        source_ref: ref,
-      });
+      const { data, error } = await supabase
+        .from("waiting_on_josh")
+        .insert({
+          title,
+          prompt: "Add what you know about this so it can be turned into a SMART action.",
+          item_type: "smartify-context",
+          priority: "normal",
+          source_session: "smart-board",
+          source_ref: ref,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
-      toast.success("Sent to Review for context");
+      const newId = (data as { id: string }).id;
+      undoToast(`Sent to Review: "${title.slice(0, 50)}"`, async () => {
+        const { error: e2 } = await supabase.from("waiting_on_josh").delete().eq("id", newId);
+        if (e2) toast.error("Undo failed");
+        else toast.success("Undone — removed from Review");
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to send to review");
     }
@@ -144,6 +175,9 @@ export default function SmartBoardPanel() {
     inbox: true, "Needs SMART": true, "Pending approval": false, Active: true, Done: false,
   });
   const toggle = (k: string) => setOpenSections((p) => ({ ...p, [k]: !p[k] }));
+
+  // Needs SMART venture tabs (Josh, 2026-07-08): organize the section by category.
+  const [needsTab, setNeedsTab] = useState<string>("All");
 
   const isLoading = smartRowsLoading || trello.loading;
 
@@ -235,18 +269,36 @@ export default function SmartBoardPanel() {
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
+                  {/* Needs SMART: venture tabs to organize the section */}
+                  {stage === "Needs SMART" && rows.length > 0 && (
+                    <div className="flex items-center gap-1 px-3 py-2 border-t border-border/60 overflow-x-auto">
+                      {["All", ...SMART_VENTURES].map((v) => {
+                        const n = v === "All" ? rows.length : rows.filter((r) => normalizeVenture(r.board_venture) === v).length;
+                        if (v !== "All" && n === 0) return null;
+                        return (
+                          <button key={v} onClick={() => setNeedsTab(v)}
+                            className={`text-xs px-2 py-1 rounded whitespace-nowrap border ${needsTab === v ? "border-primary bg-primary/10 text-primary" : "border-transparent text-muted-foreground hover:bg-muted/40"}`}>
+                            {v} <span className="opacity-60">({n})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   <div className="divide-y divide-border/40 border-t border-border/60">
                     {rows.length === 0 && (
                       <p className="text-xs text-muted-foreground py-3 text-center">Nothing here.</p>
                     )}
-                    {rows.map((row) => {
+                    {(stage === "Needs SMART" && needsTab !== "All"
+                      ? rows.filter((r) => normalizeVenture(r.board_venture) === needsTab)
+                      : rows
+                    ).map((row) => {
                       const venture = normalizeVenture(row.board_venture);
                       return (
                         <div key={row.id} className="px-3 py-1.5 flex items-center gap-2.5">
                           {/* venture (color dot + select) */}
                           <select
                             value={venture}
-                            onChange={(e) => patchRow(row.id, { venture: e.target.value }, `→ ${e.target.value}`)}
+                            onChange={(e) => patchRow(row.id, { venture: e.target.value }, `Venture → ${e.target.value}`, { venture })}
                             title="Venture"
                             className="text-[10px] uppercase tracking-wide bg-transparent border-0 cursor-pointer text-muted-foreground w-[4.5rem] shrink-0"
                             style={{ appearance: "none" }}
@@ -264,7 +316,8 @@ export default function SmartBoardPanel() {
                           {stage === "Active" && (
                             <button
                               onClick={() => patchRow(row.id, { recurring_followup: !row.recurring_followup },
-                                row.recurring_followup ? "Follow-up stopped" : "Following up until done")}
+                                row.recurring_followup ? "Follow-up stopped" : "Following up until done",
+                                { recurring_followup: row.recurring_followup })}
                               className={`shrink-0 ${row.recurring_followup ? "text-indigo-400" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
                               title={row.recurring_followup ? "Stop follow-up" : "Follow up until done"}
                             >
@@ -284,7 +337,7 @@ export default function SmartBoardPanel() {
                           {/* stage select */}
                           <select
                             value={stage}
-                            onChange={(e) => patchRow(row.id, { bucket: e.target.value }, `Moved to ${e.target.value}`)}
+                            onChange={(e) => patchRow(row.id, { bucket: e.target.value }, `Moved to ${e.target.value}`, { bucket: stage })}
                             className="text-[11px] bg-card border border-border rounded px-1 py-0.5 cursor-pointer text-muted-foreground shrink-0"
                             title="Move stage"
                           >
