@@ -27,8 +27,12 @@ def log(msg):
 def step(name, script, extra):
     log(f"→ {name}: {script} {' '.join(extra)}")
     try:
+        # Task Scheduler runs without UTF-8 stdio; child prints ✓/— and dies with
+        # UnicodeEncodeError under cp1252. Force UTF-8 (bit us 7/8 + 7/9 at 7:15).
+        env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
         r = subprocess.run([PY, os.path.join(HERE, script)] + extra,
-                           capture_output=True, text=True, timeout=3600)
+                           capture_output=True, text=True, timeout=3600,
+                           encoding="utf-8", errors="replace", env=env)
         tail = "\n".join((r.stdout or "").strip().splitlines()[-3:])
         log(f"  {name} rc={r.returncode} :: {tail}")
     except Exception as e:
