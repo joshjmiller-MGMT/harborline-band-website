@@ -50,6 +50,7 @@ const TOP_FOLDERS = [
   { slug: "fake-books", label: "Fake Books", icon: Music },
   { slug: "Bb-charts", label: "B♭ Charts", icon: Music },
   { slug: "Eb-charts", label: "E♭ Charts", icon: Music },
+  { slug: "horn-charts", label: "Horn Charts", icon: Music },
   { slug: "single-charts", label: "Single Charts", icon: FileText },
   { slug: "chord-charts", label: "Chord Charts", icon: FileText },
   { slug: "originals", label: "Originals", icon: Music },
@@ -143,6 +144,9 @@ export default function TeamResources() {
   const [error, setError] = useState<string | null>(null);
 
   const [folderCounts, setFolderCounts] = useState<FolderCount[]>([]);
+  // True library total (a single COUNT), so the "All" tally is exact even if a
+  // shard isn't listed as a browse chip — summing chips silently under-counts.
+  const [libraryTotal, setLibraryTotal] = useState(0);
   const [subFolderOptions, setSubFolderOptions] = useState<
     { sub: string; count: number }[]
   >([]);
@@ -183,6 +187,11 @@ export default function TeamResources() {
         counts.push({ folder_top: top.slug, total: count || 0 });
       }
       setFolderCounts(counts);
+
+      const { count: libTotal } = await supabase
+        .from("chart_index")
+        .select("id", { count: "exact", head: true });
+      setLibraryTotal(libTotal || 0);
     })();
   }, []);
 
@@ -324,7 +333,7 @@ export default function TeamResources() {
           >
             All
             <span className="ml-2 text-xs opacity-70">
-              {folderCounts.reduce((acc, f) => acc + f.total, 0)}
+              {libraryTotal || folderCounts.reduce((acc, f) => acc + f.total, 0)}
             </span>
           </Button>
           {TOP_FOLDERS.map((tf) => {
