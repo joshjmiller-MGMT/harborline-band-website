@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ExternalLink, Inbox, Loader2, RefreshCw, Eye, CheckCircle2, Circle } from "lucide-react";
+import { ExternalLink, Inbox, Loader2, RefreshCw, Eye, CheckCircle2, Circle, Lightbulb } from "lucide-react";
 
 type IngestRow = {
   id: string;
@@ -84,6 +84,21 @@ const SENSITIVITY_STYLES: Record<string, string> = {
 
 const ACCOUNT_ORDER = ["economy", "harborline", "personal"];
 
+type SocialBrand = { id: string; slug: string; name: string };
+
+// Ingest rows carry a free-text `venture`; the Social Manager keys on brand slug.
+// Map the venture onto a social brand so an ingested content idea can land in the
+// right brand's Ideas column. BSE / operator-only / blank ventures have no social
+// brand — those return null and the "→ Idea" action is hidden.
+function brandSlugForVenture(venture: string | null): string | null {
+  const v = (venture || "").toLowerCase();
+  if (v.includes("economy")) return "the-economy";
+  if (v.includes("harborline")) return "harborline";
+  if (v.includes("jmj") || v.includes("jazz") || v.includes("solo") || v.includes("operator"))
+    return "solo";
+  return null; // BSE / empty — no social brand exists
+}
+
 function accountBadgeClass(account: string | null): string {
   if (!account) return "bg-muted text-muted-foreground border-border";
   return ACCOUNT_STYLES[account] ?? "bg-muted text-muted-foreground border-border";
@@ -113,6 +128,10 @@ export default function ContentIngestLogWidget() {
   const [summary, setSummary] = useState<IngestSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [openPreview, setOpenPreview] = useState<Set<string>>(new Set());
+  const [brands, setBrands] = useState<SocialBrand[]>([]);
+  // Rows already pushed to the Ideas column this session — dedupes the button.
+  const [sentToIdeas, setSentToIdeas] = useState<Set<string>>(new Set());
+  const [sending, setSending] = useState<string | null>(null);
 
   const togglePreview = (id: string) =>
     setOpenPreview((prev) => {
@@ -168,6 +187,50 @@ export default function ContentIngestLogWidget() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Social brands, so we can resolve venture → brand_id when pushing to Ideas.
+  useEffect(() => {
+    supabase
+      .from("social_brands")
+      .select("id, slug, name")
+      .then(({ data }) => data && setBrands(data as SocialBrand[]));
+  }, []);
+
+  // Push an ingested content idea into the Social Manager's Ideas column as a
+  // new idea-status post on the venture-mapped brand. Additive — leaves the
+  // ingest row's own routing untouched.
+  const sendToIdeas = async (item: IngestRow) => {
+    const slug = brandSlugForVenture(item.venture);
+    const brand = brands.find((b) => b.slug === slug);
+    if (!brand) {
+      toast({
+        title: "No social brand for this venture",
+        description: `"${item.venture || "—"}" doesn't map to a Social Manager brand.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setSending(item.id);
+    const title = (item.action || item.summary || item.caption || "Content idea").slice(0, 200);
+    const notesParts = [
+      item.summary && `Overview: ${item.summary}`,
+      item.caption && `Caption: ${item.caption}`,
+      item.url && `Source: ${item.url}`,
+    ].filter(Boolean);
+    const { error } = await supabase.from("social_posts").insert({
+      brand_id: brand.id,
+      title,
+      notes: notesParts.join("\n\n"),
+      status: "idea",
+    });
+    setSending(null);
+    if (error) {
+      toast({ title: "Failed to add idea", description: error.message, variant: "destructive" });
+      return;
+    }
+    setSentToIdeas((prev) => new Set(prev).add(item.id));
+    toast({ title: `Added to ${brand.name} Ideas`, description: title });
+  };
 
   return (
     <Card>
@@ -284,11 +347,38 @@ export default function ContentIngestLogWidget() {
                       {/* Actionable — the review on what to do + where it routed */}
                       <TableCell className="max-w-xs align-top">
                         <div className="text-foreground">{item.action || "—"}</div>
-                        {item.route && (
-                          <Badge variant="secondary" className="mt-1 text-xs">
-                            {ROUTE_LABEL[item.route] ?? item.route}
-                          </Badge>
-                        )}
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          {item.route && (
+                            <Badge variant="secondary" className="text-xs">
+                              {ROUTE_LABEL[item.route] ?? item.route}
+                            </Badge>
+                          )}
+                          {brandSlugForVenture(item.venture) &&
+                            (sentToIdeas.has(item.id) ? (
+                              <Badge
+                                variant="outline"
+                                className="text-xs bg-green-500/10 text-green-600 border-green-500/30"
+                              >
+                                <CheckCircle2 className="w-3 h-3 mr-1" /> In Ideas
+                              </Badge>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 px-2 text-xs"
+                                disabled={sending === item.id}
+                                onClick={() => sendToIdeas(item)}
+                                title="Add to the Social Manager's Ideas column"
+                              >
+                                {sending === item.id ? (
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Lightbulb className="w-3 h-3 mr-1" />
+                                )}
+                                → Idea
+                              </Button>
+                            ))}
+                        </div>
                       </TableCell>
                       {/* Done? */}
                       <TableCell className="align-top whitespace-nowrap">
