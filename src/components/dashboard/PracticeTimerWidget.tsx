@@ -128,11 +128,54 @@ const fmt = (sec: number) => {
     : `${m}:${String(r).padStart(2, "0")}`;
 };
 
-// Soft chime via WebAudio (no asset needed)
+// ---------- Shared WebAudio context ----------
+// iOS Safari is strict: (1) an AudioContext starts "suspended" and only unlocks
+// inside a real user gesture, and (2) it caps you at a few contexts before
+// `new AudioContext()` throws. So we keep ONE lazily-created context for the
+// whole widget (metronome clicks + chime) instead of spinning up a fresh one
+// per sound, and unlock it from the actual button presses.
+let sharedCtx: AudioContext | null = null;
+function getAudioCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!sharedCtx) {
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return null;
+    try {
+      sharedCtx = new Ctx();
+    } catch {
+      return null;
+    }
+  }
+  return sharedCtx;
+}
+
+// Unlock audio for iOS: call inside a user gesture. Resuming alone isn't enough
+// on iPad — iOS only truly opens output once a source node actually starts
+// within the gesture, so we also fire a 1-frame silent buffer.
+function unlockAudio() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === "suspended") ctx.resume().catch(() => {});
+  try {
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch {
+    /* already unlocked / not supported */
+  }
+}
+
+// Soft chime via WebAudio (no asset needed). Uses the shared, already-unlocked
+// context — the session was started by a user gesture, which unlocks it.
 function playChime() {
   try {
-    const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
-    const ctx = new Ctx();
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
     const tones = [880, 660];
     tones.forEach((freq, i) => {
       const o = ctx.createOscillator();
@@ -148,7 +191,6 @@ function playChime() {
       o.start(t);
       o.stop(t + 0.4);
     });
-    setTimeout(() => ctx.close(), 1200);
   } catch {
     /* no audio */
   }
@@ -171,11 +213,10 @@ function useMetronome() {
   useEffect(() => { mutedRef.current = muted; }, [muted]);
 
   const ensureCtx = () => {
-    if (!ctxRef.current) {
-      const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
-      ctxRef.current = new Ctx();
-    }
-    if (ctxRef.current.state === "suspended") ctxRef.current.resume();
+    // Shared context + iOS unlock (silent-buffer prime). start() is always
+    // called from a button press, so this runs inside a real user gesture.
+    unlockAudio();
+    ctxRef.current = getAudioCtx();
     return ctxRef.current;
   };
 
@@ -211,6 +252,7 @@ function useMetronome() {
 
   const start = () => {
     const ctx = ensureCtx();
+    if (!ctx) return;
     beatRef.current = 0;
     nextNoteRef.current = ctx.currentTime + 0.05;
     if (timerRef.current) window.clearInterval(timerRef.current);
@@ -663,6 +705,9 @@ export default function PracticeTimerWidget() {
       toast({ title: "Add at least one segment", variant: "destructive" });
       return;
     }
+    // Unlock audio inside this gesture so the later auto-chime (fired from a
+    // timer effect, not a gesture) can play on iOS.
+    unlockAudio();
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
