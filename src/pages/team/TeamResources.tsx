@@ -35,7 +35,18 @@ type ChartRow = {
   time_signature: string | null;
 };
 
-type FolderCount = { folder_top: string; total: number };
+// Counts come from the chart_index_song_counts() RPC. `songs` folds book/edition
+// versions of the same tune into one (Josh: "don't count Autumn Leaves as 10
+// songs because we have 10 versions"); `charts` is the raw PDF count.
+type FolderCount = { folder_top: string; songs: number; charts: number };
+type SubCount = { sub: string; songs: number; charts: number };
+type SongCountRow = {
+  level: "total" | "top" | "sub";
+  folder_top: string | null;
+  folder_sub: string | null;
+  songs: number;
+  charts: number;
+};
 
 // One song, with all its book/edition versions folded together.
 type SongGroup = {
@@ -144,12 +155,10 @@ export default function TeamResources() {
   const [error, setError] = useState<string | null>(null);
 
   const [folderCounts, setFolderCounts] = useState<FolderCount[]>([]);
-  // True library total (a single COUNT), so the "All" tally is exact even if a
-  // shard isn't listed as a browse chip — summing chips silently under-counts.
-  const [libraryTotal, setLibraryTotal] = useState(0);
-  const [subFolderOptions, setSubFolderOptions] = useState<
-    { sub: string; count: number }[]
-  >([]);
+  // Library-wide totals + per-subfolder counts, all from one RPC call.
+  const [libraryTotals, setLibraryTotals] = useState({ songs: 0, charts: 0 });
+  const [subCounts, setSubCounts] = useState<Record<string, SubCount[]>>({});
+  const [countsLoaded, setCountsLoaded] = useState(false);
   const [genres, setGenres] = useState<string[]>([]);
   // storage_path -> signed URL, populated after each result page loads.
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
@@ -176,22 +185,29 @@ export default function TeamResources() {
     return "";
   }, [topFolder, subFolder]);
 
+  // One RPC returns song+chart counts at every level (total / top / sub). This
+  // replaces 9 per-chip head-counts AND the old client-side subfolder tally,
+  // which silently truncated at PostgREST's 1000-row cap (fake-books ~8k rows).
   useEffect(() => {
     (async () => {
-      const counts: FolderCount[] = [];
-      for (const top of TOP_FOLDERS) {
-        const { count } = await supabase
-          .from("chart_index")
-          .select("id", { count: "exact", head: true })
-          .like("folder_path", `${top.slug}%`);
-        counts.push({ folder_top: top.slug, total: count || 0 });
+      const { data, error } = await supabase.rpc("chart_index_song_counts");
+      if (error || !data) return;
+      const rows = data as SongCountRow[];
+      const totalRow = rows.find((r) => r.level === "total");
+      if (totalRow) setLibraryTotals({ songs: totalRow.songs, charts: totalRow.charts });
+      setFolderCounts(
+        rows
+          .filter((r) => r.level === "top" && r.folder_top)
+          .map((r) => ({ folder_top: r.folder_top!, songs: r.songs, charts: r.charts })),
+      );
+      const bySub: Record<string, SubCount[]> = {};
+      for (const r of rows) {
+        if (r.level !== "sub" || !r.folder_top || !r.folder_sub) continue;
+        (bySub[r.folder_top] ||= []).push({ sub: r.folder_sub, songs: r.songs, charts: r.charts });
       }
-      setFolderCounts(counts);
-
-      const { count: libTotal } = await supabase
-        .from("chart_index")
-        .select("id", { count: "exact", head: true });
-      setLibraryTotal(libTotal || 0);
+      for (const k of Object.keys(bySub)) bySub[k].sort((a, b) => a.sub.localeCompare(b.sub));
+      setSubCounts(bySub);
+      setCountsLoaded(true);
     })();
   }, []);
 
@@ -207,31 +223,12 @@ export default function TeamResources() {
     })();
   }, []);
 
+  // Subfolder options come from the same RPC payload; just reset the selection
+  // when the top folder changes.
   useEffect(() => {
-    if (!topFolder) {
-      setSubFolderOptions([]);
-      setSubFolder(null);
-      return;
-    }
-    (async () => {
-      const { data } = await supabase
-        .from("chart_index")
-        .select("folder_path")
-        .like("folder_path", `${topFolder}/%`);
-      const subCounts = new Map<string, number>();
-      for (const row of data || []) {
-        const fp = (row as { folder_path: string }).folder_path;
-        const rest = fp.slice(topFolder.length + 1);
-        const sub = rest.split("/")[0];
-        if (!sub) continue;
-        subCounts.set(sub, (subCounts.get(sub) || 0) + 1);
-      }
-      const opts = Array.from(subCounts.entries())
-        .map(([sub, count]) => ({ sub, count }))
-        .sort((a, b) => a.sub.localeCompare(b.sub));
-      setSubFolderOptions(opts);
-    })();
+    setSubFolder(null);
   }, [topFolder]);
+  const subFolderOptions = (topFolder && subCounts[topFolder]) || [];
 
   useEffect(() => {
     let cancelled = false;
@@ -288,8 +285,7 @@ export default function TeamResources() {
     };
   }, [query, folderPath, genre, edition]);
 
-  const isEmptyLibrary =
-    folderCounts.length > 0 && folderCounts.every((f) => f.total === 0);
+  const isEmptyLibrary = countsLoaded && libraryTotals.charts === 0;
 
   // Collapse the flat result page into one row per song.
   const groups = useMemo(() => groupBySong(results), [results]);
@@ -302,8 +298,11 @@ export default function TeamResources() {
             Resources
           </h1>
           <p className="text-muted-foreground mt-2">
-            Sheet music library — fake books (concert, B♭, E♭), single charts,
-            originals, parts, setlists. Team-only, served from secure storage.
+            Sheet music library — fake books (concert, B♭, E♭), horn charts,
+            single charts, originals, parts, setlists. Team-only, served from
+            secure storage.
+            {libraryTotals.songs > 0 &&
+              ` ${libraryTotals.songs.toLocaleString()} songs across ${libraryTotals.charts.toLocaleString()} charts.`}
           </p>
         </div>
 
@@ -332,20 +331,23 @@ export default function TeamResources() {
             }}
           >
             All
-            <span className="ml-2 text-xs opacity-70">
-              {libraryTotal || folderCounts.reduce((acc, f) => acc + f.total, 0)}
+            {/* Chip badges count SONGS (versions folded), not chart PDFs. */}
+            <span
+              className="ml-2 text-xs opacity-70"
+              title={`${libraryTotals.songs} songs · ${libraryTotals.charts} charts`}
+            >
+              {libraryTotals.songs}
             </span>
           </Button>
           {TOP_FOLDERS.map((tf) => {
-            const count =
-              folderCounts.find((c) => c.folder_top === tf.slug)?.total || 0;
+            const fc = folderCounts.find((c) => c.folder_top === tf.slug);
             const Icon = tf.icon;
             return (
               <Button
                 key={tf.slug}
                 variant={topFolder === tf.slug ? "default" : "outline"}
                 size="sm"
-                disabled={count === 0}
+                disabled={!fc || fc.charts === 0}
                 onClick={() => {
                   setTopFolder(tf.slug);
                   setSubFolder(null);
@@ -353,7 +355,12 @@ export default function TeamResources() {
               >
                 <Icon className="w-3.5 h-3.5 mr-1.5" />
                 {tf.label}
-                <span className="ml-2 text-xs opacity-70">{count}</span>
+                <span
+                  className="ml-2 text-xs opacity-70"
+                  title={fc ? `${fc.songs} songs · ${fc.charts} charts` : undefined}
+                >
+                  {fc?.songs ?? 0}
+                </span>
               </Button>
             );
           })}
@@ -427,7 +434,12 @@ export default function TeamResources() {
                 onClick={() => setSubFolder(opt.sub)}
               >
                 {opt.sub.replace(/-/g, " ")}
-                <span className="ml-2 text-xs opacity-70">{opt.count}</span>
+                <span
+                  className="ml-2 text-xs opacity-70"
+                  title={`${opt.songs} songs · ${opt.charts} charts`}
+                >
+                  {opt.songs}
+                </span>
               </Button>
             ))}
           </div>
