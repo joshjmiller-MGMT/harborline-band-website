@@ -41,7 +41,7 @@ const organizationSchema = {
   },
   "contactPoint": {
     "@type": "ContactPoint",
-    "telephone": "+1-443-405-2378",
+    "telephone": "+1-443-785-6769",
     "contactType": "booking",
     "email": "harborlineband@gmail.com"
   },
@@ -61,7 +61,7 @@ const localBusinessSchema = {
   "name": "Harborline Entertainment",
   "@id": "https://harborlineband.com",
   "url": "https://harborlineband.com",
-  "telephone": "+1-443-405-2378",
+  "telephone": "+1-443-785-6769",
   "email": "harborlineband@gmail.com",
   "address": {
     "@type": "PostalAddress",

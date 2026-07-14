@@ -36,12 +36,12 @@ Site: https://harborlineband.com
 
 Harborline is a Baltimore event band led by working musicians. We scale from a solo act up to a full band with horns, covering weddings, corporate events, and galas across the DMV. Let me know what you need from us.
 
-Josh / Harborline / harborlineband@gmail.com / (443) 405-2378`;
+Josh / Harborline / harborlineband@gmail.com / (443) 785-6769`;
 
 const COLD_CLOSING = `[band-hero] [group-waterfront-2]
 Watch the band: https://vimeo.com/showcase/11690570 · Site: https://harborlineband.com
 We scale from a solo act up to a full band with horns, covering weddings, corporate events, and galas across the DMV. Named point of contact, a backup for every role, and we show up. Happy to send pricing and our rider.
-Josh / Harborline / harborlineband@gmail.com / (443) 405-2378`;
+Josh / Harborline / harborlineband@gmail.com / (443) 785-6769`;
 
 const COLD_SUBJECT = "Harborline, a DMV event band for your roster";
 
