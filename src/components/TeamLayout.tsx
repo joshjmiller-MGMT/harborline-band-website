@@ -1,5 +1,6 @@
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { useTeamAuth } from "@/hooks/useTeamAuth";
+import ReportFixWidget from "@/components/team/ReportFixWidget";
 import {
   Music,
   Calendar,
@@ -276,6 +277,9 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
       <HubTabs pathname={location.pathname} />
 
       <main>{children}</main>
+
+      {/* Site-fix chatbot — reports file as jobs on Webb's board (AI Team). */}
+      <ReportFixWidget />
     </div>
   );
 }
