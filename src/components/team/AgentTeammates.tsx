@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { MicButton } from "@/components/dictation/MicButton";
 import { appendDictation } from "@/hooks/useDictation";
 import {
-  ArrowLeft,
   Send,
   Loader2,
   CircleDot,
@@ -114,7 +113,18 @@ export default function AgentTeammates() {
       .from("agent_teammates")
       .select("*")
       .order("sort_order");
-    if (data) setAgents(data as Teammate[]);
+    if (data) {
+      setAgents(data as Teammate[]);
+      // Sidebar layout: always have a conversation open. Restore the last one
+      // Josh was in (so he re-acclimates where he left off), else the first.
+      setSelectedSlug((cur) => {
+        if (cur && (data as Teammate[]).some((a) => a.slug === cur)) return cur;
+        const remembered = window.localStorage.getItem("aiteam.lastAgent");
+        if (remembered && (data as Teammate[]).some((a) => a.slug === remembered))
+          return remembered;
+        return (data as Teammate[])[0]?.slug ?? null;
+      });
+    }
   }, []);
 
   const loadChat = useCallback(async (agentId: string) => {
@@ -255,105 +265,97 @@ export default function AgentTeammates() {
     }
   };
 
-  // ---------- Grid ----------
-  if (!selected) {
-    return (
-      <div className="py-6">
-        <p className="text-sm text-muted-foreground mb-4">
-          Your AI team — one expert per field. Open a teammate to give them work
-          and see what they've done.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {agents.map((a) => {
-            const st = STATUS_META[a.status] || STATUS_META.idle;
-            return (
-              <Card
-                key={a.slug}
-                className="border-border bg-card hover:border-primary/40 transition-colors cursor-pointer"
-                onClick={() => setSelectedSlug(a.slug)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-11 h-11 rounded-full flex items-center justify-center text-xl flex-shrink-0"
-                      style={{ backgroundColor: `${a.color}22`, border: `2px solid ${a.color}` }}
-                    >
-                      {a.emoji}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-foreground">{a.name}</h3>
-                        <Badge variant="outline" className={`text-[10px] ${st.cls}`}>
-                          {st.label}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">{a.field}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-3 line-clamp-1">
-                    {a.tagline}
-                  </p>
-                  <div className="mt-2 text-xs flex items-center gap-1.5 min-h-[1.25rem]">
-                    {a.current_action ? (
-                      <>
-                        <CircleDot className="w-3 h-3 text-green-500 flex-shrink-0" />
-                        <span className="truncate text-foreground">{a.current_action}</span>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground/60">No active job</span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground/60 mt-1">
-                    Active {timeAgo(a.updated_at)}
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-          {agents.length === 0 && (
-            <p className="text-sm text-muted-foreground col-span-full py-8 text-center">
-              No teammates yet.
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  }
+  // ---------- Sidebar + conversation (Claude-style, Josh 2026-07-14) ----------
+  const pickAgent = (slug: string) => {
+    setSelectedSlug(slug);
+    window.localStorage.setItem("aiteam.lastAgent", slug);
+  };
 
-  // ---------- Chat + log ----------
-  const st = STATUS_META[selected.status] || STATUS_META.idle;
+  const st = selected ? STATUS_META[selected.status] || STATUS_META.idle : STATUS_META.idle;
   const activeJobs = jobs.filter((j) =>
     ["queued", "in_progress", "blocked"].includes(j.status),
   );
   const pastJobs = jobs.filter((j) => ["done", "cancelled"].includes(j.status));
 
-  return (
-    <div className="py-6">
-      <div className="flex items-center gap-3 mb-4">
-        <Button variant="ghost" size="sm" onClick={() => setSelectedSlug(null)}>
-          <ArrowLeft className="w-4 h-4 mr-1" /> Team
-        </Button>
+  const sidebarRow = (a: Teammate) => {
+    const active = a.slug === selectedSlug;
+    const dot =
+      a.status === "working"
+        ? "bg-green-500"
+        : a.status === "waiting_on_josh"
+          ? "bg-amber-500"
+          : "bg-muted-foreground/40";
+    return (
+      <button
+        key={a.slug}
+        type="button"
+        onClick={() => pickAgent(a.slug)}
+        className={`w-full text-left rounded-lg px-2.5 py-2 transition-colors flex items-center gap-2.5 ${
+          active ? "bg-primary/10 border border-primary/30" : "hover:bg-muted/60 border border-transparent"
+        }`}
+      >
         <div
-          className="w-9 h-9 rounded-full flex items-center justify-center text-lg"
-          style={{ backgroundColor: `${selected.color}22`, border: `2px solid ${selected.color}` }}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-base flex-shrink-0 relative"
+          style={{ backgroundColor: `${a.color}22`, border: `2px solid ${a.color}` }}
         >
-          {selected.emoji}
+          {a.emoji}
+          <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-card ${dot}`} />
         </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="font-medium text-foreground">{selected.name}</h2>
-            <Badge variant="outline" className={`text-[10px] ${st.cls}`}>
-              {st.label}
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {selected.field}
-            {selected.current_action ? ` · ${selected.current_action}` : ""}
+        <div className="min-w-0 flex-1 hidden md:block">
+          <p className={`text-sm leading-tight truncate ${active ? "text-foreground font-medium" : "text-foreground"}`}>
+            {a.name}
+          </p>
+          <p className="text-[11px] text-muted-foreground truncate leading-tight">
+            {a.current_action || a.field}
           </p>
         </div>
-      </div>
+      </button>
+    );
+  };
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  return (
+    <div className="py-6 flex gap-4">
+      {/* Sidebar — every teammate one click away */}
+      <aside className="w-14 md:w-56 flex-shrink-0">
+        <div className="sticky top-24 space-y-1">
+          {agents.map(sidebarRow)}
+          {agents.length === 0 && (
+            <p className="text-xs text-muted-foreground p-2">No teammates yet.</p>
+          )}
+        </div>
+      </aside>
+
+      {/* Conversation + log */}
+      <div className="flex-1 min-w-0">
+        {selected && (
+          <div className="flex items-center gap-3 mb-3">
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center text-lg"
+              style={{ backgroundColor: `${selected.color}22`, border: `2px solid ${selected.color}` }}
+            >
+              {selected.emoji}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="font-medium text-foreground">{selected.name}</h2>
+                <Badge variant="outline" className={`text-[10px] ${st.cls}`}>
+                  {st.label}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground truncate">
+                {selected.field}
+                {selected.current_action ? ` · ${selected.current_action}` : ""}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!selected ? (
+          <p className="text-sm text-muted-foreground py-10 text-center">
+            Pick a teammate to start.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Chat */}
         <Card className="lg:col-span-2 border-border">
           <CardContent className="p-0 flex flex-col h-[600px]">
@@ -517,6 +519,8 @@ export default function AgentTeammates() {
             </CardContent>
           </Card>
         </div>
+          </div>
+        )}
       </div>
     </div>
   );
