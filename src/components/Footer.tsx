@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Instagram, Facebook } from "lucide-react";
+import { Instagram, Facebook, MapPin, Phone, Mail } from "lucide-react";
 import logo from "@/assets/logo-text.png";
 
 const VimeoIcon = () => (
@@ -56,7 +56,7 @@ const Footer = () => {
     <footer className="py-16 border-t border-border bg-card/50">
       <div className="container px-6 max-w-7xl mx-auto">
         {/* Main Footer Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-10 mb-12">
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-1">
             <img src={logo} alt="Harborline" className="h-12 w-auto mb-4 object-contain" />
@@ -77,6 +77,35 @@ const Footer = () => {
                 </a>
               ))}
             </div>
+          </div>
+
+          {/* Contact Info Column */}
+          <div>
+            <h4 className="font-display tracking-wide text-sm mb-4">CONTACT INFO</h4>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-2 text-sm text-muted-foreground">
+                <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
+                <span>Baltimore &amp; Washington DC areas</span>
+              </li>
+              <li>
+                <a
+                  href="tel:+14437856769"
+                  className="flex items-start gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Phone className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
+                  <span>(443) 785-6769</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="mailto:harborlineband@gmail.com"
+                  className="flex items-start gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
+                  <span className="break-all">harborlineband@gmail.com</span>
+                </a>
+              </li>
+            </ul>
           </div>
 
           {/* Services Column */}

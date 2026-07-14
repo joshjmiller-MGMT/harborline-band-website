@@ -18,6 +18,9 @@ const baseOrgSchema = {
   "name": "Harborline",
   "url": "https://harborlineband.com",
   "logo": "https://harborlineband.com/logo.png",
+  "telephone": "+1-443-785-6769",
+  "email": "harborlineband@gmail.com",
+  "areaServed": ["Baltimore MD", "Washington DC", "Maryland", "Virginia"],
   "sameAs": [
     "https://www.instagram.com/harborline.band/",
     "https://www.facebook.com/Harborline.band/",
