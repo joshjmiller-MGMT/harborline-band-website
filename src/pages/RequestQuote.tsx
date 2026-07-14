@@ -58,13 +58,13 @@ const RequestQuotePage = () => {
                   <span>harborlineband@gmail.com</span>
                 </a>
                 <a
-                  href="tel:+14434052378"
+                  href="tel:+14437856769"
                   className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors group"
                 >
                   <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center group-hover:border-primary transition-colors">
                     <Phone className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   </div>
-                  <span>(443) 405-2378</span>
+                  <span>(443) 785-6769</span>
                 </a>
                 <div className="flex items-center gap-3 text-muted-foreground">
                   <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center">

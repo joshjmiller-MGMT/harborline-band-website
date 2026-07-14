@@ -288,8 +288,8 @@ const EPKPage = () => {
             <a href="mailto:harborlineband@gmail.com" className="inline-flex items-center gap-2 hover:text-primary transition">
               <Mail className="w-4 h-4 text-primary" /> harborlineband@gmail.com
             </a>
-            <a href="tel:+14434052378" className="inline-flex items-center gap-2 hover:text-primary transition">
-              <Phone className="w-4 h-4 text-primary" /> (443) 405-2378
+            <a href="tel:+14437856769" className="inline-flex items-center gap-2 hover:text-primary transition">
+              <Phone className="w-4 h-4 text-primary" /> (443) 785-6769
             </a>
             <a href="https://harborlineband.com" className="inline-flex items-center gap-2 hover:text-primary transition">
               <Globe className="w-4 h-4 text-primary" /> harborlineband.com
