@@ -7,6 +7,15 @@
 /* Harborline Design System - Dark, Cinematic, Elegant */
 
 @layer base {
+  /* Kill horizontal scroll leaks site-wide (decorative blur orbs + off-edge
+     transforms were widening the page ~150px on mobile — measured 2026-07-17).
+     `clip` (not `hidden`) so no new scroll container is created and
+     position:sticky keeps working. */
+  html,
+  body {
+    overflow-x: clip;
+  }
+
   :root {
     --background: 220 20% 6%;
     --foreground: 45 20% 95%;
