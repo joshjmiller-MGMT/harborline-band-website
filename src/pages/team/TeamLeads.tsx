@@ -103,21 +103,20 @@ export default function TeamLeads() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+        {/* List view (was a 2-col card grid — Josh via Webb, 2026-07-15) */}
+        <div className="rounded-lg border border-border bg-card/40 divide-y divide-border">
           {filtered.map((l) => (
-            <div key={l.id} className="rounded-lg border border-border bg-card/40 p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-foreground">{l.name || "(unnamed lead)"}</span>
-                    {l.venture && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-                        <span className={`w-2 h-2 rounded-full ${VENTURE_DOT[l.venture] ?? "bg-muted-foreground"}`} />{l.venture}
-                      </span>
-                    )}
-                    <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground">{SOURCE_LABEL[l.source] ?? l.source}</span>
-                  </div>
-                  {l.event_type && <p className="text-[12px] text-foreground/90 mt-0.5">{l.event_type}</p>}
+            <div key={l.id} className="px-3 py-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-foreground">{l.name || "(unnamed lead)"}</span>
+                  {l.venture && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <span className={`w-2 h-2 rounded-full ${VENTURE_DOT[l.venture] ?? "bg-muted-foreground"}`} />{l.venture}
+                    </span>
+                  )}
+                  <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground">{SOURCE_LABEL[l.source] ?? l.source}</span>
+                  {l.event_type && <span className="text-[12px] text-foreground/90">· {l.event_type}</span>}
                 </div>
                 <select
                   value={l.status}
@@ -127,18 +126,18 @@ export default function TeamLeads() {
                   {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              <div className="mt-1.5 flex items-center gap-3 flex-wrap text-[11px] text-muted-foreground">
+              <div className="mt-1 flex items-center gap-3 flex-wrap text-[11px] text-muted-foreground">
                 {l.event_date && <span className="inline-flex items-center gap-1"><CalendarClock className="w-3 h-3" />{l.event_date}</span>}
                 {l.venue && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" />{l.venue}</span>}
                 {l.email && <a href={`mailto:${l.email}`} className="inline-flex items-center gap-1 hover:text-foreground"><Mail className="w-3 h-3" />{l.email}</a>}
                 {l.phone && <a href={`tel:${l.phone}`} className="inline-flex items-center gap-1 hover:text-foreground"><Phone className="w-3 h-3" />{l.phone}</a>}
                 {l.genres && <span>· {l.genres}</span>}
+                {l.notes && <span className="basis-full text-muted-foreground/80">{l.notes}</span>}
               </div>
-              {l.notes && <p className="text-[11px] text-muted-foreground mt-1.5">{l.notes}</p>}
             </div>
           ))}
           {!loading && filtered.length === 0 && (
-            <p className="text-center text-sm text-muted-foreground py-8 col-span-full">No leads match.</p>
+            <p className="text-center text-sm text-muted-foreground py-8">No leads match.</p>
           )}
         </div>
       </div>
