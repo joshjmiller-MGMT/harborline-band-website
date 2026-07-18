@@ -110,17 +110,21 @@ Deno.serve(async (req) => {
     // Only special characters / stray spaces are ignored: non-alphanumerics
     // inside a term become single-char wildcards so "dont"/"don't"/"don’t"
     // all match.
+    // Terms + the title_search column are normalized identically (lowercase,
+    // non-alphanumerics stripped) so punctuation never blocks a match:
+    // "dont" finds "Don't", "your song" requires BOTH words.
     const terms = query
+      .toLowerCase()
       .split(/\s+/)
-      .map((t) => t.replace(/[^\p{L}\p{N}]/gu, "_"))
-      .filter((t) => t.replace(/_/g, "").length > 0);
+      .map((t) => t.replace(/[^a-z0-9]/g, ""))
+      .filter((t) => t.length > 0);
     if (terms.length) {
       let tq = supabase
         .from("chart_index")
         .select(COLUMNS, { count: "exact" })
         .order("title", { ascending: true })
         .range(offset, offset + limit - 1);
-      for (const t of terms) tq = tq.ilike("title", `%${t}%`);
+      for (const t of terms) tq = tq.ilike("title_search", `%${t}%`);
       tq = applyFilters(tq);
       const { data: tData, error: tErr, count: tCount } = await tq;
       if (tErr) throw tErr;

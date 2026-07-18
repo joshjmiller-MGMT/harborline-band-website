@@ -231,12 +231,12 @@ function selectCandidates(
       (l: TrelloLabel) => l.name === ROUTED_LABEL_NAME,
     );
     if (hasRoutedLabel) continue;
-    // Consent gate: only cards Josh has explicitly marked ready get routed.
-    // Prevents the router racing a card he's still writing.
-    const isReady = (card.labels || []).some(
-      (l: TrelloLabel) => l.name === READY_LABEL_NAME,
-    );
-    if (!isReady) continue;
+    // GATE REMOVED (Josh 2026-07-18): "get rid of the 🟢 rule — ingest
+    // everything, especially web fixes." The 2026-07-07 mid-typing race is
+    // instead mitigated by the age check below: a card must be untouched for
+    // 10+ minutes before it routes, so we never grab one he's still writing.
+    const lastActivity = Date.parse(card.dateLastActivity || "") || 0;
+    if (Date.now() - lastActivity < 10 * 60 * 1000) continue;
     out.push({ card, listName, route });
   }
   return out;
