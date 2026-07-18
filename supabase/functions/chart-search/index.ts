@@ -104,7 +104,38 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FTS path first (websearch: phrases, AND/OR, -negation on the tsv).
+    // PRIMARY: every word the user typed must appear in the title (substring,
+    // case-insensitive). FTS was dropping English stopwords — "your song"
+    // searched just "song" and returned 154 unrelated charts (Josh 2026-07-18).
+    // Only special characters / stray spaces are ignored: non-alphanumerics
+    // inside a term become single-char wildcards so "dont"/"don't"/"don’t"
+    // all match.
+    const terms = query
+      .split(/\s+/)
+      .map((t) => t.replace(/[^\p{L}\p{N}]/gu, "_"))
+      .filter((t) => t.replace(/_/g, "").length > 0);
+    if (terms.length) {
+      let tq = supabase
+        .from("chart_index")
+        .select(COLUMNS, { count: "exact" })
+        .order("title", { ascending: true })
+        .range(offset, offset + limit - 1);
+      for (const t of terms) tq = tq.ilike("title", `%${t}%`);
+      tq = applyFilters(tq);
+      const { data: tData, error: tErr, count: tCount } = await tq;
+      if (tErr) throw tErr;
+      if ((tCount || 0) > 0) {
+        return jsonResponse({
+          results: (tData || []).map((r) => ({ ...r, rank: 1 })),
+          total: tCount || 0,
+          query,
+          folder_path: folderPath || null,
+        });
+      }
+    }
+
+    // FALLBACK: FTS websearch over the tsv (title+composer+keywords+setlists)
+    // — catches composer searches ("coltrane") and phrase/negation queries.
     let q = supabase
       .from("chart_index")
       .select(COLUMNS, { count: "exact" })
