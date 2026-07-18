@@ -144,11 +144,25 @@ export default function TeamReviewQueue() {
       setLoading(false);
       return;
     }
-    const rows = ((data || []) as unknown as ReviewItem[]).slice().sort((a, b) => {
-      const pr = (PRIORITY_RANK[a.priority] ?? 1) - (PRIORITY_RANK[b.priority] ?? 1);
-      if (pr !== 0) return pr;
-      return new Date(b.queued_at).getTime() - new Date(a.queued_at).getTime();
-    });
+    const rows = ((data || []) as unknown as ReviewItem[])
+      .map((r) => ({
+        ...r,
+        // Options arrive as either ["text", ...] or [{label, recommended?}, ...]
+        // depending on which system wrote the card. Normalize once here so a
+        // plain-string array can never render as blank buttons again
+        // (root cause of the 2026-07-18 blank-options report).
+        options: r.options
+          ? (r.options as unknown as (string | ChoiceOption)[]).map((o) =>
+              typeof o === "string" ? { label: o } : o,
+            )
+          : null,
+      }))
+      .slice()
+      .sort((a, b) => {
+        const pr = (PRIORITY_RANK[a.priority] ?? 1) - (PRIORITY_RANK[b.priority] ?? 1);
+        if (pr !== 0) return pr;
+        return new Date(b.queued_at).getTime() - new Date(a.queued_at).getTime();
+      });
     setItems(rows);
     if (rows.length && !rows.find((r) => r.id === selectedId)) {
       setSelectedId(rows[0].id);
