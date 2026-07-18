@@ -93,6 +93,7 @@ const musicHub: MegaMenu = {
     { name: "Setlists", href: "/team/setlist-builder", icon: ListMusic, description: "Build & save setlists for any ensemble" },
     { name: "Practice", href: "/team/practice", icon: Activity, description: "Practice tracker + instrument hours" },
     { name: "Charts", href: "/team/resources", icon: FolderOpen, description: "Sheet music library — fake books, charts, parts, setlists" },
+    { name: "Gig Pack", href: "/team/gig-pack", icon: FolderOpen, description: "Setlist in — every chart variation out, sources for whats missing" },
   ],
 };
 

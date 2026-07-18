@@ -46,9 +46,14 @@ const variationOf = (fp: string) => {
 
 const sourceLinks = (song: string) => {
   const q = encodeURIComponent(song);
+  // Source set per Josh 2026-07-18: free/community first, then paid, then broad.
   return [
+    { label: "MuseScore", url: `https://musescore.com/sheetmusic?text=${q}` },
     { label: "Musicnotes", url: `https://www.musicnotes.com/search/go?w=${q}` },
     { label: "SheetMusicPlus", url: `https://www.sheetmusicplus.com/en/search?Ntt=${q}` },
+    { label: "SheetMusicDirect", url: `https://www.sheetmusicdirect.com/en-US/Search.aspx?query=${q}` },
+    { label: "Scribd", url: `https://www.scribd.com/search?query=${q}+sheet+music` },
+    { label: "Sheetmusic-free", url: `https://sheetmusic-free.com/?s=${q}` },
     { label: "FreeHornCharts", url: `https://www.freehorncharts.com/?s=${q}` },
     { label: "Google", url: `https://www.google.com/search?q=${q}+sheet+music+pdf` },
   ];
