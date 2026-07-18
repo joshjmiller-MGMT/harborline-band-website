@@ -68,6 +68,7 @@ const TeamLogin = lazy(() => import("./pages/team/TeamLogin"));
 const TeamSongs = lazy(() => import("./pages/team/TeamSongs"));
 const TeamScheduler = lazy(() => import("./pages/team/TeamScheduler"));
 const TeamResources = lazy(() => import("./pages/team/TeamResources"));
+const TeamGigPack = lazy(() => import("./pages/team/TeamGigPack"));
 const TeamRunOfShow = lazy(() => import("./pages/team/TeamRunOfShow"));
 const TeamDashboard = lazy(() => import("./pages/team/TeamDashboard"));
 const TeamPractice = lazy(() => import("./pages/team/TeamPractice"));
@@ -167,6 +168,7 @@ const App = () => (
                 <Route path="/team/songs" element={<TeamSongs />} />
                 <Route path="/team/scheduler" element={<TeamScheduler />} />
                 <Route path="/team/resources" element={<TeamResources />} />
+                <Route path="/team/gig-pack" element={<TeamGigPack />} />
                 <Route path="/team/run-of-show" element={<TeamRunOfShow />} />
                 <Route path="/team/dashboard" element={<TeamDashboard />} />
                 <Route path="/team/practice" element={<TeamPractice />} />
