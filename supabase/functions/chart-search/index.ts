@@ -104,10 +104,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FTS path: use a raw SQL call via rpc to access ts_rank.
-    // We do this by selecting computed columns through a view-less rpc.
-    // Simpler: filter via .textSearch on the generated search_tsv,
-    // then re-rank client-side. PostgREST supports websearch type.
+    // FTS path first (websearch: phrases, AND/OR, -negation on the tsv).
     let q = supabase
       .from("chart_index")
       .select(COLUMNS, { count: "exact" })
@@ -119,6 +116,29 @@ Deno.serve(async (req) => {
     q = applyFilters(q);
     const { data, error, count } = await q;
     if (error) throw error;
+
+    // FTS only matches WHOLE words — while typing ("autumn lea", "mist") it
+    // returns nothing and the search feels broken (Josh 2026-07-17). When FTS
+    // finds 0, fall back to a case-insensitive title substring match.
+    if ((count || 0) === 0) {
+      let fb = supabase
+        .from("chart_index")
+        .select(COLUMNS, { count: "exact" })
+        .ilike("title", `%${query.replace(/[%_]/g, "")}%`)
+        .order("title", { ascending: true })
+        .range(offset, offset + limit - 1);
+      fb = applyFilters(fb);
+      const { data: fbData, error: fbErr, count: fbCount } = await fb;
+      if (!fbErr && (fbCount || 0) > 0) {
+        return jsonResponse({
+          results: (fbData || []).map((r) => ({ ...r, rank: 0.5 })),
+          total: fbCount || 0,
+          query,
+          folder_path: folderPath || null,
+        });
+      }
+    }
+
     return jsonResponse({
       results: (data || []).map((r) => ({ ...r, rank: 1 })),
       total: count || 0,
