@@ -81,6 +81,8 @@ interface ReviewItem {
   // Multiple-choice escalation: one-tap answer options + the non-blocking
   // default the branch already proceeded with (null for plain questions).
   options: ChoiceOption[] | null;
+  round: number;
+  parent_id: string | null;
   assumed_default: string | null;
   // Files Josh attached on this card as part of resolving it.
   uploads: UploadRef[] | null;
@@ -132,7 +134,7 @@ export default function TeamReviewQueue() {
     const { data, error } = await supabase
       .from("waiting_on_josh")
       .select(
-        "id, title, prompt, detail, context_md, media_refs, triangulation_loops, source_ref, source_session, priority, item_type, options, assumed_default, uploads, queued_at, resolved_at",
+        "id, title, prompt, detail, context_md, media_refs, triangulation_loops, source_ref, source_session, priority, item_type, options, assumed_default, uploads, queued_at, resolved_at, round, parent_id",
       )
       .is("resolved_at", null);
     if (error) {
@@ -493,6 +495,11 @@ export default function TeamReviewQueue() {
                               <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
                                 {TYPE_LABELS[item.item_type]}
                               </Badge>
+                              {(item.round > 1 || item.parent_id) && (
+                                <Badge className="text-[10px] uppercase tracking-wider bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-500/40">
+                                  <RefreshCw className="w-2.5 h-2.5 mr-1" /> Round {item.round}
+                                </Badge>
+                              )}
                               {item.media_refs?.length > 0 && (
                                 <ImageIcon className="w-3 h-3 text-muted-foreground" />
                               )}
@@ -527,6 +534,11 @@ export default function TeamReviewQueue() {
                     <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
                       {TYPE_LABELS[current.item_type]}
                     </Badge>
+                    {(current.round > 1 || current.parent_id) && (
+                      <Badge className="text-[10px] uppercase tracking-wider bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-500/40">
+                        <RefreshCw className="w-2.5 h-2.5 mr-1" /> Re-ask · round {current.round}
+                      </Badge>
+                    )}
                     {current.priority === "high" && (
                       <Badge variant="destructive" className="text-[10px] uppercase tracking-wider">
                         High
