@@ -45,6 +45,7 @@ import {
   findOrCreateLabel,
   getCardWithLabels,
   trelloConfigured,
+  trelloDelete,
   trelloGet,
   type TrelloCard,
   type TrelloLabel,
@@ -62,6 +63,12 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const ROUTED_LABEL_NAME = "✅ routed";
 const ROUTED_LABEL_COLOR = "blue";
+// Noticed protocol (Josh 2026-07-19): first sighting of a card TAGS it
+// "👀 noticed" instead of ingesting. If the tag is still there on the NEXT
+// run, the card ingests. Josh removes the tag to say "still working on it" —
+// the router simply re-notices it next cycle. Replaces the 10-min quiet check.
+const NOTICED_LABEL_NAME = "👀 noticed";
+const NOTICED_LABEL_COLOR = "yellow";
 const DONE_LABEL_NAME = "✅ done by claude";
 const DONE_LABEL_COLOR = "purple";
 // Consent gate (Josh, 2026-07-07): the router once grabbed a card mid-typing
@@ -214,7 +221,7 @@ function selectCandidates(
   cards: TrelloCard[],
   lists: TrelloList[],
   routes: RouteRow[],
-): CandidateCard[] {
+): { candidates: CandidateCard[]; toNotice: CandidateCard[] } {
   const listNameById = new Map(lists.map((l) => [l.id, l.name]));
   const routeByListName = new Map<string, RouteRow>();
   for (const r of routes) {
@@ -222,6 +229,7 @@ function selectCandidates(
     routeByListName.set(r.list_name, r);
   }
   const out: CandidateCard[] = [];
+  const toNotice: CandidateCard[] = [];
   for (const card of cards) {
     const listName = listNameById.get(card.idList);
     if (!listName) continue;
@@ -231,15 +239,18 @@ function selectCandidates(
       (l: TrelloLabel) => l.name === ROUTED_LABEL_NAME,
     );
     if (hasRoutedLabel) continue;
-    // GATE REMOVED (Josh 2026-07-18): "get rid of the 🟢 rule — ingest
-    // everything, especially web fixes." The 2026-07-07 mid-typing race is
-    // instead mitigated by the age check below: a card must be untouched for
-    // 10+ minutes before it routes, so we never grab one he's still writing.
-    const lastActivity = Date.parse(card.dateLastActivity || "") || 0;
-    if (Date.now() - lastActivity < 10 * 60 * 1000) continue;
+    // Noticed protocol: tag on first sight, ingest only if the tag survived a
+    // full cycle (Josh can pull the tag to hold a card he's still writing).
+    const hasNoticed = (card.labels || []).some(
+      (l: TrelloLabel) => l.name === NOTICED_LABEL_NAME,
+    );
+    if (!hasNoticed) {
+      toNotice.push({ card, listName, route });
+      continue;
+    }
     out.push({ card, listName, route });
   }
-  return out;
+  return { candidates: out, toNotice };
 }
 
 type RouteOutcome = {
@@ -417,7 +428,7 @@ async function handleRoute(supabase: SupabaseClient, dryRun: boolean) {
   }
 
   const { cards, lists } = await fetchBoardCardsAndLists(board.id);
-  const candidates = selectCandidates(cards, lists, routes);
+  const { candidates, toNotice } = selectCandidates(cards, lists, routes);
   const candidateIds = candidates.map((c) => c.card.id);
   const alreadyRouted = await loadAlreadyRoutedIds(supabase, candidateIds);
   const fresh = candidates.filter((c) => !alreadyRouted.has(c.card.id));
@@ -481,6 +492,33 @@ async function handleRoute(supabase: SupabaseClient, dryRun: boolean) {
     };
   }
 
+  // Tag fresh sightings "noticed" — they ingest next run if the tag survives.
+  let noticedTagged = 0;
+  try {
+    const noticedLabel = await findOrCreateLabel(
+      board.id,
+      NOTICED_LABEL_NAME,
+      NOTICED_LABEL_COLOR,
+    );
+    for (const c of toNotice) {
+      try {
+        await attachLabelToCard(c.card.id, noticedLabel.id);
+        noticedTagged++;
+      } catch (_) { /* per-card tag failures are non-fatal */ }
+    }
+    // Dispatching cards shed the noticed tag as they become ✅ routed.
+    for (const c of fresh) {
+      const noticedOn = (c.card.labels || []).find(
+        (l: TrelloLabel) => l.name === NOTICED_LABEL_NAME,
+      );
+      if (noticedOn) {
+        try {
+          await trelloDelete(`/cards/${c.card.id}/idLabels/${noticedLabel.id}`);
+        } catch (_) { /* non-fatal */ }
+      }
+    }
+  } catch (_) { /* label setup failure shouldn't block routing */ }
+
   const outcomes: RouteOutcome[] = [];
   for (const c of fresh) {
     const outcome = await dispatchOne(supabase, c, routedLabel.id);
@@ -502,6 +540,8 @@ async function handleRoute(supabase: SupabaseClient, dryRun: boolean) {
       candidate_count: candidates.length,
       skipped_already_routed: candidates.length - fresh.length,
       dispatched: fresh.length,
+      noticed_tagged: noticedTagged,
+      awaiting_notice_cycle: toNotice.length,
       dispatched_by_handler: countByHandler(outcomes.map((o) => o.handler)),
       routed_count,
       labeled_count,

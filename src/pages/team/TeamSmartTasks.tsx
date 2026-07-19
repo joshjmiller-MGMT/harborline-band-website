@@ -210,45 +210,9 @@ export default function SmartBoardPanel() {
           <SmartTaskWidget />
         </div>
 
-        {/* ── Trello inbox — mirrors the source buckets ── */}
-        <Collapsible open={openSections.inbox} onOpenChange={() => toggle("inbox")}
-          className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
-          <CollapsibleTrigger asChild>
-            <button className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-amber-500/10 rounded-lg text-left">
-              <span className="flex items-center gap-2 min-w-0">
-                <Inbox className="w-4 h-4 text-amber-500 shrink-0" />
-                <span className="font-display text-lg tracking-wide-custom text-foreground">Trello inbox</span>
-                <span className="text-xs text-muted-foreground">{inboxCount} unrouted · grouped by source bucket · tag 🟢 in Trello to route</span>
-              </span>
-              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${openSections.inbox ? "rotate-180" : ""}`} />
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="px-3 pb-3 space-y-2">
-            {inboxByBucket.length === 0 && (
-              <p className="text-xs text-muted-foreground py-2 text-center">Inbox is clear — everything is routed or ported.</p>
-            )}
-            {inboxByBucket.map(([bucket, cards]) => (
-              <div key={bucket}>
-                <p className="text-[11px] uppercase tracking-wider text-amber-500/90 font-medium px-1 py-1">
-                  {bucket} <span className="text-muted-foreground">({cards.length})</span>
-                </p>
-                <div className="rounded border border-border/60 bg-card/40 divide-y divide-border/40">
-                  {cards.map((c) => (
-                    <div key={c.id} className="px-2.5 py-1.5 flex items-center gap-2">
-                      <span className="text-sm text-foreground truncate flex-1">{c.name}</span>
-                      {c.due && <span className="text-[11px] text-muted-foreground shrink-0">{c.due.slice(0, 10)}</span>}
-                      <a href={c.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
-                        className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Open in Trello">
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
-
+        {/* Trello inbox panel REMOVED (Josh 2026-07-19): the noticed-tag
+            protocol on the router replaced the inbox concept — cards are
+            👀-noticed in Trello itself, then auto-ingest a cycle later. */}
         {/* ── SMART tasks by stage — compact rows, no scrum ── */}
         <div className="space-y-3">
           {PERSISTABLE_SMART_BUCKETS.map((stage) => {

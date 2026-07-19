@@ -167,6 +167,11 @@ export async function findOrCreateLabel(
   return await createRes.json();
 }
 
+export async function trelloDelete(path: string): Promise<Response> {
+  const url = `https://api.trello.com/1${path}?${trelloAuth()}`;
+  return await fetch(url, { method: "DELETE", headers: { Accept: "application/json" } });
+}
+
 export async function attachLabelToCard(
   cardId: string,
   labelId: string,

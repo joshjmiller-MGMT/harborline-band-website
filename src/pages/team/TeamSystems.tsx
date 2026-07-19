@@ -21,6 +21,10 @@ type SystemRow = {
   brain_ref: string | null;
   health: string | null;
   security_note: string | null;
+  current_work: string | null;
+  just_finished: string | null;
+  up_next: string | null;
+  blocked_on: string | null;
   pinned: boolean;
   sort_order: number;
   last_activity: string | null;
@@ -44,7 +48,7 @@ export default function TeamSystems() {
     setLoading(true);
     const { data, error } = await supabase
       .from("systems_registry")
-      .select("id, key, name, category, description, status, backend_path, brain_ref, health, security_note, pinned, sort_order, last_activity")
+      .select("id, key, name, category, description, status, backend_path, brain_ref, health, security_note, pinned, sort_order, last_activity, current_work, just_finished, up_next, blocked_on")
       .order("sort_order", { ascending: true });
     if (error) toast.error(error.message);
     setRows((data ?? []) as SystemRow[]);
@@ -137,6 +141,23 @@ export default function TeamSystems() {
                       </select>
                     </div>
                     {r.health && <p className="text-[11px] text-foreground/80 mt-1.5">{r.health}</p>}
+                    {/* CEO glance (Josh 2026-07-19): now / just shipped / next / hang-up */}
+                    {(r.current_work || r.just_finished || r.up_next || r.blocked_on) && (
+                      <div className="mt-1.5 space-y-0.5 text-[11px]">
+                        {r.current_work && (
+                          <p className="text-foreground/90"><span className="text-green-500 font-medium">Now:</span> {r.current_work}</p>
+                        )}
+                        {r.just_finished && (
+                          <p className="text-muted-foreground"><span className="text-sky-400 font-medium">Shipped:</span> {r.just_finished}</p>
+                        )}
+                        {r.up_next && (
+                          <p className="text-muted-foreground"><span className="text-violet-400 font-medium">Next:</span> {r.up_next}</p>
+                        )}
+                        {r.blocked_on && (
+                          <p className="text-amber-500"><span className="font-medium">Hang-up:</span> {r.blocked_on}</p>
+                        )}
+                      </div>
+                    )}
                     <div className="mt-1.5 flex items-center gap-3 flex-wrap text-[10px] text-muted-foreground">
                       {!r.backend_path && (
                         <span className="inline-flex items-center gap-1 text-amber-400">
