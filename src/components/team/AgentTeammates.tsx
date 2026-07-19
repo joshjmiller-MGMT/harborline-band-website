@@ -51,8 +51,9 @@ type AgentMessage = {
   agent_id: string;
   job_id: string | null;
   role: "josh" | "agent" | "system";
-  kind: "chat" | "action" | "result";
+  kind: "chat" | "action" | "result" | "ticket";
   body: string;
+  ticket_ref: string | null;
   created_at: string;
 };
 
@@ -97,6 +98,10 @@ export default function AgentTeammates() {
   const [agents, setAgents] = useState<Teammate[]>([]);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [messages, setMessages] = useState<AgentMessage[]>([]);
+  // Per-ticket history filter (Josh 2026-07-19): click any ticket chip to see
+  // ONLY that ticket's events across this agent's whole log.
+  const [ticketFilter, setTicketFilter] = useState<string | null>(null);
+  const [ticketMsgs, setTicketMsgs] = useState<AgentMessage[]>([]);
   const [jobs, setJobs] = useState<AgentJob[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -147,6 +152,21 @@ export default function AgentTeammates() {
     setJobs((jbs.data as AgentJob[]) || []);
     setLoadingChat(false);
   }, []);
+
+  useEffect(() => {
+    setTicketFilter(null);
+  }, [selectedSlug]);
+
+  useEffect(() => {
+    if (!ticketFilter) { setTicketMsgs([]); return; }
+    supabase
+      .from("agent_messages")
+      .select("*")
+      .eq("ticket_ref", ticketFilter)
+      .order("created_at", { ascending: true })
+      .limit(200)
+      .then(({ data }) => setTicketMsgs((data as AgentMessage[]) || []));
+  }, [ticketFilter]);
 
   // Agents list + live status updates.
   useEffect(() => {
@@ -370,13 +390,28 @@ export default function AgentTeammates() {
                   Say hi — give {selected.name} a job or ask where things stand.
                 </p>
               )}
-              {messages.map((m) =>
+              {ticketFilter && (
+                <div className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs">
+                  <span className="truncate">Ticket history: <span className="font-mono">{ticketFilter}</span> ({ticketMsgs.length} events)</span>
+                  <button type="button" className="text-primary hover:underline flex-shrink-0" onClick={() => setTicketFilter(null)}>
+                    Show all
+                  </button>
+                </div>
+              )}
+              {(ticketFilter ? ticketMsgs : messages).map((m) =>
                 m.kind !== "chat" ? (
                   <div key={m.id} className="flex justify-center">
-                    <span className="text-[11px] text-muted-foreground bg-muted/40 rounded-full px-3 py-1 flex items-center gap-1.5 max-w-[90%]">
+                    <button
+                      type="button"
+                      onClick={() => m.ticket_ref && setTicketFilter(m.ticket_ref)}
+                      disabled={!m.ticket_ref}
+                      className={`text-[11px] text-muted-foreground bg-muted/40 rounded-full px-3 py-1 flex items-center gap-1.5 max-w-[90%] text-left ${m.ticket_ref ? "hover:bg-primary/15 hover:text-foreground cursor-pointer" : "cursor-default"}`}
+                      title={m.ticket_ref ? "Show this ticket's full history" : undefined}
+                    >
                       <ScrollText className="w-3 h-3 flex-shrink-0" />
                       <span className="truncate">{m.body}</span>
-                    </span>
+                      {m.ticket_ref && <span className="font-mono text-[9px] opacity-60 flex-shrink-0">{m.ticket_ref.slice(0, 18)}</span>}
+                    </button>
                   </div>
                 ) : (
                   <div
