@@ -45,6 +45,8 @@ export default function TeamContacts() {
     const { data, error } = await supabase
       .from("contacts")
       .select("id, name, email, phone, role, org, venture, followup, followup_note, source, notes, sheet_synced")
+      // task-not-contact rows are board items, not people (audit 7/19)
+      .not("tags", "cs", "{task-not-contact}")
       .order("followup", { ascending: false })
       .order("name", { ascending: true });
     if (error) toast.error(error.message);
