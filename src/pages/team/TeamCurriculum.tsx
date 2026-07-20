@@ -13,6 +13,7 @@ import { GraduationCap, ChevronRight, BookOpen, Loader2 } from "lucide-react";
 
 type Week = { week: number; topic: string; materials?: string };
 type Reading = { title: string; author?: string; note?: string };
+type Variant = { school: string; note: string };
 type CourseRow = {
   id: string;
   program: "jazz-piano-performance" | "jazz-composition";
@@ -23,6 +24,7 @@ type CourseRow = {
   description: string | null;
   weeks: Week[];
   readings: Reading[];
+  variants: Variant[];
   mentorship_note: string | null;
   sort: number;
 };
@@ -152,6 +154,19 @@ export default function TeamCurriculum() {
                                         <span className="text-foreground">{r.title}</span>
                                         {r.author && <span className="text-muted-foreground"> — {r.author}</span>}
                                         {r.note && <span className="block text-xs text-muted-foreground pl-3">{r.note}</span>}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {c.variants?.length > 0 && (
+                                <div>
+                                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">How the other schools teach it</h4>
+                                  <ul className="text-sm space-y-1">
+                                    {c.variants.map((v, i) => (
+                                      <li key={i}>
+                                        <Badge variant="outline" className="text-[10px] mr-1.5">{v.school}</Badge>
+                                        <span className="text-muted-foreground">{v.note}</span>
                                       </li>
                                     ))}
                                   </ul>
