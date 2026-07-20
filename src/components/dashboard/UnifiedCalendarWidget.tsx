@@ -680,10 +680,19 @@ export default function UnifiedCalendarWidget() {
         : event.color;
     const stripe = (overrideKey && colorOverrides[overrideKey]) || naturalStripe;
 
-    // Both the top tag (stripe) and the fill (body) reflect the SOURCE the event came from,
-    // NOT the event's own Google color-id. Josh's calendar color-coding (warehouse/gig/hold/etc.)
-    // is his INPUT language for me to read/classify — it must not be painted back onto this view.
-    return { body: stripe, stripe };
+    // Josh 2026-07-20 (supersedes the earlier "don't paint colors back" rule):
+    // the BODY reflects the event's OWN color — read the Google per-event color
+    // (colorId) and show it on the item, so his color language (red=needs
+    // staffing, green=money, purple=rehearsal, etc.) reads directly here. The
+    // STRIPE (little top tag) is the ONLY thing we add — it signifies the source
+    // calendar. Google events with no per-event color fall back to the
+    // calendar's own color; non-Google sources keep the source color for both.
+    let body = stripe;
+    if (event.source === "google") {
+      const gid = event.meta?.eventColorId as string | null | undefined;
+      body = (gid && GOOGLE_EVENT_COLORS[gid]) || event.color || stripe;
+    }
+    return { body, stripe };
   };
 
   const eventStyleGetter = (event: UnifiedEvent) => {
