@@ -322,17 +322,32 @@ export default function SmartBoardPanel() {
                           {row.due_date && (
                             <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{row.due_date}</span>
                           )}
-                          {/* follow-up toggle (Active only) */}
+                          {/* follow-up: toggle + frequency + next/last (Active only) */}
                           {stage === "Active" && (
-                            <button
-                              onClick={() => patchRow(row.id, { recurring_followup: !row.recurring_followup },
-                                row.recurring_followup ? "Follow-up stopped" : "Following up until done",
-                                { recurring_followup: row.recurring_followup })}
-                              className={`shrink-0 ${row.recurring_followup ? "text-indigo-400" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
-                              title={row.recurring_followup ? "Stop follow-up" : "Follow up until done"}
-                            >
-                              <Repeat className="w-3.5 h-3.5" />
-                            </button>
+                            <span className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => patchRow(row.id, { recurring_followup: !row.recurring_followup },
+                                  row.recurring_followup ? "Follow-up stopped" : "Following up until done",
+                                  { recurring_followup: row.recurring_followup })}
+                                className={row.recurring_followup ? "text-indigo-400" : "text-muted-foreground/40 hover:text-muted-foreground"}
+                                title={row.recurring_followup ? "Stop follow-up" : "Follow up until done"}
+                              >
+                                <Repeat className="w-3.5 h-3.5" />
+                              </button>
+                              {row.recurring_followup && (
+                                <select
+                                  value={row.followup_frequency || "daily"}
+                                  onChange={(e) => patchRow(row.id, { followup_frequency: e.target.value }, `Follow-up: ${e.target.value}`)}
+                                  className="text-[10px] bg-transparent border border-border/60 rounded px-0.5 py-0 cursor-pointer text-indigo-300"
+                                  title={`next: ${row.next_followup_at ? row.next_followup_at.slice(0, 10) : "next daily run"} · last: ${row.last_followup_at ? row.last_followup_at.slice(0, 10) : "never"}`}
+                                >
+                                  <option value="daily">daily</option>
+                                  <option value="every-3-days">3d</option>
+                                  <option value="weekly">weekly</option>
+                                  <option value="biweekly">2wk</option>
+                                </select>
+                              )}
+                            </span>
                           )}
                           {/* send to review (Needs SMART only) */}
                           {stage === "Needs SMART" && (

@@ -47,6 +47,9 @@ export type SmartTaskRow = {
   board_bucket: string | null;
   board_venture: string | null;
   recurring_followup: boolean;
+  followup_frequency: string | null;
+  last_followup_at: string | null;
+  next_followup_at: string | null;
   created_at: string;
 };
 
