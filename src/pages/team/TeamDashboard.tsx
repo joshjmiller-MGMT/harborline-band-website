@@ -1,7 +1,5 @@
 import TeamLayout from "@/components/TeamLayout";
 import AvailabilityCheckerWidget from "@/components/dashboard/AvailabilityCheckerWidget";
-import IntegrationHealthWidget from "@/components/dashboard/IntegrationHealthWidget";
-import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
 import PendingApprovalAlert from "@/components/dashboard/PendingApprovalAlert";
 import FollowupsAlert from "@/components/dashboard/FollowupsAlert";
 import DayPlanWidget from "@/components/dashboard/DayPlanWidget";
@@ -47,7 +45,6 @@ export default function TeamDashboard() {
           {/* Needs-action goes first — pins urgent + everything that needs Josh. */}
           <div className="lg:col-span-2">
             <ErrorBoundary compact label="Needs Action">
-              <NeedsActionWidget />
             </ErrorBoundary>
           </div>
 
@@ -75,7 +72,6 @@ export default function TeamDashboard() {
           {/* Integration health goes last — it's read-only diagnostics, not a daily-driver. */}
           <div className="lg:col-span-2">
             <ErrorBoundary compact label="Integration health">
-              <IntegrationHealthWidget />
             </ErrorBoundary>
           </div>
         </div>

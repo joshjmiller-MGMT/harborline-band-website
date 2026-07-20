@@ -13,6 +13,7 @@ import { Sun, AlertTriangle, ArrowRight, CircleDot } from "lucide-react";
 type ReviewRow = { id: string; title: string; priority: string; queued_at: string };
 type BlockedJob = { title: string; blocked_reason: string | null; slug: string; emoji: string };
 type AgentRow = { slug: string; name: string; emoji: string; status: string; current_action: string | null };
+type Brief = { brief_date: string; brief_md: string };
 
 function age(iso: string): string {
   const h = Math.floor((Date.now() - new Date(iso).getTime()) / 3600000);
@@ -25,6 +26,8 @@ export default function TodayCommandWidget() {
   const [reviewTotal, setReviewTotal] = useState(0);
   const [blocked, setBlocked] = useState<BlockedJob[]>([]);
   const [agents, setAgents] = useState<AgentRow[]>([]);
+  const [brief, setBrief] = useState<Brief | null>(null);
+  const [briefOpen, setBriefOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -58,6 +61,12 @@ export default function TodayCommandWidget() {
         ),
       );
       setAgents((a.data as AgentRow[]) || []);
+      const { data: b } = await supabase
+        .from("daily_briefs")
+        .select("brief_date, brief_md")
+        .order("brief_date", { ascending: false })
+        .limit(1);
+      if (b?.[0]) setBrief(b[0] as Brief);
     })();
   }, []);
 
@@ -123,6 +132,18 @@ export default function TodayCommandWidget() {
             <Badge variant="outline" className="mt-2 text-[10px]">every routine + update flows here — no silos</Badge>
           </div>
         </div>
+        {/* 9am cloud brief — published into the site, rendered here (no silo). */}
+        {brief && (
+          <div className="mt-3 pt-3 border-t border-border/40">
+            <button type="button" onClick={() => setBriefOpen(!briefOpen)}
+              className="text-xs text-primary hover:underline">
+              ☀️ Morning brief — {brief.brief_date} {briefOpen ? "(hide)" : "(read)"}
+            </button>
+            {briefOpen && (
+              <pre className="mt-2 text-xs text-foreground/90 whitespace-pre-wrap font-sans bg-muted/30 rounded p-3 max-h-80 overflow-y-auto">{brief.brief_md}</pre>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
