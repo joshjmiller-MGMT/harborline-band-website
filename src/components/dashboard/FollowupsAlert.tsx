@@ -80,14 +80,21 @@ export default function FollowupsAlert() {
       )}
       {people.length > 0 && (
         <div className={rows.length > 0 ? "mt-2 pt-2 border-t border-indigo-500/20" : ""}>
-          <p className="text-[11px] text-muted-foreground mb-1">People to follow up with (POC F/U):</p>
-          <p className="text-sm text-foreground/90 leading-relaxed">
-            {people.map((p, i) => (
-              <span key={p.id}>
-                {i > 0 && <span className="text-muted-foreground"> · </span>}
-                {p.name}
-              </span>
+          <p className="text-[11px] text-muted-foreground mb-1">Follow up with:</p>
+          {/* Clean person chips only (task-junk lives on boards now, Josh 7/19).
+              Capped at 8; the rest are one click away on Contacts. */}
+          <p className="text-sm leading-relaxed flex flex-wrap gap-1.5">
+            {people.slice(0, 8).map((p) => (
+              <Link key={p.id} to="/team/contacts"
+                className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-foreground/90 hover:border-indigo-400 text-xs">
+                {p.name.split(/[-—(·]/)[0].trim()}
+              </Link>
             ))}
+            {people.length > 8 && (
+              <Link to="/team/contacts" className="text-xs text-indigo-400 hover:underline self-center">
+                +{people.length - 8} more
+              </Link>
+            )}
           </p>
         </div>
       )}
