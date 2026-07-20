@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,9 +58,14 @@ function buildCardContext(card: TrelloCard): CardContext {
 
 const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
-export default function SmartTaskWidget() {
+// prefill: the SMART board pushes a "Needs SMART" item up here with its full
+// context (Josh 2026-07-19) — nonce forces re-apply even for the same row.
+export default function SmartTaskWidget({ prefill }: { prefill?: { text: string; nonce: number } }) {
   const { toast } = useToast();
   const [input, setInput] = useState("");
+  useEffect(() => {
+    if (prefill?.text) setInput(prefill.text);
+  }, [prefill?.nonce]);
   const [smart, setSmart] = useState<SmartShape | null>(null);
   const [working, setWorking] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -266,7 +271,7 @@ export default function SmartTaskWidget() {
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="font-display text-lg tracking-wide-custom flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            Make a Task SMART
+            Smartify
           </CardTitle>
           <Link
             to="/team/smart-tasks"

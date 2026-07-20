@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
-import { Sparkles, RefreshCw, ChevronDown, Repeat, MessageSquarePlus, ExternalLink, Inbox } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Sparkles, RefreshCw, ChevronDown, Repeat, MessageSquarePlus, ExternalLink, Inbox, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -104,6 +104,41 @@ export default function SmartBoardPanel() {
   const inboxCount = useMemo(() => inboxByBucket.reduce((a, [, c]) => a + c.length, 0), [inboxByBucket]);
 
   // ── SMART rows grouped by stage ───────────────────────────────────────────
+  // Address-the-card layer (Josh 2026-07-19): expandable rows + one-click verbs.
+  const [openRow, setOpenRow] = useState<string | null>(null);
+  const [cardCtx, setCardCtx] = useState<Record<string, { desc: string; notes: string }>>({});
+  const [smartifyPrefill, setSmartifyPrefill] = useState<{ text: string; nonce: number } | undefined>();
+
+  useEffect(() => {
+    if (!openRow) return;
+    const row = smartRows.find((r) => r.id === openRow);
+    const tid = row?.trello_card_id;
+    if (!tid || cardCtx[tid]) return;
+    supabase
+      .from("claude_action_queue")
+      .select("card_desc, status_notes")
+      .eq("trello_card_id", tid)
+      .limit(1)
+      .then(({ data }) => {
+        const r = data?.[0];
+        if (r) setCardCtx((prev) => ({ ...prev, [tid]: { desc: r.card_desc || "", notes: r.status_notes || "" } }));
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRow]);
+
+  const smartifyRow = (row: SmartTaskRow) => {
+    const ctx = row.trello_card_id ? cardCtx[row.trello_card_id] : undefined;
+    const text = [
+      row.revised_title || row.raw_input,
+      row.raw_input && row.raw_input !== (row.revised_title || "") ? `Original: ${row.raw_input}` : "",
+      ctx?.desc ? `Card details: ${ctx.desc}` : "",
+      ctx?.notes ? `Context: ${ctx.notes}` : "",
+    ].filter(Boolean).join("\n");
+    setSmartifyPrefill({ text, nonce: Date.now() });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    toast.success("Loaded into Smartify — it's at the top of the page");
+  };
+
   const rowsByStage = useMemo(() => {
     const m = new Map<string, SmartTaskRow[]>();
     for (const b of PERSISTABLE_SMART_BUCKETS) m.set(b, []);
@@ -207,7 +242,7 @@ export default function SmartBoardPanel() {
 
         {/* Quick SMART-ify composer */}
         <div className="mb-6">
-          <SmartTaskWidget />
+          <SmartTaskWidget prefill={smartifyPrefill} />
         </div>
 
         {/* Trello inbox panel REMOVED (Josh 2026-07-19): the noticed-tag
@@ -257,8 +292,11 @@ export default function SmartBoardPanel() {
                       : rows
                     ).map((row) => {
                       const venture = normalizeVenture(row.board_venture);
+                      const isOpen = openRow === row.id;
+                      const ctx = row.trello_card_id ? cardCtx[row.trello_card_id] : undefined;
                       return (
-                        <div key={row.id} className="px-3 py-1.5 flex items-center gap-2.5">
+                        <div key={row.id}>
+                        <div className="px-3 py-1.5 flex items-center gap-2.5">
                           {/* venture (color dot + select) */}
                           <select
                             value={venture}
@@ -270,9 +308,17 @@ export default function SmartBoardPanel() {
                             {SMART_VENTURES.map((v) => <option key={v} value={v}>{v}</option>)}
                           </select>
                           <span className={`w-2 h-2 rounded-full shrink-0 -ml-1 ${VENTURE_COLORS[venture]}`} />
-                          <span className="text-sm text-foreground truncate flex-1" title={row.revised_title || row.raw_input}>
+                          <button type="button" onClick={() => setOpenRow(isOpen ? null : row.id)}
+                            className="text-sm text-foreground truncate flex-1 text-left hover:text-primary transition-colors"
+                            title="Click to open this card">
                             {row.revised_title || row.raw_input}
-                          </span>
+                          </button>
+                          {/* one-click done — river closes queue row + queues Trello check-off */}
+                          <button type="button"
+                            onClick={() => patchRow(row.id, { bucket: "Done" }, "Done — synced everywhere + Trello check-off queued", { bucket: stage })}
+                            className="text-green-500/60 hover:text-green-400 shrink-0" title="Mark done (syncs everywhere)">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </button>
                           {row.due_date && (
                             <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{row.due_date}</span>
                           )}
@@ -313,6 +359,38 @@ export default function SmartBoardPanel() {
                               <ExternalLink className="w-3.5 h-3.5" />
                             </a>
                           )}
+                        </div>
+                        {isOpen && (
+                          <div className="px-4 pb-3 pt-1 bg-muted/20 border-t border-border/30 space-y-2 text-sm">
+                            {row.raw_input && row.raw_input !== (row.revised_title || "") && (
+                              <p className="text-muted-foreground"><span className="font-medium text-foreground">Original:</span> {row.raw_input}</p>
+                            )}
+                            {row.definition_of_done && <p><span className="font-medium">Done =</span> {row.definition_of_done}</p>}
+                            {row.measure && <p><span className="font-medium">Measure:</span> {row.measure}</p>}
+                            {row.blockers && <p className="text-amber-500"><span className="font-medium">Blockers:</span> {row.blockers}</p>}
+                            {row.effort && <p className="text-muted-foreground"><span className="font-medium">Effort:</span> {row.effort}</p>}
+                            {ctx?.desc && <p className="text-muted-foreground whitespace-pre-wrap"><span className="font-medium text-foreground">Card details:</span> {ctx.desc.slice(0, 600)}</p>}
+                            {ctx?.notes && <p className="text-muted-foreground whitespace-pre-wrap">{ctx.notes.slice(0, 400)}</p>}
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {stage === "Needs SMART" && (
+                                <Button size="sm" onClick={() => smartifyRow(row)} className="h-7 text-xs gap-1">
+                                  ✨ Smartify this
+                                </Button>
+                              )}
+                              {stage === "Pending approval" && (
+                                <Button size="sm" onClick={() => patchRow(row.id, { bucket: "Active" }, "Approved → Active", { bucket: stage })} className="h-7 text-xs gap-1">
+                                  Approve → Active
+                                </Button>
+                              )}
+                              <Button size="sm" variant="outline" onClick={() => patchRow(row.id, { bucket: "Done" }, "Done — synced everywhere + Trello check-off queued", { bucket: stage })} className="h-7 text-xs gap-1">
+                                ✓ Done
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => sendToReview(row.revised_title || row.raw_input, row.id)} className="h-7 text-xs gap-1">
+                                → Review (add context)
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                         </div>
                       );
                     })}
