@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GraduationCap, ChevronRight, BookOpen, Loader2 } from "lucide-react";
 
 // Self-study conservatory (Josh 2026-07-20): "spec out an actual full grad
@@ -34,11 +35,28 @@ const PROGRAMS = [
   { key: "jazz-composition", label: "MM · Jazz Composition" },
 ] as const;
 
+// School lens: MSM is the authored baseline; picking another school surfaces
+// that school's per-course variant notes front and center.
+const SCHOOLS = [
+  "MSM (baseline)",
+  "Peabody",
+  "Berklee GJI",
+  "Frost",
+  "Juilliard",
+  "NEC",
+  "Eastman",
+  "UNT",
+];
+
 export default function TeamCurriculum() {
   const [rows, setRows] = useState<CourseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [program, setProgram] = useState<CourseRow["program"]>("jazz-piano-performance");
   const [open, setOpen] = useState<Set<string>>(new Set());
+  const [school, setSchool] = useState<string>(SCHOOLS[0]);
+  const isBaseline = school === SCHOOLS[0];
+  const variantFor = (c: CourseRow) =>
+    c.variants?.find((v) => v.school.toLowerCase().startsWith(school.split(" ")[0].toLowerCase()));
 
   useEffect(() => {
     supabase
@@ -74,11 +92,12 @@ export default function TeamCurriculum() {
           <GraduationCap className="w-7 h-7 text-primary" /> Conservatory
         </h1>
         <p className="text-muted-foreground mt-2 mb-6">
-          The MM you'd get at Manhattan School of Music — rebuilt for self-study.
-          Weekly topics, the actual books, and where a mentor plugs in.
+          {isBaseline
+            ? "The MM you'd get at Manhattan School of Music — rebuilt for self-study. Weekly topics, the actual books, and where a mentor plugs in."
+            : `Same self-study MM, viewed through the ${school} lens — each course shows how ${school} teaches it.`}
         </p>
 
-        <div className="flex gap-2 mb-8">
+        <div className="flex flex-wrap items-center gap-2 mb-8">
           {PROGRAMS.map((p) => (
             <Button
               key={p.key}
@@ -88,6 +107,13 @@ export default function TeamCurriculum() {
               {p.label}
             </Button>
           ))}
+          <span className="text-xs text-muted-foreground ml-2">School lens</span>
+          <Select value={school} onValueChange={setSchool}>
+            <SelectTrigger className="w-[180px] h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {SCHOOLS.map((sc) => <SelectItem key={sc} value={sc}>{sc}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
@@ -122,12 +148,22 @@ export default function TeamCurriculum() {
                               <span className="font-medium text-foreground">{c.title}</span>
                               {c.credits != null && <span className="text-xs text-muted-foreground">{c.credits} cr</span>}
                             </div>
-                            {!isOpen && c.description && (
-                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2 pl-6">{c.description}</p>
+                            {!isOpen && (isBaseline ? c.description : true) && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2 pl-6">
+                                {isBaseline
+                                  ? c.description
+                                  : variantFor(c)?.note || c.description || "(no " + school + " variant yet — baseline applies)"}
+                              </p>
                             )}
                           </button>
                           {isOpen && (
                             <div className="mt-3 pl-6 space-y-4">
+                              {!isBaseline && variantFor(c) && (
+                                <p className="text-sm text-foreground border-l-2 border-primary pl-3">
+                                  <Badge variant="outline" className="text-[10px] mr-1.5">{school}</Badge>
+                                  {variantFor(c)!.note}
+                                </p>
+                              )}
                               {c.description && <p className="text-sm text-foreground/90">{c.description}</p>}
                               {c.weeks?.length > 0 && (
                                 <div>
