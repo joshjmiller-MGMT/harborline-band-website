@@ -47,6 +47,8 @@ import {
   trelloConfigured,
   trelloDelete,
   trelloGet,
+  trelloPost,
+  trelloPut,
   type TrelloCard,
   type TrelloLabel,
   type TrelloList,
@@ -525,6 +527,36 @@ async function handleRoute(supabase: SupabaseClient, dryRun: boolean) {
     outcomes.push(outcome);
   }
 
+  // River P2 (Josh 2026-07-19): flush queued closure writebacks to Trello —
+  // done label + dueComplete + comment — so a Done anywhere in the system
+  // lands back on the card without a manual sweep.
+  let writebacksFlushed = 0;
+  try {
+    const { data: wb } = await supabase
+      .from("trello_writeback")
+      .select("card_id, note")
+      .is("flushed_at", null)
+      .limit(20);
+    if (wb && wb.length) {
+      const doneLabel = await findOrCreateLabel(board.id, DONE_LABEL_NAME, DONE_LABEL_COLOR);
+      for (const w of wb) {
+        try {
+          await attachLabelToCard(w.card_id, doneLabel.id);
+          await trelloPut(`/cards/${w.card_id}`, { dueComplete: "true" });
+          await trelloPost(`/cards/${w.card_id}/actions/comments`, {
+            text: `✅ done by claude — ${w.note || "closed in the system"}`,
+          });
+          await supabase
+            .from("trello_writeback")
+            .update({ flushed_at: new Date().toISOString() })
+            .eq("card_id", w.card_id)
+            .is("flushed_at", null);
+          writebacksFlushed++;
+        } catch (_) { /* leave unflushed; retried next run */ }
+      }
+    }
+  } catch (_) { /* flush is best-effort; never blocks routing */ }
+
   const routed_count = outcomes.filter((o) => o.routed).length;
   const labeled_count = outcomes.filter((o) => o.labeled).length;
   const queue_inserted_count = outcomes.filter((o) => o.queue_inserted).length;
@@ -541,6 +573,7 @@ async function handleRoute(supabase: SupabaseClient, dryRun: boolean) {
       skipped_already_routed: candidates.length - fresh.length,
       dispatched: fresh.length,
       noticed_tagged: noticedTagged,
+      writebacks_flushed: writebacksFlushed,
       awaiting_notice_cycle: toNotice.length,
       dispatched_by_handler: countByHandler(outcomes.map((o) => o.handler)),
       routed_count,

@@ -167,6 +167,18 @@ export async function findOrCreateLabel(
   return await createRes.json();
 }
 
+export async function trelloPut(
+  path: string,
+  body: Record<string, string>,
+): Promise<Response> {
+  const form = new URLSearchParams({ key: TRELLO_KEY!, token: TRELLO_TOKEN!, ...body });
+  return await fetch(`https://api.trello.com/1${path}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+    body: form.toString(),
+  });
+}
+
 export async function trelloDelete(path: string): Promise<Response> {
   const url = `https://api.trello.com/1${path}?${trelloAuth()}`;
   return await fetch(url, { method: "DELETE", headers: { Accept: "application/json" } });
