@@ -29,6 +29,7 @@ import {
   LayoutGrid,
   Landmark,
   Rss,
+  CalendarClock,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,7 @@ const bookHub: MegaMenu = {
   items: [
     { name: "Leads", href: "/team/leads", icon: Inbox, description: "Booking inquiries across all sources — status-tracked" },
     { name: "Pipeline", href: "/team/booking-pipeline", icon: Kanban, description: "Scrum board — drag leads across buckets" },
+    { name: "Holds", href: "/team/holds", icon: CalendarClock, description: "Sales holds — chase reps, keep players informed" },
     { name: "Venues", href: "/team/venues", icon: Phone, description: "Venue & Festival Tracker — rooms and stages by act fit" },
     { name: "Outreach", href: "/team/outreach", icon: Send, description: "Proactive targets — venues, festivals, radio, playlists, press, collabs" },
     { name: "Contacts", href: "/team/contacts", icon: Users, description: "Central contact hub — mirror of the JJMM sheet; follow-up flags" },
