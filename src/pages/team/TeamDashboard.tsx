@@ -4,6 +4,7 @@ import PendingApprovalAlert from "@/components/dashboard/PendingApprovalAlert";
 import FollowupsAlert from "@/components/dashboard/FollowupsAlert";
 import DayPlanWidget from "@/components/dashboard/DayPlanWidget";
 import TodayCommandWidget from "@/components/dashboard/TodayCommandWidget";
+import IntegrationHealthWidget from "@/components/dashboard/IntegrationHealthWidget";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
 import { LayoutDashboard } from "lucide-react";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -66,6 +67,7 @@ export default function TeamDashboard() {
           <div className="lg:col-span-2">
             <ErrorBoundary compact label="Availability">
               <AvailabilityCheckerWidget />
+              <IntegrationHealthWidget />
             </ErrorBoundary>
           </div>
 

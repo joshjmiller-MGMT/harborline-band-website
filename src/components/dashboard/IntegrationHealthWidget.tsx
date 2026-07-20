@@ -49,6 +49,7 @@ const LABELS: Record<string, string> = {
   "trello-latency": "Trello",
   "djep-scrub": "DJEP scrub",
   "edge-fn-error-rate": "Edge fn errors",
+  "social-ingest": "Social ingest",
 };
 
 const DOT: Record<Status, string> = {

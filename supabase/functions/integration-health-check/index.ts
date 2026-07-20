@@ -26,6 +26,7 @@ import { djepScrubAdapter } from "../_shared/health-adapters/djep-scrub.ts";
 import { edgeFnErrorRateAdapter } from "../_shared/health-adapters/edge-fn-error-rate.ts";
 import { authGateAdapter } from "../_shared/health-adapters/auth-gate.ts";
 import { secretsSanityAdapter } from "../_shared/health-adapters/secrets-sanity.ts";
+import { socialIngestAdapter } from "../_shared/health-adapters/social-ingest.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,6 +47,7 @@ const ADAPTERS: Array<{ name: string; run: Adapter }> = [
   { name: "trello-latency", run: trelloLatencyAdapter },
   { name: "djep-scrub", run: djepScrubAdapter },
   { name: "edge-fn-error-rate", run: edgeFnErrorRateAdapter },
+  { name: "social-ingest", run: socialIngestAdapter },
 ];
 
 function worst(a: "green" | "yellow" | "red", b: "green" | "yellow" | "red"): "green" | "yellow" | "red" {
