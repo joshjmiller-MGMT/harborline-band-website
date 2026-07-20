@@ -5,7 +5,7 @@ import NeedsActionWidget from "@/components/dashboard/NeedsActionWidget";
 import PendingApprovalAlert from "@/components/dashboard/PendingApprovalAlert";
 import FollowupsAlert from "@/components/dashboard/FollowupsAlert";
 import DayPlanWidget from "@/components/dashboard/DayPlanWidget";
-import BoardsOverviewWidget from "@/components/dashboard/BoardsOverviewWidget";
+import TodayCommandWidget from "@/components/dashboard/TodayCommandWidget";
 import UnifiedCalendarWidget from "@/components/dashboard/UnifiedCalendarWidget";
 import { LayoutDashboard } from "lucide-react";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -39,6 +39,7 @@ export default function TeamDashboard() {
           {/* Day plan — time-blocked day template from the Daily's bucket (P4, 2026-07-07). */}
           <div className="lg:col-span-2">
             <ErrorBoundary compact label="Day plan">
+              <TodayCommandWidget />
               <DayPlanWidget />
             </ErrorBoundary>
           </div>
@@ -53,7 +54,6 @@ export default function TeamDashboard() {
           {/* Boards overview — top item from each per-domain board (multi-board architecture). */}
           <div className="lg:col-span-2">
             <ErrorBoundary compact label="Boards">
-              <BoardsOverviewWidget />
             </ErrorBoundary>
           </div>
 
