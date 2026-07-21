@@ -444,7 +444,9 @@ function FoldersView() {
   const [clsFilter, setClsFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [closedSources, setClosedSources] = useState<Set<string>>(new Set());
+  // Sources start COLLAPSED (Josh 2026-07-21) — the page opens as a compact
+  // per-source overview; expand what you're digging into.
+  const [openSources, setOpenSources] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -521,11 +523,11 @@ function FoldersView() {
 
       <div className="space-y-3">
         {bySource.map(([source, items]) => {
-          const open = !closedSources.has(source);
+          const open = openSources.has(source);
           const bytes = items.reduce((a, f) => a + (f.total_bytes ?? 0), 0);
           return (
             <Collapsible key={source} open={open}
-              onOpenChange={() => setClosedSources((prev) => { const n = new Set(prev); n.has(source) ? n.delete(source) : n.add(source); return n; })}
+              onOpenChange={() => setOpenSources((prev) => { const n = new Set(prev); n.has(source) ? n.delete(source) : n.add(source); return n; })}
               className="rounded-lg border border-border bg-card/40 overflow-hidden">
               <CollapsibleTrigger asChild>
                 <button className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/30 text-left">
