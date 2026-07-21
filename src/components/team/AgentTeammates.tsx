@@ -57,6 +57,22 @@ type AgentMessage = {
   created_at: string;
 };
 
+// A cross-operation link surfaced by river_connections(): where else this
+// ticket's work shows up (review card, SMART row, outreach target, sibling job).
+type Connection = {
+  surface: "review" | "smart-board" | "outreach" | "sibling-job";
+  ref_id: string;
+  title: string;
+  status: string;
+};
+
+const CONNECTION_LINK: Record<Connection["surface"], { label: string; href: string }> = {
+  review: { label: "Review", href: "/team/review" },
+  "smart-board": { label: "SMART", href: "/team/review" },
+  outreach: { label: "Outreach", href: "/team/outreach" },
+  "sibling-job": { label: "Job", href: "/team/members" },
+};
+
 const STATUS_META: Record<
   Teammate["status"],
   { label: string; cls: string }
@@ -102,6 +118,7 @@ export default function AgentTeammates() {
   // ONLY that ticket's events across this agent's whole log.
   const [ticketFilter, setTicketFilter] = useState<string | null>(null);
   const [ticketMsgs, setTicketMsgs] = useState<AgentMessage[]>([]);
+  const [connections, setConnections] = useState<Connection[]>([]);
   const [jobs, setJobs] = useState<AgentJob[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -158,14 +175,20 @@ export default function AgentTeammates() {
   }, [selectedSlug]);
 
   useEffect(() => {
-    if (!ticketFilter) { setTicketMsgs([]); return; }
+    if (!ticketFilter) { setTicketMsgs([]); setConnections([]); return; }
+    // Ticket identity = job id (river). Match messages tagged either way.
     supabase
       .from("agent_messages")
       .select("*")
-      .eq("ticket_ref", ticketFilter)
+      .or(`ticket_ref.eq.${ticketFilter},job_id.eq.${ticketFilter}`)
       .order("created_at", { ascending: true })
       .limit(200)
       .then(({ data }) => setTicketMsgs((data as AgentMessage[]) || []));
+    // Cross-operation connections: review cards, SMART rows, outreach targets,
+    // sibling jobs that share this ticket's refs/keywords.
+    (supabase as unknown as { rpc: (fn: string, args: object) => PromiseLike<{ data: unknown }> })
+      .rpc("river_connections", { p_job: ticketFilter })
+      .then(({ data }) => setConnections((data as Connection[]) || []));
   }, [ticketFilter]);
 
   // Agents list + live status updates.
@@ -391,11 +414,33 @@ export default function AgentTeammates() {
                 </p>
               )}
               {ticketFilter && (
-                <div className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs">
-                  <span className="truncate">Ticket history: <span className="font-mono">{ticketFilter}</span> ({ticketMsgs.length} events)</span>
-                  <button type="button" className="text-primary hover:underline flex-shrink-0" onClick={() => setTicketFilter(null)}>
-                    Show all
-                  </button>
+                <div className="sticky top-0 z-10 rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate">
+                      {jobs.find((j) => j.id === ticketFilter)?.title
+                        ?? <span className="font-mono">{ticketFilter}</span>}{" "}
+                      <span className="text-muted-foreground">({ticketMsgs.length} events)</span>
+                    </span>
+                    <button type="button" className="text-primary hover:underline flex-shrink-0" onClick={() => setTicketFilter(null)}>
+                      Show all
+                    </button>
+                  </div>
+                  {connections.length > 0 && (
+                    <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Connected:</span>
+                      {connections.map((c) => (
+                        <a
+                          key={`${c.surface}-${c.ref_id}`}
+                          href={CONNECTION_LINK[c.surface]?.href ?? "/team/dashboard"}
+                          title={c.title}
+                          className="text-[10px] px-2 py-0.5 rounded-full border border-border bg-background/60 hover:bg-primary/15 transition-colors max-w-[220px] truncate"
+                        >
+                          <span className="text-primary font-medium">{CONNECTION_LINK[c.surface]?.label ?? c.surface}</span>
+                          {" · "}{c.title}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
               {(ticketFilter ? ticketMsgs : messages).map((m) =>
@@ -494,9 +539,19 @@ export default function AgentTeammates() {
                 <ul className="space-y-2">
                   {activeJobs.map((j) => {
                     const jm = JOB_STATUS_META[j.status];
+                    const active = ticketFilter === j.id;
                     return (
                       <li key={j.id} className="text-sm">
-                        <div className="flex items-start gap-2">
+                        {/* Click any job to sort the conversation down to just
+                            this ticket's events (Josh 2026-07-21). */}
+                        <button
+                          type="button"
+                          onClick={() => setTicketFilter(active ? null : j.id)}
+                          title={active ? "Show the whole conversation" : "Show only this task's conversation"}
+                          className={`flex w-full items-start gap-2 text-left rounded-md px-1.5 py-1 -mx-1.5 transition-colors ${
+                            active ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted/50"
+                          }`}
+                        >
                           {j.status === "blocked" ? (
                             <AlertTriangle className="w-3.5 h-3.5 mt-0.5 text-amber-500 flex-shrink-0" />
                           ) : (
@@ -518,7 +573,7 @@ export default function AgentTeammates() {
                               </p>
                             )}
                           </div>
-                        </div>
+                        </button>
                       </li>
                     );
                   })}
@@ -536,19 +591,31 @@ export default function AgentTeammates() {
                 <p className="text-xs text-muted-foreground">No completed jobs yet.</p>
               ) : (
                 <ul className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {pastJobs.map((j) => (
-                    <li key={j.id} className="text-sm border-b border-border/40 pb-2 last:border-0">
-                      <span className="text-foreground">{j.title}</span>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">
-                        {j.finished_at ? timeAgo(j.finished_at) : ""}
-                      </div>
-                      {j.result_md && (
-                        <p className="text-[11px] text-muted-foreground mt-1 line-clamp-3 whitespace-pre-wrap">
-                          {j.result_md}
-                        </p>
-                      )}
-                    </li>
-                  ))}
+                  {pastJobs.map((j) => {
+                    const active = ticketFilter === j.id;
+                    return (
+                      <li key={j.id} className="text-sm border-b border-border/40 pb-2 last:border-0">
+                        <button
+                          type="button"
+                          onClick={() => setTicketFilter(active ? null : j.id)}
+                          title={active ? "Show the whole conversation" : "Show only this task's conversation"}
+                          className={`w-full text-left rounded-md px-1.5 py-1 -mx-1.5 transition-colors ${
+                            active ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted/50"
+                          }`}
+                        >
+                          <span className="text-foreground">{j.title}</span>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            {j.finished_at ? timeAgo(j.finished_at) : ""}
+                          </div>
+                          {j.result_md && (
+                            <p className="text-[11px] text-muted-foreground mt-1 line-clamp-3 whitespace-pre-wrap">
+                              {j.result_md}
+                            </p>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </CardContent>

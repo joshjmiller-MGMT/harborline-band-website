@@ -96,12 +96,12 @@ export default function TeamReleasePipeline() {
             <Rocket className="w-7 h-7 text-primary" /> Release Pipeline
           </h1>
           <p className="text-muted-foreground mt-2">
-            Josh Miller Jazz — the debut EP as a single-a-month waterfall. Each single re-triggers the algorithm;
-            the last one completes the EP.
+            The Trio at Blue House, Vol. 1 — surprise-dropped July 17, out on all platforms. This is the log of what
+            happened plus the post-release plan to keep the record moving: announce, amplify, grow, rights, long tail.
           </p>
           {!loading && (
             <p className="mt-2 text-sm text-muted-foreground">
-              {done} / {total} prep tasks done
+              {done} / {total} checklist items done
             </p>
           )}
         </div>

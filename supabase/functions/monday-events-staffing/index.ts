@@ -21,10 +21,15 @@ const EVENTS_BOARD_ID = "8455743669";
 const COL_EMPLOYEE_STATUS = "color_mm01k3nh"; // "NEED TO STAFF" | "Staffed" | null
 const COL_EVENT_STAGE = "color_mm01ec6s"; // Fully Booked | CANCELLED | POSTPONED | …
 const COL_EVENT_DATE = "date_mm0fxm18"; // the actual event date
+const COL_SALESPERSON = "project_owner"; // "Salesperson" people column
 
 // Event Stage values that mean "don't bother staffing this".
 const DEAD_STAGE = /cancel|postpon|lost|complete|dead/i;
 const NEEDS_STAFF = /need\s*to\s*staff/i;
+// Josh 2026-07-21: only surface gigs where JOSH is the salesperson — other
+// reps' staffing problems aren't his queue. Applied here (query level), not
+// in the UI.
+const SALESPERSON_IS_JOSH = /josh/i;
 
 async function mondayFetch(query: string, variables?: Record<string, unknown>) {
   const r = await fetch("https://api.monday.com/v2", {
@@ -58,7 +63,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const itemFields = `id name url column_values(ids: ["${COL_EMPLOYEE_STATUS}","${COL_EVENT_STAGE}","${COL_EVENT_DATE}"]) { id text }`;
+    const itemFields = `id name url column_values(ids: ["${COL_EMPLOYEE_STATUS}","${COL_EVENT_STAGE}","${COL_EVENT_DATE}","${COL_SALESPERSON}"]) { id text }`;
     const items: any[] = [];
     let cursor: string | null = null;
     let boardName = "";
@@ -95,10 +100,13 @@ Deno.serve(async (req) => {
           employeeStatus: cv(COL_EMPLOYEE_STATUS),
           eventStage: cv(COL_EVENT_STAGE),
           eventDate: cv(COL_EVENT_DATE) || null, // "YYYY-MM-DD" | null
+          salesperson: cv(COL_SALESPERSON),
         };
       })
       // Only genuine needs-to-staff gigs, excluding dead stages.
       .filter((e) => NEEDS_STAFF.test(e.employeeStatus) && !DEAD_STAGE.test(e.eventStage))
+      // Only Josh's gigs (salesperson people-column contains "Josh").
+      .filter((e) => SALESPERSON_IS_JOSH.test(e.salesperson))
       // Upcoming (or undated) only — a past gig can't be staffed.
       .filter((e) => !e.eventDate || e.eventDate >= today)
       // Soonest first; undated sink to the bottom.

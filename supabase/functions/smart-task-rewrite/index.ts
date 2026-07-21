@@ -83,6 +83,11 @@ const SMART_TOOL = {
         description:
           "ISO date (YYYY-MM-DD) if the input mentions a deadline; otherwise null. Do not invent a deadline.",
       },
+      due_time: {
+        type: ["string", "null"],
+        description:
+          "24-hour local time 'HH:MM' if the input states or implies a time of day for the due_date — e.g. 'tomorrow evening'→'18:00', 'by 3pm'→'15:00', 'first thing'→'09:00', 'tonight'→'20:00'. Null when no time is stated or implied. Only set when due_date is also set. Never invent a time.",
+      },
       clarifying_questions: {
         type: "array",
         items: { type: "string" },
@@ -100,6 +105,7 @@ Rules:
 - Be concrete. Replace "improve X" with verbs that describe the actual change.
 - Keep his existing wording when it's already specific. Don't dress up plain language.
 - Only include a due_date if the input mentions one (or implies one like "this week" / "by Friday"). Otherwise return null. Do not invent deadlines.
+- due_time: if the input states or implies a time of day (a clock time like "3pm", or a daypart like "morning" / "afternoon" / "evening" / "tonight"), set due_time as 24h "HH:MM" — morning→09:00, midday/noon→12:00, afternoon→14:00, evening→18:00, night/tonight→20:00, or the explicit stated time. Only when due_date is set. Otherwise null. Never invent a time.
 - Blockers should reflect what the input actually mentions — return "None" if nothing is implied.
 - Effort: pick the closest bucket. When ambiguous, lean smaller.
 - clarifying_questions: when the task is too vague to make genuinely SMART — no deadline stated or implied (so due_date is null), an ambiguous definition of done, or unclear scope — return up to 3 short, specific questions whose answers would let you set a real due_date / definition_of_done / measure. Return an empty array when the task is already clear. Never ask about something the input or card_context already answers. The most useful question is almost always the missing deadline.
