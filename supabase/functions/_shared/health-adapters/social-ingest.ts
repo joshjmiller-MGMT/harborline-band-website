@@ -36,11 +36,17 @@ export const socialIngestAdapter: Adapter = async (ctx): Promise<AdapterResult[]
     }
     const hours = (Date.now() - new Date(last).getTime()) / 3600000;
     const ago = hours < 24 ? `${Math.round(hours)}h ago` : `${Math.round(hours / 24)}d ago`;
-    const status = hours <= 72 ? "green" : hours <= 168 ? "yellow" : "red";
+    // Josh sends content ~daily (his words 2026-07-21), so a healthy gap is
+    // short. Tightened: green <30h, yellow 30–54h (a day-plus quiet = worth a
+    // glance), red >54h (>~2 days = the ingest has stopped; reopen Instagram
+    // on JARSH). Matches his real cadence rather than a generic weekly window.
+    const status = hours <= 30 ? "green" : hours <= 54 ? "yellow" : "red";
     const detail =
       status === "red"
-        ? `last item ${ago} — likely stopped; reopen Instagram on JARSH`
-        : `last item ${ago}`;
+        ? `last item ${ago} — stopped; reopen Instagram on JARSH`
+        : status === "yellow"
+          ? `last item ${ago} — quiet for a daily sender, check JARSH`
+          : `last item ${ago}`;
     return [{
       integration: "social-ingest",
       status,
