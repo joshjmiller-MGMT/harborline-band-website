@@ -12,8 +12,16 @@ out of the conversation. Idempotent: re-running updates changed rows by full_pat
 
 Usage:
     python scan_media.py small          # fast Dropbox + small gdrive roots
-    python scan_media.py all            # everything incl. the big gdrive roots
+    python scan_media.py all            # everything incl. the big gdrive roots + mounted physical drives
+    python scan_media.py physical       # any mounted external drives (LaCie/T7/GLYPH…)
     python scan_media.py "<abs path>" [venture]   # ad-hoc single root
+
+Physical drives (Josh 2026-07-21): the library must LOG everything that exists
+across all storage, cloud and physical, searchable even when a drive is on a
+shelf. So external volumes are indexed whenever they happen to be mounted, under
+a drive-letter-independent identity (physical://<LABEL>/<rel path>) — rows
+persist after unplug and refresh on the next mount. Daily runs pick up whatever
+is plugged in; nothing mounted costs nothing.
 """
 import os, sys, re, json, urllib.request, datetime
 
@@ -35,6 +43,33 @@ BIG_ROOTS = [
     ("/j/My Drive/z Adam’s Archive",  "Economy",    "gdrive-mydrive"),
     ("/g/Shared drives/Josh Miller's Total Raw Content", "Harborline", "gdrive-shared"),
 ]
+
+# Letters that are NOT external physical drives: C system, D internal-fixed
+# (add explicitly to roots if it ever holds media), G/H/I/J Google-Drive mounts.
+NON_PHYSICAL_LETTERS = {"C", "D", "G", "H", "I", "J"}
+# Junk dirs to skip when walking a whole drive.
+DRIVE_SKIP_DIRS = {".git", "$RECYCLE.BIN", ".dropbox.cache", "System Volume Information",
+                   ".Spotlight-V100", ".Trashes", ".fseventsd", ".TemporaryItems",
+                   "Windows", "Program Files", "Program Files (x86)", "ProgramData",
+                   "node_modules", ".DocumentRevisions-V100"}
+
+def mounted_physical_drives():
+    """[(letter, label)] for every mounted volume that isn't system/cloud."""
+    import ctypes
+    out = []
+    bitmask = ctypes.windll.kernel32.GetLogicalDrives()
+    for i in range(26):
+        if not (bitmask >> i) & 1:
+            continue
+        letter = chr(65 + i)
+        if letter in NON_PHYSICAL_LETTERS:
+            continue
+        buf = ctypes.create_unicode_buffer(261)
+        ok = ctypes.windll.kernel32.GetVolumeInformationW(
+            f"{letter}:\\", buf, 261, None, None, None, None, 0)
+        label = (buf.value.strip() if ok and buf.value else "") or f"DRIVE-{letter}"
+        out.append((letter, label))
+    return out
 
 IMAGE = {"jpg","jpeg","png","heic","heif","tif","tiff","gif","webp","bmp",
          "raw","arw","cr2","cr3","nef","dng","orf","rw2","raf"}
@@ -127,15 +162,20 @@ def upsert_batch(token, rows):
          + "updated_at=now();")
     run_sql(token, q)
 
-def scan_root(token, root_bash, venture_default, location_kind, manifest):
+def scan_root(token, root_bash, venture_default, location_kind, manifest,
+              store_root=None, reachable="JARSH", skip_dirs=None):
     # Convert the Git-Bash mount path to the Windows form Python needs on win32.
+    # store_root: canonical identity to record instead of the real mount path —
+    # physical drives use physical://<LABEL> so rows survive drive-letter drift.
     root = to_win(root_bash)
     if not os.path.isdir(root):
         print(f"  SKIP (not found): {root}", flush=True)
         return 0
+    stored_base = (store_root or root).rstrip("/")
+    skips = skip_dirs or {".git", "$RECYCLE.BIN", ".dropbox.cache"}
     batch, total, seen = [], 0, 0
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in (".git","$RECYCLE.BIN",".dropbox.cache")]
+        dirnames[:] = [d for d in dirnames if d not in skips]
         for fn in filenames:
             ext = fn.rsplit(".",1)[-1].lower() if "." in fn else ""
             if ext not in MEDIA_EXTS:
@@ -146,17 +186,19 @@ def scan_root(token, root_bash, venture_default, location_kind, manifest):
             except OSError:
                 continue
             seen += 1
+            rel = full[len(root):].lstrip("/")
+            stored_full = f"{stored_base}/{rel}"
             name_l = fn.lower(); path_l = full.lower()
             stem = fn.rsplit(".",1)[0] if "." in fn else fn
             row = {
-                "full_path": full,
-                "source_root": root,
-                "rel_path": full[len(root):].lstrip("/"),
+                "full_path": stored_full,
+                "source_root": stored_base,
+                "rel_path": rel,
                 "filename": fn,
                 "ext": ext,
                 "media_type": media_type(ext),
                 "location_kind": location_kind,
-                "reachable_from": "JARSH",
+                "reachable_from": reachable,
                 "size_bytes": st.st_size,
                 "file_mtime": datetime.datetime.fromtimestamp(st.st_mtime).isoformat(),
                 "captured_on": infer_date(stem, st.st_mtime),
@@ -173,6 +215,23 @@ def scan_root(token, root_bash, venture_default, location_kind, manifest):
     print(f"  {root_bash}: {total} media files", flush=True)
     return total
 
+def scan_physical(token, manifest):
+    """Index every mounted external drive under its label-based identity."""
+    drives = mounted_physical_drives()
+    if not drives:
+        print("  no physical drives mounted", flush=True)
+        return 0
+    total = 0
+    for letter, label in drives:
+        print(f"Scanning physical drive {letter}: ({label})", flush=True)
+        total += scan_root(
+            token, f"/{letter.lower()}/", None, "physical", manifest,
+            store_root=f"physical://{label}",
+            reachable="JARSH when mounted",
+            skip_dirs=DRIVE_SKIP_DIRS,
+        )
+    return total
+
 def load_token():
     p = os.path.expanduser("~/.config/harborline/supabase.env")
     with open(p, encoding="utf-8") as f:
@@ -185,12 +244,15 @@ def load_token():
 def main():
     mode = sys.argv[1] if len(sys.argv)>1 else "small"
     token = load_token()
+    do_physical = mode in ("physical", "all")
     if mode == "small":
         roots = SMALL_ROOTS
     elif mode == "all":
         roots = SMALL_ROOTS + BIG_ROOTS
     elif mode == "big":
         roots = BIG_ROOTS
+    elif mode == "physical":
+        roots = []
     else:
         roots = [(mode, sys.argv[2] if len(sys.argv)>2 else None, "gdrive-mydrive")]
     os.makedirs(os.path.expanduser("~/.config/harborline/media-catalogue"), exist_ok=True)
@@ -201,6 +263,8 @@ def main():
         for root, venture, kind in roots:
             print(f"Scanning {root} (default venture={venture})", flush=True)
             grand += scan_root(token, root, venture, kind, manifest)
+        if do_physical:
+            grand += scan_physical(token, manifest)
     print(f"DONE mode={mode} total={grand} manifest={mpath}", flush=True)
 
 if __name__ == "__main__":

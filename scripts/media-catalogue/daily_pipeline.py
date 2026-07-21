@@ -41,6 +41,11 @@ def step(name, script, extra):
 def main():
     log("=== DAM daily pipeline start ===")
     step("scan",   "scan_media.py",          ["small"])
+    # Physical drives (Josh 7/21): index whatever external drive happens to be
+    # mounted today under physical://<LABEL>; rows persist after unplug so the
+    # library stays a searchable log of everything that exists. Costs nothing
+    # when no drive is plugged in.
+    step("physical", "scan_media.py",        ["physical"])
     step("folder", "build_folder_context.py", [])            # DB-only (no sidecar churn)
     step("enrich", "enrich_media.py",         ["--limit", "60"])   # new Camera Uploads
     step("drain",  "enrich_media.py",         ["--drain-requests"])
