@@ -207,8 +207,10 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
             {megaMenus.map((menu) => {
               const isActive = menu.items.some((m) => location.pathname === m.href);
               const TriggerIcon = menu.icon;
+              // modal={false}: don't scroll-lock the body — the removed
+              // scrollbar was shifting the whole site on menu open (Josh 7/21).
               return (
-                <DropdownMenu key={menu.label}>
+                <DropdownMenu key={menu.label} modal={false}>
                   <DropdownMenuTrigger asChild>
                     <button
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-display tracking-wide-custom transition-colors ${
@@ -222,7 +224,7 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
                       <ChevronDown className="w-3.5 h-3.5 opacity-70" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-64">
+                  <DropdownMenuContent align="start" className="w-64 max-h-[70vh] overflow-y-auto">
                     {menu.items.map((item) => {
                       const ItemIcon = item.icon;
                       const itemActive = location.pathname === item.href;
