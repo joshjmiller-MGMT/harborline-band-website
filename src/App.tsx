@@ -61,6 +61,7 @@ const CloistersCastlePage = lazy(() => import("./pages/venues/CloistersCastle"))
 
 const RequestQuotePage = lazy(() => import("./pages/RequestQuote"));
 const SchedulePage = lazy(() => import("./pages/Schedule"));
+const SmartLinkPage = lazy(() => import("./pages/SmartLink"));
 
 // Team Portal: auth provider stays eager (context); pages are lazy
 import { TeamAuthProvider } from "./hooks/useTeamAuth";
@@ -95,6 +96,7 @@ const TeamReviewQueue = lazy(() => import("./pages/team/TeamReviewQueue"));
 const TeamFinances = lazy(() => import("./pages/team/TeamFinances"));
 const TeamReleasePipeline = lazy(() => import("./pages/team/TeamReleasePipeline"));
 const TeamOutreach = lazy(() => import("./pages/team/TeamOutreach"));
+const TeamSmartLinks = lazy(() => import("./pages/team/TeamSmartLinks"));
 
 const queryClient = new QueryClient();
 
@@ -165,6 +167,9 @@ const App = () => (
                 {/* Hidden Routes */}
                 <Route path="/schedule" element={<SchedulePage />} />
 
+                {/* Public smart-link landing (our own Artist Hub) */}
+                <Route path="/l/:slug" element={<SmartLinkPage />} />
+
                 {/* Team Portal */}
                 <Route path="/team/login" element={<TeamLogin />} />
                 <Route path="/team/songs" element={<TeamSongs />} />
@@ -200,6 +205,7 @@ const App = () => (
                 <Route path="/team/review" element={<TeamReviewQueue />} />
                 <Route path="/team/finances" element={<TeamFinances />} />
                 <Route path="/team/release-pipeline" element={<TeamReleasePipeline />} />
+                <Route path="/team/smart-links" element={<TeamSmartLinks />} />
                 <Route path="/team/outreach" element={<TeamOutreach />} />
 
                 <Route path="*" element={<NotFound />} />
