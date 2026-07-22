@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link2, Plus, Trash2, Copy, ExternalLink, Eye, MousePointerClick, Loader2, Check, X } from "lucide-react";
+import { Link2, Plus, Trash2, Copy, ExternalLink, Eye, MousePointerClick, Loader2, Check, X, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { PLATFORMS, platformMeta, type SmartLinkRow, type PlatformLink } from "@/lib/smartlink";
 
@@ -37,6 +37,51 @@ export default function TeamSmartLinks() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<SmartLinkRow | null>(null);
   const [saving, setSaving] = useState(false);
+  // Auto-source discovery (Josh 2026-07-22): one known link in → every other
+  // platform's link out (Odesli via the smartlink-sources edge fn); Josh picks
+  // which to add from the checklist.
+  const [finding, setFinding] = useState(false);
+  const [found, setFound] = useState<PlatformLink[] | null>(null);
+  const [foundSel, setFoundSel] = useState<Set<string>>(new Set());
+
+  const findSources = async () => {
+    if (!editing) return;
+    const seed = editing.platforms.find((p) => p.url)?.url;
+    if (!seed) {
+      toast({ title: "Add one link first", description: "Paste any one platform URL (e.g. Spotify), then I can find the rest.", variant: "destructive" });
+      return;
+    }
+    setFinding(true);
+    setFound(null);
+    try {
+      const { data, error } = await (supabase as unknown as {
+        functions: { invoke: (n: string, o: object) => Promise<{ data: unknown; error: { message: string } | null }> };
+      }).functions.invoke("smartlink-sources", { body: { url: seed } });
+      if (error) throw new Error(error.message);
+      const res = data as { sources?: PlatformLink[]; matched?: { title?: string; artist?: string } };
+      const have = new Set(editing.platforms.map((p) => p.platform));
+      const fresh = (res.sources ?? []).filter((s) => !have.has(s.platform));
+      setFound(fresh);
+      setFoundSel(new Set(fresh.map((f) => f.platform)));
+      toast({
+        title: fresh.length ? `Found ${fresh.length} new source${fresh.length > 1 ? "s" : ""}` : "No new sources yet",
+        description: res.matched?.title
+          ? `Matched: ${res.matched.title} — ${res.matched.artist ?? ""}${fresh.length ? "" : " · DSPs still propagating; try again tomorrow"}`
+          : undefined,
+      });
+    } catch (e) {
+      toast({ title: "Source lookup failed", description: e instanceof Error ? e.message : "unknown", variant: "destructive" });
+    } finally {
+      setFinding(false);
+    }
+  };
+
+  const addFound = () => {
+    if (!editing || !found) return;
+    const picked = found.filter((f) => foundSel.has(f.platform));
+    setEditing({ ...editing, platforms: [...editing.platforms, ...picked] });
+    setFound(null);
+  };
 
   const load = async () => {
     const [l, e] = await Promise.all([
@@ -171,10 +216,36 @@ export default function TeamSmartLinks() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Platforms</span>
-                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={addPlat}>
-                    <Plus className="w-3 h-3" /> Add platform
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={findSources} disabled={finding}>
+                      {finding ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} Find sources
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={addPlat}>
+                      <Plus className="w-3 h-3" /> Add platform
+                    </Button>
+                  </div>
                 </div>
+                {found && found.length > 0 && (
+                  <div className="mb-2 rounded-md border border-primary/30 bg-primary/5 p-2 space-y-1">
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Found — pick what to add</p>
+                    {found.map((f) => (
+                      <label key={f.platform} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={foundSel.has(f.platform)}
+                          onChange={() => setFoundSel((prev) => { const n = new Set(prev); n.has(f.platform) ? n.delete(f.platform) : n.add(f.platform); return n; })}
+                        />
+                        <span className="font-medium">{platformMeta(f.platform).label}</span>
+                        <span className="text-xs text-muted-foreground truncate">{f.url}</span>
+                      </label>
+                    ))}
+                    <div className="pt-1">
+                      <Button size="sm" className="h-7 text-xs gap-1" onClick={addFound} disabled={foundSel.size === 0}>
+                        <Check className="w-3 h-3" /> Add selected ({foundSel.size})
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   {editing.platforms.length === 0 && (
                     <p className="text-xs text-muted-foreground">Add the DSP links a fan should see (Spotify, Apple Music, …).</p>
