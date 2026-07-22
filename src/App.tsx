@@ -1,5 +1,5 @@
 // Harborline App
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -100,6 +100,20 @@ const TeamSmartLinks = lazy(() => import("./pages/team/TeamSmartLinks"));
 
 const queryClient = new QueryClient();
 
+// Short-link domain (Josh 2026-07-22, "gethip.to/[release]" — Artist Hub style).
+// When the site is served on this host (Netlify domain alias), root-level slugs
+// render the smart-link page directly: gethip.to/blue-house-vol-1. Pre-staged so
+// the domain works the moment DNS lands.
+const SHORT_LINK_HOST = /^(www\.)?gethip\.to$/i;
+const isShortLinkHost =
+  typeof window !== "undefined" && SHORT_LINK_HOST.test(window.location.hostname);
+
+function ShortHome() {
+  // Bare gethip.to → send to the main site.
+  useEffect(() => { window.location.replace("https://harborlineband.com"); }, []);
+  return null;
+}
+
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
@@ -113,6 +127,9 @@ const App = () => (
             <ErrorBoundary label="the app">
             <Suspense fallback={<PageLoadingSpinner />}>
               <Routes>
+                {/* gethip.to serves smart links at root-level slugs */}
+                {isShortLinkHost && <Route path="/" element={<ShortHome />} />}
+                {isShortLinkHost && <Route path="/:slug" element={<SmartLinkPage />} />}
                 <Route path="/" element={<Index />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/faq" element={<FAQPage />} />
