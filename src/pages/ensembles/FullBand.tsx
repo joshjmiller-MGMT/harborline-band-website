@@ -71,7 +71,7 @@ const FullBandPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                THE COMPLETE <span className="text-gradient-gold">LIVE EXPERIENCE</span>
+                THE COMPLETE <span className="text-gradient-brand">LIVE EXPERIENCE</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 When you want an event that people will talk about for years, you bring the full band. 

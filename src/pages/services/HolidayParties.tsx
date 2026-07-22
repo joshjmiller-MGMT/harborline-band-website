@@ -87,7 +87,7 @@ const HolidayPartiesPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                CELEBRATE THE <span className="text-gradient-gold">SEASON</span>
+                CELEBRATE THE <span className="text-gradient-brand">SEASON</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 The holidays deserve more than a playlist. Harborline brings live energy, 

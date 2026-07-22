@@ -72,7 +72,7 @@ const SoloPerformerPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                THE POWER OF <span className="text-gradient-gold">SIMPLICITY</span>
+                THE POWER OF <span className="text-gradient-brand">SIMPLICITY</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 Sometimes the perfect entertainment is one exceptional musician creating an 

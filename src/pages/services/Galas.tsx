@@ -68,7 +68,7 @@ const GalasPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                GALAS WE'VE <span className="text-gradient-gold">RUN</span>
+                GALAS WE'VE <span className="text-gradient-brand">RUN</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 Galas have three registers — cocktail-hour ambient, dinner-music

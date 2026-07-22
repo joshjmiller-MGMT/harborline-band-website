@@ -87,7 +87,7 @@ const BreweryEventsPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                CRAFT BEER & <span className="text-gradient-gold">LIVE MUSIC</span>
+                CRAFT BEER & <span className="text-gradient-brand">LIVE MUSIC</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 Baltimore's craft brewery scene deserves live entertainment that matches 

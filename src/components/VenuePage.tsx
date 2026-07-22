@@ -104,7 +104,7 @@ const VenuePage = ({
                   )}
                 </div>
                 <h2 className="font-display text-3xl md:text-4xl tracking-tight mb-4">
-                  HARBORLINE AT <span className="text-gradient-gold">{venueName.toUpperCase()}</span>
+                  HARBORLINE AT <span className="text-gradient-brand">{venueName.toUpperCase()}</span>
                 </h2>
                 <p className="text-muted-foreground text-lg mb-6">{description}</p>
                 

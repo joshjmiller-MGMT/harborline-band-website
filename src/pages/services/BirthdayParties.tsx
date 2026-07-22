@@ -87,7 +87,7 @@ const BirthdayPartiesPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                MAKE IT A <span className="text-gradient-gold">PARTY</span>
+                MAKE IT A <span className="text-gradient-brand">PARTY</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 A birthday party with live music isn't just a party—it's an event. 

@@ -72,7 +72,7 @@ const LocationPage = ({ city, region, description, venues, nearbyAreas }: Locati
             >
               <div>
                 <h2 className="font-display text-3xl md:text-4xl tracking-tight mb-4">
-                  LIVE ENTERTAINMENT IN <span className="text-gradient-gold">{city.toUpperCase()}</span>
+                  LIVE ENTERTAINMENT IN <span className="text-gradient-brand">{city.toUpperCase()}</span>
                 </h2>
                 <p className="text-muted-foreground text-lg">{description}</p>
               </div>

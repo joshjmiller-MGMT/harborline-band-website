@@ -123,7 +123,7 @@ export default function TeamReleasePipeline() {
                       <Music2 className="w-3.5 h-3.5" /> SINGLE {s.single_no}
                     </div>
                     <div className="mt-2 font-medium text-sm">{s.working_title || "Untitled"}</div>
-                    <div className="mt-1 text-2xl font-display text-gradient-gold">{fmtDate(s.release_date)}</div>
+                    <div className="mt-1 text-2xl font-display text-gradient-brand">{fmtDate(s.release_date)}</div>
                     <div className="text-xs text-muted-foreground">{daysUntil(s.release_date)}</div>
                     <div className="mt-2 text-xs text-muted-foreground">
                       {sd}/{st.length} tasks · {s.status}

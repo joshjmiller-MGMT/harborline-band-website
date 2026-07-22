@@ -108,7 +108,7 @@ const AboutPage = () => {
                 className="text-center"
               >
                 <stat.icon className="w-8 h-8 text-primary mx-auto mb-3" />
-                <div className="font-display text-4xl text-gradient-gold mb-1">
+                <div className="font-display text-4xl text-gradient-brand mb-1">
                   {stat.value}
                 </div>
                 <div className="text-sm text-muted-foreground">{stat.label}</div>

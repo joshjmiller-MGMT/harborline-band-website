@@ -76,7 +76,7 @@ const CorporatePage = () => {
               transition={{ duration: 0.6 }}
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight mb-6">
-                CORPORATE <span className="text-gradient-gold">EVENTS</span>
+                CORPORATE <span className="text-gradient-brand">EVENTS</span>
               </h2>
               <p className="text-muted-foreground text-lg mb-6">
                 Whether it's a conference welcome reception or the company holiday

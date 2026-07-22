@@ -72,7 +72,7 @@ const StringEnsemblePage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                ACOUSTIC, <span className="text-gradient-gold">CONSERVATORY-TRAINED</span>
+                ACOUSTIC, <span className="text-gradient-brand">CONSERVATORY-TRAINED</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 The string ensemble is what we staff when a ceremony or formal moment needs

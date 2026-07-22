@@ -70,7 +70,7 @@ const PianoTrioPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                PIANO-LED <span className="text-gradient-gold">THREE-PIECE</span>
+                PIANO-LED <span className="text-gradient-brand">THREE-PIECE</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 The trio is the right call when the room needs a full sound that doesn't drown

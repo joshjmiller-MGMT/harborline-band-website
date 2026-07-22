@@ -87,7 +87,7 @@ const AnniversariesPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                YOUR LOVE <span className="text-gradient-gold">STORY</span>
+                YOUR LOVE <span className="text-gradient-brand">STORY</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 A milestone anniversary deserves more than cake and champagne—it deserves 

@@ -99,7 +99,7 @@ const About = () => {
                 { number: "100%", label: "Energy" },
               ].map((stat) => (
                 <div key={stat.label} className="text-center">
-                  <p className="font-display text-3xl md:text-4xl text-gradient-gold">
+                  <p className="font-display text-3xl md:text-4xl text-gradient-brand">
                     {stat.number}
                   </p>
                   <p className="text-muted-foreground font-display tracking-display text-xs mt-1">

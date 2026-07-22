@@ -72,7 +72,7 @@ const JazzCombosPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                STAFFED TO THE <span className="text-gradient-gold">GIG</span>
+                STAFFED TO THE <span className="text-gradient-brand">GIG</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 Three to seven musicians, staffed to the gig — swing to bossa, ballads to

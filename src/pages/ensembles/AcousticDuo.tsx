@@ -72,7 +72,7 @@ const AcousticDuoPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                PURE <span className="text-gradient-gold">ACOUSTIC MAGIC</span>
+                PURE <span className="text-gradient-brand">ACOUSTIC MAGIC</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 Sometimes less is more. Our acoustic duo strips songs to their emotional core, 

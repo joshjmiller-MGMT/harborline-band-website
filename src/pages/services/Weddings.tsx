@@ -87,7 +87,7 @@ const WeddingsPage = () => {
               className="space-y-6"
             >
               <h2 className="font-display text-4xl md:text-5xl tracking-tight">
-                WORKING <span className="text-gradient-gold">WEDDING BAND</span>
+                WORKING <span className="text-gradient-brand">WEDDING BAND</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 We do weddings as a full operation — ceremony musicians through

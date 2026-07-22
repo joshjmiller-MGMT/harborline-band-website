@@ -66,7 +66,7 @@ const PrivatePartiesPage = () => {
             className="text-center mb-16"
           >
             <h2 className="font-display text-4xl md:text-5xl tracking-tight mb-6">
-              PARTIES WE <span className="text-gradient-gold">RUN</span>
+              PARTIES WE <span className="text-gradient-brand">RUN</span>
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               From intimate milestone birthdays to multi-room anniversary parties,

@@ -16,26 +16,31 @@
     overflow-x: clip;
   }
 
+  /* Palette flip (Josh 2026-07-22): turquoise/cobalt-teal is PRIMARY, royal
+     purple is the accent — the old purple-primary + warm-cream text read as
+     "every AI platform's black & yellow." Black stays; text goes cool white
+     (the old hue-45 cream was the yellow cast). Reference: Josh's cobalt-teal /
+     cerulean watercolor swatches. */
   :root {
     --background: 220 20% 6%;
-    --foreground: 45 20% 95%;
+    --foreground: 190 20% 96%;
 
     --card: 220 18% 10%;
-    --card-foreground: 45 20% 95%;
+    --card-foreground: 190 20% 96%;
 
     --popover: 220 18% 10%;
-    --popover-foreground: 45 20% 95%;
+    --popover-foreground: 190 20% 96%;
 
-    --primary: 262 83% 58%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 178 84% 45%;
+    --primary-foreground: 200 60% 6%;
 
     --secondary: 220 15% 15%;
-    --secondary-foreground: 45 20% 95%;
+    --secondary-foreground: 190 20% 96%;
 
     --muted: 220 15% 18%;
-    --muted-foreground: 220 10% 60%;
+    --muted-foreground: 205 10% 62%;
 
-    --accent: 217 91% 60%;
+    --accent: 264 78% 62%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
@@ -43,32 +48,34 @@
 
     --border: 220 15% 20%;
     --input: 220 15% 20%;
-    --ring: 262 83% 58%;
+    --ring: 178 84% 45%;
 
     --radius: 0.25rem;
 
     /* Custom Harborline tokens */
-    --purple: 262 83% 58%;
-    --purple-glow: 262 83% 72%;
-    --blue: 217 91% 60%;
-    --blue-glow: 217 91% 70%;
+    --teal: 178 84% 45%;
+    --teal-glow: 178 84% 60%;
+    --purple: 264 78% 62%;
+    --purple-glow: 264 78% 74%;
+    --blue: 202 90% 55%;
+    --blue-glow: 202 90% 68%;
     --charcoal: 220 20% 6%;
     --charcoal-light: 220 18% 12%;
-    --cream: 45 20% 95%;
-    
-    /* Gradients */
-    --gradient-brand: linear-gradient(135deg, hsl(262 83% 58%), hsl(217 91% 60%));
+    --cream: 190 20% 96%;
+
+    /* Gradients — turquoise → cerulean → royal purple (the identity) */
+    --gradient-brand: linear-gradient(135deg, hsl(178 84% 48%), hsl(202 90% 55%), hsl(264 78% 62%));
     --gradient-dark: linear-gradient(180deg, hsl(220 20% 6%), hsl(220 18% 10%));
     --gradient-overlay: linear-gradient(180deg, transparent 0%, hsl(220 20% 6% / 0.7) 50%, hsl(220 20% 6%) 100%);
-    
+
     /* Shadows */
-    --shadow-brand: 0 0 40px hsl(262 83% 58% / 0.3);
+    --shadow-brand: 0 0 40px hsl(178 84% 45% / 0.35);
     --shadow-soft: 0 4px 20px hsl(0 0% 0% / 0.3);
   }
 
   .dark {
     --background: 220 20% 6%;
-    --foreground: 45 20% 95%;
+    --foreground: 190 20% 96%;
   }
 }
 
@@ -93,7 +100,7 @@
 }
 
 @layer utilities {
-  .text-gradient-gold {
+  .text-gradient-brand {
     background: var(--gradient-brand);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
