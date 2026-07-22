@@ -406,13 +406,7 @@ function FolderCard({ f, open, onOpenChange, updateFolder }: {
           {f.context_md || "(no context generated)"}
         </pre>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => { void updateFolder(f.id, { status: "enrich_requested" }); toast.success("Queued for enrichment (thumbnails + AI tags)"); }}
-            className="text-[10px] px-1.5 py-0.5 rounded border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
-            title="Generate thumbnails + EXIF + AI captions for this folder on the next enrich run"
-          >
-            ⚡ enrich media
-          </button>
+          {/* enrichment is automatic now (nightly backlog sweep) — manual button removed per Josh 7/22 */}
           <span className="text-[11px] text-muted-foreground ml-1">Pipeline:</span>
           {FOLDER_STATUSES.map((s) => (
             <button

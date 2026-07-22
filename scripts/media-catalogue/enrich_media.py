@@ -158,6 +158,7 @@ def main():
     limit = 25
     folder = venture = None
     drain = "--drain-requests" in args
+    backlog = "--backlog" in args
     force = "--force" in args
     for i,a in enumerate(args):
         if a=="--limit" and i+1<len(args): limit=int(args[i+1])
@@ -183,6 +184,12 @@ def main():
         if not folders: print("nothing to enrich"); return
         ors = " or ".join(f"full_path like {sql_str(fp + '%')}" for fp in folders)
         where.append(f"({ors})")
+    elif backlog:
+        # Automatic backlog sweep (Josh 7/22: enrichment shouldn't be manual):
+        # oldest-first through everything reachable; physical:// snapshot rows
+        # have no readable bytes until the drive mounts (real paths land then).
+        where.append("full_path not like 'physical://%'")
+        where.append("(location_kind like 'gdrive%' or location_kind = 'dropbox')")
     else:
         where.append("full_path like '%Camera Uploads%'")
     q = (f"select id, full_path, filename, media_type, venture from media_assets "

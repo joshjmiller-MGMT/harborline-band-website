@@ -9,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link2, Plus, Trash2, Copy, ExternalLink, Eye, MousePointerClick, Loader2, Check, X, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { PLATFORMS, platformMeta, type SmartLinkRow, type PlatformLink } from "@/lib/smartlink";
+import { Area, ComposedChart, Line, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 
 // Manager for the personal smart-link tool. Create one shareable /l/:slug per
 // release, set a destination URL per DSP, and watch views + clicks roll in.
 const db = supabase as unknown as { from: (t: string) => any };
 
-type EventRow = { slug: string; kind: string; platform: string | null };
+type EventRow = { slug: string; kind: string; platform: string | null; created_at: string; referrer: string | null };
 
 const blank = (): SmartLinkRow => ({
   slug: "",
@@ -133,7 +134,7 @@ export default function TeamSmartLinks() {
   const load = async () => {
     const [l, e] = await Promise.all([
       db.from("smart_links").select("*").order("created_at", { ascending: false }),
-      db.from("smart_link_events").select("slug,kind,platform"),
+      db.from("smart_link_events").select("slug,kind,platform,created_at,referrer"),
     ]);
     setRows((l.data as SmartLinkRow[]) || []);
     setEvents((e.data as EventRow[]) || []);
@@ -155,6 +156,43 @@ export default function TeamSmartLinks() {
     }
     return m;
   }, [events]);
+
+  // Full analytics (Josh 2026-07-22, Artist-Hub parity): per-link expandable
+  // panel — stat tiles, 30-day time graph, platform clickthroughs, referrers.
+  // Series colors are palette-validated for CVD on the dark surface
+  // (views #3987e5 / clicks #d95926) — data encoding, not brand decoration.
+  const [analyticsSlug, setAnalyticsSlug] = useState<string | null>(null);
+
+  const seriesFor = (slug: string) => {
+    const days: { day: string; views: number; clicks: number }[] = [];
+    const idx = new Map<string, number>();
+    const now = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 86400000);
+      const key = d.toISOString().slice(0, 10);
+      idx.set(key, days.length);
+      days.push({ day: `${d.getMonth() + 1}/${d.getDate()}`, views: 0, clicks: 0 });
+    }
+    for (const e of events) {
+      if (e.slug !== slug) continue;
+      const key = (e.created_at || "").slice(0, 10);
+      const i = idx.get(key);
+      if (i === undefined) continue;
+      if (e.kind === "view") days[i].views++; else days[i].clicks++;
+    }
+    return days;
+  };
+
+  const referrersFor = (slug: string) => {
+    const m = new Map<string, number>();
+    for (const e of events) {
+      if (e.slug !== slug || e.kind !== "view") continue;
+      let host = "direct / none";
+      try { if (e.referrer) host = new URL(e.referrer).hostname.replace(/^www\./, ""); } catch { /* keep */ }
+      m.set(host, (m.get(host) || 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  };
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://harborlineband.com";
 
@@ -417,8 +455,90 @@ export default function TeamSmartLinks() {
                             ))}
                           </div>
                         )}
+                        {analyticsSlug === r.slug && (() => {
+                          const days = seriesFor(r.slug);
+                          const totalViews = s?.views ?? 0;
+                          const totalClicks = s?.clicks ?? 0;
+                          const ctr = totalViews ? Math.round((totalClicks / totalViews) * 1000) / 10 : 0;
+                          const refs = referrersFor(r.slug);
+                          const maxPlat = Math.max(1, ...Object.values(s?.byPlatform ?? {}));
+                          return (
+                            <div className="mt-3 rounded-lg border border-border bg-background/40 p-3 space-y-4">
+                              {/* Stat tiles */}
+                              <div className="grid grid-cols-3 gap-2 max-w-sm">
+                                {[["Views", totalViews], ["Clicks", totalClicks], ["CTR", `${ctr}%`]].map(([label, val]) => (
+                                  <div key={String(label)} className="rounded-md border border-border bg-card/60 px-3 py-2">
+                                    <div className="text-xl font-semibold tabular-nums text-foreground">{val}</div>
+                                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+                                  </div>
+                                ))}
+                              </div>
+                              {/* 30-day engagement — views (area) + clicks (line), one axis */}
+                              <div>
+                                <div className="flex items-center gap-3 mb-1 text-[11px] text-muted-foreground">
+                                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "#3987e5" }} /> Views</span>
+                                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "#d95926" }} /> Clicks</span>
+                                  <span className="ml-auto">last 30 days</span>
+                                </div>
+                                <div className="h-44">
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={days} margin={{ top: 6, right: 8, bottom: 0, left: -18 }}>
+                                      <CartesianGrid stroke="hsl(var(--border))" strokeOpacity={0.35} vertical={false} />
+                                      <XAxis dataKey="day" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} interval={4} />
+                                      <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                                      <ChartTooltip
+                                        cursor={{ stroke: "hsl(var(--muted-foreground))", strokeDasharray: "3 3" }}
+                                        contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                                        labelStyle={{ color: "hsl(var(--muted-foreground))" }}
+                                      />
+                                      <Area type="monotone" dataKey="views" stroke="#3987e5" strokeWidth={2} fill="#3987e5" fillOpacity={0.18} dot={false} />
+                                      <Line type="monotone" dataKey="clicks" stroke="#d95926" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                                    </ComposedChart>
+                                  </ResponsiveContainer>
+                                </div>
+                              </div>
+                              {/* Destination clickthroughs */}
+                              {s && Object.keys(s.byPlatform).length > 0 && (
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Destination clicks</p>
+                                  <div className="space-y-1">
+                                    {Object.entries(s.byPlatform).sort((a, b) => b[1] - a[1]).map(([plat, n]) => (
+                                      <div key={plat} className="flex items-center gap-2 text-xs">
+                                        <span className="w-24 shrink-0 text-foreground">{platformMeta(plat).label}</span>
+                                        <div className="flex-1 h-3 rounded-sm bg-muted/40 overflow-hidden">
+                                          <div className="h-full rounded-sm" style={{ width: `${(n / maxPlat) * 100}%`, background: "hsl(var(--primary))" }} />
+                                        </div>
+                                        <span className="w-8 text-right tabular-nums text-muted-foreground">{n}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {/* Top sources */}
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Top sources</p>
+                                {refs.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground">No referrer data yet.</p>
+                                ) : (
+                                  <div className="space-y-0.5">
+                                    {refs.map(([host, n]) => (
+                                      <div key={host} className="flex items-center justify-between text-xs">
+                                        <span className="text-foreground">{host}</span>
+                                        <span className="tabular-nums text-muted-foreground">{n}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
+                        <Button size="sm" variant={analyticsSlug === r.slug ? "default" : "outline"} className="h-8 text-xs gap-1"
+                          onClick={() => setAnalyticsSlug(analyticsSlug === r.slug ? null : r.slug)}>
+                          <Eye className="w-3.5 h-3.5" /> Analytics
+                        </Button>
                         <a href={`/l/${r.slug}`} target="_blank" rel="noreferrer">
                           <Button size="icon" variant="ghost" className="h-8 w-8" title="Open"><ExternalLink className="w-4 h-4" /></Button>
                         </a>

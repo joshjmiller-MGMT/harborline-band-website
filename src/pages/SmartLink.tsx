@@ -52,7 +52,8 @@ export default function SmartLink() {
     );
   }
 
-  const accent = link.accent || "#c9a24b";
+  // Brand (Josh 7/22): cobalt primary + royal purple, CREAM as the accent.
+  const accent = link.accent || "#efe6cf";
   const platforms: PlatformLink[] = Array.isArray(link.platforms) ? link.platforms : [];
   const pageTitle = `${link.artist} — ${link.title}`;
 
@@ -94,7 +95,7 @@ export default function SmartLink() {
           {link.subtitle && (
             <span
               className="inline-block text-xs uppercase tracking-[0.2em] font-semibold px-3 py-1 rounded-full"
-              style={{ backgroundColor: accent, color: "#0a0a0a" }}
+              style={{ backgroundColor: accent, color: "#141210" }}
             >
               {link.subtitle}
             </span>
@@ -103,8 +104,11 @@ export default function SmartLink() {
           <p className="text-white/60">{link.artist}</p>
         </div>
 
+        {/* Brand divider: cobalt -> royal purple */}
+        <div className="mt-6 h-0.5 w-24 rounded-full" style={{ background: "linear-gradient(135deg, #3b64ee, #8a4bea)" }} aria-hidden />
+
         {/* Platform buttons */}
-        <div className="mt-8 w-full space-y-3">
+        <div className="mt-6 w-full space-y-3">
           {platforms.length === 0 ? (
             <p className="text-center text-white/40 text-sm">Links coming soon.</p>
           ) : (

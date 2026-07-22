@@ -49,6 +49,9 @@ def main():
     step("folder", "build_folder_context.py", [])            # DB-only (no sidecar churn)
     step("enrich", "enrich_media.py",         ["--limit", "60"])   # new Camera Uploads
     step("drain",  "enrich_media.py",         ["--drain-requests"])
+    # Progressive full-library enrichment (Josh 7/22) — chew through the
+    # backlog ~120/night until every reachable asset has thumbs + AI tags.
+    step("backlog", "enrich_media.py",        ["--backlog", "--limit", "120"])
     log("=== DAM daily pipeline done ===")
 
 if __name__ == "__main__":
