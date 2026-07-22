@@ -36,6 +36,10 @@ GIG_WORDS = {"wedding","club","bar","pub","gala","corporate","party","fest","fes
 
 def source_of(path):
     p = path.replace("\\", "/")
+    # Physical drives (Josh 7/21: "should list and look as the cloud drives") —
+    # each physical://<LABEL> becomes its own top-level source, like the gdrives.
+    pm = re.match(r"^physical://([^/]+)", p)
+    if pm: return f"{pm.group(1)} (physical drive)"
     if p.startswith("C:/Users/joshj/Dropbox"): return "Dropbox"
     m = re.match(r"^([A-Z]):/", p)
     if m and m.group(1) in "GHIJ": return f"Google Drive ({m.group(1)}:)"
