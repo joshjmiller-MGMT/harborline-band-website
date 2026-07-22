@@ -83,6 +83,52 @@ export default function TeamSmartLinks() {
     setFound(null);
   };
 
+  // ---- Artwork: upload / pick from Media Library (Josh 2026-07-22) ----
+  const [uploadingArt, setUploadingArt] = useState(false);
+  const [artSearchOpen, setArtSearchOpen] = useState(false);
+  const [artQuery, setArtQuery] = useState("");
+  const [artResults, setArtResults] = useState<{ id: string; filename: string; thumbnail_path: string; ai_caption: string | null }[]>([]);
+
+  const uploadArtwork = async (file: File) => {
+    if (!editing) return;
+    setUploadingArt(true);
+    try {
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `smartlink/${slugify(editing.slug || editing.title || "art")}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("visual-assets").upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw new Error(error.message);
+      const { data } = supabase.storage.from("visual-assets").getPublicUrl(path);
+      setEditing((prev) => (prev ? { ...prev, artwork_url: data.publicUrl } : prev));
+      toast({ title: "Artwork uploaded" });
+    } catch (e) {
+      toast({ title: "Upload failed", description: e instanceof Error ? e.message : "unknown", variant: "destructive" });
+    } finally {
+      setUploadingArt(false);
+    }
+  };
+
+  // Debounced library search: filename + description + AI caption (what's IN
+  // the picture) + exact AI tag. Only thumbnail-backed rows are pickable —
+  // they're the ones with a web-servable image.
+  useEffect(() => {
+    if (!artSearchOpen) return;
+    const q = artQuery.trim();
+    if (q.length < 2) { setArtResults([]); return; }
+    const h = setTimeout(async () => {
+      let query = db.from("media_assets")
+        .select("id, filename, thumbnail_path, ai_caption")
+        .eq("media_type", "image")
+        .not("thumbnail_path", "is", null)
+        .limit(18);
+      const ors = [`filename.ilike.%${q}%`, `description.ilike.%${q}%`, `ai_caption.ilike.%${q}%`];
+      if (/^[a-z0-9-]+$/i.test(q)) ors.push(`ai_tags.cs.["${q.toLowerCase()}"]`);
+      query = query.or(ors.join(","));
+      const { data } = await query;
+      setArtResults((data as typeof artResults) || []);
+    }, 300);
+    return () => clearTimeout(h);
+  }, [artQuery, artSearchOpen]);
+
   const load = async () => {
     const [l, e] = await Promise.all([
       db.from("smart_links").select("*").order("created_at", { ascending: false }),
@@ -209,8 +255,59 @@ export default function TeamSmartLinks() {
                 </div>
                 <Input placeholder="Artist" value={editing.artist} onChange={(ev) => setEditing({ ...editing, artist: ev.target.value })} />
                 <Input placeholder='Badge (e.g. "Out now", "Pre-save")' value={editing.subtitle || ""} onChange={(ev) => setEditing({ ...editing, subtitle: ev.target.value })} />
-                <Input placeholder="Artwork image URL" value={editing.artwork_url || ""} onChange={(ev) => setEditing({ ...editing, artwork_url: ev.target.value })} />
                 <Input type="date" value={editing.release_date || ""} onChange={(ev) => setEditing({ ...editing, release_date: ev.target.value })} />
+              </div>
+
+              {/* Artwork: upload a file, pick from the Media Library (search by
+                  name, tags, or what's IN the picture via AI captions), or
+                  paste a URL. Josh 2026-07-22. */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Artwork</span>
+                  <div className="flex items-center gap-1.5">
+                    <label className="inline-flex">
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={(ev) => { const f = ev.target.files?.[0]; if (f) void uploadArtwork(f); ev.target.value = ""; }} />
+                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1 pointer-events-none">
+                        {uploadingArt ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Upload
+                      </Button>
+                    </label>
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
+                      onClick={() => setArtSearchOpen((v) => !v)}>
+                      <Sparkles className="w-3 h-3" /> From library
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  {editing.artwork_url ? (
+                    <img src={editing.artwork_url} alt="artwork" className="w-20 h-20 rounded-md object-cover border border-border shrink-0" />
+                  ) : (
+                    <div className="w-20 h-20 rounded-md border border-dashed border-border flex items-center justify-center text-[10px] text-muted-foreground shrink-0">no art</div>
+                  )}
+                  <div className="flex-1 space-y-2 min-w-0">
+                    <Input placeholder="…or paste an image URL" value={editing.artwork_url || ""} onChange={(ev) => setEditing({ ...editing, artwork_url: ev.target.value })} />
+                    {artSearchOpen && (
+                      <div className="rounded-md border border-primary/30 bg-primary/5 p-2">
+                        <Input autoFocus placeholder="Search the library — name, tags, or what's in the picture…"
+                          value={artQuery} onChange={(ev) => setArtQuery(ev.target.value)} />
+                        {artResults.length > 0 && (
+                          <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-2">
+                            {artResults.map((a) => (
+                              <button key={a.id} type="button" title={a.ai_caption ?? a.filename}
+                                onClick={() => { setEditing((prev) => prev ? { ...prev, artwork_url: a.thumbnail_path } : prev); setArtSearchOpen(false); }}
+                                className="aspect-square rounded-md overflow-hidden border border-border hover:ring-2 hover:ring-primary transition">
+                                <img src={a.thumbnail_path} alt={a.filename} className="w-full h-full object-cover" loading="lazy" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {artQuery.trim().length > 1 && artResults.length === 0 && (
+                          <p className="mt-2 text-xs text-muted-foreground">Nothing enriched matches — only library items with thumbnails are pickable (2,258 and growing nightly).</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div>

@@ -120,7 +120,18 @@ export default function TeamMedia() {
       if (type) query = query.eq("media_type", type);
       if (status) query = query.eq("status", status);
       if (lane) query = query.eq("suggested_output", lane);
-      if (qDebounced) query = query.or(`filename.ilike.%${qDebounced}%,description.ilike.%${qDebounced}%,ai_caption.ilike.%${qDebounced}%`);
+      if (qDebounced) {
+        // Search name, description, what's IN the picture (AI caption), and
+        // exact AI tag (Josh 2026-07-22: "finds it in the title or tags or
+        // within the picture content").
+        const ors = [
+          `filename.ilike.%${qDebounced}%`,
+          `description.ilike.%${qDebounced}%`,
+          `ai_caption.ilike.%${qDebounced}%`,
+        ];
+        if (/^[a-z0-9-]+$/i.test(qDebounced)) ors.push(`ai_tags.cs.["${qDebounced.toLowerCase()}"]`);
+        query = query.or(ors.join(","));
+      }
       const { data, error, count } = await query;
       if (error) throw error;
       setRows((data ?? []) as MediaRow[]);
@@ -455,7 +466,11 @@ function FoldersView() {
       .select("id, folder_path, name, source_root, file_count, image_count, video_count, audio_count, total_bytes, date_min, date_max, top_venture, folder_class, sphere, event_name, event_date, context_md, status, editor")
       .limit(1000);
     if (venture) query = query.eq("top_venture", venture);
-    if (q.trim()) query = query.ilike("name", `%${q.trim()}%`);
+    if (q.trim()) {
+      const term = q.trim();
+      // Folder search covers name + rolled-up context + event (not just name).
+      query = query.or(`name.ilike.%${term}%,context_md.ilike.%${term}%,event_name.ilike.%${term}%`);
+    }
     const { data } = await query;
     setFolders((data ?? []) as FolderRow[]);
     setLoading(false);
@@ -491,7 +506,7 @@ function FoldersView() {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[220px]">
           <Search className="w-4 h-4 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search folder name…" className="pl-8 h-9" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search folders — name, event, contents…" className="pl-8 h-9" />
         </div>
         <select value={venture} onChange={(e) => setVenture(e.target.value)} className="h-9 rounded-md border border-border bg-card px-2 text-sm">
           <option value="">All ventures</option>
