@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -56,7 +56,7 @@ export default function TeamSmartLinks() {
     try {
       const { data, error } = await (supabase as unknown as {
         functions: { invoke: (n: string, o: object) => Promise<{ data: unknown; error: { message: string } | null }> };
-      }).functions.invoke("smartlink-sources", { body: { url: seed } });
+      }).functions.invoke("smartlink-sources", { body: { url: seed, title: editing.title, artist: editing.artist } });
       if (error) throw new Error(error.message);
       const res = data as { sources?: PlatformLink[]; matched?: { title?: string; artist?: string } };
       const have = new Set(editing.platforms.map((p) => p.platform));
@@ -85,6 +85,7 @@ export default function TeamSmartLinks() {
 
   // ---- Artwork: upload / pick from Media Library (Josh 2026-07-22) ----
   const [uploadingArt, setUploadingArt] = useState(false);
+  const artFileRef = useRef<HTMLInputElement | null>(null);
   const [artSearchOpen, setArtSearchOpen] = useState(false);
   const [artQuery, setArtQuery] = useState("");
   const [artResults, setArtResults] = useState<{ id: string; filename: string; thumbnail_path: string; ai_caption: string | null }[]>([]);
@@ -265,13 +266,12 @@ export default function TeamSmartLinks() {
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Artwork</span>
                   <div className="flex items-center gap-1.5">
-                    <label className="inline-flex">
-                      <input type="file" accept="image/*" className="hidden"
-                        onChange={(ev) => { const f = ev.target.files?.[0]; if (f) void uploadArtwork(f); ev.target.value = ""; }} />
-                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1 pointer-events-none">
-                        {uploadingArt ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Upload
-                      </Button>
-                    </label>
+                    <input ref={artFileRef} type="file" accept="image/*" className="hidden"
+                      onChange={(ev) => { const f = ev.target.files?.[0]; if (f) void uploadArtwork(f); ev.target.value = ""; }} />
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
+                      onClick={() => artFileRef.current?.click()} disabled={uploadingArt}>
+                      {uploadingArt ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Upload
+                    </Button>
                     <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
                       onClick={() => setArtSearchOpen((v) => !v)}>
                       <Sparkles className="w-3 h-3" /> From library
