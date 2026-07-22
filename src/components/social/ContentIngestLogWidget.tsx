@@ -53,7 +53,7 @@ type ListResponse = { items: IngestRow[]; summary: IngestSummary };
 // The three IG flows get distinct, stable colors so the audit reads at a glance.
 const ACCOUNT_STYLES: Record<string, string> = {
   economy: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
-  harborline: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
+  harborline: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
   personal: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
   "trello-card": "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
 };
@@ -78,7 +78,7 @@ const ROUTE_LABEL: Record<string, string> = {
 const SENSITIVITY_STYLES: Record<string, string> = {
   urgent: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40",
   soon: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
-  rolling: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/20",
+  rolling: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
   expired: "bg-muted text-muted-foreground border-border line-through",
 };
 

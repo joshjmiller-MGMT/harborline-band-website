@@ -11,7 +11,7 @@ export type InstrumentKind = "gig" | "rehearsal" | "practice";
 export const KIND_COLOR: Record<InstrumentKind, { bg: string; text: string; border: string }> = {
   gig:       { bg: "bg-primary",     text: "text-primary",     border: "border-primary/40" },
   rehearsal: { bg: "bg-orange-500",  text: "text-orange-500",  border: "border-orange-500/40" },
-  practice:  { bg: "bg-blue-500",    text: "text-blue-500",    border: "border-blue-500/40" },
+  practice:  { bg: "bg-accent",      text: "text-accent",      border: "border-accent/40" },
 };
 
 export const CONFIDENCE_TONE: Record<

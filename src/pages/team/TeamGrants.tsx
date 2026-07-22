@@ -24,8 +24,8 @@ type GrantRow = {
 const STATUSES = ["researching", "drafting", "submitted", "awarded", "declined", "skip", "bookmark"];
 const STATUS_STYLE: Record<string, string> = {
   researching: "bg-amber-500/15 text-amber-400",
-  drafting: "bg-sky-500/15 text-sky-400",
-  submitted: "bg-violet-500/15 text-violet-400",
+  drafting: "bg-primary/15 text-primary",
+  submitted: "bg-accent/15 text-accent",
   awarded: "bg-emerald-500/15 text-emerald-400",
   declined: "bg-rose-500/15 text-rose-400",
   skip: "bg-muted/60 text-muted-foreground",

@@ -38,14 +38,14 @@ const LANES = ["harborline-epk", "harborline-social", "economy-social", "joshjmi
 const PAGE = 200;
 
 const VENTURE_DOT: Record<string, string> = {
-  Harborline: "bg-sky-500", Economy: "bg-violet-500", JMJ: "bg-amber-500",
+  Harborline: "bg-primary", Economy: "bg-accent", JMJ: "bg-amber-500",
   Personal: "bg-emerald-500", BSE: "bg-rose-500", "Brand Studio": "bg-fuchsia-500",
   Unknown: "bg-muted-foreground",
 };
 const STATUS_STYLE: Record<string, string> = {
   new: "bg-muted/60 text-muted-foreground",
   keep: "bg-emerald-500/15 text-emerald-400",
-  routed: "bg-sky-500/15 text-sky-400",
+  routed: "bg-primary/15 text-primary",
   archive: "bg-amber-500/15 text-amber-400",
   junk: "bg-rose-500/15 text-rose-400",
 };
@@ -59,8 +59,8 @@ function humanSize(n: number | null): string {
 }
 
 function TypeIcon({ t }: { t: string }) {
-  if (t === "image") return <ImageIcon className="w-4 h-4 text-sky-400" />;
-  if (t === "video") return <Film className="w-4 h-4 text-violet-400" />;
+  if (t === "image") return <ImageIcon className="w-4 h-4 text-primary" />;
+  if (t === "video") return <Film className="w-4 h-4 text-accent" />;
   if (t === "audio") return <Music className="w-4 h-4 text-amber-400" />;
   return <FolderOpen className="w-4 h-4 text-muted-foreground" />;
 }
@@ -343,8 +343,8 @@ type FolderRow = {
 };
 
 const CLASS_STYLE: Record<string, string> = {
-  event: "bg-sky-500/15 text-sky-400",
-  shoot: "bg-violet-500/15 text-violet-400",
+  event: "bg-primary/15 text-primary",
+  shoot: "bg-accent/15 text-accent",
   session: "bg-amber-500/15 text-amber-400",
   reference: "bg-fuchsia-500/15 text-fuchsia-400",
   knowledge: "bg-emerald-500/15 text-emerald-400",

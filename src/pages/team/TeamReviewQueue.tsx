@@ -481,7 +481,7 @@ export default function TeamReviewQueue() {
                             ? "border-l-red-500"
                             : item.priority === "low"
                               ? "border-l-border/40"
-                              : "border-l-sky-500/50"
+                              : "border-l-primary/50"
                         } ${isSelected ? "bg-primary/10" : ""}`}
                       >
                         <div className="flex items-start gap-2">
@@ -496,7 +496,7 @@ export default function TeamReviewQueue() {
                                 {TYPE_LABELS[item.item_type]}
                               </Badge>
                               {(item.round > 1 || item.parent_id) && (
-                                <Badge className="text-[10px] uppercase tracking-wider bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-500/40">
+                                <Badge className="text-[10px] uppercase tracking-wider bg-accent/20 text-accent border border-accent/40">
                                   <RefreshCw className="w-2.5 h-2.5 mr-1" /> Round {item.round}
                                 </Badge>
                               )}
@@ -535,7 +535,7 @@ export default function TeamReviewQueue() {
                       {TYPE_LABELS[current.item_type]}
                     </Badge>
                     {(current.round > 1 || current.parent_id) && (
-                      <Badge className="text-[10px] uppercase tracking-wider bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-500/40">
+                      <Badge className="text-[10px] uppercase tracking-wider bg-accent/20 text-accent border border-accent/40">
                         <RefreshCw className="w-2.5 h-2.5 mr-1" /> Re-ask · round {current.round}
                       </Badge>
                     )}

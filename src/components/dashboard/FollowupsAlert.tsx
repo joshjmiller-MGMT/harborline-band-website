@@ -15,7 +15,7 @@ type Followup = {
 };
 
 const VENTURE_DOT: Record<string, string> = {
-  Harborline: "bg-sky-500", Economy: "bg-violet-500", JMJ: "bg-amber-500",
+  Harborline: "bg-primary", Economy: "bg-accent", JMJ: "bg-amber-500",
   Personal: "bg-emerald-500", BSE: "bg-rose-500", "Brand Studio": "bg-fuchsia-500",
 };
 
@@ -50,19 +50,19 @@ export default function FollowupsAlert() {
   if (loading || (rows.length === 0 && people.length === 0)) return null;
 
   return (
-    <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-4">
+    <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-medium text-foreground flex items-center gap-2">
-          <Repeat className="w-4 h-4 text-indigo-400" /> Follow-ups
+          <Repeat className="w-4 h-4 text-accent" /> Follow-ups
           <span className="text-xs text-muted-foreground">
             ({rows.length} task{rows.length === 1 ? "" : "s"} · {people.length} people)
           </span>
         </h3>
         <span className="flex items-center gap-3">
-          <Link to="/team/contacts" className="text-xs text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-0.5">
+          <Link to="/team/contacts" className="text-xs text-accent hover:text-accent/80 inline-flex items-center gap-0.5">
             contacts <ChevronRight className="w-3 h-3" />
           </Link>
-          <Link to="/team/smart-tasks" className="text-xs text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-0.5">
+          <Link to="/team/smart-tasks" className="text-xs text-accent hover:text-accent/80 inline-flex items-center gap-0.5">
             board <ChevronRight className="w-3 h-3" />
           </Link>
         </span>
@@ -79,19 +79,19 @@ export default function FollowupsAlert() {
         </ul>
       )}
       {people.length > 0 && (
-        <div className={rows.length > 0 ? "mt-2 pt-2 border-t border-indigo-500/20" : ""}>
+        <div className={rows.length > 0 ? "mt-2 pt-2 border-t border-accent/20" : ""}>
           <p className="text-[11px] text-muted-foreground mb-1">Follow up with:</p>
           {/* Clean person chips only (task-junk lives on boards now, Josh 7/19).
               Capped at 8; the rest are one click away on Contacts. */}
           <p className="text-sm leading-relaxed flex flex-wrap gap-1.5">
             {people.slice(0, 8).map((p) => (
               <Link key={p.id} to="/team/contacts"
-                className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-foreground/90 hover:border-indigo-400 text-xs">
+                className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-foreground/90 hover:border-accent text-xs">
                 {p.name.split(/[-—(·]/)[0].trim()}
               </Link>
             ))}
             {people.length > 8 && (
-              <Link to="/team/contacts" className="text-xs text-indigo-400 hover:underline self-center">
+              <Link to="/team/contacts" className="text-xs text-accent hover:underline self-center">
                 +{people.length - 8} more
               </Link>
             )}

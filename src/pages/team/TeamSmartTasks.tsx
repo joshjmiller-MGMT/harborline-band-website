@@ -58,7 +58,7 @@ function undoToast(message: string, onUndo: () => void | Promise<void>) {
 
 const STAGE_ACCENT: Record<string, string> = {
   "Needs SMART": "text-orange-400",
-  "Pending approval": "text-sky-400",
+  "Pending approval": "text-primary",
   "Active": "text-emerald-400",
   "Done": "text-muted-foreground",
 };
@@ -329,7 +329,7 @@ export default function SmartBoardPanel() {
                                 onClick={() => patchRow(row.id, { recurring_followup: !row.recurring_followup },
                                   row.recurring_followup ? "Follow-up stopped" : "Following up until done",
                                   { recurring_followup: row.recurring_followup })}
-                                className={row.recurring_followup ? "text-indigo-400" : "text-muted-foreground/40 hover:text-muted-foreground"}
+                                className={row.recurring_followup ? "text-accent" : "text-muted-foreground/40 hover:text-muted-foreground"}
                                 title={row.recurring_followup ? "Stop follow-up" : "Follow up until done"}
                               >
                                 <Repeat className="w-3.5 h-3.5" />
@@ -338,7 +338,7 @@ export default function SmartBoardPanel() {
                                 <select
                                   value={row.followup_frequency || "daily"}
                                   onChange={(e) => patchRow(row.id, { followup_frequency: e.target.value }, `Follow-up: ${e.target.value}`)}
-                                  className="text-[10px] bg-transparent border border-border/60 rounded px-0.5 py-0 cursor-pointer text-indigo-300"
+                                  className="text-[10px] bg-transparent border border-border/60 rounded px-0.5 py-0 cursor-pointer text-accent"
                                   title={`next: ${row.next_followup_at ? row.next_followup_at.slice(0, 10) : "next daily run"} · last: ${row.last_followup_at ? row.last_followup_at.slice(0, 10) : "never"}`}
                                 >
                                   <option value="daily">daily</option>
@@ -353,7 +353,7 @@ export default function SmartBoardPanel() {
                           {stage === "Needs SMART" && (
                             <button
                               onClick={() => sendToReview(row.revised_title || row.raw_input, row.id)}
-                              className="text-sky-400/70 hover:text-sky-300 shrink-0"
+                              className="text-primary/70 hover:text-primary shrink-0"
                               title="Add context → Review"
                             >
                               <MessageSquarePlus className="w-3.5 h-3.5" />

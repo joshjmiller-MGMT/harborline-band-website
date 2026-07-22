@@ -33,7 +33,7 @@ type GoalsResponse = { goals: SmartGoal[] };
 
 const VENTURE_STYLES: Record<string, string> = {
   "The Economy": "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
-  Harborline: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
+  Harborline: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
   BSE: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
   "JMJ / jazz": "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
   "Solo / operator": "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30",
@@ -42,7 +42,7 @@ const VENTURE_STYLES: Record<string, string> = {
 const SENSITIVITY_STYLES: Record<string, string> = {
   urgent: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40",
   soon: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
-  rolling: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/20",
+  rolling: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
   expired: "bg-muted text-muted-foreground border-border line-through",
 };
 

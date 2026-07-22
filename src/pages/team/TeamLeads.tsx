@@ -24,9 +24,9 @@ type Lead = {
 
 const STATUSES = ["new", "contacted", "quoted", "booked", "lost", "nurture"];
 const STATUS_STYLE: Record<string, string> = {
-  new: "bg-sky-500/15 text-sky-400",
+  new: "bg-primary/15 text-primary",
   contacted: "bg-amber-500/15 text-amber-400",
-  quoted: "bg-violet-500/15 text-violet-400",
+  quoted: "bg-accent/15 text-accent",
   booked: "bg-emerald-500/15 text-emerald-400",
   lost: "bg-rose-500/15 text-rose-400",
   nurture: "bg-muted/60 text-muted-foreground",
@@ -36,7 +36,7 @@ const SOURCE_LABEL: Record<string, string> = {
   referral: "Referral", "knowledge-capture": "Captured", web: "Web", other: "Other",
 };
 const VENTURE_DOT: Record<string, string> = {
-  Harborline: "bg-sky-500", Economy: "bg-violet-500", JMJ: "bg-amber-500",
+  Harborline: "bg-primary", Economy: "bg-accent", JMJ: "bg-amber-500",
   BSE: "bg-rose-500", Personal: "bg-emerald-500",
 };
 

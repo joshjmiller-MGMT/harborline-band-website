@@ -16,7 +16,7 @@
     overflow-x: clip;
   }
 
-  /* Palette flip (Josh 2026-07-22): turquoise/cobalt-teal is PRIMARY, royal
+  /* Palette flip (Josh 2026-07-22): ROYAL COBALT is PRIMARY (one blue, no aqua), royal
      purple is the accent — the old purple-primary + warm-cream text read as
      "every AI platform's black & yellow." Black stays; text goes cool white
      (the old hue-45 cream was the yellow cast). Reference: Josh's cobalt-teal /
@@ -31,8 +31,8 @@
     --popover: 220 18% 10%;
     --popover-foreground: 190 20% 96%;
 
-    --primary: 178 84% 45%;
-    --primary-foreground: 200 60% 6%;
+    --primary: 226 84% 58%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 220 15% 15%;
     --secondary-foreground: 190 20% 96%;
@@ -48,28 +48,26 @@
 
     --border: 220 15% 20%;
     --input: 220 15% 20%;
-    --ring: 178 84% 45%;
+    --ring: 226 84% 58%;
 
     --radius: 0.25rem;
 
     /* Custom Harborline tokens */
-    --teal: 178 84% 45%;
-    --teal-glow: 178 84% 60%;
     --purple: 264 78% 62%;
     --purple-glow: 264 78% 74%;
-    --blue: 202 90% 55%;
-    --blue-glow: 202 90% 68%;
+    --blue: 226 84% 58%;
+    --blue-glow: 226 84% 70%;
     --charcoal: 220 20% 6%;
     --charcoal-light: 220 18% 12%;
     --cream: 190 20% 96%;
 
-    /* Gradients — turquoise → cerulean → royal purple (the identity) */
-    --gradient-brand: linear-gradient(135deg, hsl(178 84% 48%), hsl(202 90% 55%), hsl(264 78% 62%));
+    /* Gradients — cobalt → royal purple (the identity; ONE blue) */
+    --gradient-brand: linear-gradient(135deg, hsl(226 84% 58%), hsl(264 78% 62%));
     --gradient-dark: linear-gradient(180deg, hsl(220 20% 6%), hsl(220 18% 10%));
     --gradient-overlay: linear-gradient(180deg, transparent 0%, hsl(220 20% 6% / 0.7) 50%, hsl(220 20% 6%) 100%);
 
     /* Shadows */
-    --shadow-brand: 0 0 40px hsl(178 84% 45% / 0.35);
+    --shadow-brand: 0 0 40px hsl(226 84% 58% / 0.35);
     --shadow-soft: 0 4px 20px hsl(0 0% 0% / 0.3);
   }
 

@@ -42,10 +42,10 @@ export default function PendingApprovalAlert() {
   if (!loading && (pending ?? 0) === 0 && needsSmart === 0) return null;
 
   return (
-    <Card className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-sky-500/30 bg-sky-500/10 p-4">
+    <Card className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-primary/30 bg-primary/10 p-4">
       <div className="flex items-center gap-3">
-        <div className="rounded-full bg-sky-500/15 p-2">
-          <Sparkles className="h-5 w-5 text-sky-500" />
+        <div className="rounded-full bg-primary/15 p-2">
+          <Sparkles className="h-5 w-5 text-primary" />
         </div>
         <div>
           {loading ? (

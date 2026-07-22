@@ -132,7 +132,7 @@ export function SmartTaskCard({
         </DropdownMenu>
         {card.recurringFollowup && (
           <span
-            className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-400"
+            className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/15 text-accent"
             title="Recurring follow-up — re-surfaces daily until moved to Done"
           >
             <Repeat className="w-3 h-3" /> follow-up
@@ -179,7 +179,7 @@ export function SmartTaskCard({
               onSendToReview(card);
             }}
             onPointerDown={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 text-[10px] font-medium text-sky-400 hover:text-sky-300 hover:underline"
+            className="inline-flex items-center gap-1 text-[10px] font-medium text-primary hover:text-primary/80 hover:underline"
           >
             <MessageSquarePlus className="w-3 h-3" /> Add context → Review
           </button>
@@ -193,7 +193,7 @@ export function SmartTaskCard({
             onPointerDown={(e) => e.stopPropagation()}
             className={`inline-flex items-center gap-1 text-[10px] font-medium hover:underline ${
               card.recurringFollowup
-                ? "text-indigo-400 hover:text-indigo-300"
+                ? "text-accent hover:text-accent/80"
                 : "text-muted-foreground hover:text-foreground"
             }`}
             title={

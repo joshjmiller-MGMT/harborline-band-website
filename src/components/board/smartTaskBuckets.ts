@@ -43,7 +43,7 @@ export type PersistableSmartBucket = (typeof PERSISTABLE_SMART_BUCKETS)[number];
 export const SMART_BUCKET_COLUMNS: ScrumColumn[] = [
   { id: "Trello inbox", title: "Trello inbox", accent: "text-amber-500" },
   { id: "Needs SMART", title: "Needs SMART", accent: "text-orange-400" },
-  { id: "Pending approval", title: "Pending approval", accent: "text-sky-400" },
+  { id: "Pending approval", title: "Pending approval", accent: "text-primary" },
   { id: "Active", title: "Active (calendar)", accent: "text-emerald-400" },
   { id: "Done", title: "Done", accent: "text-muted-foreground" },
 ];
@@ -51,8 +51,8 @@ export const SMART_BUCKET_COLUMNS: ScrumColumn[] = [
 // One color per venture — color is processed faster than text, so the eye
 // learns "purple = Economy" etc. without reading (kanban-swimlane best practice).
 export const VENTURE_COLORS: Record<SmartVenture, string> = {
-  Harborline: "bg-sky-500",
-  Economy: "bg-violet-500",
+  Harborline: "bg-primary",
+  Economy: "bg-accent",
   JMJ: "bg-amber-500",
   Personal: "bg-emerald-500",
   BSE: "bg-rose-500",

@@ -30,7 +30,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 const STATUS_STYLE: Record<string, string> = {
   todo: "bg-muted text-muted-foreground",
-  contacted: "bg-blue-500/15 text-blue-400",
+  contacted: "bg-primary/15 text-primary",
   in_progress: "bg-amber-500/15 text-amber-400",
   won: "bg-green-500/15 text-green-400",
   passed: "bg-border text-muted-foreground line-through",

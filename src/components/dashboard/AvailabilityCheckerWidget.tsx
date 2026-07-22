@@ -37,7 +37,7 @@ interface Report {
 const verdictMeta: Record<Verdict, { label: string; className: string }> = {
   confirmed_busy: { label: "Confirmed Booking", className: "bg-destructive/20 text-destructive border-destructive/40" },
   tentative: { label: "Tentative", className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/40" },
-  mention_only: { label: "Mentioned in Email", className: "bg-blue-500/20 text-blue-400 border-blue-500/40" },
+  mention_only: { label: "Mentioned in Email", className: "bg-primary/20 text-primary border-primary/40" },
   clear: { label: "Clear", className: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40" },
 };
 

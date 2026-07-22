@@ -32,9 +32,9 @@ type SystemRow = {
 
 const STATUS_STYLE: Record<string, string> = {
   active: "bg-emerald-500/15 text-emerald-400",
-  in_flight: "bg-sky-500/15 text-sky-400",
+  in_flight: "bg-primary/15 text-primary",
   planned: "bg-amber-500/15 text-amber-400",
-  idea: "bg-fuchsia-500/15 text-fuchsia-400",
+  idea: "bg-accent/15 text-accent",
   paused: "bg-muted/60 text-muted-foreground",
 };
 const STATUSES = ["active", "in_flight", "planned", "idea", "paused"];
@@ -148,10 +148,10 @@ export default function TeamSystems() {
                           <p className="text-foreground/90"><span className="text-green-500 font-medium">Now:</span> {r.current_work}</p>
                         )}
                         {r.just_finished && (
-                          <p className="text-muted-foreground"><span className="text-sky-400 font-medium">Shipped:</span> {r.just_finished}</p>
+                          <p className="text-muted-foreground"><span className="text-primary font-medium">Shipped:</span> {r.just_finished}</p>
                         )}
                         {r.up_next && (
-                          <p className="text-muted-foreground"><span className="text-violet-400 font-medium">Next:</span> {r.up_next}</p>
+                          <p className="text-muted-foreground"><span className="text-accent font-medium">Next:</span> {r.up_next}</p>
                         )}
                         {r.blocked_on && (
                           <p className="text-amber-500"><span className="font-medium">Hang-up:</span> {r.blocked_on}</p>

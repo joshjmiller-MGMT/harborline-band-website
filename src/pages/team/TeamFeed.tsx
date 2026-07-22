@@ -18,7 +18,7 @@ type FeedItem = {
 };
 
 const KINDS: { key: string; label: string; icon: typeof Film; accent: string }[] = [
-  { key: "watch", label: "Watch", icon: Film, accent: "text-violet-400" },
+  { key: "watch", label: "Watch", icon: Film, accent: "text-accent" },
   { key: "listen", label: "Listen", icon: Headphones, accent: "text-amber-400" },
   { key: "learn", label: "Learn", icon: GraduationCap, accent: "text-emerald-400" },
 ];
@@ -108,7 +108,7 @@ export default function TeamFeed() {
                         {!r.blurb && r.note && <p className="text-[11px] text-muted-foreground mt-1.5 flex-1">{r.note}</p>}
                         {(r.link || r.url) && (
                           <a href={r.link || r.url || "#"} target="_blank" rel="noreferrer"
-                            className="mt-2.5 inline-flex items-center justify-center gap-1.5 text-xs font-medium rounded border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 px-2 py-1.5">
+                            className="mt-2.5 inline-flex items-center justify-center gap-1.5 text-xs font-medium rounded border border-accent/40 bg-accent/10 text-accent hover:bg-accent/20 px-2 py-1.5">
                             ▶ Trailer / watch
                           </a>
                         )}
