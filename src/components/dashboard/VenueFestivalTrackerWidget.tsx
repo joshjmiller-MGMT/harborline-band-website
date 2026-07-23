@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -89,6 +90,10 @@ export default function VenueFestivalTrackerWidget() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [detailRow, setDetailRow] = useState<VenueRow | null>(null);
+  // Editable modal (Josh 7/21: "i should be able to change statuses, change
+  // everything, and it should work two ways back and forth with the sheet").
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [savingRow, setSavingRow] = useState(false);
 
   const [config, setConfig] = useState<Config | null>(null);
   const [draftGid, setDraftGid] = useState("");
@@ -207,6 +212,52 @@ export default function VenueFestivalTrackerWidget() {
     Object.values(headerMap).forEach((h) => h && s.add(h));
     return s;
   }, [headerMap]);
+
+  const openDetail = useCallback((r: VenueRow) => {
+    setDetailRow(r);
+    setDraft({ ...r.fields });
+  }, []);
+
+  const changedKeys = useMemo(() => {
+    if (!detailRow) return [];
+    return Object.keys(draft).filter(
+      (k) => (draft[k] ?? "") !== (detailRow.fields[k] ?? ""),
+    );
+  }, [draft, detailRow]);
+
+  // Push edited cells back to the sheet. The fn verify-then-writes: it
+  // re-reads the tab with true row numbers and only writes when the name cell
+  // matches (or a unique name match exists) — never a wrong-row write.
+  const saveEdits = useCallback(async () => {
+    if (!detailRow || changedKeys.length === 0) return;
+    setSavingRow(true);
+    const updates: Record<string, string> = {};
+    changedKeys.forEach((k) => { updates[k] = draft[k] ?? ""; });
+    const { data, error } = await supabase.functions.invoke("venue-tracker-writeback", {
+      body: {
+        row_index: detailRow.rowIndex,
+        venue_name: get(detailRow, "venue"),
+        name_header: headerMap.venue || firstHeader,
+        updates,
+      },
+    });
+    setSavingRow(false);
+    if (error) {
+      // supabase-js stashes the Response on error.context for non-2xx
+      let detail = error.message;
+      try {
+        const body = await (error as { context?: Response }).context?.json();
+        detail = body?.message || body?.detail || body?.error || detail;
+      } catch { /* keep generic message */ }
+      toast.error(`Save failed: ${detail}`);
+      return;
+    }
+    toast.success(
+      `Saved ${data.updated_cells} cell${data.updated_cells === 1 ? "" : "s"} to the sheet (row ${data.row})`,
+    );
+    setDetailRow(null);
+    await load();
+  }, [detailRow, changedKeys, draft, headerMap, firstHeader, load]);
 
   return (
     <Card className="bg-card/50 border-border">
@@ -348,7 +399,7 @@ export default function VenueFestivalTrackerWidget() {
                     <tr
                       key={r.id}
                       className="border-t border-border/30 hover:bg-muted/20 align-top cursor-pointer"
-                      onClick={() => setDetailRow(r)}
+                      onClick={() => openDetail(r)}
                     >
                       <td className="px-3 py-2 text-foreground font-medium">
                         {get(r, "venue") || <span className="text-muted-foreground italic">(unnamed row {r.rowIndex})</span>}
@@ -404,55 +455,68 @@ export default function VenueFestivalTrackerWidget() {
                     {get(detailRow, "venue") || `Row ${detailRow.rowIndex}`}
                   </DialogTitle>
                   <DialogDescription>
-                    All fields from the Venue &amp; Festival Tracker · row {detailRow.rowIndex}
+                    Editable — saves write back to the Venue &amp; Festival Tracker sheet · row {detailRow.rowIndex}
                   </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4 mt-2">
-                  {/* Main 6 columns */}
+                  {/* Main columns — editable */}
                   <div className="grid grid-cols-2 gap-3">
                     {COMM_COLUMNS.filter((c) => c.key !== "venue").map((c) => {
-                      const val = get(detailRow, c.key);
+                      const h = headerMap[c.key];
+                      if (!h) return null;
                       return (
-                        <div key={c.key} className="p-2 rounded border border-border/40 bg-muted/20">
-                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{c.label}</div>
-                          <div className="text-sm text-foreground">{val || <span className="text-muted-foreground">—</span>}</div>
+                        <div key={c.key}>
+                          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{c.label}</Label>
+                          <Input
+                            value={draft[h] ?? ""}
+                            onChange={(e) => setDraft((d) => ({ ...d, [h]: e.target.value }))}
+                            className="h-9 mt-1"
+                          />
                         </div>
                       );
                     })}
                   </div>
 
-                  {/* All other columns */}
+                  {/* All other columns — editable */}
                   {headers.filter((h) => h && !mainHeaderSet.has(h) && h !== firstHeader).length > 0 && (
                     <div>
                       <div className="text-xs font-medium text-muted-foreground mb-2">Other details</div>
                       <div className="space-y-2">
                         {headers
                           .filter((h) => h && !mainHeaderSet.has(h) && h !== firstHeader)
-                          .map((h) => {
-                            const val = (detailRow.fields[h] || "").trim();
-                            return (
-                              <div key={h} className="flex gap-3 text-sm border-b border-border/20 pb-1.5">
-                                <div className="w-1/3 text-muted-foreground text-xs pt-0.5">{h}</div>
-                                <div className="flex-1 text-foreground/90 whitespace-pre-wrap break-words">
-                                  {val || <span className="text-muted-foreground italic">empty</span>}
-                                </div>
-                              </div>
-                            );
-                          })}
+                          .map((h) => (
+                            <div key={h} className="flex gap-3 text-sm items-start">
+                              <div className="w-1/3 text-muted-foreground text-xs pt-2">{h}</div>
+                              <Textarea
+                                value={draft[h] ?? ""}
+                                onChange={(e) => setDraft((d) => ({ ...d, [h]: e.target.value }))}
+                                className="flex-1 min-h-[36px] text-sm"
+                                rows={1}
+                              />
+                            </div>
+                          ))}
                       </div>
                     </div>
                   )}
 
-                  {sheetUrl && (
-                    <div className="pt-2 border-t border-border/30">
+                  <div className="pt-2 border-t border-border/30 flex items-center justify-between">
+                    {sheetUrl ? (
                       <Button variant="outline" size="sm" asChild>
                         <a href={sheetUrl} target="_blank" rel="noreferrer">
                           <ExternalLink className="w-4 h-4 mr-1" /> Open in Google Sheets
                         </a>
                       </Button>
-                    </div>
-                  )}
+                    ) : <span />}
+                    <Button
+                      size="sm"
+                      onClick={saveEdits}
+                      disabled={savingRow || changedKeys.length === 0}
+                    >
+                      <Save className="w-4 h-4 mr-1" />
+                      {savingRow ? "Saving…" : changedKeys.length > 0 ? `Save ${changedKeys.length} change${changedKeys.length === 1 ? "" : "s"}` : "No changes"}
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
