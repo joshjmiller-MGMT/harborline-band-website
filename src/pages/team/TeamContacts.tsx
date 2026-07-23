@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import TeamLayout from "@/components/TeamLayout";
 import { Users, RefreshCw, Search, Mail, Phone, ExternalLink, Flag, Plus, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ type Contact = {
 
 const SOURCE_LABEL: Record<string, string> = {
   "trello-contacts": "Trello", "trello-poc-fu": "POC F/U", "jjmm-sheet": "JJMM sheet",
-  email: "Email", manual: "Manual",
+  email: "Email", manual: "Manual", "fan-signup": "Fan",
 };
 
 const EMPTY_DRAFT = { name: "", phone: "", email: "", org: "", notes: "" };
@@ -41,7 +42,9 @@ export default function TeamContacts() {
   const [rows, setRows] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [q, setQ] = useState("");
+  // ?q= deep-link support (the Fans page links each signup to its contact row)
+  const [searchParams] = useSearchParams();
+  const [q, setQ] = useState(searchParams.get("q") ?? "");
   const [onlyFollowup, setOnlyFollowup] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [draft, setDraft] = useState(EMPTY_DRAFT);

@@ -277,9 +277,12 @@ Deno.serve(async (req) => {
     }
 
     // ── PUSH: db → sheet (append-only) ────────────────────────────────
+    // 'fan' rows are excluded: the JJMM sheet is Josh's personal network;
+    // smart-link fan signups are the owned-audience list (/team/fans).
     const toPush = (dbRows || []).filter((c: any) =>
       c.name &&
       !(c.tags || []).includes("task-not-contact") &&
+      !(c.tags || []).includes("fan") &&
       !sheetByName.has(normName(c.name)),
     );
     const appendValues = toPush.map((c: any) => {

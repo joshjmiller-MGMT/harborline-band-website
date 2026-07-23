@@ -86,6 +86,7 @@ const createHub: MegaMenu = {
     { name: "Brand Studio", href: "/team/brand-studio", icon: Palette, description: "People, decisions, releases, EPKs" },
     { name: "Releases", href: "/team/release-pipeline", icon: Rocket, description: "JMJ EP waterfall — singles + per-release checklist" },
     { name: "Smart Links", href: "/team/smart-links", icon: Link2, description: "Your own Artist Hub — one /l/slug per release, deep-links + click tracking" },
+    { name: "Fans", href: "/team/fans", icon: Users, description: "Text/email signups from smart links — the owned audience" },
   ],
 };
 
