@@ -150,6 +150,19 @@ Deno.serve(async (req) => {
     const igUserId = String(me.user_id ?? short.user_id ?? "");
     const username = me.username ?? null;
 
+    // Username allowlist — the start URL is public by necessity, so without
+    // this ANYONE could enroll their own IG account into the pipeline. Fail
+    // closed: empty list rejects everyone.
+    const allowed = ((await secret("ig_allowed_usernames")) ?? "")
+      .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+    if (!username || !allowed.includes(username.toLowerCase())) {
+      return jsonResponse({
+        error: "account_not_allowed",
+        username,
+        message: "This Instagram account isn't on the allowlist. Tell Claude the exact @username to enable it, then retry the connect link.",
+      }, 403);
+    }
+
     await db.from("meta_tokens").upsert({
       provider: "instagram",
       ig_user_id: igUserId,

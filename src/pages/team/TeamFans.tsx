@@ -49,9 +49,13 @@ export default function TeamFans() {
   const emails = rows.length - phones;
 
   const exportCsv = useCallback(() => {
+    // contact_value is fan-supplied: double quotes per RFC 4180 and prefix
+    // formula-leading chars (=+-@) so Excel never executes a "signup".
+    const esc = (s: string) =>
+      `"${(/^[=+\-@]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`;
     const lines = ["slug,type,contact,signed_up"];
     visible.forEach((r) =>
-      lines.push(`${r.slug},${r.contact_type},"${r.contact_value}",${r.created_at}`));
+      lines.push(`${r.slug},${r.contact_type},${esc(r.contact_value)},${r.created_at}`));
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

@@ -34,3 +34,4 @@ PREVIEW-c-*.html
 
 # Local env overrides / secrets — never commit (.env holds only PUBLIC Vite vars)
 .env*.local
+__pycache__/

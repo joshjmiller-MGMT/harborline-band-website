@@ -511,10 +511,13 @@ export default function VenueFestivalTrackerWidget() {
                     <Button
                       size="sm"
                       onClick={saveEdits}
-                      disabled={savingRow || changedKeys.length === 0}
+                      // Unnamed rows have no name anchor — the writeback fn
+                      // (correctly) refuses them, so don't offer a doomed Save.
+                      disabled={savingRow || changedKeys.length === 0 || !get(detailRow, "venue")}
+                      title={!get(detailRow, "venue") ? "This row has no venue name — name it on the sheet first, then edit here" : undefined}
                     >
                       <Save className="w-4 h-4 mr-1" />
-                      {savingRow ? "Saving…" : changedKeys.length > 0 ? `Save ${changedKeys.length} change${changedKeys.length === 1 ? "" : "s"}` : "No changes"}
+                      {savingRow ? "Saving…" : !get(detailRow, "venue") ? "Name the row on the sheet first" : changedKeys.length > 0 ? `Save ${changedKeys.length} change${changedKeys.length === 1 ? "" : "s"}` : "No changes"}
                     </Button>
                   </div>
                 </div>

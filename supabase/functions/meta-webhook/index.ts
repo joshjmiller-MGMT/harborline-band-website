@@ -161,13 +161,22 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "bad json" }), { status: 400 });
   }
 
+  // Sender allowlist (cron_secrets ig_allowed_senders, comma-separated IGSIDs).
+  // The pro account receives DMs from ANYONE — client inquiries, fans, spam.
+  // Only listed senders (Josh's accounts) get classified + routed; everyone
+  // else is parked in the log untouched (tag ig-dm-unlisted, no Claude spend,
+  // no board items). Empty/missing list = park everything (fail closed).
+  const allowRaw = (await secret("ig_allowed_senders")) ?? "";
+  const allowedSenders = new Set(allowRaw.split(",").map((s) => s.trim()).filter(Boolean));
+
   const classifyJobs: Promise<void>[] = [];
-  let inserted = 0, skipped = 0;
+  let inserted = 0, skipped = 0, parked = 0;
 
   for (const entry of body.entry ?? []) {
     for (const ev of entry.messaging ?? []) {
       const msg = ev.message;
       if (!msg?.mid || msg.is_echo) continue; // echoes = our own sends
+      const senderListed = !!ev.sender?.id && allowedSenders.has(ev.sender.id);
 
       const attachments = (msg.attachments ?? []).filter((a) => a?.payload);
       // One row per attachment; text-only DMs become a single text row.
@@ -186,11 +195,12 @@ Deno.serve(async (req) => {
         const { error, data } = await db.from("content_ingest_log").insert({
           shortcode: u.shortcode,
           platform: "instagram",
-          source_account: "ig-dm",
+          source_account: senderListed ? "ig-dm" : "ig-dm-unlisted",
           collection_name: `dm:${ev.sender?.id ?? "unknown"}`,
           url: u.url,
           uploader: u.kind,
           caption: u.caption,
+          tags: senderListed ? null : ["ig-dm-unlisted"],
           status: "new",
         }).select("id").single();
         if (error) {
@@ -199,6 +209,7 @@ Deno.serve(async (req) => {
           console.error("insert failed", error.message);
           continue;
         }
+        if (!senderListed) { parked++; continue; } // logged, never classified/routed
         inserted++;
         const text = `Type: ${u.kind}\nCaption/title: ${u.caption ?? "(none)"}\nURL: ${u.url}`;
         classifyJobs.push(classifyRow(data.id, text));
@@ -208,11 +219,13 @@ Deno.serve(async (req) => {
 
   // Respond fast (Meta retries slow endpoints); classification continues after.
   if (classifyJobs.length > 0) {
+    const all = Promise.allSettled(classifyJobs);
     // deno-lint-ignore no-explicit-any
-    (globalThis as any).EdgeRuntime?.waitUntil?.(Promise.allSettled(classifyJobs))
-      ?? await Promise.allSettled(classifyJobs);
+    const rt = (globalThis as any).EdgeRuntime;
+    if (rt?.waitUntil) rt.waitUntil(all);
+    else await all;
   }
-  return new Response(JSON.stringify({ ok: true, inserted, skipped }), {
+  return new Response(JSON.stringify({ ok: true, inserted, skipped, parked }), {
     status: 200, headers: { "Content-Type": "application/json" },
   });
 });

@@ -20,9 +20,13 @@ function FanSignup({ slug, accent }: { slug: string; accent: string }) {
   const [err, setErr] = useState<string | null>(null);
 
   const submit = async () => {
+    if (busy) return; // Enter-key re-entrancy guard
     const v = value.trim();
     setErr(null);
-    const norm = mode === "email" ? v.toLowerCase() : v.replace(/\D/g, "");
+    // Canonical US form: "+1 410…" and "410…" must collide to one contact —
+    // the DB trigger applies the same leading-1 strip.
+    let norm = mode === "email" ? v.toLowerCase() : v.replace(/\D/g, "");
+    if (mode === "phone" && norm.length === 11 && norm.startsWith("1")) norm = norm.slice(1);
     if (mode === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) {
       setErr("That email doesn't look right.");
       return;
