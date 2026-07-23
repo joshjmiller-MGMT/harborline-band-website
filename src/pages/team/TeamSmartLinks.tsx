@@ -15,7 +15,7 @@ import { Area, ComposedChart, Line, ResponsiveContainer, Tooltip as ChartTooltip
 // release, set a destination URL per DSP, and watch views + clicks roll in.
 const db = supabase as unknown as { from: (t: string) => any };
 
-type EventRow = { slug: string; kind: string; platform: string | null; created_at: string; referrer: string | null };
+type EventRow = { slug: string; kind: string; platform: string | null; created_at: string; referrer: string | null; country: string | null; city: string | null; utm_campaign: string | null; utm_source: string | null };
 
 const blank = (): SmartLinkRow => ({
   slug: "",
@@ -134,7 +134,7 @@ export default function TeamSmartLinks() {
   const load = async () => {
     const [l, e] = await Promise.all([
       db.from("smart_links").select("*").order("created_at", { ascending: false }),
-      db.from("smart_link_events").select("slug,kind,platform,created_at,referrer"),
+      db.from("smart_link_events").select("slug,kind,platform,created_at,referrer,country,city,utm_campaign,utm_source"),
     ]);
     setRows((l.data as SmartLinkRow[]) || []);
     setEvents((e.data as EventRow[]) || []);
@@ -192,6 +192,39 @@ export default function TeamSmartLinks() {
       m.set(host, (m.get(host) || 0) + 1);
     }
     return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  };
+
+  // Where fans are (edge-fn geolocation, live since 7/23) — the metric Josh
+  // asked for by name. City shown when a country has one dominant city.
+  const countriesFor = (slug: string) => {
+    const m = new Map<string, number>();
+    for (const e of events) {
+      if (e.slug !== slug || e.kind !== "view" || !e.country) continue;
+      m.set(e.country, (m.get(e.country) || 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  };
+
+  // Campaign attribution (utm_campaign, falling back to utm_source) — on the
+  // old vibe.to data one FB campaign was 94% of all traffic; this is the
+  // table that says whether an ad spend is working.
+  const campaignsFor = (slug: string) => {
+    const m = new Map<string, number>();
+    for (const e of events) {
+      if (e.slug !== slug || e.kind !== "view") continue;
+      const key = e.utm_campaign || e.utm_source;
+      if (!key) continue;
+      m.set(key, (m.get(key) || 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  };
+
+  const signupsFor = (slug: string) => {
+    let n = 0;
+    for (const e of events) {
+      if (e.slug === slug && e.kind === "click" && e.platform?.startsWith("signup_")) n++;
+    }
+    return n;
   };
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://harborlineband.com";
@@ -461,12 +494,15 @@ export default function TeamSmartLinks() {
                           const totalClicks = s?.clicks ?? 0;
                           const ctr = totalViews ? Math.round((totalClicks / totalViews) * 1000) / 10 : 0;
                           const refs = referrersFor(r.slug);
+                          const countries = countriesFor(r.slug);
+                          const campaigns = campaignsFor(r.slug);
+                          const signups = signupsFor(r.slug);
                           const maxPlat = Math.max(1, ...Object.values(s?.byPlatform ?? {}));
                           return (
                             <div className="mt-3 rounded-lg border border-border bg-background/40 p-3 space-y-4">
-                              {/* Stat tiles */}
-                              <div className="grid grid-cols-3 gap-2 max-w-sm">
-                                {[["Views", totalViews], ["Clicks", totalClicks], ["CTR", `${ctr}%`]].map(([label, val]) => (
+                              {/* Stat tiles — Signups is the one that matters: owned contacts, not rented reach */}
+                              <div className="grid grid-cols-4 gap-2 max-w-lg">
+                                {[["Views", totalViews], ["Clicks", totalClicks], ["CTR", `${ctr}%`], ["Signups", signups]].map(([label, val]) => (
                                   <div key={String(label)} className="rounded-md border border-border bg-card/60 px-3 py-2">
                                     <div className="text-xl font-semibold tabular-nums text-foreground">{val}</div>
                                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
@@ -514,7 +550,8 @@ export default function TeamSmartLinks() {
                                   </div>
                                 </div>
                               )}
-                              {/* Top sources */}
+                              {/* Where + how fans arrive: sources · countries · campaigns */}
+                              <div className="grid md:grid-cols-3 gap-4">
                               <div>
                                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Top sources</p>
                                 {refs.length === 0 ? (
@@ -529,6 +566,37 @@ export default function TeamSmartLinks() {
                                     ))}
                                   </div>
                                 )}
+                              </div>
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Countries</p>
+                                {countries.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground">Geo starts with the next deploy's views.</p>
+                                ) : (
+                                  <div className="space-y-0.5">
+                                    {countries.map(([c, n]) => (
+                                      <div key={c} className="flex items-center justify-between text-xs">
+                                        <span className="text-foreground">{c}</span>
+                                        <span className="tabular-nums text-muted-foreground">{n}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Campaigns</p>
+                                {campaigns.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground">Tag posts with ?utm_campaign=… to attribute.</p>
+                                ) : (
+                                  <div className="space-y-0.5">
+                                    {campaigns.map(([c, n]) => (
+                                      <div key={c} className="flex items-center justify-between text-xs">
+                                        <span className="text-foreground truncate max-w-[10rem]" title={c}>{c}</span>
+                                        <span className="tabular-nums text-muted-foreground">{n}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                               </div>
                             </div>
                           );

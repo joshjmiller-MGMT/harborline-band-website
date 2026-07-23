@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { MessageCircle, Mail, ArrowRight, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { platformMeta, logSmartLinkEvent, type SmartLinkRow, type PlatformLink } from "@/lib/smartlink";
+import { platformMeta, logSmartLinkEvent, initMetaPixel, pixelTrack, type SmartLinkRow, type PlatformLink } from "@/lib/smartlink";
 
 // Public smart-link landing at /l/:slug — "our own Artist Hub". Standalone page
 // (no team chrome): blurred-artwork backdrop, the cover, and one button per DSP.
@@ -46,6 +46,7 @@ function FanSignup({ slug, accent }: { slug: string; accent: string }) {
       return;
     }
     logSmartLinkEvent(slug, "click", `signup_${mode}`);
+    pixelTrack("Lead", { content_name: slug, method: mode });
     setDone(true);
   };
 
@@ -148,6 +149,12 @@ export default function SmartLink() {
       setLink(data as SmartLinkRow);
       setState("ready");
       logSmartLinkEvent(slug, "view");
+      // Per-link Meta Pixel: lets ads pointed at this lander optimize on real
+      // conversions (Lead = fan signup) instead of raw clicks.
+      if ((data as SmartLinkRow).pixel_id) {
+        initMetaPixel((data as SmartLinkRow).pixel_id!);
+        pixelTrack("ViewContent", { content_name: (data as SmartLinkRow).title });
+      }
     })();
     return () => {
       alive = false;
@@ -238,7 +245,10 @@ export default function SmartLink() {
                   href={p.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => logSmartLinkEvent(link.slug, "click", p.platform)}
+                  onClick={() => {
+                    logSmartLinkEvent(link.slug, "click", p.platform);
+                    pixelTrack("Contact", { content_name: link.title, platform: p.platform });
+                  }}
                   className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-sm transition hover:bg-white/10"
                 >
                   <span className="font-medium">{p.label || meta.label}</span>
