@@ -36,9 +36,16 @@ function FanSignup({ slug, accent }: { slug: string; accent: string }) {
       return;
     }
     setBusy(true);
+    // Stamp the acquisition source so each owned fan remembers which post got
+    // them (the DB trigger tags the contact src:<source>).
+    const q = (() => { try { return new URLSearchParams(window.location.search); } catch { return new URLSearchParams(); } })();
     const { error } = await (supabase as unknown as { from: (t: string) => any })
       .from("fan_signups")
-      .insert({ slug, contact_type: mode, contact_value: v, contact_norm: norm });
+      .insert({
+        slug, contact_type: mode, contact_value: v, contact_norm: norm,
+        utm_source: q.get("utm_source"), utm_medium: q.get("utm_medium"), utm_campaign: q.get("utm_campaign"),
+        referrer: typeof document !== "undefined" && document.referrer ? document.referrer.slice(0, 300) : null,
+      });
     setBusy(false);
     // 23505 = already signed up on this release — that's a success to the fan.
     if (error && error.code !== "23505") {
