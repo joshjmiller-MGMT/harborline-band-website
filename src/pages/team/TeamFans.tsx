@@ -134,7 +134,7 @@ export default function TeamFans() {
                 <Users className="w-4 h-4" />
               </Link>
               <a
-                href={`/l/${r.slug}`}
+                href={`https://gethip.to/${r.slug}`}
                 target="_blank"
                 rel="noreferrer"
                 className="text-muted-foreground hover:text-foreground shrink-0"

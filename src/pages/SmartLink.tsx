@@ -66,8 +66,15 @@ function FanSignup({ slug, accent }: { slug: string; accent: string }) {
         >
           <Check className="h-5 w-5" style={{ color: "#141210" }} />
         </span>
-        <p className="mt-3 font-medium">You're on the list.</p>
-        <p className="mt-1 text-sm text-white/50">We'll hit you when something drops.</p>
+        <p className="mt-3 font-medium">You're in. Thank you — it means a lot.</p>
+        <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-white/60">
+          I'll only ever reach out about real things I've got going on — new music, shows,
+          the occasional early thing before it's public. Stuff I'm genuinely excited to share.
+          Nothing else, ever.
+        </p>
+        <p className="mx-auto mt-2 max-w-xs text-xs leading-relaxed text-white/40">
+          I don't share or sell your info. You're here because you chose to be — I'll keep it worth it.
+        </p>
       </div>
     );
   }

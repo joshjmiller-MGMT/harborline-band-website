@@ -298,7 +298,7 @@ export default function TeamSmartLinks() {
     }
     setEditing(null);
     load();
-    toast({ title: e.id ? "Saved" : "Link created", description: `${origin}/l/${slugify(e.slug)}` });
+    toast({ title: e.id ? "Saved" : "Link created", description: publicLink(slugify(e.slug)) });
   };
 
   // --- platform-row helpers for the editor ---
@@ -320,8 +320,8 @@ export default function TeamSmartLinks() {
               <Link2 className="w-7 h-7 text-primary" /> Smart Links
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Your own Artist Hub. One <span className="font-mono text-xs">/l/slug</span> per release — deep-links to
-              every DSP, with click tracking. Promote the one link everywhere.
+              Your own Artist Hub. One <span className="font-mono text-xs">gethip.to/slug</span> per release — deep-links to
+              every DSP, with full tracking. Promote the one link everywhere.
             </p>
           </div>
           <Button onClick={() => setEditing(blank())} className="gap-1.5">
@@ -346,7 +346,7 @@ export default function TeamSmartLinks() {
                   }
                 />
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground shrink-0">/l/</span>
+                  <span className="text-xs text-muted-foreground shrink-0">gethip.to/</span>
                   <Input placeholder="slug" value={editing.slug} onChange={(ev) => setEditing({ ...editing, slug: ev.target.value })} />
                 </div>
                 <Input placeholder="Artist" value={editing.artist} onChange={(ev) => setEditing({ ...editing, artist: ev.target.value })} />
@@ -467,7 +467,7 @@ export default function TeamSmartLinks() {
                   <X className="w-4 h-4" /> Cancel
                 </Button>
                 {editing.slug && (
-                  <a href={`/l/${slugify(editing.slug)}`} target="_blank" rel="noreferrer" className="text-xs text-muted-foreground hover:text-foreground ml-auto flex items-center gap-1">
+                  <a href={publicLink(slugify(editing.slug))} target="_blank" rel="noreferrer" className="text-xs text-muted-foreground hover:text-foreground ml-auto flex items-center gap-1">
                     Preview <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
