@@ -653,7 +653,7 @@ export default function TeamSmartLinks() {
                           onClick={() => setAnalyticsSlug(analyticsSlug === r.slug ? null : r.slug)}>
                           <Eye className="w-3.5 h-3.5" /> Analytics
                         </Button>
-                        <a href={`/l/${r.slug}`} target="_blank" rel="noreferrer">
+                        <a href={publicLink(r.slug)} target="_blank" rel="noreferrer">
                           <Button size="icon" variant="ghost" className="h-8 w-8" title="Open"><ExternalLink className="w-4 h-4" /></Button>
                         </a>
                         <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setEditing({ ...r, platforms: r.platforms || [], subtitle: r.subtitle || "", artwork_url: r.artwork_url || "", release_date: r.release_date || "" })}>Edit</Button>
