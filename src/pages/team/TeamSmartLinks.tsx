@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link2, Plus, Trash2, Copy, ExternalLink, Eye, MousePointerClick, Loader2, Check, X, Sparkles } from "lucide-react";
+import { Link2, Plus, Trash2, Copy, ExternalLink, Eye, MousePointerClick, Loader2, Check, X, Sparkles, Share2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { PLATFORMS, platformMeta, type SmartLinkRow, type PlatformLink } from "@/lib/smartlink";
 import { Area, ComposedChart, Line, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis, CartesianGrid } from "recharts";
@@ -227,12 +227,36 @@ export default function TeamSmartLinks() {
     return n;
   };
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://harborlineband.com";
-
-  const copyUrl = (slug: string) => {
-    navigator.clipboard?.writeText(`${origin}/l/${slug}`);
-    toast({ title: "Link copied", description: `${origin}/l/${slug}` });
+  // Public release links use the short domain — gethip.to serves root-level
+  // slugs (App.tsx SHORT_LINK_HOST). The /team manager itself stays on
+  // harborlineband.com; only the copyable fan-facing links use gethip.to.
+  const SHORT_DOMAIN = "gethip.to";
+  const publicLink = (slug: string, params?: Record<string, string>) => {
+    const base = `https://${SHORT_DOMAIN}/${slug}`;
+    if (!params) return base;
+    const q = new URLSearchParams(params).toString();
+    return q ? `${base}?${q}` : base;
   };
+
+  const copyUrl = (slug: string, params?: Record<string, string>) => {
+    const link = publicLink(slug, params);
+    navigator.clipboard?.writeText(link);
+    toast({ title: "Link copied", description: link });
+  };
+
+  // One-tap campaign links (Josh 7/24). utm_campaign = the slug, so every
+  // placement rolls up under one release while source/medium split them apart
+  // in the Sources + Campaigns tables. His old ArtistHub data was 94% one
+  // untagged campaign — this is the fix for "which post actually pulled".
+  const SHARE_PRESETS: { label: string; source?: string; medium?: string }[] = [
+    { label: "Plain link" },
+    { label: "IG bio", source: "instagram", medium: "bio" },
+    { label: "IG story", source: "instagram", medium: "story" },
+    { label: "IG post", source: "instagram", medium: "post" },
+    { label: "Facebook", source: "facebook", medium: "post" },
+    { label: "Email / Text", source: "owned", medium: "message" },
+  ];
+  const [shareSlug, setShareSlug] = useState<string | null>(null);
 
   const toggleActive = async (r: SmartLinkRow) => {
     setRows((prev) => prev.map((x) => (x.id === r.id ? { ...x, is_active: !x.is_active } : x)));
@@ -472,7 +496,7 @@ export default function TeamSmartLinks() {
                           {!r.is_active && <Badge variant="outline" className="text-[10px] text-muted-foreground">hidden</Badge>}
                         </div>
                         <button onClick={() => copyUrl(r.slug)} className="mt-1 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 font-mono">
-                          {origin.replace(/^https?:\/\//, "")}/l/{r.slug} <Copy className="w-3 h-3" />
+                          {SHORT_DOMAIN}/{r.slug} <Copy className="w-3 h-3" />
                         </button>
                         <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {s?.views ?? 0} views</span>
@@ -486,6 +510,24 @@ export default function TeamSmartLinks() {
                                 {platformMeta(plat).label} {n}
                               </span>
                             ))}
+                          </div>
+                        )}
+                        {shareSlug === r.slug && (
+                          <div className="mt-3 rounded-lg border border-border bg-background/40 p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+                              Copy a tagged link per placement — tonight the Campaigns + Sources tables show which one pulled
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {SHARE_PRESETS.map((p) => (
+                                <button
+                                  key={p.label}
+                                  onClick={() => copyUrl(r.slug, p.source ? { utm_source: p.source, utm_medium: p.medium!, utm_campaign: r.slug } : undefined)}
+                                  className="text-xs px-2.5 py-1.5 rounded border border-border text-foreground hover:bg-muted/50 inline-flex items-center gap-1.5"
+                                >
+                                  <Copy className="w-3 h-3" /> {p.label}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         )}
                         {analyticsSlug === r.slug && (() => {
@@ -603,6 +645,10 @@ export default function TeamSmartLinks() {
                         })()}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
+                        <Button size="sm" variant={shareSlug === r.slug ? "default" : "outline"} className="h-8 text-xs gap-1"
+                          onClick={() => setShareSlug(shareSlug === r.slug ? null : r.slug)}>
+                          <Share2 className="w-3.5 h-3.5" /> Share
+                        </Button>
                         <Button size="sm" variant={analyticsSlug === r.slug ? "default" : "outline"} className="h-8 text-xs gap-1"
                           onClick={() => setAnalyticsSlug(analyticsSlug === r.slug ? null : r.slug)}>
                           <Eye className="w-3.5 h-3.5" /> Analytics
