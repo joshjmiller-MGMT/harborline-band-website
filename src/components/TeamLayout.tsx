@@ -70,6 +70,7 @@ const bookHub: MegaMenu = {
     { name: "Venues", href: "/team/venues", icon: Phone, description: "Venue & Festival Tracker — rooms and stages by act fit" },
     { name: "Outreach", href: "/team/outreach", icon: Send, description: "Proactive targets — venues, festivals, radio, playlists, press, collabs" },
     { name: "Contacts", href: "/team/contacts", icon: Users, description: "Central contact hub — mirror of the JJMM sheet; follow-up flags" },
+    { name: "People", href: "/team/people", icon: Users, description: "Unified roster — players + crew + both, per venture, linked to Contacts" },
     { name: "Bands", href: "/team/bands", icon: Handshake, description: "Relationship board — bands for show swaps & support slots" },
     { name: "Grants", href: "/team/grants", icon: Landmark, description: "Grant & funding opportunities — deadlines, fit, status" },
   ],

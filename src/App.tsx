@@ -98,6 +98,7 @@ const TeamReleasePipeline = lazy(() => import("./pages/team/TeamReleasePipeline"
 const TeamOutreach = lazy(() => import("./pages/team/TeamOutreach"));
 const TeamSmartLinks = lazy(() => import("./pages/team/TeamSmartLinks"));
 const TeamFans = lazy(() => import("./pages/team/TeamFans"));
+const TeamPeople = lazy(() => import("./pages/team/TeamPeople"));
 
 const queryClient = new QueryClient();
 
@@ -225,6 +226,7 @@ const App = () => (
                 <Route path="/team/release-pipeline" element={<TeamReleasePipeline />} />
                 <Route path="/team/smart-links" element={<TeamSmartLinks />} />
                 <Route path="/team/fans" element={<TeamFans />} />
+                <Route path="/team/people" element={<TeamPeople />} />
                 <Route path="/team/outreach" element={<TeamOutreach />} />
 
                 <Route path="*" element={<NotFound />} />
