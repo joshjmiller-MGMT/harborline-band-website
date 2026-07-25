@@ -12,7 +12,14 @@ import { GraduationCap, ChevronRight, BookOpen, Loader2 } from "lucide-react";
 // study to greatness and seek out mentorship." Two MM programs; content rows
 // authored by the research agent into curriculum_items.
 
-type Week = { week: number; topic: string; materials?: string };
+type Week = {
+  week: number;
+  topic: string;
+  materials?: string;
+  goal?: string;                                  // what you can do by week's end
+  listen?: { title: string; url: string }[];      // albums/tracks, clickable
+  read?: { title: string; url?: string }[];       // chapters/articles, clickable
+};
 type Reading = { title: string; author?: string; note?: string };
 type Variant = { school: string; note: string };
 type CourseRow = {
@@ -46,6 +53,7 @@ const SCHOOLS = [
   "NEC",
   "Eastman",
   "UNT",
+  "The New School",
 ];
 
 export default function TeamCurriculum() {
@@ -175,6 +183,17 @@ export default function TeamCurriculum() {
                                         <div className="min-w-0">
                                           <span className="text-foreground">{w.topic}</span>
                                           {w.materials && <span className="block text-xs text-muted-foreground">{w.materials}</span>}
+                                          {w.goal && <span className="block text-xs text-primary/80 mt-0.5"><span className="font-semibold">Goal:</span> {w.goal}</span>}
+                                          {w.listen && w.listen.length > 0 && (
+                                            <span className="block text-xs text-muted-foreground mt-0.5">🎧 {w.listen.map((l, i) => (
+                                              <span key={i}>{i > 0 && " · "}<a href={l.url} target="_blank" rel="noreferrer" className="underline hover:text-foreground">{l.title}</a></span>
+                                            ))}</span>
+                                          )}
+                                          {w.read && w.read.length > 0 && (
+                                            <span className="block text-xs text-muted-foreground mt-0.5">📖 {w.read.map((r, i) => (
+                                              <span key={i}>{i > 0 && " · "}{r.url ? <a href={r.url} target="_blank" rel="noreferrer" className="underline hover:text-foreground">{r.title}</a> : r.title}</span>
+                                            ))}</span>
+                                          )}
                                         </div>
                                       </div>
                                     ))}
