@@ -39,6 +39,9 @@ function FanSignup({ slug, accent }: { slug: string; accent: string }) {
     // Stamp the acquisition source so each owned fan remembers which post got
     // them (the DB trigger tags the contact src:<source>).
     const q = (() => { try { return new URLSearchParams(window.location.search); } catch { return new URLSearchParams(); } })();
+    // The welcome message fires server-side from an AFTER INSERT trigger on
+    // fan_signups (fan-welcome edge fn) — no client call needed, and it works
+    // even though anon can't read the row back.
     const { error } = await (supabase as unknown as { from: (t: string) => any })
       .from("fan_signups")
       .insert({
