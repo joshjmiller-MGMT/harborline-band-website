@@ -12,7 +12,7 @@ import { platformMeta, logSmartLinkEvent, initMetaPixel, pixelTrack, type SmartL
 // Fan capture (Josh 7/22, vibe.to reference): text or email signup on the
 // lander. Rows land in fan_signups (public INSERT-only RLS) and auto-flow
 // into contacts tagged 'fan' via DB trigger; /team/fans is the ops surface.
-function FanSignup({ slug, accent }: { slug: string; accent: string }) {
+function FanSignup({ slug, accent, artist }: { slug: string; accent: string; artist: string }) {
   const [mode, setMode] = useState<"phone" | "email">("phone");
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -135,7 +135,7 @@ function FanSignup({ slug, accent }: { slug: string; accent: string }) {
       {err && <p className="mt-2 text-center text-xs text-red-300">{err}</p>}
 
       <p className="mt-3 text-center text-[10px] leading-relaxed text-white/35">
-        By submitting you agree to receive occasional updates from Harborline at the contact
+        By submitting you agree to receive occasional updates from {artist} at the contact
         provided. Msg &amp; data rates may apply. Reply STOP to opt out of texts; every email has
         an unsubscribe link.
       </p>
@@ -282,12 +282,10 @@ export default function SmartLink() {
           )}
         </div>
 
-        <FanSignup slug={link.slug} accent={accent} />
+        <FanSignup slug={link.slug} accent={accent} artist={link.artist} />
 
         <div className="mt-auto pt-10 text-center">
-          <a href="/" className="text-xs text-white/30 hover:text-white/60 transition">
-            harborlineband.com
-          </a>
+          <span className="text-xs text-white/30">{link.artist}</span>
         </div>
       </div>
     </div>
