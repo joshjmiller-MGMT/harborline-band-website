@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import TeamLayout from "@/components/TeamLayout";
-import { HeartHandshake, RefreshCw, Mail, MessageCircle, Users, ExternalLink } from "lucide-react";
+import { HeartHandshake, RefreshCw, Mail, MessageCircle, Users, ExternalLink, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +28,40 @@ export default function TeamFans() {
   const [rows, setRows] = useState<FanRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [slugFilter, setSlugFilter] = useState<string>("all");
+  // Compose ("message my list", Josh 7/24) — sends via the fan-broadcast fn
+  // to the owned contacts list (email via Resend now; SMS via Twilio once wired).
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [channel, setChannel] = useState<"email" | "sms">("email");
+  const [segment, setSegment] = useState("all");
+  const [subject, setSubject] = useState("");
+  const [msgBody, setMsgBody] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const broadcast = useCallback(async (test: boolean) => {
+    if (!msgBody.trim()) { toast.error("Write a message first"); return; }
+    if (channel === "email" && !subject.trim()) { toast.error("Email needs a subject"); return; }
+    let testTo: string | undefined;
+    if (test) {
+      testTo = window.prompt(`Send a test ${channel === "email" ? "email" : "text"} to:`) || undefined;
+      if (!testTo) return;
+    }
+    setSending(true);
+    const { data, error } = await supabase.functions.invoke("fan-broadcast", {
+      body: { channel, segment, subject, body: msgBody, test_to: testTo },
+    });
+    setSending(false);
+    if (error) {
+      let detail = error.message;
+      try { const b = await (error as { context?: Response }).context?.json(); detail = b?.message || b?.error || detail; } catch { /* keep */ }
+      toast.error(`Send failed: ${detail}`);
+      return;
+    }
+    if (test) toast.success(`Test ${channel} sent to ${testTo}`);
+    else {
+      toast.success(`Sent to ${data.sent}/${data.recipients} ${channel === "email" ? "emails" : "numbers"}${data.failed ? ` · ${data.failed} failed` : ""}`, { duration: 8000 });
+      setComposeOpen(false); setSubject(""); setMsgBody("");
+    }
+  }, [channel, segment, subject, msgBody]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -80,6 +116,9 @@ export default function TeamFans() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setComposeOpen((v) => !v)}>
+              <Send className="w-4 h-4 mr-1.5" /> Message fans
+            </Button>
             <Button variant="outline" size="sm" onClick={exportCsv} disabled={visible.length === 0}>
               Export CSV
             </Button>
@@ -88,6 +127,55 @@ export default function TeamFans() {
             </Button>
           </div>
         </div>
+
+        {composeOpen && (
+          <div className="mb-6 rounded-lg border border-primary/30 bg-card/50 p-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* channel */}
+              <div className="flex rounded-md border border-border overflow-hidden">
+                {(["email", "sms"] as const).map((c) => (
+                  <button key={c} onClick={() => setChannel(c)}
+                    className={`px-3 py-1.5 text-xs inline-flex items-center gap-1.5 ${channel === c ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/40"}`}>
+                    {c === "email" ? <Mail className="w-3.5 h-3.5" /> : <MessageCircle className="w-3.5 h-3.5" />}
+                    {c === "email" ? "Email" : "Text"}
+                  </button>
+                ))}
+              </div>
+              {/* segment */}
+              <select value={segment} onChange={(e) => setSegment(e.target.value)}
+                className="h-8 rounded-md border border-input bg-background px-2 text-xs">
+                <option value="all">All fans</option>
+                {slugs.map((s) => <option key={s} value={s}>{s} fans</option>)}
+              </select>
+              <span className="text-xs text-muted-foreground">
+                → {segment === "all"
+                  ? (channel === "email" ? emails : phones)
+                  : rows.filter((r) => r.slug === segment && r.contact_type === (channel === "email" ? "email" : "phone")).length} recipients
+              </span>
+            </div>
+            {channel === "email" && (
+              <Input placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} className="h-9" />
+            )}
+            <Textarea placeholder={channel === "email" ? "Your message… (plain, personal — the way you'd actually talk to people who care)" : "Your text… (keep it short; every send includes STOP-to-opt-out)"}
+              value={msgBody} onChange={(e) => setMsgBody(e.target.value)} rows={5} />
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] text-muted-foreground">
+                {channel === "sms"
+                  ? "Text sends once Twilio + carrier registration are live."
+                  : "Sends from your gethip.to address once the domain's verified; test to yourself anytime."}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => void broadcast(true)} disabled={sending}>
+                  Send test
+                </Button>
+                <Button size="sm" onClick={() => void broadcast(false)} disabled={sending}>
+                  {sending ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Send className="w-4 h-4 mr-1.5" />}
+                  Send to fans
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {slugs.length > 1 && (
           <div className="mb-4 flex flex-wrap items-center gap-2">
