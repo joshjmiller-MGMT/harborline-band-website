@@ -112,7 +112,7 @@ export default function TeamReleasePipeline() {
           </div>
         ) : (
           <>
-            {/* Waterfall overview */}
+            {/* Release overview */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
               {singles.map((s) => {
                 const st = tasks.filter((t) => t.single_no === s.single_no);
@@ -120,7 +120,7 @@ export default function TeamReleasePipeline() {
                 return (
                   <div key={s.id} className="rounded-lg border border-border bg-card/50 p-4">
                     <div className="flex items-center gap-2 text-xs font-display tracking-wide text-primary">
-                      <Music2 className="w-3.5 h-3.5" /> SINGLE {s.single_no}
+                      <Music2 className="w-3.5 h-3.5" /> ALBUM · 4 TRACKS
                     </div>
                     <div className="mt-2 font-medium text-sm">{s.working_title || "Untitled"}</div>
                     <div className="mt-1 text-2xl font-display text-gradient-brand">{fmtDate(s.release_date)}</div>

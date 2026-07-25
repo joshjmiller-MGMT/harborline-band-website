@@ -207,16 +207,17 @@ export default function SmartLink() {
         <meta name="twitter:card" content="summary_large_image" />
       </Helmet>
 
-      {/* Blurred artwork backdrop — fixed so it fills on scroll too (Josh 7/22:
-          keep the art present, subtle blur, not crushed to black) */}
+      {/* Blown-up blurred artwork backdrop (Josh 7/24) — fixed so it fills on
+          scroll; scaled up + saturated so a dark cover still reads as an
+          atmospheric wash, with a gradient keeping the buttons legible. */}
       {link.artwork_url && (
         <div
-          className="fixed inset-0 bg-cover bg-center scale-125 blur-3xl opacity-55 saturate-125"
+          className="fixed inset-0 bg-cover bg-center scale-150 blur-3xl opacity-70 saturate-150"
           style={{ backgroundImage: `url(${link.artwork_url})` }}
           aria-hidden
         />
       )}
-      <div className="fixed inset-0 bg-gradient-to-b from-neutral-950/35 via-neutral-950/55 to-neutral-950/85" aria-hidden />
+      <div className="fixed inset-0 bg-gradient-to-b from-neutral-950/25 via-neutral-950/55 to-neutral-950/90" aria-hidden />
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-md flex-col items-center px-6 py-12">
         {/* Cover */}
