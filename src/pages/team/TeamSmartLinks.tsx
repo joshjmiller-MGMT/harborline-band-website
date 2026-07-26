@@ -6,16 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link2, Plus, Trash2, Copy, ExternalLink, Eye, MousePointerClick, Loader2, Check, X, Sparkles, Share2 } from "lucide-react";
+import { Link2, Plus, Trash2, Copy, ExternalLink, Eye, MousePointerClick, Loader2, Check, X, Sparkles, Share2, Music } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { PLATFORMS, platformMeta, type SmartLinkRow, type PlatformLink } from "@/lib/smartlink";
+import { PLATFORMS, platformMeta, type SmartLinkRow, type PlatformLink, type PreviewTrack } from "@/lib/smartlink";
 import { Area, ComposedChart, Line, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 
 // Manager for the personal smart-link tool. Create one shareable /l/:slug per
 // release, set a destination URL per DSP, and watch views + clicks roll in.
 const db = supabase as unknown as { from: (t: string) => any };
 
-type EventRow = { slug: string; kind: string; platform: string | null; created_at: string; referrer: string | null; country: string | null; city: string | null; utm_campaign: string | null; utm_source: string | null };
+type EventRow = { slug: string; kind: string; platform: string | null; created_at: string; referrer: string | null; country: string | null; region: string | null; city: string | null; utm_campaign: string | null; utm_source: string | null };
 
 const blank = (): SmartLinkRow => ({
   slug: "",
@@ -84,6 +84,40 @@ export default function TeamSmartLinks() {
     setFound(null);
   };
 
+  // Pull 30-sec previews from Apple (Josh 7/26) — matches the release by
+  // title+artist via the smartlink-previews edge fn and loads its tracks so the
+  // lander shows an inline player. Save persists them to smart_links.tracks.
+  const [pullingPrev, setPullingPrev] = useState(false);
+  const pullPreviews = async () => {
+    if (!editing) return;
+    if (!editing.title) {
+      toast({ title: "Add the release title first", variant: "destructive" });
+      return;
+    }
+    setPullingPrev(true);
+    try {
+      const { data, error } = await (supabase as unknown as {
+        functions: { invoke: (n: string, o: object) => Promise<{ data: unknown; error: { message: string } | null }> };
+      }).functions.invoke("smartlink-previews", { body: { title: editing.title, artist: editing.artist } });
+      if (error) throw new Error(error.message);
+      const res = data as { tracks?: PreviewTrack[]; matched?: { collection?: string } };
+      const tracks = res.tracks ?? [];
+      if (!tracks.length) {
+        toast({ title: "No previews found on Apple", description: "Check the title/artist, or Apple may not carry this release yet." });
+      } else {
+        setEditing((prev) => (prev ? { ...prev, tracks } : prev));
+        toast({
+          title: `Loaded ${tracks.length} preview${tracks.length > 1 ? "s" : ""}`,
+          description: res.matched?.collection ? `Matched: ${res.matched.collection} · Save to publish` : "Save to publish",
+        });
+      }
+    } catch (e) {
+      toast({ title: "Preview lookup failed", description: e instanceof Error ? e.message : "unknown", variant: "destructive" });
+    } finally {
+      setPullingPrev(false);
+    }
+  };
+
   // ---- Artwork: upload / pick from Media Library (Josh 2026-07-22) ----
   const [uploadingArt, setUploadingArt] = useState(false);
   const artFileRef = useRef<HTMLInputElement | null>(null);
@@ -134,7 +168,7 @@ export default function TeamSmartLinks() {
   const load = async () => {
     const [l, e] = await Promise.all([
       db.from("smart_links").select("*").order("created_at", { ascending: false }),
-      db.from("smart_link_events").select("slug,kind,platform,created_at,referrer,country,city,utm_campaign,utm_source"),
+      db.from("smart_link_events").select("slug,kind,platform,created_at,referrer,country,region,city,utm_campaign,utm_source"),
     ]);
     setRows((l.data as SmartLinkRow[]) || []);
     setEvents((e.data as EventRow[]) || []);
@@ -194,15 +228,22 @@ export default function TeamSmartLinks() {
     return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
   };
 
-  // Where fans are (edge-fn geolocation, live since 7/23) — the metric Josh
-  // asked for by name. City shown when a country has one dominant city.
-  const countriesFor = (slug: string) => {
+  // Where fans are, to the city (Josh 7/26: "specify to the city"). The edge-fn
+  // geolocation stamps city/region/country on every view; group by "City,
+  // Region" so Alexandria VA and Baltimore MD read distinctly, falling back to
+  // region/country when a city didn't resolve.
+  const citiesFor = (slug: string) => {
     const m = new Map<string, number>();
     for (const e of events) {
       if (e.slug !== slug || e.kind !== "view" || !e.country) continue;
-      m.set(e.country, (m.get(e.country) || 0) + 1);
+      const label = e.city
+        ? `${e.city}, ${e.region || e.country}`
+        : e.region
+          ? `${e.region}, ${e.country}`
+          : e.country;
+      m.set(label, (m.get(label) || 0) + 1);
     }
-    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
   };
 
   // Campaign attribution (utm_campaign, falling back to utm_source) — on the
@@ -285,6 +326,7 @@ export default function TeamSmartLinks() {
       artwork_url: e.artwork_url || null,
       release_date: e.release_date || null,
       platforms: clean,
+      tracks: (e.tracks as PreviewTrack[]) ?? [],
       is_active: e.is_active,
     };
     setSaving(true);
@@ -403,6 +445,35 @@ export default function TeamSmartLinks() {
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* Preview player (Josh 7/26): pull 30-sec Apple previews so the
+                  lander plays the release inline. */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Preview player</span>
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={pullPreviews} disabled={pullingPrev}>
+                    {pullingPrev ? <Loader2 className="w-3 h-3 animate-spin" /> : <Music className="w-3 h-3" />} Pull previews from Apple
+                  </Button>
+                </div>
+                {editing.tracks && editing.tracks.length > 0 ? (
+                  <div className="rounded-md border border-border divide-y divide-border/60">
+                    {editing.tracks.map((t, i) => (
+                      <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 text-xs">
+                        <span className="font-mono text-muted-foreground w-5 shrink-0">{t.order ?? i + 1}</span>
+                        <span className="flex-1 truncate text-foreground">{t.title}</span>
+                        <span className="text-[10px] text-emerald-500 shrink-0">30s ✓</span>
+                        <button type="button" aria-label={`Remove ${t.title}`}
+                          onClick={() => setEditing((prev) => prev ? { ...prev, tracks: (prev.tracks || []).filter((_, j) => j !== i) } : prev)}
+                          className="text-muted-foreground hover:text-destructive shrink-0">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No previews yet — "Pull previews from Apple" matches this release and adds an inline 30-sec player to the lander.</p>
+                )}
               </div>
 
               <div>
@@ -536,7 +607,7 @@ export default function TeamSmartLinks() {
                           const totalClicks = s?.clicks ?? 0;
                           const ctr = totalViews ? Math.round((totalClicks / totalViews) * 1000) / 10 : 0;
                           const refs = referrersFor(r.slug);
-                          const countries = countriesFor(r.slug);
+                          const cities = citiesFor(r.slug);
                           const campaigns = campaignsFor(r.slug);
                           const signups = signupsFor(r.slug);
                           const maxPlat = Math.max(1, ...Object.values(s?.byPlatform ?? {}));
@@ -610,15 +681,15 @@ export default function TeamSmartLinks() {
                                 )}
                               </div>
                               <div>
-                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Countries</p>
-                                {countries.length === 0 ? (
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Top cities</p>
+                                {cities.length === 0 ? (
                                   <p className="text-xs text-muted-foreground">Geo starts with the next deploy's views.</p>
                                 ) : (
                                   <div className="space-y-0.5">
-                                    {countries.map(([c, n]) => (
-                                      <div key={c} className="flex items-center justify-between text-xs">
-                                        <span className="text-foreground">{c}</span>
-                                        <span className="tabular-nums text-muted-foreground">{n}</span>
+                                    {cities.map(([c, n]) => (
+                                      <div key={c} className="flex items-center justify-between text-xs gap-2">
+                                        <span className="text-foreground truncate" title={c}>{c}</span>
+                                        <span className="tabular-nums text-muted-foreground shrink-0">{n}</span>
                                       </div>
                                     ))}
                                   </div>
