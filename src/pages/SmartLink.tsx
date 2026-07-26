@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { MessageCircle, Mail, ArrowRight, Check } from "lucide-react";
+import { MessageCircle, Mail, ArrowRight, Check, Play, Pause } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { platformMeta, logSmartLinkEvent, initMetaPixel, pixelTrack, type SmartLinkRow, type PlatformLink } from "@/lib/smartlink";
+import { platformMeta, logSmartLinkEvent, initMetaPixel, pixelTrack, type SmartLinkRow, type PlatformLink, type PreviewTrack } from "@/lib/smartlink";
 
 // Public smart-link landing at /l/:slug — "our own Artist Hub". Standalone page
 // (no team chrome): blurred-artwork backdrop, the cover, and one button per DSP.
@@ -143,6 +143,62 @@ function FanSignup({ slug, accent, artist }: { slug: string; accent: string; art
   );
 }
 
+// Inline preview player (Josh 7/24, HyperFollow reference — his highest-value
+// add). Plays the 30-sec Apple previews stored on the row so a fan hears the
+// music before clicking out to a DSP. Renders only when the release has tracks;
+// zero change to links without them. One shared <audio>; tap a track to play,
+// tap again to stop.
+function PreviewPlayer({ slug, tracks, accent }: { slug: string; tracks: PreviewTrack[]; accent: string }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [active, setActive] = useState<number | null>(null);
+  const logged = useRef(false);
+
+  const toggle = (i: number) => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (active === i) { a.pause(); setActive(null); return; }
+    a.src = tracks[i].preview_url;
+    a.currentTime = 0;
+    void a.play().catch(() => setActive(null));
+    setActive(i);
+    if (!logged.current) {
+      logged.current = true;
+      logSmartLinkEvent(slug, "click", "preview");
+      pixelTrack("ViewContent", { content_name: slug, method: "preview" });
+    }
+  };
+
+  return (
+    <div className="mt-6 w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 backdrop-blur-sm">
+      <p className="px-2 pb-1 text-center text-xs font-semibold uppercase tracking-[0.15em] text-white/50">
+        Preview the EP
+      </p>
+      {tracks.map((t, i) => {
+        const on = active === i;
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={() => toggle(i)}
+            aria-label={on ? `Stop ${t.title}` : `Preview ${t.title}`}
+            className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-white/5"
+          >
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition"
+              style={{ backgroundColor: on ? accent : "rgba(255,255,255,0.1)", color: on ? "#141210" : "#ffffff" }}
+            >
+              {on ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 translate-x-[1px]" />}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm text-white/90">{t.title}</span>
+            <span className="shrink-0 text-[10px] uppercase tracking-wide text-white/30">30s</span>
+          </button>
+        );
+      })}
+      <audio ref={audioRef} onEnded={() => setActive(null)} preload="none" />
+    </div>
+  );
+}
+
 export default function SmartLink() {
   const { slug } = useParams<{ slug: string }>();
   const [link, setLink] = useState<SmartLinkRow | null>(null);
@@ -193,6 +249,7 @@ export default function SmartLink() {
   // Brand (Josh 7/22): cobalt primary + royal purple, CREAM as the accent.
   const accent = link.accent || "#efe6cf";
   const platforms: PlatformLink[] = Array.isArray(link.platforms) ? link.platforms : [];
+  const tracks: PreviewTrack[] = Array.isArray(link.tracks) ? link.tracks : [];
   const pageTitle = `${link.artist} — ${link.title}`;
 
   return (
@@ -246,6 +303,9 @@ export default function SmartLink() {
 
         {/* Brand divider: cobalt -> royal purple */}
         <div className="mt-6 h-0.5 w-24 rounded-full" style={{ background: "linear-gradient(135deg, #3b64ee, #8a4bea)" }} aria-hidden />
+
+        {/* Inline preview player — hear it before clicking out (only if tracks) */}
+        {tracks.length > 0 && <PreviewPlayer slug={link.slug} tracks={tracks} accent={accent} />}
 
         {/* Platform buttons */}
         <div className="mt-6 w-full space-y-3">

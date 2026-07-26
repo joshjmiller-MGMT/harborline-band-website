@@ -6,6 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type PlatformLink = { platform: string; label?: string; url: string };
 
+// Optional per-release preview track (Josh 7/24, HyperFollow reference — his
+// highest-value add: "hearing it *is* the pitch"). preview_url is a 30-sec clip
+// (Apple/iTunes previewUrl, pulled by the manager); the lander plays it inline.
+export type PreviewTrack = { title: string; order?: number; preview_url: string };
+
 export type SmartLinkRow = {
   id?: string;
   slug: string;
@@ -15,6 +20,7 @@ export type SmartLinkRow = {
   artwork_url?: string | null;
   release_date?: string | null;
   platforms: PlatformLink[];
+  tracks?: PreviewTrack[] | null;
   accent?: string | null;
   is_active: boolean;
   pixel_id?: string | null;
