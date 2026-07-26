@@ -186,9 +186,6 @@ export default function SmartLink() {
     return (
       <div className="min-h-screen bg-neutral-950 text-neutral-300 flex flex-col items-center justify-center gap-3 px-6 text-center">
         <p className="text-lg">This link isn't available.</p>
-        <a href="/" className="text-sm text-neutral-500 underline hover:text-neutral-300">
-          harborlineband.com
-        </a>
       </div>
     );
   }
