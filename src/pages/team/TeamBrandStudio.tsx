@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import EpkTab from "@/components/brand/EpkTab";
 
 type Venture = "harborline" | "economy" | "jmj" | "personal" | "bse";
 type Skill = "novice" | "intermediate" | "pro";
@@ -137,13 +138,7 @@ export default function TeamBrandStudio() {
               body="Timeline of singles, albums, performance videos, social campaigns per venture. Status pipeline: planning → in production → ready → released."
             />
           </TabsContent>
-          <TabsContent value="epk">
-            <PlaceholderTab
-              title="EPK / Press Kit Builder"
-              phase="2"
-              body="Generate a shareable per-venture press kit: bio + photos (from Visual Assets, filtered by venture + rights) + reel links + booking contact. Linktree-shaped output."
-            />
-          </TabsContent>
+          <TabsContent value="epk"><EpkTab /></TabsContent>
           <TabsContent value="metrics">
             <PlaceholderTab
               title="Content &amp; Performance Metrics"
