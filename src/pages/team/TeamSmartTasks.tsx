@@ -40,6 +40,10 @@ const INBOX_BUCKETS = new Set([
 
 function deriveBucket(row: SmartTaskRow): SmartBucket {
   if (row.board_bucket && row.board_bucket !== "Trello inbox") {
+    // A smartified row (it has a Definition of Done) is past "Needs SMART" by
+    // definition — never let it linger there after it's been smartified or
+    // reviewed (Josh 7/27: a card shouldn't sit in two states at once).
+    if (row.board_bucket === "Needs SMART" && row.definition_of_done) return "Pending approval";
     return row.board_bucket as SmartBucket;
   }
   if (row.google_calendar_event_id) return "Active";
@@ -81,6 +85,22 @@ export default function SmartBoardPanel() {
     refreshAll,
     refreshSmartRows,
   } = useSmartTaskBoardData();
+
+  // Cards out for context in the Review queue live there and ONLY there — never
+  // also on the board (Josh 7/27: "shouldn't stay in two places at once"). Track
+  // which card ids have an open smartify-context review item and exclude them
+  // from every board bucket until the review resolves; then they flow back in.
+  const [inReviewIds, setInReviewIds] = useState<Set<string>>(new Set());
+  const refreshInReview = useCallback(async () => {
+    const { data } = await supabase
+      .from("waiting_on_josh")
+      .select("source_ref")
+      .eq("item_type", "smartify-context")
+      .is("resolved_at", null)
+      .not("source_ref", "is", null);
+    setInReviewIds(new Set((data ?? []).map((r: { source_ref: string }) => r.source_ref)));
+  }, []);
+  useEffect(() => { void refreshInReview(); }, [refreshInReview]);
 
   const smartifiedTrelloCardIds = useMemo(() => {
     const s = new Set<string>();
@@ -143,11 +163,12 @@ export default function SmartBoardPanel() {
     const m = new Map<string, SmartTaskRow[]>();
     for (const b of PERSISTABLE_SMART_BUCKETS) m.set(b, []);
     for (const row of smartRows) {
+      if (inReviewIds.has(row.id)) continue;   // lives in the Review queue, not the board
       const b = deriveBucket(row);
       (m.get(b) ?? m.set(b, []).get(b)!).push(row);
     }
     return m;
-  }, [smartRows]);
+  }, [smartRows, inReviewIds]);
 
   // undoBody = the patch that reverts this action; every action gets a sticky
   // Undo toast that only goes away when clicked.
@@ -194,10 +215,15 @@ export default function SmartBoardPanel() {
         .single();
       if (error) throw error;
       const newId = (data as { id: string }).id;
+      // Leave the board immediately — the card now lives in the Review queue.
+      if (ref) setInReviewIds((prev) => { const n = new Set(prev); n.add(ref); return n; });
       undoToast(`Sent to Review: "${title.slice(0, 50)}"`, async () => {
         const { error: e2 } = await supabase.from("waiting_on_josh").delete().eq("id", newId);
         if (e2) toast.error("Undo failed");
-        else toast.success("Undone — removed from Review");
+        else {
+          if (ref) setInReviewIds((prev) => { const n = new Set(prev); n.delete(ref); return n; });
+          toast.success("Undone — removed from Review");
+        }
       });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to send to review");
@@ -227,7 +253,7 @@ export default function SmartBoardPanel() {
               {inboxCount} in Trello inbox · {smartRows.length} SMART-ified
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={refreshAll} disabled={isLoading}>
+          <Button variant="ghost" size="sm" onClick={() => { void refreshAll(); void refreshInReview(); }} disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 mr-1.5 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
