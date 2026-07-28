@@ -279,10 +279,15 @@ Deno.serve(async (req) => {
     // ── PUSH: db → sheet (append-only) ────────────────────────────────
     // 'fan' rows are excluded: the JJMM sheet is Josh's personal network;
     // smart-link fan signups are the owned-audience list (/team/fans).
+    // 'src:jjmm-phone-export' rows are GATED (7/28 consolidation): 932 raw
+    // phone-export contacts would otherwise append onto the curated Contact
+    // List tab. Held until Josh answers the go/no-go on the ambiguous-merges
+    // review card; delete this one filter line to open the gate.
     const toPush = (dbRows || []).filter((c: any) =>
       c.name &&
       !(c.tags || []).includes("task-not-contact") &&
       !(c.tags || []).includes("fan") &&
+      !(c.tags || []).includes("src:jjmm-phone-export") &&
       !sheetByName.has(normName(c.name)),
     );
     const appendValues = toPush.map((c: any) => {
