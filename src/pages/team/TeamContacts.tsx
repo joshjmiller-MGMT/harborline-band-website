@@ -29,11 +29,31 @@ type Contact = {
   source: string;
   notes: string | null;
   sheet_synced: boolean;
+  tags: string[] | null;
 };
 
 const SOURCE_LABEL: Record<string, string> = {
   "trello-contacts": "Trello", "trello-poc-fu": "POC F/U", "jjmm-sheet": "JJMM sheet",
-  email: "Email", manual: "Manual", "fan-signup": "Fan",
+  email: "Email", manual: "Manual", "fan-signup": "Fan", "jjmm-phone-export": "Phone export",
+};
+
+// Lane break-off (2026-07-28): every contact carries exactly one lane:* tag.
+// Personal = JJMM personal network · Operational = venues/vendors/bookers/venture
+// people (the working set, default view) · Services = businesses from the phone
+// export · Fans = signups. Rows without a lane tag yet (fresh sync pulls, manual
+// adds) show in every lane until classified.
+const LANES = [
+  { key: "operational", label: "Operational" },
+  { key: "personal", label: "Personal" },
+  { key: "services", label: "Services" },
+  { key: "fan", label: "Fans" },
+  { key: "all", label: "All" },
+] as const;
+type LaneKey = (typeof LANES)[number]["key"];
+
+const laneOf = (c: Contact): LaneKey | null => {
+  const t = c.tags?.find((x) => x?.startsWith("lane:"));
+  return t ? (t.slice(5) as LaneKey) : null;
 };
 
 const EMPTY_DRAFT = { name: "", phone: "", email: "", org: "", notes: "" };
@@ -45,6 +65,13 @@ export default function TeamContacts() {
   // ?q= deep-link support (the Fans page links each signup to its contact row)
   const [searchParams] = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") ?? "");
+  // Default lane = Operational (the working view). A ?q= deep-link (Fans page)
+  // or an explicit ?lane= opens wide so the linked contact is never hidden.
+  const [lane, setLane] = useState<LaneKey>(() => {
+    const p = searchParams.get("lane");
+    if (p && LANES.some((l) => l.key === p)) return p as LaneKey;
+    return searchParams.get("q") ? "all" : "operational";
+  });
   const [onlyFollowup, setOnlyFollowup] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
@@ -54,9 +81,12 @@ export default function TeamContacts() {
     setLoading(true);
     const { data, error } = await supabase
       .from("contacts")
-      .select("id, name, email, phone, role, org, venture, followup, followup_note, source, notes, sheet_synced")
-      // task-not-contact rows are board items, not people (audit 7/19)
+      .select("id, name, email, phone, role, org, venture, followup, followup_note, source, notes, sheet_synced, tags")
+      // task-not-contact rows are board items, not people (audit 7/19);
+      // archived-junk = quarantined task rows, merged-dup = dedup tombstones (lane pass 7/28)
       .not("tags", "cs", "{task-not-contact}")
+      .not("tags", "cs", "{archived-junk}")
+      .not("tags", "cs", "{merged-dup}")
       .order("followup", { ascending: false })
       .order("name", { ascending: true });
     if (error) toast.error(error.message);
@@ -83,6 +113,7 @@ export default function TeamContacts() {
       org: draft.org.trim() || null,
       notes: draft.notes.trim() || null,
       source: "manual",
+      tags: [], // unclassified — shows in every lane until a lane:* tag is set
       sheet_synced: false, // next sync pushes it to the JJMM sheet
     });
     setSaving(false);
@@ -115,12 +146,20 @@ export default function TeamContacts() {
 
   const visible = useMemo(() => {
     let v = rows;
+    // unclassified rows (no lane:* tag) stay visible in every lane
+    if (lane !== "all") v = v.filter((r) => { const l = laneOf(r); return l === null || l === lane; });
     if (onlyFollowup) v = v.filter((r) => r.followup);
     const s = q.trim().toLowerCase();
     if (s) v = v.filter((r) =>
       [r.name, r.email, r.phone, r.org, r.role, r.notes].some((f) => f?.toLowerCase().includes(s)));
     return v;
-  }, [rows, q, onlyFollowup]);
+  }, [rows, q, lane, onlyFollowup]);
+
+  const laneCounts = useMemo(() => {
+    const m: Record<string, number> = { all: rows.length };
+    for (const r of rows) { const l = laneOf(r); if (l) m[l] = (m[l] ?? 0) + 1; }
+    return m;
+  }, [rows]);
 
   const followupCount = useMemo(() => rows.filter((r) => r.followup).length, [rows]);
   const syncedCount = useMemo(() => rows.filter((r) => r.sheet_synced).length, [rows]);
@@ -150,6 +189,19 @@ export default function TeamContacts() {
               <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? "animate-spin" : ""}`} /> Refresh
             </Button>
           </div>
+        </div>
+
+        {/* Lane chips — JJMM personal network broken off from the operational working set (7/28) */}
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {LANES.map((l) => (
+            <button
+              key={l.key}
+              onClick={() => setLane(l.key)}
+              className={`text-xs px-2.5 py-1.5 rounded-full border ${lane === l.key ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/40"}`}
+            >
+              {l.label}{laneCounts[l.key] !== undefined ? ` (${laneCounts[l.key]})` : " (0)"}
+            </button>
+          ))}
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
