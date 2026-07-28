@@ -46,6 +46,10 @@ type ItemType =
 // One tappable answer on a multiple-choice escalation. `recommended` flags the
 // branch's suggested default (the one mirrored in assumed_default).
 type ChoiceOption = { label: string; recommended?: boolean };
+// One part of a multi-part card. `options` are its choices (optional);
+// `text: true` also shows a free-text box for that part (default true when
+// there are no options).
+type MultiPartQuestion = { q: string; options?: (string | ChoiceOption)[]; text?: boolean };
 
 type MediaRef = {
   kind: MediaKind;
@@ -81,6 +85,10 @@ interface ReviewItem {
   // Multiple-choice escalation: one-tap answer options + the non-blocking
   // default the branch already proceeded with (null for plain questions).
   options: ChoiceOption[] | null;
+  // Multi-part cards (Josh 7/28): several questions on one card, each with its
+  // own choices and/or a descriptive text answer. Answers compose into
+  // resolution_note as labeled Q/A blocks.
+  questions: MultiPartQuestion[] | null;
   round: number;
   parent_id: string | null;
   assumed_default: string | null;
@@ -134,7 +142,7 @@ export default function TeamReviewQueue() {
     const { data, error } = await supabase
       .from("waiting_on_josh")
       .select(
-        "id, title, prompt, detail, context_md, media_refs, triangulation_loops, source_ref, source_session, priority, item_type, options, assumed_default, uploads, queued_at, resolved_at, round, parent_id",
+        "id, title, prompt, detail, context_md, media_refs, triangulation_loops, source_ref, source_session, priority, item_type, options, questions, assumed_default, uploads, queued_at, resolved_at, round, parent_id",
       )
       .is("resolved_at", null);
     if (error) {
@@ -293,9 +301,36 @@ export default function TeamReviewQueue() {
   }
 
   // One-tap multiple-choice answer: resolve the row with the chosen option's
-  // label as the resolution note.
+  // label — and if Josh also typed detail in the answer box, carry BOTH
+  // (choice + descriptive response on one card, Josh 7/28).
   async function resolveChoice(label: string) {
-    await commitResolution(label, "Answered");
+    const detail = resolution.trim();
+    await commitResolution(detail ? `${label} — ${detail}` : label, "Answered");
+  }
+
+  // Multi-part cards: one answer slot per question (choice and/or text).
+  const [multiAnswers, setMultiAnswers] = useState<Record<number, { choice?: string; text?: string }>>({});
+  useEffect(() => { setMultiAnswers({}); }, [selectedId]);
+
+  // Compose every part into ONE labeled resolution note, so downstream readers
+  // (Claude sessions parsing resolution_note) need no new schema.
+  async function submitMultiPart() {
+    if (!current?.questions) return;
+    const qs = current.questions;
+    const answered = qs.filter((_, i) => multiAnswers[i]?.choice || multiAnswers[i]?.text?.trim());
+    if (answered.length === 0) {
+      toast({ title: "Answer at least one part", variant: "destructive" });
+      return;
+    }
+    const note = qs
+      .map((q, i) => {
+        const a = multiAnswers[i];
+        const parts = [a?.choice, a?.text?.trim()].filter(Boolean);
+        return `Q${i + 1}: ${q.q}\nA${i + 1}: ${parts.length ? parts.join(" — ") : "(skipped)"}`;
+      })
+      .join("\n\n");
+    await commitResolution(note, `Answered ${answered.length}/${qs.length} parts`);
+    setMultiAnswers({});
   }
 
   async function deferItem() {
@@ -719,7 +754,73 @@ export default function TeamReviewQueue() {
                     </p>
                   </div>
 
-                  {current.options && current.options.length > 0 ? (
+                  {current.questions && current.questions.length > 0 ? (
+                    // Multi-part card (Josh 7/28): several questions, each with
+                    // choices and/or a descriptive answer. One submit for all.
+                    <>
+                      <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                        {current.questions.length} parts — answer what you can, skip the rest
+                      </h3>
+                      <div className="space-y-4 mb-3">
+                        {current.questions.map((q, qi) => {
+                          const opts = (q.options ?? []).map((o) => (typeof o === "string" ? { label: o } : o));
+                          const showText = q.text !== false || opts.length === 0;
+                          const a = multiAnswers[qi] ?? {};
+                          return (
+                            <div key={qi} className="rounded-md border border-border p-3">
+                              <p className="text-sm font-medium text-foreground mb-2">
+                                <span className="text-muted-foreground mr-1.5">{qi + 1}.</span>{q.q}
+                              </p>
+                              {opts.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mb-2">
+                                  {opts.map((opt, oi) => {
+                                    const on = a.choice === opt.label;
+                                    return (
+                                      <button
+                                        key={oi}
+                                        type="button"
+                                        onClick={() => setMultiAnswers((p) => ({ ...p, [qi]: { ...p[qi], choice: on ? undefined : opt.label } }))}
+                                        className={`text-xs px-2.5 py-1.5 rounded border text-left ${on ? "border-primary bg-primary/15 text-primary" : opt.recommended ? "border-primary/40 text-foreground hover:bg-primary/5" : "border-border text-muted-foreground hover:bg-muted/40"}`}
+                                      >
+                                        {opt.label}{opt.recommended && !on ? " ★" : ""}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              {showText && (
+                                <div>
+                                  <div className="flex items-center justify-end mb-1">
+                                    <MicButton label title="Dictate this part" onText={(t) => setMultiAnswers((p) => ({ ...p, [qi]: { ...p[qi], text: appendDictation(p[qi]?.text ?? "", t) } }))} />
+                                  </div>
+                                  <Textarea
+                                    value={a.text ?? ""}
+                                    onChange={(e) => setMultiAnswers((p) => ({ ...p, [qi]: { ...p[qi], text: e.target.value } }))}
+                                    placeholder={opts.length ? "Add detail (optional — combines with your pick)…" : "Your answer…"}
+                                    rows={2}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button onClick={() => void submitMultiPart()} disabled={resolving}>
+                          {resolving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
+                          Submit all answers
+                        </Button>
+                        <Button variant="outline" onClick={deferItem} disabled={resolving}>
+                          <ArrowDownToLine className="w-4 h-4 mr-1" />
+                          Defer
+                        </Button>
+                        <Button variant="ghost" onClick={() => resolveItem("rejected")} disabled={resolving} className="text-muted-foreground hover:text-destructive">
+                          <X className="w-4 h-4 mr-1" />
+                          Reject
+                        </Button>
+                      </div>
+                    </>
+                  ) : current.options && current.options.length > 0 ? (
                     // Multiple-choice: one tap per option resolves the row with
                     // that label. The recommended option is visually primary.
                     <>
@@ -752,10 +853,12 @@ export default function TeamReviewQueue() {
                           </Button>
                         ))}
                       </div>
-                      {/* "Other" — type a custom answer instead of picking an option. */}
+                      {/* Add detail and/or a custom answer. Text typed here rides
+                          along with a tapped choice ("A — because…"), or stands
+                          alone via Submit (Josh 7/28: choice + descriptive). */}
                       <details className="mb-3 rounded-md border border-border p-2">
                         <summary className="cursor-pointer text-xs text-muted-foreground">
-                          Other — type your own answer
+                          Add detail to a choice — or type your own answer
                         </summary>
                         <div className="mt-2 flex items-center justify-between mb-1">
                           <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Your answer</span>

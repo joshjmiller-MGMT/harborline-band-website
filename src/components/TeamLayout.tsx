@@ -12,7 +12,6 @@ import {
   Activity,
   Share2,
   Phone,
-  ChevronDown,
   Images,
   Palette,
   Loader2,
@@ -34,12 +33,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import logo from "@/assets/logo-text.png";
 
 type NavItem = {
@@ -206,49 +199,26 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
               );
             })()}
 
+            {/* Hub buttons — plain links, "A: tabs are the menu" (Josh 7/28
+                nav decision). Clicking a hub lands on its first page; the
+                persistent HubTabs bar below is THE page picker. The dropdown
+                mega-menus are gone — one nav system, no double menu. */}
             {megaMenus.map((menu) => {
               const isActive = menu.items.some((m) => location.pathname === m.href);
               const TriggerIcon = menu.icon;
-              // modal={false}: don't scroll-lock the body — the removed
-              // scrollbar was shifting the whole site on menu open (Josh 7/21).
               return (
-                <DropdownMenu key={menu.label} modal={false}>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-display tracking-wide-custom transition-colors ${
-                        isActive
-                          ? "bg-primary/15 text-primary"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                      }`}
-                    >
-                      <TriggerIcon className="w-4 h-4" />
-                      <span className="hidden sm:inline">{menu.label}</span>
-                      <ChevronDown className="w-3.5 h-3.5 opacity-70" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-64 max-h-[70vh] overflow-y-auto">
-                    {menu.items.map((item) => {
-                      const ItemIcon = item.icon;
-                      const itemActive = location.pathname === item.href;
-                      return (
-                        <DropdownMenuItem key={item.href} asChild>
-                          <Link
-                            to={item.href}
-                            className={`flex items-start gap-3 cursor-pointer ${
-                              itemActive ? "bg-primary/10 text-primary" : ""
-                            }`}
-                          >
-                            <ItemIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium">{item.name}</span>
-                              <span className="text-xs text-muted-foreground">{item.description}</span>
-                            </div>
-                          </Link>
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Link
+                  key={menu.label}
+                  to={menu.items[0].href}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-display tracking-wide-custom transition-colors ${
+                    isActive
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  <TriggerIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{menu.label}</span>
+                </Link>
               );
             })}
 
