@@ -1,5 +1,3 @@
-import type { ScrumColumn } from "./ScrumBoard";
-
 export const SMART_VENTURES = [
   "Harborline",
   "Economy",
@@ -19,9 +17,8 @@ export function normalizeVenture(v: string | null | undefined): SmartVenture {
     : DEFAULT_VENTURE;
 }
 
-// "Trello inbox" sits in the columns list but is only populated by trello-poll
-// output, not by smart_task_enrichments rows. Persisted board_bucket values
-// are the four after it.
+// "Trello inbox" is derived from trello-poll output only — it is never
+// persisted to board_bucket (see PERSISTABLE_SMART_BUCKETS below).
 export const SMART_BUCKETS = [
   "Trello inbox",
   "Needs SMART",
@@ -39,14 +36,6 @@ export const PERSISTABLE_SMART_BUCKETS = [
   "Done",
 ] as const;
 export type PersistableSmartBucket = (typeof PERSISTABLE_SMART_BUCKETS)[number];
-
-export const SMART_BUCKET_COLUMNS: ScrumColumn[] = [
-  { id: "Trello inbox", title: "Trello inbox", accent: "text-amber-500" },
-  { id: "Needs SMART", title: "Needs SMART", accent: "text-orange-400" },
-  { id: "Pending approval", title: "Pending approval", accent: "text-primary" },
-  { id: "Active", title: "Active (calendar)", accent: "text-emerald-400" },
-  { id: "Done", title: "Done", accent: "text-muted-foreground" },
-];
 
 // One color per venture — color is processed faster than text, so the eye
 // learns "purple = Economy" etc. without reading (kanban-swimlane best practice).
