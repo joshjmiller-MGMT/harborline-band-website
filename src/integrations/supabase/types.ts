@@ -2049,6 +2049,10 @@ export type Database = {
           created_at: string
           id: string
           label: string
+          metronome_bpm_end: number | null
+          metronome_bpm_start: number | null
+          metronome_seconds: number | null
+          metronome_time_sig: string | null
           notes: string
           session_id: string
           skipped: boolean
@@ -2064,6 +2068,10 @@ export type Database = {
           created_at?: string
           id?: string
           label?: string
+          metronome_bpm_end?: number | null
+          metronome_bpm_start?: number | null
+          metronome_seconds?: number | null
+          metronome_time_sig?: string | null
           notes?: string
           session_id: string
           skipped?: boolean
@@ -2079,6 +2087,10 @@ export type Database = {
           created_at?: string
           id?: string
           label?: string
+          metronome_bpm_end?: number | null
+          metronome_bpm_start?: number | null
+          metronome_seconds?: number | null
+          metronome_time_sig?: string | null
           notes?: string
           session_id?: string
           skipped?: boolean
@@ -3263,6 +3275,8 @@ export type Database = {
           heartbeat_at: string | null
           notes_snippet: string | null
           priority: number | null
+          released_at: string | null
+          suspect_reasons: string[] | null
           work_key: string | null
         }
         Insert: {
@@ -3270,6 +3284,8 @@ export type Database = {
           heartbeat_at?: string | null
           notes_snippet?: never
           priority?: number | null
+          released_at?: string | null
+          suspect_reasons?: never
           work_key?: string | null
         }
         Update: {
@@ -3277,6 +3293,8 @@ export type Database = {
           heartbeat_at?: string | null
           notes_snippet?: never
           priority?: number | null
+          released_at?: string | null
+          suspect_reasons?: never
           work_key?: string | null
         }
         Relationships: []
