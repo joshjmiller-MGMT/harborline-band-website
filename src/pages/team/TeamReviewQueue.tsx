@@ -31,7 +31,6 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import LaneLogWidget from "@/components/team/LaneLogWidget";
 
 type MediaKind = "image" | "video" | "screenshot";
 type ItemType =
@@ -944,12 +943,6 @@ export default function TeamReviewQueue() {
               </div>
             )}
           </Card>
-        </div>
-
-        {/* Orchestration lane log — live view of what every Claude branch is
-            claiming / working / done (reads the work_claims lease table). */}
-        <div className="mt-8">
-          <LaneLogWidget />
         </div>
       </div>
     </TeamLayout>
