@@ -11,9 +11,11 @@ interface Props {
   bpm: number;
   onBpmChange: (next: number) => void;
   running: boolean;
-  currentBeat: number; // -1 idle, 0..3
+  currentBeat: number; // -1 idle, 0..beatsPerBar-1
   size?: number; // px, default 220
   accent?: boolean; // for fine-step buttons; default true
+  beatsPerBar?: number; // beat dots around the rim; default 4
+  emphasis?: boolean[]; // which beats are accented; defaults to beat 1 only
 }
 
 function angleAtPointer(x: number, y: number, cx: number, cy: number): number {
@@ -32,6 +34,8 @@ export default function MetronomeWheel({
   currentBeat,
   size = 220,
   accent = true,
+  beatsPerBar = 4,
+  emphasis,
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -177,20 +181,21 @@ export default function MetronomeWheel({
             className="transition-all duration-150"
           />
           <circle cx={cx} cy={cy} r={6} fill="hsl(var(--primary))" />
-          {/* beat indicator dots around the rim */}
-          {[0, 1, 2, 3].map((b) => {
-            const a = (b / 4) * 2 * Math.PI - Math.PI / 2;
+          {/* beat indicator dots around the rim — one per beat in the bar */}
+          {Array.from({ length: Math.max(1, beatsPerBar) }, (_, b) => {
+            const a = (b / Math.max(1, beatsPerBar)) * 2 * Math.PI - Math.PI / 2;
             const r = size / 2 - 22;
             const bx = cx + Math.cos(a) * r;
             const by = cy + Math.sin(a) * r;
             const active = currentBeat === b && running;
+            const accented = emphasis ? emphasis[b] === true : b === 0;
             return (
               <circle
                 key={b}
                 cx={bx}
                 cy={by}
                 r={active ? 6 : 3}
-                fill={b === 0 ? "hsl(var(--primary))" : "hsl(var(--foreground))"}
+                fill={accented ? "hsl(var(--primary))" : "hsl(var(--foreground))"}
                 opacity={active ? 1 : 0.25}
                 className="transition-all"
               />
