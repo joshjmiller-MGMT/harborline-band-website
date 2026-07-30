@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Dashboard alert that answers the "where did it all go?" question: surfaces how
 // many smartified tasks sit in board_bucket='Pending approval' (and how many
-// still need SMART) on /team/smart-tasks, so the backlog isn't invisible.
+// still need SMART) on /team/review (SMART board panel), so the backlog isn't invisible.
 // Self-contained — fetches its own counts. (Re-added fresh 2026-07-05; the
 // original PR #160 branch had gone stale behind the SMART-board redesign.)
 export default function PendingApprovalAlert() {
@@ -67,7 +67,7 @@ export default function PendingApprovalAlert() {
         </div>
       </div>
       <Button asChild variant="outline" size="sm" className="shrink-0">
-        <Link to="/team/smart-tasks">
+        <Link to="/team/review">
           SMART board
           <ChevronRight className="ml-1 h-4 w-4" />
         </Link>

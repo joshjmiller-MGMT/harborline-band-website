@@ -31,13 +31,14 @@ type SystemRow = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
+  live: "bg-sky-500/15 text-sky-400",
   active: "bg-emerald-500/15 text-emerald-400",
   in_flight: "bg-primary/15 text-primary",
   planned: "bg-amber-500/15 text-amber-400",
   idea: "bg-accent/15 text-accent",
   paused: "bg-muted/60 text-muted-foreground",
 };
-const STATUSES = ["active", "in_flight", "planned", "idea", "paused"];
+const STATUSES = ["live", "active", "in_flight", "planned", "idea", "paused"];
 
 export default function TeamSystems() {
   const [rows, setRows] = useState<SystemRow[]>([]);

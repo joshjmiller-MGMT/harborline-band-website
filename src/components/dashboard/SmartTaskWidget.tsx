@@ -79,7 +79,7 @@ export default function SmartTaskWidget({ prefill }: { prefill?: { text: string;
   const [activeCard, setActiveCard] = useState<TrelloCard | null>(null);
 
   // Trello inbox + SMART rows come from the shared P312 board data layer
-  // so the dashboard widget stays in sync with /team/smart-tasks.
+  // so the dashboard widget stays in sync with the SMART board on /team/review.
   const {
     trello: { cards, boardName, loading: trelloLoading, error: trelloError },
     refreshTrello: loadTrello,
@@ -209,8 +209,8 @@ export default function SmartTaskWidget({ prefill }: { prefill?: { text: string;
     try {
       const calendarEvent = await createCalendarEvent(smart);
 
-      // P312: stamp defaults so the new row lands on the /team/smart-tasks
-      // board in a sensible spot. board_bucket is "Active" if a calendar
+      // P312: stamp defaults so the new row lands on the SMART board
+      // (/team/review) in a sensible spot. board_bucket is "Active" if a calendar
       // event was created, else "Pending approval". board_venture defaults
       // to Personal; the board's "Move venture" dropdown reassigns later.
       const defaultBucket = calendarEvent?.id ? "Active" : "Pending approval";
@@ -274,7 +274,7 @@ export default function SmartTaskWidget({ prefill }: { prefill?: { text: string;
             Smartify
           </CardTitle>
           <Link
-            to="/team/smart-tasks"
+            to="/team/review"
             className="text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
           >
             <LayoutGrid className="w-3 h-3" /> Full board

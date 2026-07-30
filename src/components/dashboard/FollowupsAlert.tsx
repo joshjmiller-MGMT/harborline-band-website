@@ -62,7 +62,7 @@ export default function FollowupsAlert() {
           <Link to="/team/contacts" className="text-xs text-accent hover:text-accent/80 inline-flex items-center gap-0.5">
             contacts <ChevronRight className="w-3 h-3" />
           </Link>
-          <Link to="/team/smart-tasks" className="text-xs text-accent hover:text-accent/80 inline-flex items-center gap-0.5">
+          <Link to="/team/review" className="text-xs text-accent hover:text-accent/80 inline-flex items-center gap-0.5">
             board <ChevronRight className="w-3 h-3" />
           </Link>
         </span>
