@@ -2,14 +2,19 @@
 // Validates a deterministic HMAC week-token before returning the week's queue.
 //
 // Q6 (b): no Drive permission churn, no SMTP path. The operator UI calls
-// `social-queue-mutate` op=mint_handoff_url to issue the URL; Des opens it on
-// her phone; this fn validates the token and returns the items keyed to that
-// ISO week. No mutation surface here.
+// `social-queue-mutate` op=mint_handoff_url to issue the URL; the recipient
+// opens it on their phone; this fn validates the token and returns the items
+// keyed to that ISO week. No mutation surface here.
+//
+// Per-person links (media→content people chain, Josh 7/20): an optional
+// `person` slug is bound into the HMAC and filters items to that assignee.
+// Week-only links (no person) keep working and show the whole week.
 //
 // verify_jwt=false on deploy — this fn is anon-callable. Token check is the
 // only authorization gate.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { HANDOFF_PEOPLE } from "../_shared/social-people.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,7 +36,7 @@ function json(status: number, body: unknown) {
   });
 }
 
-async function hmacToken(week: string): Promise<string> {
+async function hmacToken(week: string, person?: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(SOCIAL_HANDOFF_SECRET),
@@ -39,10 +44,13 @@ async function hmacToken(week: string): Promise<string> {
     false,
     ["sign"],
   );
+  const message = person
+    ? `social-handoff:${week}:${person}`
+    : `social-handoff:${week}`;
   const sig = await crypto.subtle.sign(
     "HMAC",
     key,
-    new TextEncoder().encode(`social-handoff:${week}`),
+    new TextEncoder().encode(message),
   );
   return Array.from(new Uint8Array(sig))
     .slice(0, 12)
@@ -82,7 +90,7 @@ Deno.serve(async (req) => {
   }
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
 
-  let body: { week?: string; token?: string };
+  let body: { week?: string; token?: string; person?: string };
   try {
     body = await req.json();
   } catch {
@@ -91,10 +99,14 @@ Deno.serve(async (req) => {
 
   const week = (body.week ?? "").trim();
   const token = (body.token ?? "").trim();
+  const person = (body.person ?? "").trim();
   if (!WEEK_RE.test(week)) return json(400, { error: "invalid_week" });
   if (!token) return json(400, { error: "missing_token" });
+  if (person && !HANDOFF_PEOPLE.has(person)) {
+    return json(400, { error: "invalid_person" });
+  }
 
-  const expected = await hmacToken(week);
+  const expected = await hmacToken(week, person || undefined);
   if (!constantTimeEq(token, expected)) return json(403, { error: "invalid_token" });
 
   const range = weekRange(week);
@@ -104,13 +116,16 @@ Deno.serve(async (req) => {
 
   // Pull items either scheduled inside the week range OR with no scheduled_for
   // but status='ready' (so "ready but not yet slotted" still surfaces).
-  const { data, error } = await supabase
+  // Per-person links additionally filter to that assignee's items.
+  let query = supabase
     .from("social_content_queue")
     .select("id, media_paths, caption, scheduled_for, slot, accounts, status, assigned_to, notes, updated_at")
     .or(
       `and(scheduled_for.gte.${range.start},scheduled_for.lte.${range.end}),and(scheduled_for.is.null,status.eq.ready)`,
     )
-    .in("status", ["queued", "ready"])
+    .in("status", ["queued", "ready"]);
+  if (person) query = query.eq("assigned_to", person);
+  const { data, error } = await query
     .order("scheduled_for", { ascending: true, nullsFirst: false })
     .order("updated_at", { ascending: true });
 
@@ -120,6 +135,7 @@ Deno.serve(async (req) => {
 
   return json(200, {
     week,
+    person: person || null,
     range,
     items: data ?? [],
     public_url_base: `${SUPABASE_URL}/storage/v1/object/public/visual-assets/`,

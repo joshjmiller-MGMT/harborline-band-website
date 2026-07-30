@@ -11,6 +11,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireOperator } from "../_shared/require-operator.ts";
+import { HANDOFF_PEOPLE } from "../_shared/social-people.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,7 +53,9 @@ function json(status: number, body: unknown) {
   });
 }
 
-async function hmacToken(week: string): Promise<string> {
+// Week-only message keeps pre-existing "whole week" links valid; per-person
+// links (media→content people chain, Josh 7/20) bind the person into the HMAC.
+async function hmacToken(week: string, person?: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(SOCIAL_HANDOFF_SECRET),
@@ -60,10 +63,13 @@ async function hmacToken(week: string): Promise<string> {
     false,
     ["sign"],
   );
+  const message = person
+    ? `social-handoff:${week}:${person}`
+    : `social-handoff:${week}`;
   const sig = await crypto.subtle.sign(
     "HMAC",
     key,
-    new TextEncoder().encode(`social-handoff:${week}`),
+    new TextEncoder().encode(message),
   );
   return Array.from(new Uint8Array(sig))
     .slice(0, 12)
@@ -190,8 +196,13 @@ Deno.serve(async (req) => {
     if (!WEEK_RE.test(week)) {
       return json(400, { error: "invalid_week", detail: "expected YYYY-Www format" });
     }
-    const token = await hmacToken(week);
-    return json(200, { week, token, path: `/team/social-handoff/${week}?t=${token}` });
+    const person = typeof body.person === "string" && body.person ? body.person : "";
+    if (person && !HANDOFF_PEOPLE.has(person)) {
+      return json(400, { error: "invalid_person", detail: "unknown handoff person slug" });
+    }
+    const token = await hmacToken(week, person || undefined);
+    const path = `/team/social-handoff/${week}?t=${token}${person ? `&p=${person}` : ""}`;
+    return json(200, { week, person: person || null, token, path });
   }
 
   if (op === "status_get") {

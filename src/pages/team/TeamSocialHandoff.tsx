@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ContentQueueItem, SocialQueueItem } from "@/components/social/ContentQueueItem";
+import { EDITOR_BRIEF, personBySlug } from "@/components/social/peopleChain";
 import { Loader2, Share2 } from "lucide-react";
 
 type HandoffPayload = {
   week: string;
+  person?: string | null;
   range: { start: string; end: string };
   items: SocialQueueItem[];
   public_url_base: string;
@@ -15,6 +17,8 @@ export default function TeamSocialHandoff() {
   const { week } = useParams<{ week: string }>();
   const [search] = useSearchParams();
   const token = search.get("t") ?? "";
+  const personSlug = search.get("p") ?? "";
+  const person = personBySlug(personSlug);
   const [state, setState] = useState<
     | { kind: "loading" }
     | { kind: "loaded"; payload: HandoffPayload }
@@ -29,7 +33,7 @@ export default function TeamSocialHandoff() {
     }
     const { data, error } = await supabase.functions.invoke<HandoffPayload>(
       "social-handoff-read",
-      { body: { week, token } },
+      { body: { week, token, person: personSlug || undefined } },
     );
     if (error) {
       const ctx = (error as { context?: Response }).context;
@@ -50,7 +54,7 @@ export default function TeamSocialHandoff() {
       return;
     }
     setState({ kind: "loaded", payload: data });
-  }, [week, token]);
+  }, [week, token, personSlug]);
 
   useEffect(() => {
     load();
@@ -77,10 +81,15 @@ export default function TeamSocialHandoff() {
         <div className="container mx-auto px-6 py-5">
           <h1 className="font-display text-2xl tracking-wide-custom flex items-center gap-3">
             <Share2 className="w-6 h-6 text-primary" /> Social handoff
+            {person ? <span className="text-primary">· {person.name}</span> : null}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Read-only view for {week ?? "—"}. Open this on your phone, save it as a
-            bookmark. Updates auto-refresh on reload.
+            Read-only view for {week ?? "—"}
+            {person
+              ? ` — ${person.role === "editor" ? `${person.scope} edits assigned to you` : `publishing lane: ${person.scope}`}`
+              : ""}
+            . Open this on your phone, save it as a bookmark. Updates auto-refresh on
+            reload.
           </p>
         </div>
       </header>
@@ -108,6 +117,19 @@ export default function TeamSocialHandoff() {
             <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
               Week of {state.payload.range.start} → {state.payload.range.end}
             </p>
+            {person?.role === "editor" ? (
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-4 text-sm space-y-2">
+                <p className="font-medium">Editor brief — every item should spell out:</p>
+                <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                  {EDITOR_BRIEF.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+                <p className="text-xs text-muted-foreground">
+                  Missing direction on an item? Don't guess — ask Josh.
+                </p>
+              </div>
+            ) : null}
             {state.payload.items.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-10 border border-dashed border-border rounded-md">
                 Nothing queued for this week yet.

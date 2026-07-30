@@ -29,6 +29,7 @@ import {
   SLOT_LABEL,
   SocialQueueItem,
 } from "./ContentQueueItem";
+import { PEOPLE_CHAIN, PUBLISHER_RULE, personBySlug } from "./peopleChain";
 
 const ACCOUNTS = [
   { id: "personal", label: "Personal" },
@@ -97,6 +98,7 @@ export default function SocialContentQueueManager() {
   const [edit, setEdit] = useState<EditState>(EMPTY_EDIT);
   const [saving, setSaving] = useState(false);
   const [week, setWeek] = useState(isoWeekOf(new Date()));
+  const [sharePerson, setSharePerson] = useState("des");
   const [shareLoading, setShareLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -208,11 +210,12 @@ export default function SocialContentQueueManager() {
       const data = await callMutate<{ week: string; token: string; path: string }>({
         op: "mint_handoff_url",
         week,
+        person: sharePerson,
       });
       const url = `${window.location.origin}${data.path}`;
       await navigator.clipboard.writeText(url);
       toast({
-        title: "Des handoff link copied",
+        title: `${personBySlug(sharePerson)?.name ?? sharePerson} handoff link copied`,
         description: url,
       });
     } catch (e) {
@@ -277,13 +280,28 @@ export default function SocialContentQueueManager() {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 p-3 rounded-md border border-border bg-muted/30">
           <div className="flex flex-col">
-            <Label className="text-xs mb-1">Share week with Des</Label>
+            <Label className="text-xs mb-1">Share week</Label>
             <Input
               value={week}
               onChange={(e) => setWeek(e.target.value.trim())}
               placeholder="2026-W20"
               className="w-32 font-mono text-sm"
             />
+          </div>
+          <div className="flex flex-col">
+            <Label className="text-xs mb-1">With</Label>
+            <Select value={sharePerson} onValueChange={setSharePerson}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PEOPLE_CHAIN.map((p) => (
+                  <SelectItem key={p.slug} value={p.slug}>
+                    {p.name} · {p.role === "editor" ? "edit" : "publish"} ({p.scope})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Button onClick={copyHandoffLink} disabled={shareLoading} variant="secondary" size="sm">
             {shareLoading ? (
@@ -293,9 +311,9 @@ export default function SocialContentQueueManager() {
             )}
             Copy handoff link
           </Button>
-          <p className="text-xs text-muted-foreground self-center">
-            Generates a read-only `/team/social-handoff/{`<week>`}` URL Des can open without
-            signing in.
+          <p className="text-xs text-muted-foreground self-center basis-full">
+            Generates a read-only `/team/social-handoff/{`<week>`}` URL filtered to that
+            person's assigned items — no sign-in needed. {PUBLISHER_RULE}
           </p>
         </div>
 
@@ -396,15 +414,27 @@ export default function SocialContentQueueManager() {
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Assigned to</Label>
-                <Input
-                  value={edit.assigned_to}
-                  onChange={(e) => setEdit((p) => ({ ...p, assigned_to: e.target.value }))}
-                  placeholder="josh / des / ..."
-                />
-              </div>
+            <div>
+              <Label className="text-xs">Assigned to</Label>
+              <Select
+                value={edit.assigned_to || "unassigned"}
+                onValueChange={(v) =>
+                  setEdit((p) => ({ ...p, assigned_to: v === "unassigned" ? "" : v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {PEOPLE_CHAIN.map((p) => (
+                    <SelectItem key={p.slug} value={p.slug}>
+                      {p.name} · {p.role === "editor" ? "edit" : "publish"} ({p.scope})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">{PUBLISHER_RULE}</p>
             </div>
             <div>
               <Label className="text-xs">Media storage paths (one per line)</Label>
@@ -426,7 +456,7 @@ export default function SocialContentQueueManager() {
                 <Textarea
                   value={edit.notes}
                   onChange={(e) => setEdit((p) => ({ ...p, notes: e.target.value }))}
-                  placeholder="Anything Des should know"
+                  placeholder="Direction for the assignee — editors need the full brief (source clips, format, vibe, text, deadline)"
                   rows={2}
                   className="pr-10"
                 />
