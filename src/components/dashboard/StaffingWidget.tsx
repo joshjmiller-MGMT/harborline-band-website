@@ -15,7 +15,6 @@ import {
   Pencil,
   Save,
   X,
-  CalendarClock,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { CalendarColorLegend } from "./CalendarColorLegend";
@@ -391,7 +390,7 @@ export default function StaffingWidget({
   const events = data?.events || [];
   // The board shows ONLY needs-staffing items (red + orange). Holds (yellow),
   // staffed gigs (light-green), and warehouse/admin (dark-green) are excluded
-  // — holds still surface on the dashboard via HoldsNeedsAction.
+  // by design (the old dashboard holds alert was retired with the 07-19 prune).
   const visible = useMemo(
     () => events.filter((ev) => NEEDS_STAFFING_BOARD_COLOR_IDS.has(ev.colorId)),
     [events],
@@ -544,187 +543,5 @@ export default function StaffingWidget({
         </CollapsibleContent>
       </Collapsible>
     </Card>
-  );
-}
-
-/**
- * Compact summary for embedding in NeedsActionWidget — fetches the next 14 days
- * and shows a one-line "N events need staff" + a top-3 list. Surfaces every
- * unstaffed event (the binary unstaffed = staff list empty OR known headcount
- * not met). Click jumps to the scheduler page.
- */
-export function StaffingNeedsAction() {
-  const [data, setData] = useState<StaffingResponse | null>(null);
-  const [monday, setMonday] = useState<MondayStaffResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        // Mirror the scheduler's staffing widget: GCal red/orange items PLUS the
-        // Monday events-board "NEED TO STAFF" gigs, so the dashboard summary
-        // reflects the same total the scheduler shows (Josh 2026-07).
-        // 730 days = max the staffing-snapshot edge fn allows.
-        const [snap, mon] = await Promise.all([
-          supabase.functions.invoke("staffing-snapshot", {
-            method: "POST",
-            body: { days: 730 },
-          }),
-          supabase.functions.invoke("monday-events-staffing", {
-            method: "POST",
-            body: {},
-          }),
-        ]);
-        if (!cancelled) {
-          setData(snap.data as StaffingResponse);
-          setMonday(mon.data as MondayStaffResponse);
-        }
-      } catch {
-        // Silently swallow; widget just hides if it can't load.
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (loading) return null;
-
-  const unstaffed =
-    data && data.connected
-      ? (data.events || []).filter((e) => eventStatus(e) === "unstaffed")
-      : [];
-  const mondayNeeds = monday?.events || [];
-
-  // One combined, date-sorted list so the dashboard mirrors the scheduler.
-  type Row = { key: string; date: Date | null; title: string; note: string };
-  const rows: Row[] = [
-    ...unstaffed.map((ev) => ({
-      key: ev.id,
-      date: ev.start ? parseEventDate(ev.start) : null,
-      title: ev.title,
-      note:
-        ev.expected_headcount !== null && ev.missing_count
-          ? `needs ${ev.missing_count}`
-          : "needs staff",
-    })),
-    ...mondayNeeds.map((e) => ({
-      key: `monday-${e.id}`,
-      date: e.eventDate ? parseEventDate(e.eventDate) : null,
-      title: e.name,
-      note: "events board",
-    })),
-  ].sort((a, b) => {
-    if (!a.date && !b.date) return 0;
-    if (!a.date) return 1;
-    if (!b.date) return -1;
-    return a.date.getTime() - b.date.getTime();
-  });
-
-  if (rows.length === 0) return null;
-
-  const top = rows.slice(0, 3);
-
-  return (
-    <div className="border border-amber-500/40 rounded-lg p-3 bg-amber-500/5">
-      <a
-        href="/team/scheduler"
-        className="flex items-center justify-between gap-2 group"
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <Users className="w-4 h-4 text-amber-600 shrink-0" />
-          <span className="text-sm font-medium">
-            {rows.length} upcoming event{rows.length === 1 ? "" : "s"} need{rows.length === 1 ? "s" : ""} staff
-          </span>
-        </div>
-        <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-foreground shrink-0" />
-      </a>
-      <ul className="mt-2 space-y-1 text-xs text-muted-foreground pl-6">
-        {top.map((r) => (
-          <li key={r.key} className="flex items-center gap-2">
-            {r.date && <span className="tabular-nums">{format(r.date, "MMM d")}</span>}
-            <span className="truncate">{r.title}</span>
-            <span className="ml-auto shrink-0">{r.note}</span>
-          </li>
-        ))}
-        {rows.length > top.length && (
-          <li className="italic">+ {rows.length - top.length} more…</li>
-        )}
-      </ul>
-    </div>
-  );
-}
-
-/**
- * Compact "holds need a confirm" alert for NeedsActionWidget. A hold (Banana/5)
- * is a tentative gig that hasn't been confirmed yet — distinct from the
- * needs-staffing alert above. Reuses the staffing-snapshot feed (which returns
- * the booked green/yellow events with their colorId) and filters for holds.
- */
-export function HoldsNeedsAction() {
-  const [data, setData] = useState<StaffingResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data: resp } = await supabase.functions.invoke("staffing-snapshot", {
-          method: "POST",
-          body: { days: 730 },
-        });
-        if (!cancelled) setData(resp as StaffingResponse);
-      } catch {
-        // Silently swallow; widget just hides if it can't load.
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (loading) return null;
-  if (!data || !data.connected) return null;
-
-  const holds = (data.events || []).filter((e) => e.colorId === HOLD_COLOR_ID);
-  if (holds.length === 0) return null;
-
-  const top = holds.slice(0, 3);
-
-  return (
-    <div className="border border-yellow-500/40 rounded-lg p-3 bg-yellow-500/5">
-      <a
-        href="/team/scheduler"
-        className="flex items-center justify-between gap-2 group"
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <CalendarClock className="w-4 h-4 text-yellow-600 shrink-0" />
-          <span className="text-sm font-medium">
-            {holds.length} gig hold{holds.length === 1 ? "" : "s"} need{holds.length === 1 ? "s" : ""} a confirm
-          </span>
-        </div>
-        <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-foreground shrink-0" />
-      </a>
-      <ul className="mt-2 space-y-1 text-xs text-muted-foreground pl-6">
-        {top.map((ev) => {
-          const date = ev.start ? parseEventDate(ev.start) : null;
-          return (
-            <li key={ev.id} className="flex items-center gap-2">
-              {date && <span className="tabular-nums">{format(date, "MMM d")}</span>}
-              <span className="truncate">{ev.title}</span>
-              <span className="ml-auto shrink-0">tentative</span>
-            </li>
-          );
-        })}
-        {holds.length > top.length && (
-          <li className="italic">+ {holds.length - top.length} more…</li>
-        )}
-      </ul>
-    </div>
   );
 }

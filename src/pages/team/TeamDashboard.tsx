@@ -43,18 +43,6 @@ export default function TeamDashboard() {
             </ErrorBoundary>
           </div>
 
-          {/* Needs-action goes first — pins urgent + everything that needs Josh. */}
-          <div className="lg:col-span-2">
-            <ErrorBoundary compact label="Needs Action">
-            </ErrorBoundary>
-          </div>
-
-          {/* Boards overview — top item from each per-domain board (multi-board architecture). */}
-          <div className="lg:col-span-2">
-            <ErrorBoundary compact label="Boards">
-            </ErrorBoundary>
-          </div>
-
           {/* Calendar — daily-driver surface, full width. */}
           <div className="lg:col-span-2">
             <ErrorBoundary compact label="Calendar">
@@ -67,13 +55,15 @@ export default function TeamDashboard() {
           <div className="lg:col-span-2">
             <ErrorBoundary compact label="Availability">
               <AvailabilityCheckerWidget />
-              <IntegrationHealthWidget />
             </ErrorBoundary>
           </div>
 
-          {/* Integration health goes last — it's read-only diagnostics, not a daily-driver. */}
+          {/* Integration health goes last — read-only diagnostics, not a daily-driver.
+              (Restored 2026-07-20 with the social-ingest signal; the 07-19 prune had
+              unmounted it.) */}
           <div className="lg:col-span-2">
             <ErrorBoundary compact label="Integration health">
+              <IntegrationHealthWidget />
             </ErrorBoundary>
           </div>
         </div>
