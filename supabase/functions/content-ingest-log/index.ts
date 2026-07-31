@@ -90,8 +90,13 @@ Deno.serve(async (req) => {
   // Accept the op from the JSON body (POST) or the query string (GET).
   let op = "list";
   let limit = DEFAULT_LIMIT;
+  // Filters (Josh 7/31: "the tags at the top aren't categorizing the items").
+  // They must run SERVER-side — the summary counts the whole table while the
+  // list is one page, so client-side filtering would only sift the page.
+  let account: string | null = null;
+  let purpose: string | null = null;
   if (req.method === "POST") {
-    let body: { op?: string; limit?: unknown } = {};
+    let body: { op?: string; limit?: unknown; account?: unknown; purpose?: unknown } = {};
     try {
       body = await req.json();
     } catch {
@@ -99,10 +104,14 @@ Deno.serve(async (req) => {
     }
     op = (body.op as string | undefined) ?? "list";
     limit = clampLimit(body.limit);
+    account = typeof body.account === "string" && body.account ? body.account : null;
+    purpose = typeof body.purpose === "string" && body.purpose ? body.purpose : null;
   } else if (req.method === "GET") {
     const params = new URL(req.url).searchParams;
     op = params.get("op") ?? "list";
     limit = clampLimit(params.get("limit"));
+    account = params.get("account");
+    purpose = params.get("purpose");
   } else {
     return json(405, { error: "method_not_allowed" });
   }
@@ -110,11 +119,14 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   if (op === "list") {
-    const { data: rows, error } = await supabase
+    let q = supabase
       .from("content_ingest_log")
       .select(DISPLAY_COLUMNS)
       .order("ingested_at", { ascending: false })
       .limit(limit);
+    if (account) q = q.eq("source_account", account);
+    if (purpose) q = q.eq("purpose", purpose);
+    const { data: rows, error } = await q;
     if (error) {
       return json(500, { error: "list_failed", detail: error.message });
     }

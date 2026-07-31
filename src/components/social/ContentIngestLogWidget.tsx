@@ -132,6 +132,10 @@ export default function ContentIngestLogWidget() {
   // Rows already pushed to the Ideas column this session — dedupes the button.
   const [sentToIdeas, setSentToIdeas] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState<string | null>(null);
+  // Chip filters (Josh 7/31). Applied server-side so a chip sifts all 846 rows,
+  // not just the loaded page. Tapping an active chip clears it.
+  const [account, setAccount] = useState<string | null>(null);
+  const [purpose, setPurpose] = useState<string | null>(null);
 
   const togglePreview = (id: string) =>
     setOpenPreview((prev) => {
@@ -156,7 +160,8 @@ export default function ContentIngestLogWidget() {
     try {
       const { data, error } = await supabase.functions.invoke<ListResponse>(
         "content-ingest-log",
-        { body: { op: "list" } },
+        // A filtered view pulls a bigger page — you're looking at one slice.
+        { body: { op: "list", account, purpose, limit: account || purpose ? 200 : undefined } },
       );
       if (error) {
         const ctx = (error as { context?: Response }).context;
@@ -182,7 +187,7 @@ export default function ContentIngestLogWidget() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, account, purpose]);
 
   useEffect(() => {
     load();
@@ -261,25 +266,65 @@ export default function ContentIngestLogWidget() {
       <CardContent className="space-y-4">
         {summary && (
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="font-mono">
-              {summary.total} total
-            </Badge>
-            {ACCOUNT_ORDER.map((acct) => (
+            <button
+              type="button"
+              onClick={() => { setAccount(null); setPurpose(null); }}
+              className="rounded-full"
+              aria-label="Clear filters"
+            >
               <Badge
-                key={acct}
-                variant="outline"
-                className={accountBadgeClass(acct)}
+                variant={account || purpose ? "outline" : "secondary"}
+                className="font-mono cursor-pointer hover:bg-muted"
               >
-                {acct} · {summary.by_account[acct] ?? 0}
+                {summary.total} total
               </Badge>
+            </button>
+            {ACCOUNT_ORDER.map((acct) => (
+              <button
+                key={acct}
+                type="button"
+                onClick={() => setAccount((cur) => (cur === acct ? null : acct))}
+                className="rounded-full"
+                aria-pressed={account === acct}
+              >
+                <Badge
+                  variant="outline"
+                  className={`cursor-pointer transition ${accountBadgeClass(acct)} ${
+                    account === acct ? "ring-2 ring-offset-1 ring-offset-background ring-current" : "opacity-80 hover:opacity-100"
+                  }`}
+                >
+                  {acct} · {summary.by_account[acct] ?? 0}
+                </Badge>
+              </button>
             ))}
             {Object.entries(summary.by_purpose)
               .sort(([, a], [, b]) => b - a)
-              .map(([purpose, count]) => (
-                <Badge key={purpose} variant="outline" className="text-muted-foreground">
-                  {PURPOSE_LABEL[purpose] ?? purpose} · {count}
-                </Badge>
+              .map(([p, count]) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPurpose((cur) => (cur === p ? null : p))}
+                  className="rounded-full"
+                  aria-pressed={purpose === p}
+                >
+                  <Badge
+                    variant="outline"
+                    className={`cursor-pointer transition ${
+                      purpose === p
+                        ? "border-primary text-primary bg-primary/10"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {PURPOSE_LABEL[p] ?? p} · {count}
+                  </Badge>
+                </button>
               ))}
+            {(account || purpose) && (
+              <span className="text-xs text-muted-foreground">
+                showing {items.length}
+                {items.length === 200 ? "+ (capped)" : ""} filtered
+              </span>
+            )}
           </div>
         )}
 
