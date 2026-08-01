@@ -12,6 +12,14 @@ import { platformMeta, logSmartLinkEvent, initMetaPixel, pixelTrack, type SmartL
 // Fan capture (Josh 7/22, vibe.to reference): text or email signup on the
 // lander. Rows land in fan_signups (public INSERT-only RLS) and auto-flow
 // into contacts tagged 'fan' via DB trigger; /team/fans is the ops surface.
+// The exact consent language shown on the lander. Stored verbatim with each
+// signup (CTIA 5.1.2 wants a record of what was SHOWN, not just consent=true).
+// If this text changes, signups keep the wording they actually agreed to.
+const consentText = (artist: string) =>
+  `By submitting your number you agree to receive automated marketing texts from ${artist} at that number. ` +
+  `Consent isn't a condition of any purchase. Msg & data rates may apply and message frequency varies. ` +
+  `Reply STOP to opt out or HELP for help; every email has an unsubscribe link.`;
+
 function FanSignup({ slug, accent, artist }: { slug: string; accent: string; artist: string }) {
   const [mode, setMode] = useState<"phone" | "email">("phone");
   const [value, setValue] = useState("");
@@ -46,6 +54,7 @@ function FanSignup({ slug, accent, artist }: { slug: string; accent: string; art
       .from("fan_signups")
       .insert({
         slug, contact_type: mode, contact_value: v, contact_norm: norm,
+        consent_text: consentText(artist),
         utm_source: q.get("utm_source"), utm_medium: q.get("utm_medium"), utm_campaign: q.get("utm_campaign"),
         referrer: typeof document !== "undefined" && document.referrer ? document.referrer.slice(0, 300) : null,
       });
@@ -134,10 +143,18 @@ function FanSignup({ slug, accent, artist }: { slug: string; accent: string; art
 
       {err && <p className="mt-2 text-center text-xs text-red-300">{err}</p>}
 
+      {/* TCPA §64.1200(f)(9) express-written-consent form: the disclosure must
+          say (a) signing up authorizes AUTOMATED marketing texts and (b) that
+          consent is not a condition of purchase. The prior copy said neither,
+          which is the exposure flagged in the 8/1 security review — statutory
+          damages are per message, so this is settled BEFORE Twilio sends
+          anything. A separate unchecked checkbox is the belt-and-braces form
+          and is Josh's call (it costs conversion); this is the disclosure. */}
       <p className="mt-3 text-center text-[10px] leading-relaxed text-white/35">
-        By submitting you agree to receive occasional updates from {artist} at the contact
-        provided. Msg &amp; data rates may apply. Reply STOP to opt out of texts; every email has
-        an unsubscribe link.{" "}
+        By submitting your number you agree to receive <span className="text-white/50">automated</span>{" "}
+        marketing texts from {artist} at that number. Consent isn&apos;t a condition of any
+        purchase. Msg &amp; data rates may apply and message frequency varies. Reply STOP to opt
+        out or HELP for help; every email has an unsubscribe link.{" "}
         {/* Deliberately subtle: same muted tone as the consent copy, underline
             on hover only. Opens in a new tab so the fan keeps the lander. */}
         <a
