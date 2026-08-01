@@ -232,10 +232,25 @@ Deno.serve(async (req) => {
     }
 
     // ── read db ───────────────────────────────────────────────────────
-    const { data: dbRows, error: dbErr } = await supabase
-      .from("contacts")
-      .select("id, name, phone, email, role, org, notes, tags, followup_note, sheet_synced");
-    if (dbErr) throw new Error(`contacts read failed: ${dbErr.message}`);
+    // PAGINATED — this is load-bearing. PostgREST caps an unbounded select at
+    // 1000 rows. On 2026-07-31 contacts crossed 1000 (the phone-export push),
+    // so the sync could only see the first 1000: every contact past that
+    // looked ABSENT, got re-inserted by the PULL below, which grew the table,
+    // which pushed more rows out of the window — 484 duplicate rows in ~19
+    // hourly runs before it was caught. Never read this table unbounded.
+    const PAGE = 1000;
+    const dbRows: any[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data: page, error: pageErr } = await supabase
+        .from("contacts")
+        .select("id, name, phone, email, role, org, notes, tags, followup_note, sheet_synced")
+        .order("id")
+        .range(from, from + PAGE - 1);
+      if (pageErr) throw new Error(`contacts read failed: ${pageErr.message}`);
+      if (!page || page.length === 0) break;
+      dbRows.push(...page);
+      if (page.length < PAGE) break;
+    }
     const dbByName = new Map<string, any>();
     for (const c of dbRows || []) {
       if (c.name && !dbByName.has(normName(c.name))) dbByName.set(normName(c.name), c);
