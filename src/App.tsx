@@ -63,6 +63,7 @@ const CloistersCastlePage = lazy(() => import("./pages/venues/CloistersCastle"))
 const RequestQuotePage = lazy(() => import("./pages/RequestQuote"));
 const SchedulePage = lazy(() => import("./pages/Schedule"));
 const SmartLinkPage = lazy(() => import("./pages/SmartLink"));
+const PrivacyPage = lazy(() => import("./pages/Privacy"));
 
 // Team Portal: auth provider stays eager (context); pages are lazy
 import { TeamAuthProvider } from "./hooks/useTeamAuth";
@@ -142,6 +143,9 @@ const App = () => (
                 <Route path="/epk" element={<EPKPage />} />
                 <Route path="/epk/:slug" element={<ActEPKPage />} />
                 <Route path="/press" element={<EPKPage />} />
+                {/* Static path outranks the gethip.to /:slug route in RR7's
+                    ranked matching, so /privacy resolves on BOTH hosts. */}
+                <Route path="/privacy" element={<PrivacyPage />} />
 
                 {/* Occasion Routes */}
                 <Route path="/weddings" element={<WeddingsPage />} />

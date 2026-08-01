@@ -137,7 +137,17 @@ function FanSignup({ slug, accent, artist }: { slug: string; accent: string; art
       <p className="mt-3 text-center text-[10px] leading-relaxed text-white/35">
         By submitting you agree to receive occasional updates from {artist} at the contact
         provided. Msg &amp; data rates may apply. Reply STOP to opt out of texts; every email has
-        an unsubscribe link.
+        an unsubscribe link.{" "}
+        {/* Deliberately subtle: same muted tone as the consent copy, underline
+            on hover only. Opens in a new tab so the fan keeps the lander. */}
+        <a
+          href="https://harborlineband.com/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-white/20 underline-offset-2 transition-colors hover:text-white/60"
+        >
+          Privacy
+        </a>
       </p>
     </div>
   );

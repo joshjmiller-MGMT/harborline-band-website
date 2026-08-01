@@ -203,9 +203,17 @@ const Footer = () => {
             <p className="text-muted-foreground text-sm">
               © {new Date().getFullYear()} Harborline. Musician-led Baltimore event band.
             </p>
-            <p className="text-muted-foreground/60 text-xs">
-              Live Entertainment for Maryland, DC, Virginia & Beyond
-            </p>
+            <div className="flex items-center gap-4">
+              <Link
+                to="/privacy"
+                className="text-muted-foreground/60 text-xs hover:text-primary transition-colors"
+              >
+                Privacy Policy
+              </Link>
+              <p className="text-muted-foreground/60 text-xs">
+                Live Entertainment for Maryland, DC, Virginia & Beyond
+              </p>
+            </div>
           </div>
         </div>
       </div>
