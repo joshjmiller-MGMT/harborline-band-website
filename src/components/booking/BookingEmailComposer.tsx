@@ -102,13 +102,16 @@ const BAND_PRESETS: Record<string, BandPreset> = {
       { id: "3", role: "", name: "Shamboogie", url: "https://www.instagram.com/shamboogiband/?hl=en" },
     ],
   },
+  // Jazz/solo identity locked to Joshua J Miller / JJM (Josh 2026-07-20; Vol. 1
+  // shipped under that name). The `jmj` key stays — it's a join/URL token, and
+  // renaming keys costs more than it's worth.
   jmj: {
-    label: "Josh Miller Jazz",
+    label: "Joshua J Miller",
     senderName: "Josh",
-    bandName: "Josh Miller Jazz",
+    bandName: "Joshua J Miller",
     bandDescription: "jazz trio / quartet",
     homeBase: "Baltimore-based",
-    epkUrl: "",
+    epkUrl: "https://gethip.to/blue-house-vol-1",
     phone: "",
     lineup: [],
   },
