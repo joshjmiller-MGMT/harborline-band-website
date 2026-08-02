@@ -28,8 +28,14 @@ type Tax = {
 type Detail = {
   id: string; segment_id: string;
   method_id: string | null; dim2_id: string | null; dim3_id: string | null;
-  bpm: number | null; sort_order: number;
+  bpm: number | null; range_from: number | null; range_to: number | null; sort_order: number;
 };
+
+// Patterns work differently again (Josh 8/2): he moves through *Patterns for
+// Jazz* (Coker) in RANGES — "122-148" means patterns 122 through 148 — and he
+// pencils each pattern's BPM into the physical book. So this row takes a range
+// and deliberately offers NO bpm field.
+const RANGE_SECTIONS = new Set(["Patterns", "Patters"]);  // sheet has both spellings
 
 // Slow-practice range first — Josh's log lives at 30-60 ("Belz 10ths MAJ 35 BPM",
 // "Barry Harris min drop 2 at 35 bpm"), so those are the reachable options.
@@ -62,6 +68,7 @@ export default function PracticeDetailRow({
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<Item[]>([]);
   const itemKind = ITEM_SECTIONS[category];
+  const isRange = RANGE_SECTIONS.has(category);
 
   // Item mode: pull the named items (lines/songs) with their CURRENT mastery.
   useEffect(() => {
@@ -237,14 +244,27 @@ export default function PracticeDetailRow({
               {d3.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
             </select>
 
-            <select
-              className={sel}
-              value={r.bpm ?? ""}
-              onChange={(e) => void patch(r.id, { bpm: e.target.value ? Number(e.target.value) : null })}
-            >
-              <option value="">bpm…</option>
-              {BPMS.map((b) => <option key={b} value={b}>{b}</option>)}
-            </select>
+            {isRange ? (
+              // Range in, no BPM — those tempos live pencilled in his book.
+              <span className="inline-flex items-center gap-1">
+                <input type="number" inputMode="numeric" placeholder="from"
+                  className={`${sel} w-16`} value={r.range_from ?? ""}
+                  onChange={(e) => void patch(r.id, { range_from: e.target.value ? Number(e.target.value) : null })} />
+                <span className="text-[10px] text-muted-foreground">–</span>
+                <input type="number" inputMode="numeric" placeholder="to"
+                  className={`${sel} w-16`} value={r.range_to ?? ""}
+                  onChange={(e) => void patch(r.id, { range_to: e.target.value ? Number(e.target.value) : null })} />
+              </span>
+            ) : (
+              <select
+                className={sel}
+                value={r.bpm ?? ""}
+                onChange={(e) => void patch(r.id, { bpm: e.target.value ? Number(e.target.value) : null })}
+              >
+                <option value="">bpm…</option>
+                {BPMS.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+            )}
 
             <button
               type="button"
