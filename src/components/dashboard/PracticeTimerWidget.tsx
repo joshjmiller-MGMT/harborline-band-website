@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from "@/hooks/use-toast";
 import { MicButton } from "@/components/dictation/MicButton";
 import { appendDictation } from "@/hooks/useDictation";
+import PracticeDetailRow from "@/components/practice/PracticeDetailRow";
 import {
   Timer,
   Play,
@@ -856,6 +857,12 @@ function SortableRow({
                 onText={(t) => onChange({ what_practiced: appendDictation(seg.what_practiced, t) })}
               />
             </div>
+          )}
+
+          {/* Structured detail (Josh 8/2) — sits under the comment box, never
+              replaces it. Renders nothing for sections with no methods seeded. */}
+          {(active || seg.what_practiced) && seg.id && (
+            <PracticeDetailRow segmentId={seg.id} category={seg.category} />
           )}
         </div>
       </div>
