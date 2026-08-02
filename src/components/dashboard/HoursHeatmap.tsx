@@ -41,7 +41,7 @@ const heatBg = (level: number) => {
   return "bg-amber-500";
 };
 
-type HeatmapKindFilter = "all" | "gig" | "rehearsal";
+type HeatmapKindFilter = "all" | "gig" | "rehearsal" | "practice";
 
 const RESAMPLE_STALE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const RESAMPLE_BATCH = 10;
@@ -55,14 +55,28 @@ export default function HoursHeatmap() {
   const [allTime, setAllTime] = useState(false);
   const [kindFilter, setKindFilter] = useState<HeatmapKindFilter>("all");
 
+  // TWO sources, not one. The calendar classifier covers gigs and rehearsals;
+  // the practice timer covers practice. Before 2026-08-02 this read the
+  // classifier alone, so 108 logged practice hours counted for nothing toward
+  // the 10,000. v_practice_hours emits sessions in the same shape and drops any
+  // day a calendar 'practice' estimate already covers, so nothing double-counts.
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("instrument_event_classifications")
-      .select("*")
-      .neq("classified_as", "none")
-      .order("event_start", { ascending: true });
-    setClassifications((data as InstrumentClassification[]) || []);
+    const [cls, prac] = await Promise.all([
+      supabase
+        .from("instrument_event_classifications")
+        .select("*")
+        .neq("classified_as", "none")
+        .order("event_start", { ascending: true }),
+      (supabase as unknown as { from: (t: string) => { select: (s: string) => Promise<{ data: unknown }> } })
+        .from("v_practice_hours")
+        .select("*"),
+    ]);
+    const rows = [
+      ...((cls.data as InstrumentClassification[]) || []),
+      ...((prac.data as InstrumentClassification[]) || []),
+    ].sort((a, b) => a.event_start.localeCompare(b.event_start));
+    setClassifications(rows);
     setLoading(false);
   };
 
@@ -73,6 +87,11 @@ export default function HoursHeatmap() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "instrument_event_classifications" },
+        load,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "practice_sessions" },
         load,
       )
       .subscribe();
@@ -294,9 +313,9 @@ export default function HoursHeatmap() {
           <>
             <div className="mb-2 flex items-center gap-1 flex-wrap text-[10px]">
               <span className="text-muted-foreground mr-1">Heatmap:</span>
-              {(["all", "gig", "rehearsal"] as HeatmapKindFilter[]).map((k) => {
+              {(["all", "gig", "rehearsal", "practice"] as HeatmapKindFilter[]).map((k) => {
                 const active = kindFilter === k;
-                const label = k === "all" ? "All" : k === "gig" ? "Gigs" : "Rehearsals";
+                const label = k === "all" ? "All" : k === "gig" ? "Gigs" : k === "rehearsal" ? "Rehearsals" : "Practice";
                 return (
                   <button
                     key={k}
