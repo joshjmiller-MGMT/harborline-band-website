@@ -34,7 +34,8 @@ type Detail = {
   method_id: string | null; dim2_id: string | null; dim3_id: string | null;
   bpm: number | null; range_from: number | null; range_to: number | null;
   maintenance: boolean; keys_worked: string[] | null;
-  lh_id: string | null; triad_interval: string | null; triad_qualities: string | null;
+  lh_id: string | null; lh_item_id: string | null;
+  triad_interval: string | null; triad_qualities: string | null;
   sort_order: number;
 };
 
@@ -68,6 +69,46 @@ const ITEM_SECTIONS: Record<string, "line" | "song"> = {
   Songs: "song",
 };
 type Item = { id: string; kind: string; title: string; color_level: number; artist: string | null };
+
+// One dropdown, two kinds of answer: a generic left-hand style (bass, stride,
+// walking) or an actual exercise tagged lh_device (VA 2, a diad movement, the
+// Roman numeral movement). They write to different columns because one is
+// taxonomy and the other is a real item, so the value is prefixed to say which.
+function LeftHandSelect({
+  row, styles, items, onChange,
+}: {
+  row: { lh_id: string | null; lh_item_id: string | null };
+  styles: Tax[];
+  items: Array<{ id: string; title: string }>;
+  onChange: (p: { lh_id: string | null; lh_item_id: string | null }) => void;
+}) {
+  const value = row.lh_item_id ? `item:${row.lh_item_id}` : row.lh_id ? `tax:${row.lh_id}` : "";
+  return (
+    <select
+      className={sel}
+      value={value}
+      title="What the left hand was doing"
+      onChange={(e) => {
+        const v = e.target.value;
+        if (!v) return onChange({ lh_id: null, lh_item_id: null });
+        const [kind, id] = v.split(":");
+        onChange(kind === "item" ? { lh_id: null, lh_item_id: id } : { lh_id: id, lh_item_id: null });
+      }}
+    >
+      <option value="">LH…</option>
+      {styles.length > 0 && (
+        <optgroup label="Style">
+          {styles.map((o) => <option key={o.id} value={`tax:${o.id}`}>{o.label}</option>)}
+        </optgroup>
+      )}
+      {items.length > 0 && (
+        <optgroup label="Exercise">
+          {items.map((i) => <option key={i.id} value={`item:${i.id}`}>{i.title}</option>)}
+        </optgroup>
+      )}
+    </select>
+  );
+}
 
 export default function PracticeDetailRow({
   segmentId,
@@ -139,7 +180,26 @@ export default function PracticeDetailRow({
 
   // The left hand is its own axis, not a per-method child — nearly every
   // right-hand exercise in the log names one, across every section.
-  const lhOptions = useMemo(() => tax.filter((t) => t.dimension === "lh"), [tax]);
+  //
+  // Josh 8/2: "pull any left hand item for lh devices". So the list is the
+  // generic styles (bass, stride, walking…) PLUS every real item tagged
+  // lh_device — VA 1-3, the diad movements, the Roman numeral movement. An
+  // exercise can be a technique in one slot and a left-hand device in another,
+  // which is exactly how he practises them.
+  const [lhItems, setLhItems] = useState<Array<{ id: string; title: string }>>([]);
+  useEffect(() => {
+    let alive = true;
+    db.from("practice_items")
+      .select("id,title")
+      .contains("roles", ["lh_device"])
+      .is("archived_at", null)
+      .order("title")
+      .then(({ data }: { data: Array<{ id: string; title: string }> | null }) => {
+        if (alive) setLhItems(data ?? []);
+      });
+    return () => { alive = false; };
+  }, []);
+  const lhStyles = useMemo(() => tax.filter((t) => t.dimension === "lh"), [tax]);
 
   const patch = async (id: string, p: Partial<Detail>) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...p } : r)));
@@ -210,15 +270,12 @@ export default function PracticeDetailRow({
                 upkeep
               </label>
 
-              <select
-                className={sel}
-                value={r.lh_id ?? ""}
-                onChange={(e) => void patch(r.id, { lh_id: e.target.value || null })}
-                title="What the left hand was doing"
-              >
-                <option value="">LH…</option>
-                {lhOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-              </select>
+              <LeftHandSelect
+                row={r}
+                styles={lhStyles}
+                items={lhItems}
+                onChange={(p) => void patch(r.id, p)}
+              />
 
               {/* Triad pairs, on the digital patterns that are built from them.
                   Digital Pattern 5 is the whole process, not one lick. */}
@@ -327,15 +384,12 @@ export default function PracticeDetailRow({
             {/* Left hand, every section. "Same as right hand" leads because
                 that's the most common case on patterns, lines, transcriptions
                 and scale work. */}
-            <select
-              className={sel}
-              value={r.lh_id ?? ""}
-              onChange={(e) => void patch(r.id, { lh_id: e.target.value || null })}
-              title="What the left hand was doing"
-            >
-              <option value="">LH…</option>
-              {lhOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-            </select>
+            <LeftHandSelect
+              row={r}
+              styles={lhStyles}
+              items={lhItems}
+              onChange={(p) => void patch(r.id, p)}
+            />
 
             {/* Key chips — tap the centres worked this rep. No fixed count on
                 purpose (Josh: depends on time and how fast the exercise goes). */}
