@@ -13,7 +13,10 @@
 // Reds-that-are-old bubble to the top; purples-just-done sink. Unrated items
 // (color 0) get treated as red-equivalent so newly-added stuff surfaces.
 
-export type ColorLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+// Level 7 (pink) added 2026-08-02 per Josh: beyond "internalized" there's a
+// further state — lines pulled out of it, sometimes the whole transcription
+// taken through 12 keys. Mastery-memorization.
+export type ColorLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export type PracticeItemKind =
   | "song"
@@ -125,11 +128,54 @@ export const COLOR_SCALE: ColorSpec[] = [
     badgeText: "text-purple-500",
     borderTint: "border-purple-500/40",
   },
+  {
+    level: 7,
+    name: "pink",
+    meaning: "mastery — lines pulled out, 12-keyed",
+    swatchBg: "bg-pink-500",
+    swatchRing: "ring-pink-500/60",
+    badgeBg: "bg-pink-500/15",
+    badgeText: "text-pink-500",
+    borderTint: "border-pink-500/40",
+  },
 ];
 
 export const colorSpec = (level: number): ColorSpec => {
-  const clamped = Math.max(0, Math.min(6, Math.round(level))) as ColorLevel;
+  const clamped = Math.max(0, Math.min(7, Math.round(level))) as ColorLevel;
   return COLOR_SCALE[clamped];
+};
+
+// The SAME colours mean different things per item kind (Josh 8/2). The base
+// COLOR_SCALE wording is line-flavoured; songs and transcriptions have their
+// own ladders in his words. Canonical: wiki/harborline/practice-system-canonical-2026-08.md
+export const MEANINGS_BY_KIND: Record<string, Record<number, string>> = {
+  song: {
+    0: "no rating yet",
+    1: "don't know it at all",
+    2: "have to read it",
+    3: "only read it for the melody",
+    4: "know it, memorized",
+    5: "know it well enough to play in other keys",
+    6: "know it so well I have my own arrangement",
+    7: "mastery — fully my own",
+  },
+  transcription: {
+    0: "no rating yet",
+    1: "haven't started — have it somewhere",
+    2: "know it somewhat; can sing along to most",
+    3: "can sing the whole thing, played through it",
+    4: "can play it, but reading",
+    5: "memorized, performable at concert tempo",
+    6: "dissected",
+    7: "lines pulled out and 12-keyed",
+  },
+};
+
+/** Colour spec with the wording for this item kind (falls back to the line scale). */
+export const colorSpecFor = (kind: string, level: number): ColorSpec => {
+  const base = colorSpec(level);
+  const m = MEANINGS_BY_KIND[kind]?.[base.level];
+  return m ? { ...base, meaning: m } : base;
 };
 
 export const KIND_LABELS: Record<PracticeItemKind, string> = {

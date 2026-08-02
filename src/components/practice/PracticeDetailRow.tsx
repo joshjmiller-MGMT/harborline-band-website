@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { COLOR_SCALE, colorSpec } from "@/lib/practice-mastery";
+import { COLOR_SCALE, colorSpecFor } from "@/lib/practice-mastery";
+
+// Josh does 1, 2 or 4 key centres depending on time — never a fixed count
+// (8/2: "don't suggest a fixed number… maybe you have a dropdown for keys").
+const KEYS = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 
 // Structured practice detail (Josh 2026-08-02). Sits UNDER the free-text box —
 // it supplements, never replaces it ("I like that it's a comment style text box").
@@ -28,7 +32,8 @@ type Tax = {
 type Detail = {
   id: string; segment_id: string;
   method_id: string | null; dim2_id: string | null; dim3_id: string | null;
-  bpm: number | null; range_from: number | null; range_to: number | null; sort_order: number;
+  bpm: number | null; range_from: number | null; range_to: number | null;
+  maintenance: boolean; keys_worked: string[] | null; sort_order: number;
 };
 
 // Patterns work differently again (Josh 8/2): he moves through *Patterns for
@@ -151,7 +156,8 @@ export default function PracticeDetailRow({
       <div className="space-y-1">
         {rows.map((r) => {
           const item = r.method_id ? items.find((i) => i.id === r.method_id) : null;
-          const spec = colorSpec(item?.color_level ?? 0);
+          // Same colours, kind-specific meanings (song vs transcription vs line).
+          const spec = colorSpecFor(itemKind, item?.color_level ?? 0);
           return (
             <div key={r.id} className="flex items-center gap-1 flex-wrap">
               <select
@@ -175,11 +181,22 @@ export default function PracticeDetailRow({
                   onChange={(e) => item && void setItemColor(item.id, Number(e.target.value))}
                 >
                   <option value="">how well?</option>
-                  {COLOR_SCALE.map((c) => (
-                    <option key={c.level} value={c.level}>{c.name} — {c.meaning}</option>
-                  ))}
+                  {COLOR_SCALE.map((c) => {
+                    const s = colorSpecFor(itemKind, c.level);
+                    return <option key={c.level} value={c.level}>{s.name} — {s.meaning}</option>;
+                  })}
                 </select>
               </span>
+
+              {/* Maintenance = held it at its current colour rather than pushed
+                  it up. The coaching engine needs to tell those apart. */}
+              <label className="inline-flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer"
+                title="Worked to KEEP it where it is, rather than move it up">
+                <input type="checkbox" className="accent-current"
+                  checked={r.maintenance}
+                  onChange={(e) => void patch(r.id, { maintenance: e.target.checked })} />
+                upkeep
+              </label>
 
               <select
                 className={sel}
@@ -265,6 +282,24 @@ export default function PracticeDetailRow({
                 {BPMS.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
             )}
+
+            {/* Key chips — tap the centres worked this rep. No fixed count on
+                purpose (Josh: depends on time and how fast the exercise goes). */}
+            <span className="inline-flex items-center gap-0.5 flex-wrap">
+              {KEYS.map((k) => {
+                const on = (r.keys_worked ?? []).includes(k);
+                return (
+                  <button key={k} type="button"
+                    onClick={() => {
+                      const cur = r.keys_worked ?? [];
+                      void patch(r.id, { keys_worked: on ? cur.filter((x) => x !== k) : [...cur, k] });
+                    }}
+                    className={`px-1 py-0.5 rounded text-[9px] border ${on ? "border-primary bg-primary/15 text-primary" : "border-border/60 text-muted-foreground/60 hover:text-muted-foreground"}`}>
+                    {k}
+                  </button>
+                );
+              })}
+            </span>
 
             <button
               type="button"
