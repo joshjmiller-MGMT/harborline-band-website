@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Search, ExternalLink, AlertTriangle, Loader2, FolderOpen } from "lucide-react";
+import { Package, Search, ExternalLink, AlertTriangle, Loader2, FolderOpen, Download } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 // Gig Pack Builder v1 (Josh spec 2026-07-18): setlist in (paste text or import
 // a saved setlist) → every matching chart in the library, grouped per song with
@@ -69,6 +70,68 @@ export default function TeamGigPack() {
   const [results, setResults] = useState<SongResult[] | null>(null);
   const [resolving, setResolving] = useState(false);
   const [signed, setSigned] = useState<Record<string, string>>({});
+  const [zipping, setZipping] = useState(false);
+
+  // Download the whole pack as one zip: set-order numbered folders, per-variation
+  // sub-folders, a manifest inside. The charts bucket is private, so the edge fn
+  // fetches with the service role and streams the zip back.
+  const downloadZip = async () => {
+    if (!results) return;
+    setZipping(true);
+    try {
+      const payload = {
+        gig_date: gigDate,
+        songs: results
+          .filter((r) => r.hits.length)
+          .map((r) => ({
+            song: r.song,
+            charts: r.hits
+              .filter((h) => h.storage_path)
+              .map((h) => ({
+                storage_path: h.storage_path as string,
+                filename: h.filename,
+                variation: variationOf(h.folder_path || ""),
+              })),
+          })),
+      };
+      const { data: sess } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gig-pack-export`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sess?.session?.access_token ?? ""}`,
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t.slice(0, 160) || `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `gig-pack-${gigDate}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      const miss = res.headers.get("X-Charts-Missing");
+      toast({
+        title: `Pack downloaded — ${res.headers.get("X-Charts-Added") ?? "?"} charts`,
+        description: miss && miss !== "0" ? `${miss} couldn't be fetched (listed in _manifest.txt)` : undefined,
+      });
+    } catch (e) {
+      toast({
+        title: "Zip failed",
+        description: e instanceof Error ? e.message : "unknown",
+        variant: "destructive",
+      });
+    } finally {
+      setZipping(false);
+    }
+  };
 
   useEffect(() => {
     supabase
@@ -177,8 +240,18 @@ export default function TeamGigPack() {
 
         {results && (
           <>
-            <div className="text-sm text-muted-foreground mb-4">
-              Pack <span className="font-medium text-foreground">{gigDate}</span> · {found.length} of {results.length} songs covered · {found.reduce((a, r) => a + r.hits.length, 0)} charts
+            <div className="text-sm text-muted-foreground mb-4 flex items-center justify-between gap-3 flex-wrap">
+              <span>
+                Pack <span className="font-medium text-foreground">{gigDate}</span> · {found.length} of {results.length} songs covered · {found.reduce((a, r) => a + r.hits.length, 0)} charts
+              </span>
+              {/* The actual "folder of charts" deliverable — one zip, set-order
+                  numbered, foldered per variation, forScore-importable. */}
+              {found.length > 0 && (
+                <Button size="sm" variant="outline" onClick={() => void downloadZip()} disabled={zipping}>
+                  {zipping ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />}
+                  {zipping ? "Building…" : "Download pack (.zip)"}
+                </Button>
+              )}
             </div>
 
             {missing.length > 0 && (
