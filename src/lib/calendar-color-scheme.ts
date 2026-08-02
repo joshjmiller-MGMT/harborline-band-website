@@ -24,13 +24,17 @@ export const CALENDAR_COLOR_SCHEME: CalendarColorEntry[] = [
   { colorId: "10", name: "Basil", hex: "#0b8043", label: "Warehouse / admin", meaning: "Warehouse + BSE-related non-gig work", countsHours: false },
   { colorId: "9", name: "Blueberry", hex: "#3f51b5", label: "Rehearsal", meaning: "Rehearsal", countsHours: true },
   { colorId: "3", name: "Grape", hex: "#8e24aa", label: "Personal / dev", meaning: "Personal or development work", countsHours: false },
-  { colorId: "4", name: "Flamingo", hex: "#e67c73", label: "Fun", meaning: "Fun / vacations / things with Shina", countsHours: false },
+  // 2026-07-22 (Josh, layered rule — supersedes the 6/22 "Fun" meaning on 4):
+  // Flamingo/Cherry Blossom = NEEDS SUB — a booked player needs a substitute,
+  // distinct from needs-staffing/Tomato(11).
+  { colorId: "4", name: "Flamingo", hex: "#e67c73", label: "Needs sub", meaning: "Booked player needs a substitute (distinct from needs-staffing)", countsHours: false },
   { colorId: "8", name: "Graphite", hex: "#616161", label: "Canceled", meaning: "Canceled — kept as a record, excluded everywhere", countsHours: false },
 ];
 
 // Named ids the dashboard alerts + filters key off of.
 export const HOLD_COLOR_ID = "5"; // Banana — needs a confirm follow-up
 export const NEEDS_STAFFING_COLOR_ID = "11"; // Tomato — confirmed, needs staff
+export const NEEDS_SUB_COLOR_ID = "4"; // Flamingo — booked player needs a substitute (Josh 7/22)
 export const GIG_COLOR_ID = "2"; // Sage — confirmed + staffed
 export const WAREHOUSE_COLOR_ID = "10"; // Basil
 export const REHEARSAL_COLOR_ID = "9"; // Blueberry

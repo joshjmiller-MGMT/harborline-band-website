@@ -33,8 +33,16 @@ type Detail = {
   id: string; segment_id: string;
   method_id: string | null; dim2_id: string | null; dim3_id: string | null;
   bpm: number | null; range_from: number | null; range_to: number | null;
-  maintenance: boolean; keys_worked: string[] | null; sort_order: number;
+  maintenance: boolean; keys_worked: string[] | null;
+  lh_id: string | null; triad_interval: string | null; triad_qualities: string | null;
+  sort_order: number;
 };
+
+// Triad pairs (Josh 8/2, decoding his own "TT(M-M)" shorthand): two triads a
+// fixed interval apart. The CASE is the quality — uppercase major, lowercase
+// minor — which is why the pair is picked separately from the interval.
+const TRIAD_INTERVALS = ["m2","M2","m3","M3","P4","TT","P5","m6","M6","m7","M7"];
+const TRIAD_QUALITIES = ["M-M","M-m","m-M","m-m"];
 
 // Patterns work differently again (Josh 8/2): he moves through *Patterns for
 // Jazz* (Coker) in RANGES — "122-148" means patterns 122 through 148 — and he
@@ -59,7 +67,7 @@ const ITEM_SECTIONS: Record<string, "line" | "song"> = {
   "Lines (RH/LH)": "line",
   Songs: "song",
 };
-type Item = { id: string; kind: string; title: string; color_level: number };
+type Item = { id: string; kind: string; title: string; color_level: number; artist: string | null };
 
 export default function PracticeDetailRow({
   segmentId,
@@ -80,7 +88,7 @@ export default function PracticeDetailRow({
     if (!itemKind) return;
     let alive = true;
     db.from("practice_items")
-      .select("id,kind,title,color_level")
+      .select("id,kind,title,color_level,artist")
       .eq("kind", itemKind)
       .is("archived_at", null)
       .order("title")
@@ -128,6 +136,10 @@ export default function PracticeDetailRow({
     if (scoped.length) return scoped;
     return tax.filter((t) => t.dimension === dim && !t.parent_id && t.applies_to.includes(category));
   };
+
+  // The left hand is its own axis, not a per-method child — nearly every
+  // right-hand exercise in the log names one, across every section.
+  const lhOptions = useMemo(() => tax.filter((t) => t.dimension === "lh"), [tax]);
 
   const patch = async (id: string, p: Partial<Detail>) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...p } : r)));
@@ -197,6 +209,35 @@ export default function PracticeDetailRow({
                   onChange={(e) => void patch(r.id, { maintenance: e.target.checked })} />
                 upkeep
               </label>
+
+              <select
+                className={sel}
+                value={r.lh_id ?? ""}
+                onChange={(e) => void patch(r.id, { lh_id: e.target.value || null })}
+                title="What the left hand was doing"
+              >
+                <option value="">LH…</option>
+                {lhOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+
+              {/* Triad pairs, on the digital patterns that are built from them.
+                  Digital Pattern 5 is the whole process, not one lick. */}
+              {item?.artist === "Digital pattern" && (
+                <>
+                  <select className={sel} value={r.triad_interval ?? ""}
+                    title="Interval between the two triads"
+                    onChange={(e) => void patch(r.id, { triad_interval: e.target.value || null })}>
+                    <option value="">triad int…</option>
+                    {TRIAD_INTERVALS.map((i) => <option key={i} value={i}>{i}</option>)}
+                  </select>
+                  <select className={sel} value={r.triad_qualities ?? ""}
+                    title="Quality of each triad — uppercase major, lowercase minor"
+                    onChange={(e) => void patch(r.id, { triad_qualities: e.target.value || null })}>
+                    <option value="">M/m…</option>
+                    {TRIAD_QUALITIES.map((q) => <option key={q} value={q}>{q}</option>)}
+                  </select>
+                </>
+              )}
 
               <select
                 className={sel}
@@ -282,6 +323,19 @@ export default function PracticeDetailRow({
                 {BPMS.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
             )}
+
+            {/* Left hand, every section. "Same as right hand" leads because
+                that's the most common case on patterns, lines, transcriptions
+                and scale work. */}
+            <select
+              className={sel}
+              value={r.lh_id ?? ""}
+              onChange={(e) => void patch(r.id, { lh_id: e.target.value || null })}
+              title="What the left hand was doing"
+            >
+              <option value="">LH…</option>
+              {lhOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
 
             {/* Key chips — tap the centres worked this rep. No fixed count on
                 purpose (Josh: depends on time and how fast the exercise goes). */}

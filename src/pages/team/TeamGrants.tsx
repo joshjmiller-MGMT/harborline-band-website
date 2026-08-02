@@ -21,13 +21,25 @@ type GrantRow = {
   sort_order: number;
 };
 
-const STATUSES = ["researching", "drafting", "submitted", "awarded", "declined", "skip", "bookmark"];
+// Full status vocabulary — must cover every value actually present in the grants
+// table (7/19 audit found rows whose status fell outside the dropdown and rendered
+// unstyled: missed-next-cycle, plus open-apply/watch/apply-next/conditional from
+// the 7/31 shortlist pass).
+const STATUSES = [
+  "researching", "drafting", "open-apply", "apply-next", "watch", "conditional",
+  "submitted", "awarded", "declined", "missed-next-cycle", "skip", "bookmark",
+];
 const STATUS_STYLE: Record<string, string> = {
   researching: "bg-amber-500/15 text-amber-400",
   drafting: "bg-primary/15 text-primary",
+  "open-apply": "bg-emerald-500/15 text-emerald-400",
+  "apply-next": "bg-primary/15 text-primary",
+  watch: "bg-sky-500/15 text-sky-400",
+  conditional: "bg-amber-500/15 text-amber-400",
   submitted: "bg-accent/15 text-accent",
   awarded: "bg-emerald-500/15 text-emerald-400",
   declined: "bg-rose-500/15 text-rose-400",
+  "missed-next-cycle": "bg-orange-500/15 text-orange-400",
   skip: "bg-muted/60 text-muted-foreground",
   bookmark: "bg-muted/60 text-muted-foreground",
 };

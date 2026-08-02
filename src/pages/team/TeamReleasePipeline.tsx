@@ -37,6 +37,12 @@ function daysUntil(date: string | null): string {
   if (days === 0) return "today";
   return `in ${days}d`;
 }
+// A passed release date with an unfinished checklist is a danger state, not
+// neutral history — flag it instead of rendering gray "Nd ago" (7/19 audit).
+function isPast(date: string | null): boolean {
+  if (!date) return false;
+  return new Date(date + "T00:00:00").getTime() < Date.now();
+}
 function fmtDate(date: string | null): string {
   if (!date) return "TBD";
   return new Date(date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -124,7 +130,10 @@ export default function TeamReleasePipeline() {
                     </div>
                     <div className="mt-2 font-medium text-sm">{s.working_title || "Untitled"}</div>
                     <div className="mt-1 text-2xl font-display text-gradient-brand">{fmtDate(s.release_date)}</div>
-                    <div className="text-xs text-muted-foreground">{daysUntil(s.release_date)}</div>
+                    <div className={`text-xs ${isPast(s.release_date) && sd < st.length ? "text-rose-400 font-medium" : "text-muted-foreground"}`}>
+                      {daysUntil(s.release_date)}
+                      {isPast(s.release_date) && sd < st.length ? ` · ${st.length - sd} tasks open` : ""}
+                    </div>
                     <div className="mt-2 text-xs text-muted-foreground">
                       {sd}/{st.length} tasks · {s.status}
                     </div>
@@ -153,7 +162,9 @@ export default function TeamReleasePipeline() {
                 <section key={s.id} className="mb-8">
                   <h2 className="font-display text-lg tracking-wide mb-2">
                     Single {s.single_no} — {fmtDate(s.release_date)}{" "}
-                    <span className="text-sm text-muted-foreground">({daysUntil(s.release_date)})</span>
+                    <span className={`text-sm ${isPast(s.release_date) && st.some((t) => t.status !== "done") ? "text-rose-400" : "text-muted-foreground"}`}>
+                      ({daysUntil(s.release_date)}{isPast(s.release_date) && st.some((t) => t.status !== "done") ? " · checklist open" : ""})
+                    </span>
                   </h2>
                   <div className="rounded-lg border border-border bg-card/30 p-2">
                     {st.map((t) => (

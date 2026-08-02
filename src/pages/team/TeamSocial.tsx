@@ -6,15 +6,16 @@ import ContentIngestLogWidget from "@/components/social/ContentIngestLogWidget";
 import ContentSmartGoalsWidget from "@/components/social/ContentSmartGoalsWidget";
 import { Share2 } from "lucide-react";
 
-// Social page IA (Josh as social-media-manager, 2026-07-07):
-// 1. Social Media MANAGER is the main hub → TOP. Its Ideas→Drafting→Scheduled→
-//    Posted pipeline is the working surface; ingested/feed ideas belong in its
-//    Ideas column.
-// 2. Content queue (Des handoff) + posting times = supporting tools, below.
-// 3. Content SMART goals stay, but they're big goals — break down ONE AT A TIME
-//    through smartification (via /team/review), not all at once.
-// 4. Content ingest log = raw intake at the bottom; actionable items flow
-//    through review/smartification, not worked from here.
+// Social page IA — RE-SCOPED 2026-08-02 to match where the work actually happens
+// (7/19 surface audit: social_sources = 0 rows, social_posts = 1 row ever, while
+// content_ingest_log carries 845 rows and social_content_queue carries the Des
+// handoff). The declared hub had inverted the real information architecture.
+// 1. Content queue (Des handoff) = the working surface → TOP.
+// 2. Content ingest log = the live intake with real volume; actionable items
+//    flow through review/smartification, not worked from here.
+// 3. Posting times + SMART goals = supporting tools.
+// 4. Social Media MANAGER (Ideas→Drafting→Scheduled→Posted) is kept intact but
+//    demoted until it earns adoption — nothing removed (no-wholesale-replacement).
 export default function TeamSocial() {
   return (
     <TeamLayout>
@@ -24,23 +25,23 @@ export default function TeamSocial() {
             <Share2 className="w-7 h-7 text-primary" /> Social
           </h1>
           <p className="text-muted-foreground mt-2">
-            The manager is the hub — ideas land in its Ideas column, everything else supports it.
+            Queue for Des first, live intake second — the tools follow the work.
           </p>
         </div>
 
         <div className="space-y-6">
-          {/* 1 — THE HUB */}
-          <SocialManagerWidget />
-
-          {/* 2 — supporting tools */}
+          {/* 1 — the working surface: what goes to Des */}
           <SocialContentQueueManager />
-          <PostingTimesWidget />
 
-          {/* 3 — big goals (break down one at a time via review/smartify) */}
+          {/* 2 — live intake; actionable items flow to review/smartification */}
+          <ContentIngestLogWidget />
+
+          {/* 3 — supporting tools */}
+          <PostingTimesWidget />
           <ContentSmartGoalsWidget />
 
-          {/* 4 — raw intake; actionable items flow to review/smartification */}
-          <ContentIngestLogWidget />
+          {/* 4 — pipeline board, kept but demoted until it earns adoption */}
+          <SocialManagerWidget />
         </div>
       </div>
     </TeamLayout>

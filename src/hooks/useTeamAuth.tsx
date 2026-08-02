@@ -50,14 +50,21 @@ export function TeamAuthProvider({ children }: { children: ReactNode }) {
     const uid = session?.user?.id;
     if (!uid) { setRole("member"); return; }
     let alive = true;
-    supabase
-      .from("team_profiles")
-      .select("role")
-      .eq("user_id", uid)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (alive && data?.role) setRole(data.role as TeamRole);
-      });
+    // Ask the database directly (security-definer RPC). Reading team_profiles
+    // from the client put a policy, PostgREST exposure and the schema cache
+    // between Josh and his own nav — when any of them said nothing, the
+    // least-privilege fallback silently demoted the owner to a member menu.
+    void (async () => {
+      const { data, error } = await (supabase as unknown as {
+        rpc: (fn: string) => Promise<{ data: string | null; error: unknown }>;
+      }).rpc("my_role");
+      if (!alive) return;
+      if (data) { setRole(data as TeamRole); return; }
+      if (error) console.warn("[team-auth] role lookup failed, falling back", error);
+      const { data: row } = await supabase
+        .from("team_profiles").select("role").eq("user_id", uid).maybeSingle();
+      if (alive && row?.role) setRole(row.role as TeamRole);
+    })();
     return () => { alive = false; };
   }, [session?.user?.id]);
 

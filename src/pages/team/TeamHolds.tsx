@@ -46,11 +46,51 @@ function fmt(d: string | null): string {
   return d ? new Date(d).toLocaleDateString([], { month: "short", day: "numeric" }) : "—";
 }
 
+// Drafted messages (Lou job 2026-07-20): when a check is due, both sides of the
+// loop are pre-written — Josh one-taps copy and sends. Goal: the player never
+// has to come back and ask.
+function first(name: string | null): string {
+  return (name || "").split(" ")[0] || "";
+}
+function fmtEventDate(d: string | null): string {
+  return d ? new Date(`${d}T00:00:00`).toLocaleDateString([], { month: "numeric", day: "numeric" }) : "that date";
+}
+function draftRepNudge(h: Hold): string {
+  const date = fmtEventDate(h.event_date);
+  const label = h.event_label ? ` (${h.event_label})` : "";
+  const holding = h.musician ? ` Still holding ${first(h.musician)} for it and want to give him an answer soon.` : "";
+  return `Hey ${first(h.sales_rep) || "there"} — any update on the ${date} date${label}?${holding}`;
+}
+function draftPlayerUpdate(h: Hold): string {
+  const date = fmtEventDate(h.event_date);
+  return `Hey ${first(h.musician) || "man"} — still holding you for ${date}. No confirmation from the client yet. I'll let you know the moment I hear back.`;
+}
+function draftPlayerFinal(h: Hold, status: string): string {
+  const date = fmtEventDate(h.event_date);
+  if (status === "confirmed") {
+    return `Hey ${first(h.musician) || "man"} — ${date} is confirmed. You're on. Details coming your way.`;
+  }
+  return `Hey ${first(h.musician) || "man"} — ${date} fell through, so you're released from that hold. Thanks for keeping it open. More coming.`;
+}
+
 export default function TeamHolds() {
   const [rows, setRows] = useState<Hold[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Partial<Hold>>({ agency: "BSE", followup_cadence: "weekly", musician_status: "available", hold_status: "open" });
+  // Which hold's drafted messages are open, and (if a hold just closed) the
+  // auto-drafted definitive player note to send.
+  const [draftsOpen, setDraftsOpen] = useState<string | null>(null);
+  const [finalNote, setFinalNote] = useState<{ holdId: string; text: string } | null>(null);
+
+  const copyText = async (label: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: `${label} copied`, description: "Paste it into the thread and send." });
+    } catch {
+      toast({ title: "Couldn't copy", description: text, variant: "destructive" });
+    }
+  };
 
   const load = async () => {
     const { data } = await supabase.from("sales_holds").select("*").order("event_date", { ascending: true, nullsFirst: false });
@@ -155,7 +195,26 @@ export default function TeamHolds() {
                       <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => markTold(h)}>
                         <MessageCircle className="w-3 h-3" /> Told {h.musician?.split(" ")[0] || "player"}
                       </Button>
-                      <Select value={h.hold_status} onValueChange={(v) => patch(h.id, { hold_status: v })}>
+                      <Button
+                        size="sm"
+                        variant={due(h.next_check_at) ? "outline" : "ghost"}
+                        className={`h-7 text-xs gap-1 ${due(h.next_check_at) ? "border-yellow-500/40 text-yellow-600" : ""}`}
+                        onClick={() => setDraftsOpen(draftsOpen === h.id ? null : h.id)}
+                      >
+                        <MessageCircle className="w-3 h-3" /> Draft messages
+                      </Button>
+                      <Select
+                        value={h.hold_status}
+                        onValueChange={(v) => {
+                          patch(h.id, { hold_status: v });
+                          // Closing the loop (confirmed/lost) auto-drafts the
+                          // definitive note so the player never has to ask.
+                          if ((v === "confirmed" || v === "lost") && h.musician) {
+                            setFinalNote({ holdId: h.id, text: draftPlayerFinal(h, v) });
+                            setDraftsOpen(h.id);
+                          }
+                        }}
+                      >
                         <SelectTrigger className="h-7 w-[110px] text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>{HOLD_STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                       </Select>
@@ -164,6 +223,35 @@ export default function TeamHolds() {
                         <SelectContent>{MUS_STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
+                    {draftsOpen === h.id && (
+                      <div className="mt-2 pt-2 border-t border-border/40 space-y-2">
+                        {finalNote?.holdId === h.id && (
+                          <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2">
+                            <p className="text-[11px] font-medium text-emerald-600 mb-1">Definitive note to {first(h.musician) || "player"} — send this now</p>
+                            <p className="text-xs text-foreground/90">{finalNote.text}</p>
+                            <Button size="sm" variant="outline" className="h-6 text-[11px] mt-1.5" onClick={() => copyText("Player note", finalNote.text)}>
+                              Copy
+                            </Button>
+                          </div>
+                        )}
+                        <div className="rounded-md border border-border/40 bg-muted/10 p-2">
+                          <p className="text-[11px] font-medium text-muted-foreground mb-1">Nudge {first(h.sales_rep) || "the rep"}</p>
+                          <p className="text-xs text-foreground/90">{draftRepNudge(h)}</p>
+                          <Button size="sm" variant="ghost" className="h-6 text-[11px] mt-1.5" onClick={() => { void copyText("Rep nudge", draftRepNudge(h)); markChecked(h); }}>
+                            Copy + mark checked
+                          </Button>
+                        </div>
+                        {h.musician && (
+                          <div className="rounded-md border border-border/40 bg-muted/10 p-2">
+                            <p className="text-[11px] font-medium text-muted-foreground mb-1">Update {first(h.musician)}</p>
+                            <p className="text-xs text-foreground/90">{draftPlayerUpdate(h)}</p>
+                            <Button size="sm" variant="ghost" className="h-6 text-[11px] mt-1.5" onClick={() => { void copyText("Player update", draftPlayerUpdate(h)); markTold(h); }}>
+                              Copy + mark told
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}

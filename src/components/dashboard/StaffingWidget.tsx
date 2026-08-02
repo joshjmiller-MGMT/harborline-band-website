@@ -21,15 +21,21 @@ import { CalendarColorLegend } from "./CalendarColorLegend";
 import {
   HOLD_COLOR_ID,
   NEEDS_STAFFING_COLOR_ID,
+  NEEDS_SUB_COLOR_ID,
   GIG_COLOR_ID,
 } from "@/lib/calendar-color-scheme";
 
 // Josh 2026-06-22: the staffing board surfaces ONLY needs-staffing items =
 // red (Tomato/11) + orange (Tangerine/6). Everything else (warehouse dark-green,
-// gig light-green, yellow holds) is excluded. NB: the staffing-snapshot edge fn
-// currently only fetches {2, 11, 5}, so orange(6) won't appear on the board until
-// that fn is extended to include it — flagged to JARSH in the handoff.
-const NEEDS_STAFFING_BOARD_COLOR_IDS = new Set([NEEDS_STAFFING_COLOR_ID, "6"]);
+// gig light-green, yellow holds) is excluded. 2026-08-02: the staffing-snapshot
+// edge fn now fetches orange(6) too, closing the gap flagged in the 7/19 audit.
+// 2026-07-22 (Josh): Flamingo(4) = needs_sub — a booked player needs a
+// SUBSTITUTE. Surfaced on this board with its own label.
+const NEEDS_STAFFING_BOARD_COLOR_IDS = new Set([
+  NEEDS_STAFFING_COLOR_ID,
+  "6",
+  NEEDS_SUB_COLOR_ID,
+]);
 
 type StaffEntry = {
   name: string;
@@ -51,6 +57,7 @@ type StaffingEvent = {
   htmlLink: string;
   colorId: string;
   is_hold?: boolean;
+  needs_sub?: boolean;
   expected_headcount: number | null;
   expected_source: string;
   staffed_count: number;
@@ -161,6 +168,12 @@ function EventRow({ ev, onSaved }: { ev: StaffingEvent; onSaved: () => void }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm truncate">{ev.title}</span>
+            {ev.needs_sub && (
+              <Badge variant="outline" className="bg-pink-500/10 text-pink-600 border-pink-500/30 text-xs">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Needs sub
+              </Badge>
+            )}
             {status === "staffed" && (
               <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30 text-xs">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -467,7 +480,7 @@ export default function StaffingWidget({
 
             {data && data.connected && visible.length === 0 && (
               <div className="text-sm text-muted-foreground py-4 text-center">
-                Nothing needs staffing (red / orange) in this window.
+                Nothing needs staffing (red / orange) or a sub (pink) in this window.
               </div>
             )}
 
@@ -535,7 +548,7 @@ export default function StaffingWidget({
                     scheme (that legend lives on the unified calendar). Josh 2026-07: the
                     scheduler's staffing section should show only staffing statuses. */}
                 <CalendarColorLegend
-                  colorIds={[HOLD_COLOR_ID, NEEDS_STAFFING_COLOR_ID, GIG_COLOR_ID]}
+                  colorIds={[HOLD_COLOR_ID, NEEDS_STAFFING_COLOR_ID, NEEDS_SUB_COLOR_ID, GIG_COLOR_ID]}
                 />
               </div>
             )}

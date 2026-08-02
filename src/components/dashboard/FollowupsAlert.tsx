@@ -21,14 +21,27 @@ const VENTURE_DOT: Record<string, string> = {
 
 type ContactFollowup = { id: string; name: string; phone: string | null; email: string | null };
 
+// Sales holds whose rep check-in is due (Lou job 2026-07-20): the hold loop is
+// self-nudging — due check-ins surface here next to task follow-ups, and the
+// drafted rep/player messages live one click away on /team/holds.
+type DueHold = {
+  id: string;
+  event_date: string | null;
+  event_label: string | null;
+  sales_rep: string | null;
+  musician: string | null;
+  next_check_at: string | null;
+};
+
 export default function FollowupsAlert() {
   const [rows, setRows] = useState<Followup[]>([]);
   const [people, setPeople] = useState<ContactFollowup[]>([]);
+  const [dueHolds, setDueHolds] = useState<DueHold[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void (async () => {
-      const [tasks, contacts] = await Promise.all([
+      const [tasks, contacts, holds] = await Promise.all([
         supabase
           .from("smart_task_enrichments")
           .select("id, revised_title, raw_input, board_venture, due_date")
@@ -40,14 +53,21 @@ export default function FollowupsAlert() {
           .select("id, name, phone, email")
           .eq("followup", true)
           .order("name", { ascending: true }),
+        supabase
+          .from("sales_holds")
+          .select("id, event_date, event_label, sales_rep, musician, next_check_at")
+          .eq("hold_status", "open")
+          .lte("next_check_at", new Date().toISOString())
+          .order("event_date", { ascending: true, nullsFirst: false }),
       ]);
       setRows((tasks.data ?? []) as Followup[]);
       setPeople((contacts.data ?? []) as ContactFollowup[]);
+      setDueHolds((holds.data ?? []) as DueHold[]);
       setLoading(false);
     })();
   }, []);
 
-  if (loading || (rows.length === 0 && people.length === 0)) return null;
+  if (loading || (rows.length === 0 && people.length === 0 && dueHolds.length === 0)) return null;
 
   return (
     <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
@@ -55,7 +75,8 @@ export default function FollowupsAlert() {
         <h3 className="font-medium text-foreground flex items-center gap-2">
           <Repeat className="w-4 h-4 text-accent" /> Follow-ups
           <span className="text-xs text-muted-foreground">
-            ({rows.length} task{rows.length === 1 ? "" : "s"} · {people.length} people)
+            ({rows.length} task{rows.length === 1 ? "" : "s"} · {people.length} people
+            {dueHolds.length > 0 ? ` · ${dueHolds.length} hold check-in${dueHolds.length === 1 ? "" : "s"}` : ""})
           </span>
         </h3>
         <span className="flex items-center gap-3">
@@ -78,8 +99,32 @@ export default function FollowupsAlert() {
           ))}
         </ul>
       )}
-      {people.length > 0 && (
+      {dueHolds.length > 0 && (
         <div className={rows.length > 0 ? "mt-2 pt-2 border-t border-accent/20" : ""}>
+          <p className="text-[11px] text-muted-foreground mb-1">Hold check-ins due (chase the rep):</p>
+          <ul className="space-y-1">
+            {dueHolds.slice(0, 6).map((h) => (
+              <li key={h.id} className="flex items-center gap-2 text-sm">
+                <span className="w-2 h-2 rounded-full shrink-0 bg-yellow-500" />
+                <Link to="/team/holds" className="text-foreground truncate flex-1 hover:text-accent">
+                  {h.event_date || "?"} · {h.event_label || "hold"}
+                  {h.sales_rep ? ` — ask ${h.sales_rep}` : ""}
+                  {h.musician ? ` (holding ${h.musician.split(" ")[0]})` : ""}
+                </Link>
+              </li>
+            ))}
+            {dueHolds.length > 6 && (
+              <li>
+                <Link to="/team/holds" className="text-xs text-accent hover:underline">
+                  +{dueHolds.length - 6} more on Sales Holds
+                </Link>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+      {people.length > 0 && (
+        <div className={rows.length > 0 || dueHolds.length > 0 ? "mt-2 pt-2 border-t border-accent/20" : ""}>
           <p className="text-[11px] text-muted-foreground mb-1">Follow up with:</p>
           {/* Clean person chips only (task-junk lives on boards now, Josh 7/19).
               Capped at 8; the rest are one click away on Contacts. */}

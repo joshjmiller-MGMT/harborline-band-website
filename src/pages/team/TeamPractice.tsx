@@ -84,7 +84,7 @@ export default function TeamPractice() {
   const [logSubmitting, setLogSubmitting] = useState(false);
   const [quickText, setQuickText] = useState("");
   const [parsing, setParsing] = useState(false);
-  // Card [10]: "Song of the day" suggests from the JMJ practice repertoire
+  // Card [10]: "Song of the day" suggests from the JJM practice repertoire
   // (practice_songs) — distinct from the Harborline catalog + chart library.
   const [practiceSongTitles, setPracticeSongTitles] = useState<string[]>([]);
 
@@ -452,7 +452,7 @@ export default function TeamPractice() {
                     ))}
                   </datalist>
                   <p className="text-[11px] text-muted-foreground">
-                    From your JMJ practice repertoire ({practiceSongTitles.length}) — or type a new one.
+                    From your JJM practice repertoire ({practiceSongTitles.length}) — or type a new one.
                   </p>
                 </div>
                 <div className="space-y-1.5">

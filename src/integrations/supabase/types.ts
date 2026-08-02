@@ -14,6 +14,271 @@ export type Database = {
   }
   public: {
     Tables: {
+      act_epk_assets: {
+        Row: {
+          act_id: string
+          asset_id: string
+          asset_source: string
+          created_at: string
+          id: string
+          role: string | null
+          sort_order: number
+        }
+        Insert: {
+          act_id: string
+          asset_id: string
+          asset_source: string
+          created_at?: string
+          id?: string
+          role?: string | null
+          sort_order?: number
+        }
+        Update: {
+          act_id?: string
+          asset_id?: string
+          asset_source?: string
+          created_at?: string
+          id?: string
+          role?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "act_epk_assets_act_id_fkey"
+            columns: ["act_id"]
+            isOneToOne: false
+            referencedRelation: "acts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      acts: {
+        Row: {
+          bio_long: string | null
+          bio_short: string | null
+          booking_email: string | null
+          booking_phone: string | null
+          commission_pct: number | null
+          created_at: string
+          epk_is_public: boolean
+          id: string
+          kind: string
+          legacy_venture_tags: string[]
+          listen_smart_link_slug: string | null
+          name: string
+          notes: string | null
+          one_liner: string | null
+          slug: string
+          socials: Json
+          sort_order: number
+          status: string
+          updated_at: string
+          voice_locked: boolean
+          website_url: string | null
+        }
+        Insert: {
+          bio_long?: string | null
+          bio_short?: string | null
+          booking_email?: string | null
+          booking_phone?: string | null
+          commission_pct?: number | null
+          created_at?: string
+          epk_is_public?: boolean
+          id?: string
+          kind?: string
+          legacy_venture_tags?: string[]
+          listen_smart_link_slug?: string | null
+          name: string
+          notes?: string | null
+          one_liner?: string | null
+          slug: string
+          socials?: Json
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          voice_locked?: boolean
+          website_url?: string | null
+        }
+        Update: {
+          bio_long?: string | null
+          bio_short?: string | null
+          booking_email?: string | null
+          booking_phone?: string | null
+          commission_pct?: number | null
+          created_at?: string
+          epk_is_public?: boolean
+          id?: string
+          kind?: string
+          legacy_venture_tags?: string[]
+          listen_smart_link_slug?: string | null
+          name?: string
+          notes?: string | null
+          one_liner?: string | null
+          slug?: string
+          socials?: Json
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          voice_locked?: boolean
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      agent_jobs: {
+        Row: {
+          agent_id: string
+          blocked_reason: string | null
+          created_at: string
+          created_by: string
+          finished_at: string | null
+          id: string
+          instruction: string
+          result_md: string | null
+          source_ref: string | null
+          started_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          blocked_reason?: string | null
+          created_at?: string
+          created_by?: string
+          finished_at?: string | null
+          id?: string
+          instruction: string
+          result_md?: string | null
+          source_ref?: string | null
+          started_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          blocked_reason?: string | null
+          created_at?: string
+          created_by?: string
+          finished_at?: string | null
+          id?: string
+          instruction?: string
+          result_md?: string | null
+          source_ref?: string | null
+          started_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_teammates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_messages: {
+        Row: {
+          agent_id: string
+          body: string
+          created_at: string
+          id: string
+          job_id: string | null
+          kind: string
+          role: string
+          ticket_ref: string | null
+        }
+        Insert: {
+          agent_id: string
+          body: string
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          kind?: string
+          role: string
+          ticket_ref?: string | null
+        }
+        Update: {
+          agent_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          kind?: string
+          role?: string
+          ticket_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_messages_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_teammates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_messages_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "agent_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_teammates: {
+        Row: {
+          charter_ref: string | null
+          color: string
+          created_at: string
+          current_action: string | null
+          emoji: string
+          field: string
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+          status: string
+          system_prompt: string
+          tagline: string
+          updated_at: string
+        }
+        Insert: {
+          charter_ref?: string | null
+          color?: string
+          created_at?: string
+          current_action?: string | null
+          emoji?: string
+          field: string
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+          status?: string
+          system_prompt: string
+          tagline?: string
+          updated_at?: string
+        }
+        Update: {
+          charter_ref?: string | null
+          color?: string
+          created_at?: string
+          current_action?: string | null
+          emoji?: string
+          field?: string
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+          status?: string
+          system_prompt?: string
+          tagline?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       archive_event_hashes: {
         Row: {
           content_hash: string
@@ -521,10 +786,12 @@ export type Database = {
           search_tsv: unknown
           setlists: string[]
           sha256: string | null
+          sheet_type: string | null
           storage_path: string | null
           tags: string[]
           time_signature: string | null
           title: string
+          title_search: string | null
           updated_at: string
         }
         Insert: {
@@ -551,10 +818,12 @@ export type Database = {
           search_tsv?: unknown
           setlists?: string[]
           sha256?: string | null
+          sheet_type?: string | null
           storage_path?: string | null
           tags?: string[]
           time_signature?: string | null
           title: string
+          title_search?: string | null
           updated_at?: string
         }
         Update: {
@@ -581,10 +850,12 @@ export type Database = {
           search_tsv?: unknown
           setlists?: string[]
           sha256?: string | null
+          sheet_type?: string | null
           storage_path?: string | null
           tags?: string[]
           time_signature?: string | null
           title?: string
+          title_search?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -682,8 +953,102 @@ export type Database = {
         }
         Relationships: []
       }
+      chart_index_quarantine: {
+        Row: {
+          composer: string | null
+          created_at: string
+          difficulty: string | null
+          drive_account_email: string | null
+          drive_id: string | null
+          drive_uploaded_at: string | null
+          drive_web_view_link: string | null
+          duration: string | null
+          file_size: number | null
+          filename: string
+          folder_path: string
+          genre: string | null
+          id: string
+          ireal_pro: string[]
+          key_signature: string | null
+          keywords: string | null
+          last_synced_at: string
+          metadata_csv_row: Json | null
+          rating: string | null
+          reference: string | null
+          search_tsv: unknown
+          setlists: string[]
+          sha256: string | null
+          storage_path: string | null
+          tags: string[]
+          time_signature: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          composer?: string | null
+          created_at?: string
+          difficulty?: string | null
+          drive_account_email?: string | null
+          drive_id?: string | null
+          drive_uploaded_at?: string | null
+          drive_web_view_link?: string | null
+          duration?: string | null
+          file_size?: number | null
+          filename: string
+          folder_path: string
+          genre?: string | null
+          id?: string
+          ireal_pro?: string[]
+          key_signature?: string | null
+          keywords?: string | null
+          last_synced_at?: string
+          metadata_csv_row?: Json | null
+          rating?: string | null
+          reference?: string | null
+          search_tsv?: unknown
+          setlists?: string[]
+          sha256?: string | null
+          storage_path?: string | null
+          tags?: string[]
+          time_signature?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          composer?: string | null
+          created_at?: string
+          difficulty?: string | null
+          drive_account_email?: string | null
+          drive_id?: string | null
+          drive_uploaded_at?: string | null
+          drive_web_view_link?: string | null
+          duration?: string | null
+          file_size?: number | null
+          filename?: string
+          folder_path?: string
+          genre?: string | null
+          id?: string
+          ireal_pro?: string[]
+          key_signature?: string | null
+          keywords?: string | null
+          last_synced_at?: string
+          metadata_csv_row?: Json | null
+          rating?: string | null
+          reference?: string | null
+          search_tsv?: unknown
+          setlists?: string[]
+          sha256?: string | null
+          storage_path?: string | null
+          tags?: string[]
+          time_signature?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       claude_action_queue: {
         Row: {
+          agent_id: string | null
           card_desc: string | null
           card_name: string
           card_url: string
@@ -700,6 +1065,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agent_id?: string | null
           card_desc?: string | null
           card_name: string
           card_url: string
@@ -716,6 +1082,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agent_id?: string | null
           card_desc?: string | null
           card_name?: string
           card_url?: string
@@ -732,6 +1099,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "claude_action_queue_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_teammates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "claude_action_queue_trello_card_id_fkey"
             columns: ["trello_card_id"]
@@ -795,6 +1169,204 @@ export type Database = {
           trello_card_id?: string | null
           updated_at?: string
           venture?: string | null
+        }
+        Relationships: []
+      }
+      contacts_backup_20260728: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          followup: boolean | null
+          followup_note: string | null
+          id: string | null
+          name: string | null
+          notes: string | null
+          org: string | null
+          phone: string | null
+          role: string | null
+          sheet_synced: boolean | null
+          source: string | null
+          tags: string[] | null
+          trello_card_id: string | null
+          updated_at: string | null
+          venture: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          followup?: boolean | null
+          followup_note?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          org?: string | null
+          phone?: string | null
+          role?: string | null
+          sheet_synced?: boolean | null
+          source?: string | null
+          tags?: string[] | null
+          trello_card_id?: string | null
+          updated_at?: string | null
+          venture?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          followup?: boolean | null
+          followup_note?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          org?: string | null
+          phone?: string | null
+          role?: string | null
+          sheet_synced?: boolean | null
+          source?: string | null
+          tags?: string[] | null
+          trello_card_id?: string | null
+          updated_at?: string | null
+          venture?: string | null
+        }
+        Relationships: []
+      }
+      contacts_backup_20260728_lanes: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          followup: boolean | null
+          followup_note: string | null
+          id: string | null
+          name: string | null
+          notes: string | null
+          org: string | null
+          phone: string | null
+          role: string | null
+          sheet_synced: boolean | null
+          source: string | null
+          tags: string[] | null
+          trello_card_id: string | null
+          updated_at: string | null
+          venture: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          followup?: boolean | null
+          followup_note?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          org?: string | null
+          phone?: string | null
+          role?: string | null
+          sheet_synced?: boolean | null
+          source?: string | null
+          tags?: string[] | null
+          trello_card_id?: string | null
+          updated_at?: string | null
+          venture?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          followup?: boolean | null
+          followup_note?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          org?: string | null
+          phone?: string | null
+          role?: string | null
+          sheet_synced?: boolean | null
+          source?: string | null
+          tags?: string[] | null
+          trello_card_id?: string | null
+          updated_at?: string | null
+          venture?: string | null
+        }
+        Relationships: []
+      }
+      contacts_echo_purge_20260801: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          followup: boolean | null
+          followup_note: string | null
+          id: string | null
+          name: string | null
+          notes: string | null
+          org: string | null
+          phone: string | null
+          role: string | null
+          sheet_synced: boolean | null
+          source: string | null
+          tags: string[] | null
+          trello_card_id: string | null
+          updated_at: string | null
+          venture: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          followup?: boolean | null
+          followup_note?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          org?: string | null
+          phone?: string | null
+          role?: string | null
+          sheet_synced?: boolean | null
+          source?: string | null
+          tags?: string[] | null
+          trello_card_id?: string | null
+          updated_at?: string | null
+          venture?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          followup?: boolean | null
+          followup_note?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          org?: string | null
+          phone?: string | null
+          role?: string | null
+          sheet_synced?: boolean | null
+          source?: string | null
+          tags?: string[] | null
+          trello_card_id?: string | null
+          updated_at?: string | null
+          venture?: string | null
+        }
+        Relationships: []
+      }
+      contacts_merge_log: {
+        Row: {
+          id: string
+          loser_id: string
+          loser_row: Json
+          merged_at: string
+          reason: string
+          survivor_id: string
+        }
+        Insert: {
+          id?: string
+          loser_id: string
+          loser_row: Json
+          merged_at?: string
+          reason: string
+          survivor_id: string
+        }
+        Update: {
+          id?: string
+          loser_id?: string
+          loser_row?: Json
+          merged_at?: string
+          reason?: string
+          survivor_id?: string
         }
         Relationships: []
       }
@@ -966,6 +1538,75 @@ export type Database = {
         }
         Relationships: []
       }
+      curriculum_items: {
+        Row: {
+          course_code: string
+          credits: number | null
+          description: string | null
+          id: string
+          mentorship_note: string | null
+          program: string
+          readings: Json | null
+          semester: number
+          sort: number | null
+          title: string
+          variants: Json | null
+          weeks: Json | null
+        }
+        Insert: {
+          course_code: string
+          credits?: number | null
+          description?: string | null
+          id?: string
+          mentorship_note?: string | null
+          program: string
+          readings?: Json | null
+          semester: number
+          sort?: number | null
+          title: string
+          variants?: Json | null
+          weeks?: Json | null
+        }
+        Update: {
+          course_code?: string
+          credits?: number | null
+          description?: string | null
+          id?: string
+          mentorship_note?: string | null
+          program?: string
+          readings?: Json | null
+          semester?: number
+          sort?: number | null
+          title?: string
+          variants?: Json | null
+          weeks?: Json | null
+        }
+        Relationships: []
+      }
+      daily_briefs: {
+        Row: {
+          brief_date: string
+          brief_md: string
+          created_at: string
+          id: string
+          source: string
+        }
+        Insert: {
+          brief_date: string
+          brief_md: string
+          created_at?: string
+          id?: string
+          source?: string
+        }
+        Update: {
+          brief_date?: string
+          brief_md?: string
+          created_at?: string
+          id?: string
+          source?: string
+        }
+        Relationships: []
+      }
       djep_events_cache: {
         Row: {
           cache_key: string
@@ -999,6 +1640,149 @@ export type Database = {
           raw?: Json | null
           refreshed_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      epk_components: {
+        Row: {
+          act_id: string
+          component: string
+          id: string
+          link: string | null
+          note: string | null
+          sort_order: number
+          source_ref: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          act_id: string
+          component: string
+          id?: string
+          link?: string | null
+          note?: string | null
+          sort_order?: number
+          source_ref?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          act_id?: string
+          component?: string
+          id?: string
+          link?: string | null
+          note?: string | null
+          sort_order?: number
+          source_ref?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epk_components_act_id_fkey"
+            columns: ["act_id"]
+            isOneToOne: false
+            referencedRelation: "acts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fan_broadcasts: {
+        Row: {
+          body: string
+          channel: string
+          created_at: string
+          created_by: string | null
+          failed: number
+          id: string
+          recipients: number
+          segment: string
+          sent: number
+          status: string
+          subject: string | null
+        }
+        Insert: {
+          body: string
+          channel: string
+          created_at?: string
+          created_by?: string | null
+          failed?: number
+          id?: string
+          recipients?: number
+          segment: string
+          sent?: number
+          status?: string
+          subject?: string | null
+        }
+        Update: {
+          body?: string
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          failed?: number
+          id?: string
+          recipients?: number
+          segment?: string
+          sent?: number
+          status?: string
+          subject?: string | null
+        }
+        Relationships: []
+      }
+      fan_signups: {
+        Row: {
+          consent: boolean
+          consent_text: string | null
+          contact_id: string | null
+          contact_norm: string
+          contact_type: string
+          contact_value: string
+          created_at: string
+          id: string
+          referrer: string | null
+          slug: string
+          source: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          welcome_status: string | null
+          welcomed_at: string | null
+        }
+        Insert: {
+          consent?: boolean
+          consent_text?: string | null
+          contact_id?: string | null
+          contact_norm: string
+          contact_type: string
+          contact_value: string
+          created_at?: string
+          id?: string
+          referrer?: string | null
+          slug: string
+          source?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          welcome_status?: string | null
+          welcomed_at?: string | null
+        }
+        Update: {
+          consent?: boolean
+          consent_text?: string | null
+          contact_id?: string | null
+          contact_norm?: string
+          contact_type?: string
+          contact_value?: string
+          created_at?: string
+          id?: string
+          referrer?: string | null
+          slug?: string
+          source?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          welcome_status?: string | null
+          welcomed_at?: string | null
         }
         Relationships: []
       }
@@ -1756,6 +2540,42 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string
+          id: string
+          ig_user_id: string
+          last_error: string | null
+          provider: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          ig_user_id: string
+          last_error?: string | null
+          provider?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ig_user_id?: string
+          last_error?: string | null
+          provider?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       monday_calendar_sources: {
         Row: {
           board_id: string
@@ -1840,6 +2660,92 @@ export type Database = {
         }
         Relationships: []
       }
+      people: {
+        Row: {
+          active: boolean
+          band_member_id: string | null
+          bio_short: string | null
+          capacities: string[]
+          contact_email: string | null
+          contact_id: string | null
+          contact_phone: string | null
+          created_at: string
+          engagement_status: string
+          found_via: string | null
+          headshot_url: string | null
+          id: string
+          instagram_handle: string | null
+          instruments: string[] | null
+          name: string
+          notes: string | null
+          rate_note: string | null
+          reference_image_path: string | null
+          roles: string[] | null
+          skill_level: string | null
+          tier: number | null
+          updated_at: string
+          ventures: string[] | null
+        }
+        Insert: {
+          active?: boolean
+          band_member_id?: string | null
+          bio_short?: string | null
+          capacities?: string[]
+          contact_email?: string | null
+          contact_id?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          engagement_status?: string
+          found_via?: string | null
+          headshot_url?: string | null
+          id?: string
+          instagram_handle?: string | null
+          instruments?: string[] | null
+          name: string
+          notes?: string | null
+          rate_note?: string | null
+          reference_image_path?: string | null
+          roles?: string[] | null
+          skill_level?: string | null
+          tier?: number | null
+          updated_at?: string
+          ventures?: string[] | null
+        }
+        Update: {
+          active?: boolean
+          band_member_id?: string | null
+          bio_short?: string | null
+          capacities?: string[]
+          contact_email?: string | null
+          contact_id?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          engagement_status?: string
+          found_via?: string | null
+          headshot_url?: string | null
+          id?: string
+          instagram_handle?: string | null
+          instruments?: string[] | null
+          name?: string
+          notes?: string | null
+          rate_note?: string | null
+          reference_image_path?: string | null
+          roles?: string[] | null
+          skill_level?: string | null
+          tier?: number | null
+          updated_at?: string
+          ventures?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "people_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posting_times_cache: {
         Row: {
           change_note: string
@@ -1920,10 +2826,12 @@ export type Database = {
           color_level_updated_at: string | null
           created_at: string
           id: string
+          image_path: string | null
           key: string
           kind: string
           last_practiced_at: string | null
           notes: string
+          source_item_id: string | null
           times_practiced: number
           title: string
           updated_at: string
@@ -1935,10 +2843,12 @@ export type Database = {
           color_level_updated_at?: string | null
           created_at?: string
           id?: string
+          image_path?: string | null
           key?: string
           kind: string
           last_practiced_at?: string | null
           notes?: string
+          source_item_id?: string | null
           times_practiced?: number
           title: string
           updated_at?: string
@@ -1950,15 +2860,25 @@ export type Database = {
           color_level_updated_at?: string | null
           created_at?: string
           id?: string
+          image_path?: string | null
           key?: string
           kind?: string
           last_practiced_at?: string | null
           notes?: string
+          source_item_id?: string | null
           times_practiced?: number
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "practice_items_source_item_id_fkey"
+            columns: ["source_item_id"]
+            isOneToOne: false
+            referencedRelation: "practice_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       practice_preset_segments: {
         Row: {
@@ -2039,6 +2959,99 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      practice_segment_details: {
+        Row: {
+          bpm: number | null
+          created_at: string
+          dim2_id: string | null
+          dim3_id: string | null
+          id: string
+          keys_covered: string | null
+          keys_worked: string[] | null
+          lh_id: string | null
+          maintenance: boolean
+          method_id: string | null
+          range_from: number | null
+          range_to: number | null
+          segment_id: string
+          sort_order: number
+          triad_interval: string | null
+          triad_qualities: string | null
+        }
+        Insert: {
+          bpm?: number | null
+          created_at?: string
+          dim2_id?: string | null
+          dim3_id?: string | null
+          id?: string
+          keys_covered?: string | null
+          keys_worked?: string[] | null
+          lh_id?: string | null
+          maintenance?: boolean
+          method_id?: string | null
+          range_from?: number | null
+          range_to?: number | null
+          segment_id: string
+          sort_order?: number
+          triad_interval?: string | null
+          triad_qualities?: string | null
+        }
+        Update: {
+          bpm?: number | null
+          created_at?: string
+          dim2_id?: string | null
+          dim3_id?: string | null
+          id?: string
+          keys_covered?: string | null
+          keys_worked?: string[] | null
+          lh_id?: string | null
+          maintenance?: boolean
+          method_id?: string | null
+          range_from?: number | null
+          range_to?: number | null
+          segment_id?: string
+          sort_order?: number
+          triad_interval?: string | null
+          triad_qualities?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_segment_details_dim2_id_fkey"
+            columns: ["dim2_id"]
+            isOneToOne: false
+            referencedRelation: "practice_taxonomy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_segment_details_dim3_id_fkey"
+            columns: ["dim3_id"]
+            isOneToOne: false
+            referencedRelation: "practice_taxonomy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_segment_details_lh_id_fkey"
+            columns: ["lh_id"]
+            isOneToOne: false
+            referencedRelation: "practice_taxonomy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_segment_details_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "practice_taxonomy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_segment_details_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "practice_session_segments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       practice_session_segments: {
         Row: {
@@ -2200,6 +3213,59 @@ export type Database = {
         }
         Relationships: []
       }
+      practice_taxonomy: {
+        Row: {
+          active: boolean
+          applies_to: string[]
+          created_at: string
+          dim2: string | null
+          dim3: string | null
+          dimension: string
+          id: string
+          label: string
+          notes: string | null
+          parent_id: string | null
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          active?: boolean
+          applies_to?: string[]
+          created_at?: string
+          dim2?: string | null
+          dim3?: string | null
+          dimension: string
+          id?: string
+          label: string
+          notes?: string | null
+          parent_id?: string | null
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          active?: boolean
+          applies_to?: string[]
+          created_at?: string
+          dim2?: string | null
+          dim3?: string | null
+          dimension?: string
+          id?: string
+          label?: string
+          notes?: string | null
+          parent_id?: string | null
+          sort_order?: number
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_taxonomy_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "practice_taxonomy"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rehearsal_responses: {
         Row: {
           created_at: string
@@ -2337,6 +3403,66 @@ export type Database = {
           },
         ]
       }
+      sales_holds: {
+        Row: {
+          agency: string | null
+          calendar_event_id: string | null
+          created_at: string
+          event_date: string | null
+          event_label: string | null
+          followup_cadence: string | null
+          hold_status: string | null
+          id: string
+          last_checked_at: string | null
+          last_told_musician_at: string | null
+          musician: string | null
+          musician_status: string | null
+          next_check_at: string | null
+          notes: string | null
+          role: string | null
+          sales_rep: string | null
+          updated_at: string
+        }
+        Insert: {
+          agency?: string | null
+          calendar_event_id?: string | null
+          created_at?: string
+          event_date?: string | null
+          event_label?: string | null
+          followup_cadence?: string | null
+          hold_status?: string | null
+          id?: string
+          last_checked_at?: string | null
+          last_told_musician_at?: string | null
+          musician?: string | null
+          musician_status?: string | null
+          next_check_at?: string | null
+          notes?: string | null
+          role?: string | null
+          sales_rep?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agency?: string | null
+          calendar_event_id?: string | null
+          created_at?: string
+          event_date?: string | null
+          event_label?: string | null
+          followup_cadence?: string | null
+          hold_status?: string | null
+          id?: string
+          last_checked_at?: string | null
+          last_told_musician_at?: string | null
+          musician?: string | null
+          musician_status?: string | null
+          next_check_at?: string | null
+          notes?: string | null
+          role?: string | null
+          sales_rep?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       setlist_builds: {
         Row: {
           created_at: string
@@ -2433,8 +3559,108 @@ export type Database = {
         }
         Relationships: []
       }
+      smart_link_events: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          id: number
+          kind: string
+          platform: string | null
+          referrer: string | null
+          region: string | null
+          slug: string
+          ua: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: never
+          kind?: string
+          platform?: string | null
+          referrer?: string | null
+          region?: string | null
+          slug: string
+          ua?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: never
+          kind?: string
+          platform?: string | null
+          referrer?: string | null
+          region?: string | null
+          slug?: string
+          ua?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
+      smart_links: {
+        Row: {
+          accent: string | null
+          artist: string
+          artwork_url: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          pixel_id: string | null
+          platforms: Json
+          release_date: string | null
+          slug: string
+          subtitle: string | null
+          title: string
+          tracks: Json
+          updated_at: string
+        }
+        Insert: {
+          accent?: string | null
+          artist?: string
+          artwork_url?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          pixel_id?: string | null
+          platforms?: Json
+          release_date?: string | null
+          slug: string
+          subtitle?: string | null
+          title: string
+          tracks?: Json
+          updated_at?: string
+        }
+        Update: {
+          accent?: string | null
+          artist?: string
+          artwork_url?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          pixel_id?: string | null
+          platforms?: Json
+          release_date?: string | null
+          slug?: string
+          subtitle?: string | null
+          title?: string
+          tracks?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       smart_task_enrichments: {
         Row: {
+          agent_id: string | null
           blockers: string | null
           board_bucket: string | null
           board_venture: string | null
@@ -2443,11 +3669,15 @@ export type Database = {
           due_date: string | null
           effort: string | null
           followup_cadence_days: number | null
+          followup_frequency: string | null
           followup_last_surfaced_at: string | null
           google_calendar_event_id: string | null
           google_calendar_html_link: string | null
+          google_task_id: string | null
           id: string
+          last_followup_at: string | null
           measure: string | null
+          next_followup_at: string | null
           raw_input: string
           recurring_followup: boolean
           revised_title: string | null
@@ -2455,6 +3685,7 @@ export type Database = {
           trello_card_url: string | null
         }
         Insert: {
+          agent_id?: string | null
           blockers?: string | null
           board_bucket?: string | null
           board_venture?: string | null
@@ -2463,11 +3694,15 @@ export type Database = {
           due_date?: string | null
           effort?: string | null
           followup_cadence_days?: number | null
+          followup_frequency?: string | null
           followup_last_surfaced_at?: string | null
           google_calendar_event_id?: string | null
           google_calendar_html_link?: string | null
+          google_task_id?: string | null
           id?: string
+          last_followup_at?: string | null
           measure?: string | null
+          next_followup_at?: string | null
           raw_input: string
           recurring_followup?: boolean
           revised_title?: string | null
@@ -2475,6 +3710,7 @@ export type Database = {
           trello_card_url?: string | null
         }
         Update: {
+          agent_id?: string | null
           blockers?: string | null
           board_bucket?: string | null
           board_venture?: string | null
@@ -2483,18 +3719,30 @@ export type Database = {
           due_date?: string | null
           effort?: string | null
           followup_cadence_days?: number | null
+          followup_frequency?: string | null
           followup_last_surfaced_at?: string | null
           google_calendar_event_id?: string | null
           google_calendar_html_link?: string | null
+          google_task_id?: string | null
           id?: string
+          last_followup_at?: string | null
           measure?: string | null
+          next_followup_at?: string | null
           raw_input?: string
           recurring_followup?: boolean
           revised_title?: string | null
           trello_card_id?: string | null
           trello_card_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "smart_task_enrichments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_teammates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       smart_task_queue: {
         Row: {
@@ -2830,12 +4078,15 @@ export type Database = {
       systems_registry: {
         Row: {
           backend_path: string | null
+          blocked_on: string | null
           brain_ref: string | null
           category: string
           created_at: string
+          current_work: string | null
           description: string | null
           health: string | null
           id: string
+          just_finished: string | null
           key: string
           last_activity: string | null
           name: string
@@ -2843,16 +4094,20 @@ export type Database = {
           security_note: string | null
           sort_order: number
           status: string
+          up_next: string | null
           updated_at: string
         }
         Insert: {
           backend_path?: string | null
+          blocked_on?: string | null
           brain_ref?: string | null
           category?: string
           created_at?: string
+          current_work?: string | null
           description?: string | null
           health?: string | null
           id?: string
+          just_finished?: string | null
           key: string
           last_activity?: string | null
           name: string
@@ -2860,16 +4115,20 @@ export type Database = {
           security_note?: string | null
           sort_order?: number
           status?: string
+          up_next?: string | null
           updated_at?: string
         }
         Update: {
           backend_path?: string | null
+          blocked_on?: string | null
           brain_ref?: string | null
           category?: string
           created_at?: string
+          current_work?: string | null
           description?: string | null
           health?: string | null
           id?: string
+          just_finished?: string | null
           key?: string
           last_activity?: string | null
           name?: string
@@ -2877,7 +4136,35 @@ export type Database = {
           security_note?: string | null
           sort_order?: number
           status?: string
+          up_next?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      team_profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          role: string
+          surfaces: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          role?: string
+          surfaces?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          role?: string
+          surfaces?: string[]
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -3012,6 +4299,30 @@ export type Database = {
           },
         ]
       }
+      trello_writeback: {
+        Row: {
+          action: string
+          card_id: string
+          created_at: string
+          flushed_at: string | null
+          note: string | null
+        }
+        Insert: {
+          action?: string
+          card_id: string
+          created_at?: string
+          flushed_at?: string | null
+          note?: string | null
+        }
+        Update: {
+          action?: string
+          card_id?: string
+          created_at?: string
+          flushed_at?: string | null
+          note?: string | null
+        }
+        Relationships: []
+      }
       visual_assets: {
         Row: {
           ai_error: string | null
@@ -3119,6 +4430,7 @@ export type Database = {
       }
       waiting_on_josh: {
         Row: {
+          agent_id: string | null
           assumed_default: string | null
           context_md: string | null
           detail: string | null
@@ -3126,12 +4438,15 @@ export type Database = {
           item_type: string
           media_refs: Json
           options: Json | null
+          parent_id: string | null
           priority: string
           prompt: string | null
+          questions: Json | null
           queued_at: string
           resolution_note: string | null
           resolved_at: string | null
           resolved_by: string | null
+          round: number
           source_ref: string | null
           source_session: string | null
           title: string
@@ -3139,6 +4454,7 @@ export type Database = {
           uploads: Json | null
         }
         Insert: {
+          agent_id?: string | null
           assumed_default?: string | null
           context_md?: string | null
           detail?: string | null
@@ -3146,12 +4462,15 @@ export type Database = {
           item_type?: string
           media_refs?: Json
           options?: Json | null
+          parent_id?: string | null
           priority?: string
           prompt?: string | null
+          questions?: Json | null
           queued_at?: string
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          round?: number
           source_ref?: string | null
           source_session?: string | null
           title: string
@@ -3159,6 +4478,7 @@ export type Database = {
           uploads?: Json | null
         }
         Update: {
+          agent_id?: string | null
           assumed_default?: string | null
           context_md?: string | null
           detail?: string | null
@@ -3166,17 +4486,146 @@ export type Database = {
           item_type?: string
           media_refs?: Json
           options?: Json | null
+          parent_id?: string | null
           priority?: string
           prompt?: string | null
+          questions?: Json | null
           queued_at?: string
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          round?: number
           source_ref?: string | null
           source_session?: string | null
           title?: string
           triangulation_loops?: Json
           uploads?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waiting_on_josh_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_teammates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waiting_on_josh_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "waiting_on_josh"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wilson_bookings: {
+        Row: {
+          buyer: string | null
+          commission_pct: number
+          created_at: string
+          event_date: string | null
+          fee: number | null
+          id: string
+          notes: string | null
+          status: string
+          updated_at: string
+          venue: string | null
+        }
+        Insert: {
+          buyer?: string | null
+          commission_pct?: number
+          created_at?: string
+          event_date?: string | null
+          fee?: number | null
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Update: {
+          buyer?: string | null
+          commission_pct?: number
+          created_at?: string
+          event_date?: string | null
+          fee?: number | null
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
+      wilson_outreach: {
+        Row: {
+          channel: string | null
+          created_at: string
+          direction: string
+          happened_at: string
+          id: string
+          summary: string
+          target: string | null
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string
+          direction?: string
+          happened_at?: string
+          id?: string
+          summary: string
+          target?: string | null
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string
+          direction?: string
+          happened_at?: string
+          id?: string
+          summary?: string
+          target?: string | null
+        }
+        Relationships: []
+      }
+      wilson_submissions: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          notes: string | null
+          region: string | null
+          sort: number
+          status: string
+          submit_path: string | null
+          submitted_at: string | null
+          target: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          region?: string | null
+          sort?: number
+          status?: string
+          submit_path?: string | null
+          submitted_at?: string | null
+          target: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          region?: string | null
+          sort?: number
+          status?: string
+          submit_path?: string | null
+          submitted_at?: string | null
+          target?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -3269,6 +4718,51 @@ export type Database = {
       }
     }
     Views: {
+      epk_public: {
+        Row: {
+          bio_long: string | null
+          bio_short: string | null
+          booking_email: string | null
+          booking_phone: string | null
+          kind: string | null
+          listen_smart_link_slug: string | null
+          name: string | null
+          one_liner: string | null
+          slug: string | null
+          socials: Json | null
+          status: string | null
+          website_url: string | null
+        }
+        Insert: {
+          bio_long?: string | null
+          bio_short?: string | null
+          booking_email?: string | null
+          booking_phone?: string | null
+          kind?: string | null
+          listen_smart_link_slug?: string | null
+          name?: string | null
+          one_liner?: string | null
+          slug?: string | null
+          socials?: Json | null
+          status?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          bio_long?: string | null
+          bio_short?: string | null
+          booking_email?: string | null
+          booking_phone?: string | null
+          kind?: string | null
+          listen_smart_link_slug?: string | null
+          name?: string | null
+          one_liner?: string | null
+          slug?: string | null
+          socials?: Json | null
+          status?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       v_suspect_done_lanes: {
         Row: {
           claimed_by: string | null
@@ -3301,6 +4795,7 @@ export type Database = {
       }
     }
     Functions: {
+      auth_role: { Args: never; Returns: string }
       chart_index_build_tsv: {
         Args: {
           p_composer: string
@@ -3321,12 +4816,41 @@ export type Database = {
           genre: string
         }[]
       }
+      chart_index_song_counts: {
+        Args: never
+        Returns: {
+          charts: number
+          folder_sub: string
+          folder_top: string
+          level: string
+          songs: number
+        }[]
+      }
+      check_ingest_stall: { Args: never; Returns: undefined }
       cleanup_old_posting_times_sources: { Args: never; Returns: undefined }
+      daitch_mokotoff: { Args: { "": string }; Returns: string[] }
+      dmetaphone: { Args: { "": string }; Returns: string }
+      dmetaphone_alt: { Args: { "": string }; Returns: string }
+      is_operator: { Args: never; Returns: boolean }
       refresh_djep_calendar_events_cache: { Args: never; Returns: number }
       refresh_djep_past_events_cache: { Args: never; Returns: number }
+      river_best_agent: { Args: { txt: string }; Returns: string }
+      river_connections: {
+        Args: { p_job: string }
+        Returns: {
+          ref_id: string
+          status: string
+          surface: string
+          title: string
+        }[]
+      }
+      soundex: { Args: { "": string }; Returns: string }
+      text_soundex: { Args: { "": string }; Returns: string }
       trigger_availability_prefetch: { Args: never; Returns: undefined }
       trigger_claude_action_smartify: { Args: never; Returns: number }
       trigger_integration_health_check: { Args: never; Returns: number }
+      trigger_jjmm_contacts_sync: { Args: never; Returns: number }
+      trigger_meta_token_refresh: { Args: never; Returns: number }
       trigger_posting_times_refresh: { Args: never; Returns: number }
       trigger_smart_followup_repin: { Args: never; Returns: number }
       trigger_trello_mark_done: { Args: { p_card_id: string }; Returns: number }

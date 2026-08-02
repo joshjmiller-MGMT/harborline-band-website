@@ -154,9 +154,10 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
   // RBAC step 2: show only what this role may reach. The real boundary is RLS
   // (step 3) — this stops a member from *seeing* surfaces that aren't theirs.
   const visibleMenus = megaMenus.filter((m) => canHub(m.label));
-  const visibleDirect = directLinks.filter((d) =>
-    isOwner ? true : d.name === "Dashboard",
-  );
+  // Owner sees every command surface. Everyone else gets Dashboard only.
+  // Filtered by name rather than by index — a positional slice() silently
+  // changes meaning the moment someone reorders directLinks.
+  const visibleDirect = directLinks.filter((d) => isOwner || d.name === "Dashboard");
 
   if (isLoading) {
     return (
