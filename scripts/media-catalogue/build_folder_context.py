@@ -20,7 +20,7 @@ from collections import Counter, defaultdict
 PROJECT_REF = "mbqyznttpvebahgygsbx"
 MGMT_SQL_URL = f"https://api.supabase.com/v1/projects/{PROJECT_REF}/database/query"
 
-PRO_VENTURES = {"Harborline", "Economy", "JMJ", "BSE", "Brand Studio"}
+PRO_VENTURES = {"Harborline", "Economy", "JJM", "BSE", "Brand Studio"}
 REFERENCE_WORDS = {"asset","assets","logo","logos","brand","branding","epk","press",
                    "graphics","design","designs","headshot","headshots","artwork","template","templates"}
 DATE_IN_NAME = re.compile(r"(20\d{2})[-_. ]?(\d{2})[-_. ]?(\d{2})")

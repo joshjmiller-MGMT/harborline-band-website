@@ -80,7 +80,8 @@ MEDIA_EXTS = IMAGE | VIDEO | AUDIO
 VENTURE_WORDS = {
     "harborline":"Harborline", "harbor line":"Harborline",
     "economy":"Economy", "econ":"Economy",
-    "jmj":"JMJ", "josh miller jazz":"JMJ",
+    "jjm":"JJM", "joshua j miller":"JJM",
+    "jmj":"JJM", "josh miller jazz":"JJM",
     "bse":"BSE", "baltimore sound":"BSE",
     "tsb":"BSE",
 }
