@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Library, Plus, Trash2, Search, TrendingUp, Sparkles } from "lucide-react";
+import { Library, Plus, Trash2, Search, TrendingUp, Sparkles, ImagePlus, Loader2 } from "lucide-react";
 import {
   COLOR_SCALE,
   KIND_LABELS,
@@ -15,6 +15,7 @@ import {
   type PracticeItem,
   type PracticeItemKind,
   colorSpec,
+  colorSpecFor,
   daysSincePracticed,
   recommendItems,
   recommendationScore,
@@ -42,6 +43,48 @@ export default function PracticeItemsWidget() {
   const [newArtist, setNewArtist] = useState("");
   const [newKey, setNewKey] = useState("");
   const [newKind, setNewKind] = useState<PracticeItemKind>("song");
+  // Staff-paper reference per exercise: private bucket, so paths get signed.
+  const [refUrls, setRefUrls] = useState<Record<string, string>>({});
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+
+  const signRefs = async (rows: Array<PracticeItem & { image_path?: string | null }>) => {
+    const paths = rows.map((r) => r.image_path).filter(Boolean) as string[];
+    if (!paths.length) return;
+    const { data } = await supabase.storage.from("practice-refs").createSignedUrls(paths, 3600);
+    if (!data) return;
+    setRefUrls((prev) => {
+      const next = { ...prev };
+      data.forEach((d) => { if (d.path && d.signedUrl) next[d.path] = d.signedUrl; });
+      return next;
+    });
+  };
+
+  const uploadRef = async (item: PracticeItem, file: File) => {
+    setUploadingId(item.id);
+    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+    const path = `${item.id}/${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("practice-refs")
+      .upload(path, file, { upsert: true, contentType: file.type || undefined });
+    if (upErr) {
+      setUploadingId(null);
+      toast({ title: "Upload failed", description: upErr.message, variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase.from("practice_items").update({ image_path: path }).eq("id", item.id);
+    setUploadingId(null);
+    if (error) {
+      toast({ title: "Saved the file but not the link", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: `Reference added to ${item.title}` });
+    await load();
+  };
+
+  const itemRef = (it: PracticeItem) => {
+    const p = (it as PracticeItem & { image_path?: string | null }).image_path;
+    return p ? refUrls[p] : undefined;
+  };
 
   const load = async () => {
     const { data } = await supabase
@@ -50,7 +93,9 @@ export default function PracticeItemsWidget() {
       .is("archived_at", null)
       .order("color_level", { ascending: true })
       .order("last_practiced_at", { ascending: true, nullsFirst: true });
-    setItems((data as PracticeItem[]) || []);
+    const rows = (data as PracticeItem[]) || [];
+    setItems(rows);
+    void signRefs(rows as Array<PracticeItem & { image_path?: string | null }>);
   };
 
   useEffect(() => {
@@ -307,7 +352,8 @@ export default function PracticeItemsWidget() {
                       <button
                         key={c.level}
                         type="button"
-                        title={`${c.name} — ${c.meaning}`}
+                        // Songs and transcriptions read their own ladder.
+                        title={`${c.name} — ${colorSpecFor(it.kind, c.level).meaning}`}
                         onClick={() => setColor(it, c.level)}
                         className={`w-5 h-5 rounded-full ${c.swatchBg} transition-all ${
                           it.color_level === c.level
@@ -318,6 +364,37 @@ export default function PracticeItemsWidget() {
                     ))}
                   </div>
                 </div>
+                {/* Staff-paper reference. Thumb if it has one, upload slot if not. */}
+                <label
+                  className="self-start cursor-pointer flex-shrink-0"
+                  title={itemRef(it) ? "Replace the picture of this exercise" : "Add a picture of this exercise (staff paper photo or render)"}
+                >
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) void uploadRef(it, f);
+                    }}
+                  />
+                  {uploadingId === it.id ? (
+                    <span className="flex items-center justify-center w-10 h-10 rounded border border-dashed">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                    </span>
+                  ) : itemRef(it) ? (
+                    <img
+                      src={itemRef(it)!}
+                      alt={`${it.title} reference`}
+                      className="w-10 h-10 object-cover rounded border bg-white"
+                    />
+                  ) : (
+                    <span className="flex items-center justify-center w-10 h-10 rounded border border-dashed text-muted-foreground/50 hover:text-primary hover:border-primary">
+                      <ImagePlus className="w-3.5 h-3.5" />
+                    </span>
+                  )}
+                </label>
                 <Button
                   size="sm"
                   variant="ghost"
