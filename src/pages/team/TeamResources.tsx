@@ -33,6 +33,7 @@ type ChartRow = {
   tags: string[] | null;
   key_signature: string | null;
   time_signature: string | null;
+  sheet_type: string | null;
 };
 
 // Counts come from the chart_index_song_counts() RPC. `songs` folds book/edition
@@ -76,6 +77,19 @@ const EDITIONS = [
   { value: "Eb", label: "E♭" },
 ] as const;
 type Edition = (typeof EDITIONS)[number]["value"];
+
+// Sheet types (classified 2026-08-01, sheet_type column): what KIND of chart
+// each PDF is — fakebook single-line leads vs piano charts vs horn/band
+// arrangements vs full scores vs individual parts vs lyric/chord charts.
+const SHEET_TYPES = [
+  { value: "leadsheet", label: "Lead Sheet" },
+  { value: "piano", label: "Piano" },
+  { value: "lyric-chord", label: "Lyrics/Chords" },
+  { value: "arrangement", label: "Arrangement" },
+  { value: "score", label: "Score" },
+  { value: "part", label: "Part" },
+] as const;
+type SheetType = (typeof SHEET_TYPES)[number]["value"];
 
 const CHARTS_BUCKET = "charts";
 const SIGNED_URL_TTL = 3600; // 1 hour
@@ -148,6 +162,7 @@ export default function TeamResources() {
   const [subFolder, setSubFolder] = useState<string | null>(null);
   const [genre, setGenre] = useState<string | null>(null);
   const [edition, setEdition] = useState<Edition | null>(null);
+  const [sheetType, setSheetType] = useState<SheetType | null>(null);
 
   const [results, setResults] = useState<ChartRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -242,6 +257,7 @@ export default function TeamResources() {
             folder_path: folderPath || undefined,
             genre: genre || undefined,
             edition: edition || undefined,
+            sheet_type: sheetType || undefined,
             limit: PAGE_SIZE,
             offset: 0,
           },
@@ -283,7 +299,7 @@ export default function TeamResources() {
     return () => {
       cancelled = true;
     };
-  }, [query, folderPath, genre, edition]);
+  }, [query, folderPath, genre, edition, sheetType]);
 
   const isEmptyLibrary = countsLoaded && libraryTotals.charts === 0;
 
@@ -387,6 +403,29 @@ export default function TeamResources() {
               }
             >
               {ed.label}
+            </Button>
+          ))}
+
+          <span className="text-xs font-medium text-muted-foreground ml-3 mr-1">
+            Type
+          </span>
+          <Button
+            variant={sheetType === null ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSheetType(null)}
+          >
+            All
+          </Button>
+          {SHEET_TYPES.map((st) => (
+            <Button
+              key={st.value}
+              variant={sheetType === st.value ? "default" : "outline"}
+              size="sm"
+              onClick={() =>
+                setSheetType(sheetType === st.value ? null : st.value)
+              }
+            >
+              {st.label}
             </Button>
           ))}
 

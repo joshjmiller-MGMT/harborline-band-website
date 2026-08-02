@@ -58,6 +58,10 @@ Deno.serve(async (req) => {
       typeof body?.genre === "string" ? body.genre.trim() : "";
     const edition =
       typeof body?.edition === "string" ? body.edition.trim() : "";
+    // Sheet type (P-sheet-type 2026-08-01): leadsheet | piano | lyric-chord |
+    // arrangement | score | part. Exact match on the sheet_type column.
+    const sheetType =
+      typeof body?.sheet_type === "string" ? body.sheet_type.trim() : "";
     const limit = Math.min(
       Math.max(parseInt(body?.limit) || 50, 1),
       200
@@ -67,7 +71,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const COLUMNS =
-      "id, title, composer, genre, folder_path, filename, reference, drive_web_view_link, storage_path, setlists, ireal_pro, tags, key_signature, time_signature";
+      "id, title, composer, genre, folder_path, filename, reference, drive_web_view_link, storage_path, setlists, ireal_pro, tags, key_signature, time_signature, sheet_type";
 
     // Transposition edition maps to the top-level folder bucket.
     // Bb-charts/* = Bb, Eb-charts/* = Eb, everything else = concert (C).
@@ -75,6 +79,7 @@ Deno.serve(async (req) => {
     const applyFilters = (q: any) => {
       if (folderPath) q = q.like("folder_path", `${folderPath}%`);
       if (genre) q = q.eq("genre", genre);
+      if (sheetType) q = q.eq("sheet_type", sheetType);
       if (edition === "Bb") q = q.like("folder_path", "Bb-charts%");
       else if (edition === "Eb") q = q.like("folder_path", "Eb-charts%");
       else if (edition === "C")

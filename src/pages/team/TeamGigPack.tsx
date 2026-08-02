@@ -20,6 +20,7 @@ type ChartHit = {
   folder_path: string;
   filename: string;
   storage_path: string | null;
+  sheet_type: string | null;
 };
 type SetlistRow = {
   id: string;
@@ -99,7 +100,7 @@ export default function TeamGigPack() {
       const terms = norm(song).split(" ").filter(Boolean);
       let q = supabase
         .from("chart_index")
-        .select("id, title, folder_path, filename, storage_path")
+        .select("id, title, folder_path, filename, storage_path, sheet_type")
         .order("folder_path")
         .limit(40);
       for (const t of terms) q = q.ilike("title_search", `%${t}%`);
@@ -217,6 +218,12 @@ export default function TeamGigPack() {
                           <a key={h.id} href={url} target="_blank" rel="noopener noreferrer"
                             className="text-xs rounded border border-border px-2 py-1 hover:border-primary/50 inline-flex items-center gap-1">
                             <Badge variant="outline" className="text-[10px] px-1">{variationOf(h.folder_path)}</Badge>
+                            {/* sheet_type label — leadsheet is the library default, so only
+                                the exceptions (piano/arrangement/score/part/lyric-chord) get
+                                a badge; that's the "what do I hand the band" signal. */}
+                            {h.sheet_type && h.sheet_type !== "leadsheet" && (
+                              <Badge variant="outline" className="text-[10px] px-1 border-primary/40">{h.sheet_type}</Badge>
+                            )}
                             {h.title}
                           </a>
                         ) : (
