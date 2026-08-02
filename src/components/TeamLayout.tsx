@@ -149,8 +149,14 @@ function HubTabs({ pathname }: { pathname: string }) {
 }
 
 export default function TeamLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, logout } = useTeamAuth();
+  const { isAuthenticated, isLoading, logout, canHub, isOwner } = useTeamAuth();
   const location = useLocation();
+  // RBAC step 2: show only what this role may reach. The real boundary is RLS
+  // (step 3) — this stops a member from *seeing* surfaces that aren't theirs.
+  const visibleMenus = megaMenus.filter((m) => canHub(m.label));
+  const visibleDirect = directLinks.filter((d) =>
+    isOwner ? true : d.name === "Dashboard",
+  );
 
   if (isLoading) {
     return (
@@ -203,7 +209,7 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
                 nav decision). Clicking a hub lands on its first page; the
                 persistent HubTabs bar below is THE page picker. The dropdown
                 mega-menus are gone — one nav system, no double menu. */}
-            {megaMenus.map((menu) => {
+            {visibleMenus.map((menu) => {
               const isActive = menu.items.some((m) => location.pathname === m.href);
               const TriggerIcon = menu.icon;
               return (
@@ -223,7 +229,7 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
             })}
 
             {/* Review direct link — tail slot */}
-            {directLinks.slice(1).map((item) => {
+            {visibleDirect.slice(1).map((item) => {
               const isActive = location.pathname === item.href;
               const ItemIcon = item.icon;
               return (
