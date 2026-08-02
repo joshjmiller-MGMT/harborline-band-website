@@ -273,20 +273,32 @@ Deno.serve(async (req) => {
   const headerSecret = req.headers.get("x-cron-secret");
   const isCron = cronSecret && headerSecret && headerSecret === cronSecret;
 
-  const authHeader = req.headers.get("Authorization");
-  const hasJwt = authHeader?.startsWith("Bearer ");
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
 
-  if (!isCron && !hasJwt) {
+  // Real operator check (8/1 security review): verify_jwt=false here (the cron
+  // path carries no JWT), so the platform never validates tokens — the old
+  // `startsWith("Bearer ")` gate passed ANY string and let strangers spend
+  // Anthropic tokens. Now the JWT is verified against auth (getUser checks the
+  // signature) and the user must be on the operator allowlist.
+  const authHeader = req.headers.get("Authorization");
+  let isOperator = false;
+  if (!isCron && authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7).trim();
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    const operatorIds = (Deno.env.get("OPERATOR_USER_IDS") ?? "")
+      .split(",").map((s) => s.trim()).filter(Boolean);
+    isOperator = !userErr && !!userData?.user && operatorIds.includes(userData.user.id);
+  }
+
+  if (!isCron && !isOperator) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
 
   try {
     const body = await req.json().catch(() => ({}));
