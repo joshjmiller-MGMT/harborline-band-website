@@ -168,6 +168,12 @@ export default function PracticeDetailRow({
   // dim2 options: children of the chosen method when the dimension is scoped to
   // it (qualities differ per method), otherwise the shared set for that
   // dimension (parent scales are the same three everywhere).
+  // Patterns is normally range-only (tempos live pencilled in the book), but
+  // triad pairs is an exercise there and his own variation isn't in the book,
+  // so it takes a range AND a bpm.
+  const isTriadPairs = (methodId: string | null) =>
+    !!methodId && byId.get(methodId)?.value === "triad_pairs";
+
   const optionsFor = (methodId: string | null, which: "dim2" | "dim3") => {
     if (!methodId) return [];
     const m = byId.get(methodId);
@@ -277,24 +283,6 @@ export default function PracticeDetailRow({
                 onChange={(p) => void patch(r.id, p)}
               />
 
-              {/* Triad pairs, on the digital patterns that are built from them.
-                  Digital Pattern 5 is the whole process, not one lick. */}
-              {item?.artist === "Digital pattern" && (
-                <>
-                  <select className={sel} value={r.triad_interval ?? ""}
-                    title="Interval between the two triads"
-                    onChange={(e) => void patch(r.id, { triad_interval: e.target.value || null })}>
-                    <option value="">triad int…</option>
-                    {TRIAD_INTERVALS.map((i) => <option key={i} value={i}>{i}</option>)}
-                  </select>
-                  <select className={sel} value={r.triad_qualities ?? ""}
-                    title="Quality of each triad — uppercase major, lowercase minor"
-                    onChange={(e) => void patch(r.id, { triad_qualities: e.target.value || null })}>
-                    <option value="">M/m…</option>
-                    {TRIAD_QUALITIES.map((q) => <option key={q} value={q}>{q}</option>)}
-                  </select>
-                </>
-              )}
 
               <select
                 className={sel}
@@ -359,7 +347,28 @@ export default function PracticeDetailRow({
               {d3.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
             </select>
 
-            {isRange ? (
+            {/* Triad pairs is an exercise inside Patterns (Josh 8/2), so its
+                controls hang off the METHOD, not off an item. Book examples
+                180-208 are triad-pair studies; his own variation is not in the
+                book at all. */}
+            {isTriadPairs(r.method_id) && (
+              <>
+                <select className={sel} value={r.triad_interval ?? ""}
+                  title="Interval between the two triads"
+                  onChange={(e) => void patch(r.id, { triad_interval: e.target.value || null })}>
+                  <option value="">triad int…</option>
+                  {TRIAD_INTERVALS.map((i) => <option key={i} value={i}>{i}</option>)}
+                </select>
+                <select className={sel} value={r.triad_qualities ?? ""}
+                  title="Quality of each triad — uppercase major, lowercase minor"
+                  onChange={(e) => void patch(r.id, { triad_qualities: e.target.value || null })}>
+                  <option value="">M/m…</option>
+                  {TRIAD_QUALITIES.map((q) => <option key={q} value={q}>{q}</option>)}
+                </select>
+              </>
+            )}
+
+            {isRange && !isTriadPairs(r.method_id) ? (
               // Range in, no BPM — those tempos live pencilled in his book.
               <span className="inline-flex items-center gap-1">
                 <input type="number" inputMode="numeric" placeholder="from"
