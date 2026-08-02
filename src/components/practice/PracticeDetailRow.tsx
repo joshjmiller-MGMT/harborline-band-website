@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { COLOR_SCALE, colorSpec } from "@/lib/practice-mastery";
 
 // Structured practice detail (Josh 2026-08-02). Sits UNDER the free-text box —
 // it supplements, never replaces it ("I like that it's a comment style text box").
@@ -37,6 +38,18 @@ const BPMS = [30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 110, 120, 140, 160, 1
 const sel =
   "h-7 text-xs rounded border border-border bg-background px-1.5 text-foreground disabled:opacity-40 disabled:cursor-not-allowed";
 
+// Lines and Songs work differently (Josh 8/2): they're not method→quality→
+// voicing, they're a NAMED ITEM ("Bill 2", "Harry 5", "Oscar 1", "Bird 3")
+// carrying a mastery colour that belongs to the item ITSELF, not to the
+// session. Change it here and the line's status changes everywhere — that's
+// the point: "it changes the color status of that line".
+const ITEM_SECTIONS: Record<string, "line" | "song"> = {
+  Lines: "line",
+  "Lines (RH/LH)": "line",
+  Songs: "song",
+};
+type Item = { id: string; kind: string; title: string; color_level: number };
+
 export default function PracticeDetailRow({
   segmentId,
   category,
@@ -47,6 +60,31 @@ export default function PracticeDetailRow({
   const [tax, setTax] = useState<Tax[]>([]);
   const [rows, setRows] = useState<Detail[]>([]);
   const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<Item[]>([]);
+  const itemKind = ITEM_SECTIONS[category];
+
+  // Item mode: pull the named items (lines/songs) with their CURRENT mastery.
+  useEffect(() => {
+    if (!itemKind) return;
+    let alive = true;
+    db.from("practice_items")
+      .select("id,kind,title,color_level")
+      .eq("kind", itemKind)
+      .is("archived_at", null)
+      .order("title")
+      .then(({ data }: { data: Item[] | null }) => { if (alive) setItems(data ?? []); });
+    return () => { alive = false; };
+  }, [itemKind]);
+
+  // Writing the colour here updates the ITEM — the line's mastery is a property
+  // of the line, so it moves everywhere at once (widgets, filters, recs).
+  const setItemColor = async (itemId: string, level: number) => {
+    setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, color_level: level } : i)));
+    await db
+      .from("practice_items")
+      .update({ color_level: level, color_level_updated_at: new Date().toISOString() })
+      .eq("id", itemId);
+  };
 
   const load = useCallback(async () => {
     const [t, d] = await Promise.all([
@@ -96,9 +134,69 @@ export default function PracticeDetailRow({
     await db.from("practice_segment_details").delete().eq("id", id);
   };
 
-  // Nothing to offer for this section (Songs, Transcriptions…) — stay invisible
-  // rather than showing an empty control.
-  if (loading || methods.length === 0) return null;
+  if (loading) return null;
+  // Nothing seeded for this section — stay invisible rather than show an empty control.
+  if (!itemKind && methods.length === 0) return null;
+
+  // ── ITEM MODE (Lines / Songs): named item + its own mastery colour ──
+  if (itemKind) {
+    return (
+      <div className="space-y-1">
+        {rows.map((r) => {
+          const item = r.method_id ? items.find((i) => i.id === r.method_id) : null;
+          const spec = colorSpec(item?.color_level ?? 0);
+          return (
+            <div key={r.id} className="flex items-center gap-1 flex-wrap">
+              <select
+                className={sel}
+                value={r.method_id ?? ""}
+                onChange={(e) => void patch(r.id, { method_id: e.target.value || null })}
+              >
+                <option value="">{itemKind === "line" ? "line…" : "song…"}</option>
+                {items.map((i) => <option key={i.id} value={i.id}>{i.title}</option>)}
+              </select>
+
+              {/* The colour belongs to the ITEM. Changing it here moves that
+                  line/song's mastery everywhere, which is the whole point. */}
+              <span className="inline-flex items-center gap-1">
+                <span className={`inline-block w-2.5 h-2.5 rounded-full ${spec.swatchBg}`} aria-hidden />
+                <select
+                  className={sel}
+                  value={item?.color_level ?? ""}
+                  disabled={!item}
+                  title={item ? `${spec.name} — ${spec.meaning}` : "pick an item first"}
+                  onChange={(e) => item && void setItemColor(item.id, Number(e.target.value))}
+                >
+                  <option value="">how well?</option>
+                  {COLOR_SCALE.map((c) => (
+                    <option key={c.level} value={c.level}>{c.name} — {c.meaning}</option>
+                  ))}
+                </select>
+              </span>
+
+              <select
+                className={sel}
+                value={r.bpm ?? ""}
+                onChange={(e) => void patch(r.id, { bpm: e.target.value ? Number(e.target.value) : null })}
+              >
+                <option value="">bpm…</option>
+                {BPMS.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+
+              <button type="button" onClick={() => void removeRow(r.id)}
+                className="text-muted-foreground/60 hover:text-destructive" aria-label="Remove">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          );
+        })}
+        <button type="button" onClick={() => void addRow()}
+          className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary">
+          <Plus className="w-3 h-3" /> {rows.length ? "add another" : `log a ${itemKind}`}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-1">
