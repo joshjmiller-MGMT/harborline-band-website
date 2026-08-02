@@ -6,9 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Flame, RefreshCw, ShieldCheck } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
+  aggregateDailyByKind,
   aggregateDailyHours,
+  dominantKind,
   fmtHours,
   KIND_COLOR,
+  KIND_HEAT,
+  KIND_LABEL,
+  KIND_ORDER,
   TEN_K_HOURS_GOAL,
   totalByKind,
   type InstrumentClassification,
@@ -33,15 +38,16 @@ const heatLevel = (hours: number): number => {
   return 4;
 };
 
-const heatBg = (level: number) => {
-  if (level === 0) return "bg-muted/30";
-  if (level === 1) return "bg-amber-500/30";
-  if (level === 2) return "bg-amber-500/55";
-  if (level === 3) return "bg-amber-500/80";
-  return "bg-amber-500";
+// Colour says WHICH kind of work; opacity says HOW MUCH. On "All" the day
+// takes the colour of whichever kind owned the most hours that day, so the
+// squares line up with the labelled totals above the map (Josh 8/2).
+const heatBg = (level: number, kind: InstrumentKind | null) => {
+  if (level <= 0) return "bg-muted/30";
+  if (!kind) return "bg-muted/30";
+  return KIND_HEAT[kind][Math.min(3, level - 1)];
 };
 
-type HeatmapKindFilter = "all" | "gig" | "rehearsal" | "practice";
+type HeatmapKindFilter = "all" | InstrumentKind;
 
 const RESAMPLE_STALE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const RESAMPLE_BATCH = 10;
@@ -126,8 +132,15 @@ export default function HoursHeatmap() {
   }, [classifications, kindFilter, resampleEligibleOnly, resampleEligibleIds]);
 
   const dailyHours = useMemo(() => aggregateDailyHours(filteredForHeatmap), [filteredForHeatmap]);
+  const dailyKinds = useMemo(() => aggregateDailyByKind(filteredForHeatmap), [filteredForHeatmap]);
   const kindTotals = useMemo(() => totalByKind(classifications), [classifications]);
-  const grandTotal = kindTotals.gig + kindTotals.rehearsal + kindTotals.practice;
+  // Only surface a kind once it has hours behind it, so empty categories don't
+  // clutter the tiles or the filter row.
+  const activeKinds = useMemo(
+    () => KIND_ORDER.filter((k) => (kindTotals[k] || 0) > 0),
+    [kindTotals],
+  );
+  const grandTotal = KIND_ORDER.reduce((sum, k) => sum + (kindTotals[k] || 0), 0);
   const pctOfGoal = (grandTotal / TEN_K_HOURS_GOAL) * 100;
 
   const today = startOfDay(new Date());
@@ -146,22 +159,26 @@ export default function HoursHeatmap() {
     const endDow = end.getDay();
     const lastSunday = addDays(end, -endDow);
     const startSunday = addDays(lastSunday, -(heatmapWeeks - 1) * 7);
-    const weeks: { date: Date; hours: number; level: number }[][] = [];
+    const weeks: { date: Date; hours: number; level: number; kind: InstrumentKind | null }[][] = [];
     for (let w = 0; w < heatmapWeeks; w++) {
-      const col: { date: Date; hours: number; level: number }[] = [];
+      const col: { date: Date; hours: number; level: number; kind: InstrumentKind | null }[] = [];
       for (let d = 0; d < 7; d++) {
         const date = addDays(startSunday, w * 7 + d);
         if (date > end) {
-          col.push({ date, hours: -1, level: -1 });
+          col.push({ date, hours: -1, level: -1, kind: null });
           continue;
         }
-        const hours = dailyHours.get(dayKey(date)) || 0;
-        col.push({ date, hours, level: heatLevel(hours) });
+        const key = dayKey(date);
+        const hours = dailyHours.get(key) || 0;
+        col.push({
+          date, hours, level: heatLevel(hours),
+          kind: dominantKind(dailyKinds.get(key) || {}),
+        });
       }
       weeks.push(col);
     }
     return weeks;
-  }, [dailyHours, today, heatmapWeeks]);
+  }, [dailyHours, dailyKinds, today, heatmapWeeks]);
 
   const monthLabels = useMemo(() => {
     const labels: { col: number; label: string }[] = [];
@@ -273,15 +290,15 @@ export default function HoursHeatmap() {
       </CardHeader>
       <CardContent>
         {/* Per-kind breakdown */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          {(["gig", "rehearsal", "practice"] as InstrumentKind[]).map((k) => {
+        <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
+          {activeKinds.map((k) => {
             const c = KIND_COLOR[k];
             return (
               <div
                 key={k}
                 className={`rounded border ${c.border} p-2 text-center bg-card`}
               >
-                <div className={`text-xs ${c.text} uppercase tracking-wide`}>{k}s</div>
+                <div className={`text-xs ${c.text} uppercase tracking-wide`}>{KIND_LABEL[k]}</div>
                 <div className="font-mono text-lg font-bold">{fmtHours(kindTotals[k])}</div>
                 <div className="text-[10px] text-muted-foreground">hours</div>
               </div>
@@ -313,21 +330,24 @@ export default function HoursHeatmap() {
           <>
             <div className="mb-2 flex items-center gap-1 flex-wrap text-[10px]">
               <span className="text-muted-foreground mr-1">Heatmap:</span>
-              {(["all", "gig", "rehearsal", "practice"] as HeatmapKindFilter[]).map((k) => {
+              {(["all", ...activeKinds] as HeatmapKindFilter[]).map((k) => {
                 const active = kindFilter === k;
-                const label = k === "all" ? "All" : k === "gig" ? "Gigs" : k === "rehearsal" ? "Rehearsals" : "Practice";
+                const c = k === "all" ? null : KIND_COLOR[k as InstrumentKind];
                 return (
                   <button
                     key={k}
                     type="button"
                     onClick={() => setKindFilter(k)}
-                    className={`h-6 px-2 rounded border transition-colors ${
+                    className={`h-6 px-2 rounded border transition-colors inline-flex items-center gap-1 ${
                       active
-                        ? "bg-amber-500/20 border-amber-500/60 text-foreground"
-                        : "bg-card border-border text-muted-foreground hover:border-amber-500/40 hover:text-foreground"
+                        ? `${c ? c.border : "border-foreground/50"} bg-foreground/10 text-foreground`
+                        : "bg-card border-border text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    {label}
+                    {c && <span className={`w-2 h-2 rounded-sm ${c.bg}`} aria-hidden />}
+                    <span className={active && c ? c.text : undefined}>
+                      {k === "all" ? "All" : KIND_LABEL[k as InstrumentKind]}
+                    </span>
                   </button>
                 );
               })}
@@ -368,19 +388,41 @@ export default function HoursHeatmap() {
                     {week.map((cell, di) => (
                       <div
                         key={di}
-                        className={`w-[11px] h-[11px] rounded-sm ${cell.level < 0 ? "bg-transparent" : heatBg(cell.level)}`}
-                        title={cell.hours < 0 ? "" : `${dayKey(cell.date)} — ${cell.hours.toFixed(1)}hr`}
+                        className={`w-[11px] h-[11px] rounded-sm ${cell.level < 0 ? "bg-transparent" : heatBg(cell.level, cell.kind)}`}
+                        title={
+                          cell.hours < 0
+                            ? ""
+                            : `${dayKey(cell.date)} — ${cell.hours.toFixed(1)}hr${cell.kind ? ` · mostly ${KIND_LABEL[cell.kind]}` : ""}`
+                        }
                       />
                     ))}
                   </div>
                 ))}
               </div>
-              <div className="flex items-center gap-1 mt-3 text-[10px] text-muted-foreground">
-                <span>Less</span>
-                {[0, 1, 2, 3, 4].map((l) => (
-                  <div key={l} className={`w-[11px] h-[11px] rounded-sm ${heatBg(l)}`} />
-                ))}
-                <span>More</span>
+              <div className="flex items-center gap-3 mt-3 text-[10px] text-muted-foreground flex-wrap">
+                <div className="flex items-center gap-1">
+                  <span>Less</span>
+                  {[0, 1, 2, 3, 4].map((l) => (
+                    <div
+                      key={l}
+                      className={`w-[11px] h-[11px] rounded-sm ${heatBg(l, kindFilter === "all" ? "gig" : (kindFilter as InstrumentKind))}`}
+                    />
+                  ))}
+                  <span>More</span>
+                </div>
+                {/* On "All" a square takes the colour of whatever kind owned the
+                    most hours that day, so this key explains the mix. */}
+                {kindFilter === "all" && activeKinds.length > 1 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="opacity-70">Colour = mostly:</span>
+                    {activeKinds.map((k) => (
+                      <span key={k} className="inline-flex items-center gap-1">
+                        <span className={`w-[11px] h-[11px] rounded-sm ${KIND_COLOR[k].bg}`} aria-hidden />
+                        <span className={KIND_COLOR[k].text}>{KIND_LABEL[k]}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
