@@ -52,7 +52,7 @@ type EngagementStatus = "active" | "occasional" | "paused" | "past";
 const VENTURE_OPTIONS: { value: Venture; label: string }[] = [
   { value: "harborline", label: "Harborline" },
   { value: "economy", label: "Economy" },
-  { value: "jmj", label: "JMJ" },
+  { value: "jmj", label: "JJM" },
   { value: "personal", label: "Personal" },
   { value: "bse", label: "BSE" },
 ];
@@ -143,7 +143,7 @@ export default function TeamBrandStudio() {
             <PlaceholderTab
               title="Content &amp; Performance Metrics"
               phase="3"
-              body="Venture-aware: Economy + JMJ get streaming + Chartmetric panels; Harborline gets bookings + IG + Bandsintown. Manual paste first, automated ingestion later."
+              body="Venture-aware: Economy + JJM get streaming + Chartmetric panels; Harborline gets bookings + IG + Bandsintown. Manual paste first, automated ingestion later."
             />
           </TabsContent>
         </Tabs>

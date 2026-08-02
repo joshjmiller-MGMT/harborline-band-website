@@ -31,14 +31,14 @@ type MediaRow = {
   suggested_output: string | null;
 };
 
-const VENTURES = ["Harborline", "Economy", "JMJ", "Personal", "BSE", "Brand Studio", "Unknown"];
+const VENTURES = ["Harborline", "Economy", "JJM", "Personal", "BSE", "Brand Studio", "Unknown"];
 const TYPES = ["image", "video", "audio", "other"];
 const STATUSES = ["new", "keep", "routed", "archive", "junk"];
 const LANES = ["harborline-epk", "harborline-social", "economy-social", "joshjmiller", "youtube", "knowledge", "archive", "none"];
 const PAGE = 200;
 
 const VENTURE_DOT: Record<string, string> = {
-  Harborline: "bg-primary", Economy: "bg-accent", JMJ: "bg-amber-500",
+  Harborline: "bg-primary", Economy: "bg-accent", JJM: "bg-amber-500",
   Personal: "bg-emerald-500", BSE: "bg-rose-500", "Brand Studio": "bg-fuchsia-500",
   Unknown: "bg-muted-foreground",
 };

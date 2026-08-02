@@ -35,7 +35,7 @@ const ORG_INFO: Record<OrgKey, { name: string; logoText: string }> = {
   harborline: { name: "Harborline", logoText: logoTextHarborline },
   bse: { name: "Baltimore Sound Entertainment", logoText: logoTextBSE },
   tsb: { name: "Tom Starr Band", logoText: logoTextTSB },
-  jmj: { name: "JMJ", logoText: logoTextJMJ },
+  jmj: { name: "JJM", logoText: logoTextJMJ },
   // "Other" — user types a one-off ensemble name; no preset brand logo on the doc.
   other: { name: "Other (enter name)", logoText: "" },
 };
@@ -655,7 +655,7 @@ export default function RunOfShowGenerator() {
     const overrides = parseManualOverrides();
     const merged = { ...base, ...overrides };
 
-    // The Step-3 selector picks the ENSEMBLE (Harborline / BSE / TSB / JMJ, or a
+    // The Step-3 selector picks the ENSEMBLE (Harborline / BSE / TSB / JJM, or a
     // custom name via "Other"). It's authoritative for the ensemble field —
     // DJEP doesn't carry it — though an explicit manual-override line still wins.
     // (Organization is the CLIENT's org and flows in from the imported event.)

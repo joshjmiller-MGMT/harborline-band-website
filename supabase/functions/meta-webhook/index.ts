@@ -56,7 +56,7 @@ const CLASSIFY_TOOL = {
       purpose: { type: "string", description: "One-word-ish content purpose: discovery, opportunity, learning, promo, personal, gear, business" },
       summary: { type: "string", description: "1-2 plain sentences: what this is" },
       application: { type: "string", description: "How Josh could use it (he runs Harborline wedding band, The Economy, JJM jazz)" },
-      venture: { type: "string", enum: ["Harborline", "The Economy", "JMJ / jazz", "Solo / operator", "BSE", ""], description: "Best-fit venture, empty if none" },
+      venture: { type: "string", enum: ["Harborline", "The Economy", "JJM / jazz", "Solo / operator", "BSE", ""], description: "Best-fit venture, empty if none" },
       action: { type: "string", description: "The single next action if actionable, else empty" },
       route: { type: "string", enum: ["trello_card", "waiting_on_josh", "poc_followup", "brain_note", "passive_ref"], description: "waiting_on_josh ONLY for genuinely urgent/deadline decisions; artist/track discovery → passive_ref; teaching/how-to → brain_note; actionable idea → trello_card; a person to follow up → poc_followup" },
       tags: { type: "array", items: { type: "string" }, description: "3-6 topical tags, lowercase" },

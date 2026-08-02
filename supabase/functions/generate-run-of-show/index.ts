@@ -2298,7 +2298,7 @@ function generateInternalHTML(event: EventData, logos?: { circle: string; text: 
     ${songlistHTML}
 
     <div class="footer">
-      ${isTSB ? 'TOM STARR BAND &nbsp;&middot;&nbsp; tomstarrband.com' : isJMJ ? 'JMJ' : organization === 'bse' ? 'BALTIMORE SOUND ENTERTAINMENT &nbsp;&middot;&nbsp; baltimoresound.net' : 'HARBORLINE &nbsp;&middot;&nbsp; Baltimore\'s Go-To Live Band &nbsp;&middot;&nbsp; harborlineband.com'}
+      ${isTSB ? 'TOM STARR BAND &nbsp;&middot;&nbsp; tomstarrband.com' : isJMJ ? 'JJM' : organization === 'bse' ? 'BALTIMORE SOUND ENTERTAINMENT &nbsp;&middot;&nbsp; baltimoresound.net' : 'HARBORLINE &nbsp;&middot;&nbsp; Baltimore\'s Go-To Live Band &nbsp;&middot;&nbsp; harborlineband.com'}
     </div>
   </div>
 </body>

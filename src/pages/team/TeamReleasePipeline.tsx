@@ -3,7 +3,7 @@ import TeamLayout from "@/components/TeamLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Rocket, CheckCircle2, Circle, Loader2, Music2 } from "lucide-react";
 
-// Release Pipeline — the JMJ EP waterfall (each single releases sequentially to keep
+// Release Pipeline — the JJM (Joshua J Miller) EP waterfall (each single releases sequentially to keep
 // re-triggering the algorithm) + the Ari-Herstand prep checklist per single + shared prep.
 // Data: public.release_singles + public.release_tasks. Types aren't in the generated
 // Database yet, so the client is cast locally.

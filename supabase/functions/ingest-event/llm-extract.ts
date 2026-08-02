@@ -213,7 +213,7 @@ const EXTRACT_TOOL = {
 
 const SYSTEM_PROMPT = `You extract structured event facts from arbitrary documents — narrative run-of-shows, Q&A intake forms, spreadsheets, planner timelines, birthday run sheets, corporate prep notes, anything that mentions an event.
 
-You are part of a doc-generator pipeline for Josh Miller, a Baltimore-based bandleader / music director running multiple ventures (Harborline, BSE — Baltimore Sound Entertainment, The Economy, Josh Miller Jazz / TSB).
+You are part of a doc-generator pipeline for Josh Miller, a Baltimore-based bandleader / music director running multiple ventures (Harborline, BSE — Baltimore Sound Entertainment, The Economy, Joshua J Miller — JJM, formerly Josh Miller Jazz / TSB).
 
 Rules:
 - Extract every fact present in the input. Use null for fields the input does not mention. Never invent details.

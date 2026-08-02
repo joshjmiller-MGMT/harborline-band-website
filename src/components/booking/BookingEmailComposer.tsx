@@ -62,7 +62,7 @@ type BookingEmailState = {
 
 /**
  * Band presets fill the sender/band fields. Only The Economy carries full
- * known-good contact details (from Jon's original tool); Harborline + JMJ fill
+ * known-good contact details (from Jon's original tool); Harborline + JJM fill
  * name/home-base/description + the real site, leaving EPK/phone for Josh to
  * confirm so nothing fabricated goes into an outbound email.
  */

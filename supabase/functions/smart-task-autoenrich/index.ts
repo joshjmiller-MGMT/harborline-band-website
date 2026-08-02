@@ -91,7 +91,7 @@ const SMARTIFY_LISTS = new Set<string>([
 const SMART_VENTURES = [
   "Harborline",
   "Economy",
-  "JMJ",
+  "JJM",
   "Personal",
   "BSE",
   "Brand Studio",
@@ -108,9 +108,13 @@ const VENTURE_ALIASES: Record<string, SmartVenture> = {
   "economy": "Economy",
   "the economy": "Economy",
   "econ": "Economy",
-  "jmj": "JMJ",
-  "josh miller jazz": "JMJ",
-  "solo / personal dev / jazz": "JMJ",
+  // JJM (Joshua J Miller) — "jmj"/"Josh Miller Jazz" are the pre-2026-08
+  // rebrand names; they normalize forward to the JJM token.
+  "jjm": "JJM",
+  "joshua j miller": "JJM",
+  "jmj": "JJM",
+  "josh miller jazz": "JJM",
+  "solo / personal dev / jazz": "JJM",
   "personal": "Personal",
   "tasks random": "Personal",
   "notes": "Personal",

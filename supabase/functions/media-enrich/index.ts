@@ -50,7 +50,7 @@ function b64ToBytes(b64: string): Uint8Array {
 const ROSTER = `Josh Miller's ventures (pick the best-fit "venture"):
 - Harborline: his polished event/wedding/corporate cover band — formal/outdoor-tent/ballroom settings, dressed-up, dance-floor crowds, often with horns/multiple vocalists.
 - Economy: his original electronic-rock band ("The Economy") — clubs, festivals, DIY/amphitheater stages, edgier/artier vibe, original-music energy.
-- JMJ: Josh Miller Jazz — small jazz combo in restaurants/lounges/cocktail settings.
+- JJM: Joshua J Miller (formerly Josh Miller Jazz) — small jazz combo in restaurants/lounges/cocktail settings.
 - BSE: Baltimore Sound Entertainment (his agency's OTHER acts/DJs/operations) — use when it's clearly another act or backline/production, not his own bands.
 - Brand Studio: logos, brand graphics, design assets.
 - Personal: personal/non-gig (family, travel, incidental) or knowledge-capture screenshots.
@@ -66,7 +66,7 @@ const TOOL = {
       tags: { type: "array", items: { type: "string" }, description: "3-8 lowercase keywords: subjects, setting, mood, and what it's usable for." },
       venture: {
         type: "string",
-        enum: ["Harborline", "Economy", "JMJ", "BSE", "Brand Studio", "Personal", "Unknown"],
+        enum: ["Harborline", "Economy", "JJM", "BSE", "Brand Studio", "Personal", "Unknown"],
         description: "Which venture this media belongs to, inferred from the visual + filename + folder. See the roster in the prompt.",
       },
       suggested_output: {

@@ -36,7 +36,7 @@ const SOURCE_LABEL: Record<string, string> = {
   referral: "Referral", "knowledge-capture": "Captured", web: "Web", other: "Other",
 };
 const VENTURE_DOT: Record<string, string> = {
-  Harborline: "bg-primary", Economy: "bg-accent", JMJ: "bg-amber-500",
+  Harborline: "bg-primary", Economy: "bg-accent", JJM: "bg-amber-500",
   BSE: "bg-rose-500", Personal: "bg-emerald-500",
 };
 

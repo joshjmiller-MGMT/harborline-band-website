@@ -99,7 +99,7 @@ const SMART_TOOL = {
   },
 };
 
-const SYSTEM_PROMPT = `You convert vague tasks into SMART tasks for Josh, a Baltimore-based bandleader / music director / operator running multiple ventures (Harborline, BSE, The Economy, Josh Miller Jazz).
+const SYSTEM_PROMPT = `You convert vague tasks into SMART tasks for Josh, a Baltimore-based bandleader / music director / operator running multiple ventures (Harborline, BSE, The Economy, Joshua J Miller — JJM, his jazz project formerly called Josh Miller Jazz).
 
 Rules:
 - Be concrete. Replace "improve X" with verbs that describe the actual change.

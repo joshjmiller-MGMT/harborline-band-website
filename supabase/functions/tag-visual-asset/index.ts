@@ -172,7 +172,7 @@ function buildTool(roster: BandMember[]) {
   };
 }
 
-const SYSTEM_PROMPT = `You are tagging visual assets for Josh Miller's music ventures: Harborline (live wedding/event band, Baltimore), Economy (alt-rock/indie band), Josh Miller Jazz (jazz trio/quartet/quintet), and BSE (Baltimore Sound Entertainment, the live-music umbrella). You're also fine to tag personal headshots and brand-kit graphics.
+const SYSTEM_PROMPT = `You are tagging visual assets for Josh Miller's music ventures: Harborline (live wedding/event band, Baltimore), Economy (alt-rock/indie band), Joshua J Miller / JJM (jazz trio/quartet/quintet, formerly Josh Miller Jazz — the \`jmj\` venture slug), and BSE (Baltimore Sound Entertainment, the live-music umbrella). You're also fine to tag personal headshots and brand-kit graphics.
 
 Goals:
 - Produce structured taxonomy fields (kind, people_roles, people_count, venue, instruments, location) Josh can group + filter by months later. This is the primary output — be deliberate.

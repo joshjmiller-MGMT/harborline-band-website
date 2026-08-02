@@ -23,11 +23,15 @@ const ALLOWED_BUCKETS = new Set([
 const ALLOWED_VENTURES = new Set([
   "Harborline",
   "Economy",
-  "JMJ",
+  "JJM",
   "Personal",
   "BSE",
   "Brand Studio",
 ]);
+
+// Legacy tokens from before the 2026-08 JJM rebrand — normalize forward so a
+// stale client sending the old vocab never hits the DB CHECK constraint.
+const LEGACY_VENTURES: Record<string, string> = { JMJ: "JJM" };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -86,7 +90,8 @@ Deno.serve(async (req) => {
   }
 
   if (body.venture !== undefined) {
-    const venture = body.venture === null ? null : String(body.venture).trim();
+    let venture = body.venture === null ? null : String(body.venture).trim();
+    if (venture !== null && LEGACY_VENTURES[venture]) venture = LEGACY_VENTURES[venture];
     if (venture !== null && !ALLOWED_VENTURES.has(venture)) {
       return new Response(
         JSON.stringify({
