@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { COLOR_SCALE, colorSpecFor } from "@/lib/practice-mastery";
+import { COLOR_SCALE, colorSpecFor, type PracticeItem } from "@/lib/practice-mastery";
+import {
+  suggestItem, suggestKeys, suggestNeglected, suggestPatternRange,
+  type HistoryRow, type Suggestion,
+} from "@/lib/practice-coach";
 
 // Josh does 1, 2 or 4 key centres depending on time — never a fixed count
 // (8/2: "don't suggest a fixed number… maybe you have a dropdown for keys").
@@ -259,6 +263,29 @@ export default function PracticeDetailRow({
     await db.from("practice_segment_details").delete().eq("id", id);
   };
 
+  // Josh 8/2: suggestions surface "only when I arrive at that section", not all
+  // up front. This component renders per-section, so computing here IS that.
+  const [history, setHistory] = useState<HistoryRow[]>([]);
+  useEffect(() => {
+    let alive = true;
+    db.from("v_practice_history")
+      .select("*")
+      .eq("category", category)
+      .order("started_at", { ascending: false })
+      .limit(120)
+      .then(({ data }: { data: HistoryRow[] | null }) => { if (alive) setHistory(data ?? []); });
+    return () => { alive = false; };
+  }, [category]);
+
+  const suggestion: Suggestion | null = useMemo(() => {
+    if (itemKind) return suggestItem(items as unknown as PracticeItem[]);
+    if (isRange) return suggestPatternRange(history);
+    // Method sections: push the least-touched method, then the least-covered keys.
+    const byNeglect = suggestNeglected(
+      methods.map((m) => ({ id: m.id, label: m.label })), history, "method_id", "session");
+    return byNeglect ?? suggestKeys(history);
+  }, [itemKind, isRange, items, history, methods]);
+
   if (loading) return null;
   // Nothing seeded for this section — stay invisible rather than show an empty control.
   if (!itemKind && methods.length === 0) return null;
@@ -267,6 +294,15 @@ export default function PracticeDetailRow({
   if (itemKind) {
     return (
       <div className="space-y-1">
+      {suggestion && (
+        <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground mb-1">
+          <span className="text-primary/80 shrink-0">suggestion</span>
+          <span>
+            <span className="text-foreground">{suggestion.text}</span>
+            <span className="opacity-70"> — {suggestion.because}</span>
+          </span>
+        </div>
+      )}
         {rows.map((r) => {
           const item = r.method_id ? items.find((i) => i.id === r.method_id) : null;
           // Same colours, kind-specific meanings (song vs transcription vs line).
