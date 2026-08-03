@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { COLOR_SCALE, colorSpecFor, type PracticeItem } from "@/lib/practice-mastery";
+import { colorSpecFor, ladderFor, type PracticeItem } from "@/lib/practice-mastery";
 import {
   suggestItem, suggestKeys, suggestNeglected, suggestPatternRange,
   type HistoryRow, type Suggestion,
@@ -354,10 +354,10 @@ export default function PracticeDetailRow({
                   onChange={(e) => item && void setItemColor(item.id, Number(e.target.value))}
                 >
                   <option value="">how well?</option>
-                  {COLOR_SCALE.map((c) => {
-                    const s = colorSpecFor(itemKind, c.level);
-                    return <option key={c.level} value={c.level}>{s.name} — {s.meaning}</option>;
-                  })}
+                  {/* Per-kind ladder: pink only exists for transcriptions. */}
+                  {ladderFor(itemKind).map((c) => (
+                    <option key={c.level} value={c.level}>{c.name} — {c.meaning}</option>
+                  ))}
                 </select>
               </span>
 

@@ -2214,12 +2214,38 @@ export default function PracticeTimerWidget() {
           const segPool = sectionPool(items, seg.category);
           if (!segPool) return null;
           const top = recommendItems(segPool, { count: 3 });
-          if (!top.length) return null;
+          if (!top.length && !seg.label) return null;
           return (
             <div className="rounded-md border bg-card p-3">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
-                Pull suggestions ({seg.category})
-              </p>
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Pull suggestions ({seg.category})
+                </p>
+                {/* Accidental click escape hatch (Josh 8/3): the current pick
+                    is clearable, and the whole pool is reachable without
+                    scrolling down to the library. */}
+                {seg.label && (
+                  <span className="inline-flex items-center gap-1 text-[11px] rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5">
+                    {seg.label}
+                    <button type="button" aria-label="Clear selection"
+                      onClick={() => updateSeg(activeIdx, { label: "" })}
+                      className="text-muted-foreground hover:text-destructive">×</button>
+                  </span>
+                )}
+                <select
+                  className="ml-auto h-6 text-[11px] rounded border border-border bg-background px-1"
+                  value=""
+                  onChange={(e) => { if (e.target.value) updateSeg(activeIdx, { label: e.target.value }); }}
+                  title="Pick anything from this section's pool"
+                >
+                  <option value="">pick any…</option>
+                  {segPool.map((it) => (
+                    <option key={it.id} value={it.artist ? `${it.title} — ${it.artist}` : it.title}>
+                      {it.title}{it.artist ? ` — ${it.artist}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 {top.map((it) => {
                   const spec = colorSpec(it.color_level);
@@ -2335,6 +2361,16 @@ export default function PracticeTimerWidget() {
               )}
               {/* Suggestion in focus mode too (Josh 8/3) — same section pool
                   as the flow view, tap to pull it into the segment label. */}
+              {activeIdx != null && segments[activeIdx]?.label && (
+                <div className="flex items-center justify-center mb-2">
+                  <span className="inline-flex items-center gap-1 text-[11px] rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5">
+                    {segments[activeIdx].label}
+                    <button type="button" aria-label="Clear selection"
+                      onClick={() => updateSeg(activeIdx, { label: "" })}
+                      className="text-muted-foreground hover:text-destructive">×</button>
+                  </span>
+                </div>
+              )}
               {activeIdx != null && (() => {
                 const seg = segments[activeIdx];
                 if (!seg || seg.label) return null;

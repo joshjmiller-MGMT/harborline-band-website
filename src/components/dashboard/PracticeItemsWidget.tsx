@@ -16,6 +16,8 @@ import {
   type PracticeItemKind,
   colorSpec,
   colorSpecFor,
+  ladderFor,
+  maxLevelFor,
   daysSincePracticed,
   recommendItems,
   recommendationScore,
@@ -109,6 +111,35 @@ export default function PracticeItemsWidget() {
     };
   }, []);
 
+  // Song adds search the CHART LIBRARY (Josh 8/3): typing a song title offers
+  // chart_index matches; picking one links the practice item to its chart.
+  // Free text still works — originals and unlisted tunes exist — but the
+  // default motion is pick-from-library, not invent a string.
+  const [chartMatches, setChartMatches] = useState<Array<{ id: string; title: string }>>([]);
+  const [chartPick, setChartPick] = useState<{ id: string; title: string } | null>(null);
+  useEffect(() => {
+    if (newKind !== "song" || newTitle.trim().length < 2 || chartPick) {
+      setChartMatches([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from("chart_index")
+        .select("id,title")
+        .ilike("title", `%${newTitle.trim()}%`)
+        .limit(12);
+      const seen = new Set<string>();
+      const uniq = ((data as Array<{ id: string; title: string }>) || []).filter((r) => {
+        const k = r.title.toLowerCase();
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      setChartMatches(uniq.slice(0, 6));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [newTitle, newKind, chartPick]);
+
   const add = async () => {
     if (!newTitle.trim()) return;
     const { error } = await supabase.from("practice_items").insert({
@@ -116,36 +147,52 @@ export default function PracticeItemsWidget() {
       artist: newArtist.trim(),
       key: newKey.trim(),
       kind: newKind,
+      chart_index_id: newKind === "song" ? chartPick?.id ?? null : null,
     });
     if (error) {
       toast({ title: "Could not add item", description: error.message, variant: "destructive" });
       return;
     }
+    if (newKind === "song" && !chartPick) {
+      toast({ title: "Added without a chart link", description: "No chart-library match was picked — link it later if one exists." });
+    }
     setNewTitle("");
     setNewArtist("");
     setNewKey("");
-    load();
+    setChartPick(null);
+    setChartMatches([]);
+    await load();
   };
 
+  // Mutations update state THEMSELVES and then re-fetch. Relying on the
+  // realtime channel alone made deletes look broken — the row archived in the
+  // DB but the list never moved (Josh hit this 8/3 with two song adds).
   const setColor = async (it: PracticeItem, level: number) => {
-    if (level === it.color_level) return;
+    if (level === it.color_level || level > maxLevelFor(it.kind)) return;
+    setItems((prev) => prev.map((p) => (p.id === it.id ? { ...p, color_level: level } : p)));
     const { error } = await supabase
       .from("practice_items")
       .update({ color_level: level, color_level_updated_at: new Date().toISOString() })
       .eq("id", it.id);
     if (error) {
       toast({ title: "Couldn't update color", description: error.message, variant: "destructive" });
+      await load();
       return;
     }
-    const spec = colorSpec(level);
+    const spec = colorSpecFor(it.kind, level);
     toast({ title: `${spec.name} — ${spec.meaning}` });
   };
 
   const remove = async (it: PracticeItem) => {
-    await supabase
+    setItems((prev) => prev.filter((p) => p.id !== it.id));
+    const { error } = await supabase
       .from("practice_items")
       .update({ archived_at: new Date().toISOString() })
       .eq("id", it.id);
+    if (error) {
+      toast({ title: "Couldn't remove item", description: error.message, variant: "destructive" });
+    }
+    await load();
   };
 
   const filtered = useMemo(() => {
@@ -163,11 +210,22 @@ export default function PracticeItemsWidget() {
     });
   }, [items, kindFilter, colorFilter, q]);
 
-  const todaysPull = useMemo(() => recommendItems(items, { count: 3 }), [items]);
+  // Today's pull is FROZEN for the day (Josh 8/3: searching the library was
+  // resetting it). Ids picked once from the first load; cards re-read live
+  // item state so colour edits show, but membership never reshuffles mid-day.
+  const [pullIds, setPullIds] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (pullIds !== null || !items.length) return;
+    setPullIds(recommendItems(items, { count: 3 }).map((it) => it.id));
+  }, [items, pullIds]);
+  const todaysPull = useMemo(
+    () => (pullIds ?? []).map((id) => items.find((it) => it.id === id)).filter(Boolean) as PracticeItem[],
+    [items, pullIds],
+  );
   const colorCounts = useMemo(() => {
-    const c = new Array(7).fill(0) as number[];
+    const c = new Array(8).fill(0) as number[];
     items.forEach((it) => {
-      const lvl = Math.max(0, Math.min(6, it.color_level));
+      const lvl = Math.max(0, Math.min(7, it.color_level));
       c[lvl] += 1;
     });
     return c;
@@ -216,6 +274,23 @@ export default function PracticeItemsWidget() {
                         {it.artist && <span>· {it.artist}</span>}
                         <span>· {relativeAge(it)}</span>
                       </div>
+                      {/* Change the colour tag right here (Josh 8/3) — same
+                          per-kind ladder as the list, pink only where it exists. */}
+                      <div className="flex items-center gap-1 mt-1">
+                        {ladderFor(it.kind).map((c) => (
+                          <button
+                            key={c.level}
+                            type="button"
+                            title={`${c.name} — ${c.meaning}`}
+                            onClick={() => setColor(it, c.level)}
+                            className={`w-4 h-4 rounded-full ${c.swatchBg} transition-all ${
+                              it.color_level === c.level
+                                ? `ring-2 ring-offset-1 ring-offset-card ${c.swatchRing}`
+                                : "opacity-40 hover:opacity-100"
+                            }`}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
                 );
@@ -241,10 +316,30 @@ export default function PracticeItemsWidget() {
           <Input
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="Title"
+            placeholder={newKind === "song" ? "Song title — searches your chart library" : "Title"}
             className="h-8 text-xs flex-1 min-w-[140px]"
             onKeyDown={(e) => e.key === "Enter" && add()}
           />
+          {chartPick && (
+            <Badge variant="secondary" className="text-[10px] h-8 inline-flex items-center gap-1">
+              chart: {chartPick.title}
+              <button type="button" onClick={() => setChartPick(null)} aria-label="Unlink chart">×</button>
+            </Badge>
+          )}
+          {chartMatches.length > 0 && (
+            <div className="w-full flex gap-1 flex-wrap">
+              {chartMatches.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => { setChartPick(m); setNewTitle(m.title); setChartMatches([]); }}
+                  className="text-[10px] rounded border border-primary/40 bg-primary/10 px-2 py-0.5 hover:bg-primary/20"
+                >
+                  📄 {m.title}
+                </button>
+              ))}
+            </div>
+          )}
           <Input
             value={newArtist}
             onChange={(e) => setNewArtist(e.target.value)}
@@ -348,12 +443,11 @@ export default function PracticeItemsWidget() {
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
-                    {COLOR_SCALE.map((c) => (
+                    {ladderFor(it.kind).map((c) => (
                       <button
                         key={c.level}
                         type="button"
-                        // Songs and transcriptions read their own ladder.
-                        title={`${c.name} — ${colorSpecFor(it.kind, c.level).meaning}`}
+                        title={`${c.name} — ${c.meaning}`}
                         onClick={() => setColor(it, c.level)}
                         className={`w-5 h-5 rounded-full ${c.swatchBg} transition-all ${
                           it.color_level === c.level

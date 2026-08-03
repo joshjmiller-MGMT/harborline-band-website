@@ -175,6 +175,14 @@ export const MEANINGS_BY_KIND: Record<string, Record<number, string>> = {
   },
 };
 
+// Pink (7) exists ONLY for transcriptions (Josh 8/3: "pink shouldn't even show
+// up anywhere except for transcriptions"). Every other ladder tops out purple.
+export const maxLevelFor = (kind: string): ColorLevel => (kind === "transcription" ? 7 : 6);
+
+/** The colour ladder for one item kind: capped at its max level, with per-kind wording. */
+export const ladderFor = (kind: string): ColorSpec[] =>
+  COLOR_SCALE.filter((c) => c.level <= maxLevelFor(kind)).map((c) => colorSpecFor(kind, c.level));
+
 /** Colour spec with the wording for this item kind (falls back to the line scale). */
 export const colorSpecFor = (kind: string, level: number): ColorSpec => {
   const base = colorSpec(level);

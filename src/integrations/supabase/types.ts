@@ -2540,6 +2540,59 @@ export type Database = {
         }
         Relationships: []
       }
+      media_intake: {
+        Row: {
+          bucket_path: string | null
+          captured_at: string | null
+          created_at: string
+          id: string
+          lane: string
+          matched_item_id: string | null
+          notes: string | null
+          sha256: string | null
+          source_filename: string
+          status: string
+          updated_at: string
+          vision_summary: string | null
+        }
+        Insert: {
+          bucket_path?: string | null
+          captured_at?: string | null
+          created_at?: string
+          id?: string
+          lane: string
+          matched_item_id?: string | null
+          notes?: string | null
+          sha256?: string | null
+          source_filename: string
+          status?: string
+          updated_at?: string
+          vision_summary?: string | null
+        }
+        Update: {
+          bucket_path?: string | null
+          captured_at?: string | null
+          created_at?: string
+          id?: string
+          lane?: string
+          matched_item_id?: string | null
+          notes?: string | null
+          sha256?: string | null
+          source_filename?: string
+          status?: string
+          updated_at?: string
+          vision_summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_intake_matched_item_id_fkey"
+            columns: ["matched_item_id"]
+            isOneToOne: false
+            referencedRelation: "practice_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_tokens: {
         Row: {
           access_token: string
@@ -2818,10 +2871,59 @@ export type Database = {
         }
         Relationships: []
       }
+      practice_item_media: {
+        Row: {
+          bucket: string
+          bucket_path: string
+          created_at: string
+          crop_note: string | null
+          id: string
+          intake_id: string | null
+          is_primary: boolean
+          item_id: string
+        }
+        Insert: {
+          bucket?: string
+          bucket_path: string
+          created_at?: string
+          crop_note?: string | null
+          id?: string
+          intake_id?: string | null
+          is_primary?: boolean
+          item_id: string
+        }
+        Update: {
+          bucket?: string
+          bucket_path?: string
+          created_at?: string
+          crop_note?: string | null
+          id?: string
+          intake_id?: string | null
+          is_primary?: boolean
+          item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_item_media_intake_id_fkey"
+            columns: ["intake_id"]
+            isOneToOne: false
+            referencedRelation: "media_intake"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_item_media_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "practice_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       practice_items: {
         Row: {
           archived_at: string | null
           artist: string
+          chart_index_id: string | null
           color_level: number
           color_level_updated_at: string | null
           created_at: string
@@ -2831,6 +2933,7 @@ export type Database = {
           kind: string
           last_practiced_at: string | null
           notes: string
+          roles: string[]
           source_item_id: string | null
           times_practiced: number
           title: string
@@ -2839,6 +2942,7 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           artist?: string
+          chart_index_id?: string | null
           color_level?: number
           color_level_updated_at?: string | null
           created_at?: string
@@ -2848,6 +2952,7 @@ export type Database = {
           kind: string
           last_practiced_at?: string | null
           notes?: string
+          roles?: string[]
           source_item_id?: string | null
           times_practiced?: number
           title: string
@@ -2856,6 +2961,7 @@ export type Database = {
         Update: {
           archived_at?: string | null
           artist?: string
+          chart_index_id?: string | null
           color_level?: number
           color_level_updated_at?: string | null
           created_at?: string
@@ -2865,12 +2971,20 @@ export type Database = {
           kind?: string
           last_practiced_at?: string | null
           notes?: string
+          roles?: string[]
           source_item_id?: string | null
           times_practiced?: number
           title?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "practice_items_chart_index_id_fkey"
+            columns: ["chart_index_id"]
+            isOneToOne: false
+            referencedRelation: "chart_index"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "practice_items_source_item_id_fkey"
             columns: ["source_item_id"]
@@ -2970,10 +3084,13 @@ export type Database = {
           keys_covered: string | null
           keys_worked: string[] | null
           lh_id: string | null
+          lh_item_id: string | null
           maintenance: boolean
           method_id: string | null
+          pattern_item_id: string | null
           range_from: number | null
           range_to: number | null
+          rh_item_id: string | null
           segment_id: string
           sort_order: number
           triad_interval: string | null
@@ -2988,10 +3105,13 @@ export type Database = {
           keys_covered?: string | null
           keys_worked?: string[] | null
           lh_id?: string | null
+          lh_item_id?: string | null
           maintenance?: boolean
           method_id?: string | null
+          pattern_item_id?: string | null
           range_from?: number | null
           range_to?: number | null
+          rh_item_id?: string | null
           segment_id: string
           sort_order?: number
           triad_interval?: string | null
@@ -3006,10 +3126,13 @@ export type Database = {
           keys_covered?: string | null
           keys_worked?: string[] | null
           lh_id?: string | null
+          lh_item_id?: string | null
           maintenance?: boolean
           method_id?: string | null
+          pattern_item_id?: string | null
           range_from?: number | null
           range_to?: number | null
+          rh_item_id?: string | null
           segment_id?: string
           sort_order?: number
           triad_interval?: string | null
@@ -3038,10 +3161,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "practice_segment_details_lh_item_id_fkey"
+            columns: ["lh_item_id"]
+            isOneToOne: false
+            referencedRelation: "practice_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "practice_segment_details_method_id_fkey"
             columns: ["method_id"]
             isOneToOne: false
             referencedRelation: "practice_taxonomy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_segment_details_pattern_item_id_fkey"
+            columns: ["pattern_item_id"]
+            isOneToOne: false
+            referencedRelation: "practice_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_segment_details_rh_item_id_fkey"
+            columns: ["rh_item_id"]
+            isOneToOne: false
+            referencedRelation: "practice_items"
             referencedColumns: ["id"]
           },
           {
@@ -3117,6 +3261,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "practice_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_session_segments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "v_practice_hours"
             referencedColumns: ["id"]
           },
         ]
@@ -4323,6 +4474,42 @@ export type Database = {
         }
         Relationships: []
       }
+      venue_db_import_20260803: {
+        Row: {
+          city: string | null
+          genre: string | null
+          id: number
+          imported_at: string
+          notes: string | null
+          source: string | null
+          state: string | null
+          venue: string | null
+          web: string | null
+        }
+        Insert: {
+          city?: string | null
+          genre?: string | null
+          id?: never
+          imported_at?: string
+          notes?: string | null
+          source?: string | null
+          state?: string | null
+          venue?: string | null
+          web?: string | null
+        }
+        Update: {
+          city?: string | null
+          genre?: string | null
+          id?: never
+          imported_at?: string
+          notes?: string | null
+          source?: string | null
+          state?: string | null
+          venue?: string | null
+          web?: string | null
+        }
+        Relationships: []
+      }
       visual_assets: {
         Row: {
           ai_error: string | null
@@ -4763,6 +4950,142 @@ export type Database = {
         }
         Relationships: []
       }
+      v_practice_history: {
+        Row: {
+          bpm: number | null
+          category: string | null
+          dim2_id: string | null
+          dim3_id: string | null
+          keys_worked: string[] | null
+          maintenance: boolean | null
+          method_id: string | null
+          pattern_item_id: string | null
+          range_from: number | null
+          range_to: number | null
+          session_id: string | null
+          started_at: string | null
+          what_practiced: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_segment_details_dim2_id_fkey"
+            columns: ["dim2_id"]
+            isOneToOne: false
+            referencedRelation: "practice_taxonomy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_segment_details_dim3_id_fkey"
+            columns: ["dim3_id"]
+            isOneToOne: false
+            referencedRelation: "practice_taxonomy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_segment_details_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "practice_taxonomy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_segment_details_pattern_item_id_fkey"
+            columns: ["pattern_item_id"]
+            isOneToOne: false
+            referencedRelation: "practice_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_session_segments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "practice_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_session_segments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "v_practice_hours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_practice_hours: {
+        Row: {
+          block_hours: number | null
+          classified_as: string | null
+          confidence: string | null
+          created_at: string | null
+          estimated_hours: number | null
+          estimation_source: string | null
+          event_color_id: string | null
+          event_description: string | null
+          event_end: string | null
+          event_start: string | null
+          event_title: string | null
+          gcal_account_email: string | null
+          gcal_calendar_id: string | null
+          gcal_event_id: string | null
+          id: string | null
+          last_resampled_at: string | null
+          matched_rule_id: string | null
+          matched_rule_pattern: string | null
+          notes: string | null
+          review_status: string | null
+          reviewed_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          block_hours?: never
+          classified_as?: never
+          confidence?: never
+          created_at?: string | null
+          estimated_hours?: never
+          estimation_source?: never
+          event_color_id?: never
+          event_description?: never
+          event_end?: never
+          event_start?: string | null
+          event_title?: never
+          gcal_account_email?: never
+          gcal_calendar_id?: never
+          gcal_event_id?: never
+          id?: string | null
+          last_resampled_at?: never
+          matched_rule_id?: never
+          matched_rule_pattern?: never
+          notes?: never
+          review_status?: never
+          reviewed_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          block_hours?: never
+          classified_as?: never
+          confidence?: never
+          created_at?: string | null
+          estimated_hours?: never
+          estimation_source?: never
+          event_color_id?: never
+          event_description?: never
+          event_end?: never
+          event_start?: string | null
+          event_title?: never
+          gcal_account_email?: never
+          gcal_calendar_id?: never
+          gcal_event_id?: never
+          id?: string | null
+          last_resampled_at?: never
+          matched_rule_id?: never
+          matched_rule_pattern?: never
+          notes?: never
+          review_status?: never
+          reviewed_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       v_suspect_done_lanes: {
         Row: {
           claimed_by: string | null
@@ -4832,6 +5155,7 @@ export type Database = {
       dmetaphone: { Args: { "": string }; Returns: string }
       dmetaphone_alt: { Args: { "": string }; Returns: string }
       is_operator: { Args: never; Returns: boolean }
+      my_role: { Args: never; Returns: string }
       refresh_djep_calendar_events_cache: { Args: never; Returns: number }
       refresh_djep_past_events_cache: { Args: never; Returns: number }
       river_best_agent: { Args: { txt: string }; Returns: string }
