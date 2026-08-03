@@ -1207,17 +1207,71 @@ export default function PracticeTimerWidget() {
     };
   }, []);
 
-  // When preset changes, populate working segments (only when no session running)
+  // Section choice (Josh 8/3): the preset's segment list is a MENU. Quick
+  // sessions default to the 2-3 most-neglected sections — the goal is not
+  // covering everything, it's going deep on what you choose. Medium/Long
+  // default to everything ON; any preset can be narrowed by tapping chips.
+  // Suggest, never decide: the preselection is a suggestion Josh can flip.
+  const [sectionChoice, setSectionChoice] = useState<Record<string, boolean>>({});
+  const [categoryLastPracticed, setCategoryLastPracticed] = useState<Record<string, string>>({});
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("practice_session_segments")
+        .select("category,created_at")
+        .order("created_at", { ascending: false })
+        .limit(300);
+      const latest: Record<string, string> = {};
+      for (const r of (data as Array<{ category: string; created_at: string }>) || []) {
+        if (!latest[r.category]) latest[r.category] = r.created_at;
+      }
+      setCategoryLastPracticed(latest);
+    })();
+  }, []);
+
   useEffect(() => {
     if (running || sessionId) return;
     if (!selectedPresetId) return;
-    const segs = presetSegments[selectedPresetId] || [];
+    const menu = presetSegments[selectedPresetId] || [];
+    const preset = presets.find((p) => p.id === selectedPresetId);
+    const isQuick = (preset?.target_minutes ?? 999) <= 35;
+    const next: Record<string, boolean> = {};
+    if (isQuick && menu.length > 3) {
+      // Rank menu categories by neglect: never-practiced first, then oldest.
+      const ranked = [...menu].sort((a, b) => {
+        const la = categoryLastPracticed[a.category];
+        const lb = categoryLastPracticed[b.category];
+        if (!la && !lb) return 0;
+        if (!la) return -1;
+        if (!lb) return 1;
+        return la.localeCompare(lb);
+      });
+      const pick = new Set(ranked.slice(0, 3).map((m) => m.id));
+      menu.forEach((m) => { next[m.id] = pick.has(m.id); });
+    } else {
+      menu.forEach((m) => { next[m.id] = true; });
+    }
+    setSectionChoice(next);
+  }, [selectedPresetId, presetSegments, presets, categoryLastPracticed, running, sessionId]);
+
+  // When preset OR section choice changes, populate working segments. Minutes
+  // scale so the chosen subset fills the preset's target time.
+  useEffect(() => {
+    if (running || sessionId) return;
+    if (!selectedPresetId) return;
+    const menu = presetSegments[selectedPresetId] || [];
+    const preset = presets.find((p) => p.id === selectedPresetId);
+    const enabled = menu.filter((m) => sectionChoice[m.id] !== false);
+    const segs = enabled.length && Object.keys(sectionChoice).length ? enabled : menu;
+    const menuSum = segs.reduce((a, m) => a + m.target_minutes, 0) || 1;
+    const target = preset?.target_minutes ?? menuSum;
+    const scale = target / menuSum;
     setSegments(
       segs.map((s) => ({
         key: s.id,
         category: s.category,
         label: s.label,
-        target_minutes: s.target_minutes,
+        target_minutes: Math.max(3, Math.round(s.target_minutes * scale)),
         bpm: s.bpm,
         notes: s.notes,
         what_practiced: "",
@@ -1228,7 +1282,7 @@ export default function PracticeTimerWidget() {
     );
     setActiveIdx(null);
     seedElapsed(0);
-  }, [selectedPresetId, presetSegments, running, sessionId]);
+  }, [selectedPresetId, presetSegments, presets, sectionChoice, running, sessionId]);
 
   // Tick — timestamp-anchored (elapsed = base + wall-clock since anchor) and
   // driven from the Web Worker, so time stays accurate even when the browser
@@ -1842,8 +1896,35 @@ export default function PracticeTimerWidget() {
             ))}
           </TabsList>
           {presets.map((p) => (
-            <TabsContent key={p.id} value={p.id} className="mt-2">
+            <TabsContent key={p.id} value={p.id} className="mt-2 space-y-2">
               <p className="text-xs text-muted-foreground">{p.description} · target {p.target_minutes} min</p>
+              {/* Section picker — the menu of sections for this preset. On
+                  Quick the 3 most-neglected come preselected; tap to change.
+                  Minutes rescale live to fill the target. */}
+              {!sessionId && (presetSegments[p.id]?.length ?? 0) > 1 && (
+                <div className="flex items-center gap-1 flex-wrap">
+                  {(presetSegments[p.id] || []).map((m) => {
+                    const on = sectionChoice[m.id] !== false;
+                    const never = !categoryLastPracticed[m.category];
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setSectionChoice((prev) => ({ ...prev, [m.id]: !on }))}
+                        title={never ? "Never practiced — suggested" : `Last practiced ${new Date(categoryLastPracticed[m.category]).toLocaleDateString()}`}
+                        className={`h-6 px-2 rounded-full border text-[11px] transition-colors ${
+                          on
+                            ? "border-primary bg-primary/15 text-foreground"
+                            : "border-border text-muted-foreground/60 hover:text-muted-foreground"
+                        }`}
+                      >
+                        {m.category}
+                        {never && on && <span className="ml-1 text-primary">•</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </TabsContent>
           ))}
         </Tabs>
