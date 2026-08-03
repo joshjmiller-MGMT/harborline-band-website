@@ -180,17 +180,23 @@ export default function HoursHeatmap() {
     return weeks;
   }, [dailyHours, dailyKinds, today, heatmapWeeks]);
 
+  // On the all-time view the month names cycle several times over, so a bare
+  // "Jan" tells you nothing about which January. Stamp the year whenever it
+  // changes — and on the very first label — so the axis is readable (Josh 8/2).
   const monthLabels = useMemo(() => {
     const labels: { col: number; label: string }[] = [];
-    let last = "";
+    let lastMonth = "";
+    let lastYear = "";
     heatmap.forEach((week, idx) => {
       const first = week[0]?.date;
       if (!first) return;
       const m = first.toLocaleString("en-US", { month: "short" });
-      if (m !== last) {
-        labels.push({ col: idx, label: m });
-        last = m;
-      }
+      const y = String(first.getFullYear());
+      if (m === lastMonth) return;
+      const yearChanged = y !== lastYear;
+      labels.push({ col: idx, label: yearChanged ? `${m} '${y.slice(2)}` : m });
+      lastMonth = m;
+      lastYear = y;
     });
     return labels;
   }, [heatmap]);
@@ -371,7 +377,7 @@ export default function HoursHeatmap() {
                 {heatmap.map((_, idx) => {
                   const label = monthLabels.find((m) => m.col === idx)?.label;
                   return (
-                    <div key={idx} className="w-[11px] text-center">
+                    <div key={idx} className="w-[11px] text-center whitespace-nowrap overflow-visible">
                       {label || ""}
                     </div>
                   );

@@ -36,6 +36,7 @@ type Detail = {
   maintenance: boolean; keys_worked: string[] | null;
   lh_id: string | null; lh_item_id: string | null;
   triad_interval: string | null; triad_qualities: string | null;
+  pattern_item_id: string | null;
   sort_order: number;
 };
 
@@ -207,9 +208,43 @@ export default function PracticeDetailRow({
   }, []);
   const lhStyles = useMemo(() => tax.filter((t) => t.dimension === "lh"), [tax]);
 
+  // Josh's off-book triad-pair variation, and anything like it he adds later.
+  // It has to be loggable at the same time as a book range: "I want to include
+  // it with my patterns practice, ESPECIALLY when I'm doing other triad pairs."
+  const [triadItems, setTriadItems] = useState<Array<{ id: string; title: string }>>([]);
+  useEffect(() => {
+    let alive = true;
+    db.from("practice_items")
+      .select("id,title")
+      .contains("roles", ["triad_pair"])
+      .is("archived_at", null)
+      .order("title")
+      .then(({ data }: { data: Array<{ id: string; title: string }> | null }) => {
+        if (alive) setTriadItems(data ?? []);
+      });
+    return () => { alive = false; };
+  }, []);
+
   const patch = async (id: string, p: Partial<Detail>) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...p } : r)));
     await db.from("practice_segment_details").update(p).eq("id", id);
+  };
+
+  // Patterns for Jazz 180-208 are triad-pair studies. Josh knows not to log
+  // them as plain patterns, but asked for the net anyway "just in case I forget
+  // one time" — so entering a range in that window selects the method for him.
+  const TRIAD_BOOK_RANGE: [number, number] = [180, 208];
+  const patchRange = async (row: Detail, p: Partial<Detail>) => {
+    const from = p.range_from ?? row.range_from;
+    const to = p.range_to ?? row.range_to;
+    const inWindow = (n: number | null) =>
+      n != null && n >= TRIAD_BOOK_RANGE[0] && n <= TRIAD_BOOK_RANGE[1];
+    const triadMethod = tax.find((t) => t.dimension === "method" && t.value === "triad_pairs");
+    if (triadMethod && !isTriadPairs(row.method_id) && (inWindow(from) || inWindow(to))) {
+      await patch(row.id, { ...p, method_id: triadMethod.id });
+      return;
+    }
+    await patch(row.id, p);
   };
   const addRow = async () => {
     const { data } = await db
@@ -368,26 +403,48 @@ export default function PracticeDetailRow({
               </>
             )}
 
+            {isTriadPairs(r.method_id) && triadItems.length > 0 && (
+              <select className={sel} value={r.pattern_item_id ?? ""}
+                title="A specific variation, alongside whatever book range you worked"
+                onChange={(e) => void patch(r.id, { pattern_item_id: e.target.value || null })}>
+                <option value="">book only…</option>
+                {triadItems.map((i) => <option key={i.id} value={i.id}>{i.title}</option>)}
+              </select>
+            )}
+
             {isRange && !isTriadPairs(r.method_id) ? (
               // Range in, no BPM — those tempos live pencilled in his book.
               <span className="inline-flex items-center gap-1">
                 <input type="number" inputMode="numeric" placeholder="from"
                   className={`${sel} w-16`} value={r.range_from ?? ""}
-                  onChange={(e) => void patch(r.id, { range_from: e.target.value ? Number(e.target.value) : null })} />
+                  onChange={(e) => void patchRange(r, { range_from: e.target.value ? Number(e.target.value) : null })} />
                 <span className="text-[10px] text-muted-foreground">–</span>
                 <input type="number" inputMode="numeric" placeholder="to"
                   className={`${sel} w-16`} value={r.range_to ?? ""}
-                  onChange={(e) => void patch(r.id, { range_to: e.target.value ? Number(e.target.value) : null })} />
+                  onChange={(e) => void patchRange(r, { range_to: e.target.value ? Number(e.target.value) : null })} />
               </span>
             ) : (
-              <select
-                className={sel}
-                value={r.bpm ?? ""}
-                onChange={(e) => void patch(r.id, { bpm: e.target.value ? Number(e.target.value) : null })}
-              >
-                <option value="">bpm…</option>
-                {BPMS.map((b) => <option key={b} value={b}>{b}</option>)}
-              </select>
+              <>
+                {isRange && isTriadPairs(r.method_id) && (
+                  <span className="inline-flex items-center gap-1">
+                    <input type="number" inputMode="numeric" placeholder="from"
+                      className={`${sel} w-16`} value={r.range_from ?? ""}
+                      onChange={(e) => void patchRange(r, { range_from: e.target.value ? Number(e.target.value) : null })} />
+                    <span className="text-[10px] text-muted-foreground">–</span>
+                    <input type="number" inputMode="numeric" placeholder="to"
+                      className={`${sel} w-16`} value={r.range_to ?? ""}
+                      onChange={(e) => void patchRange(r, { range_to: e.target.value ? Number(e.target.value) : null })} />
+                  </span>
+                )}
+                <select
+                  className={sel}
+                  value={r.bpm ?? ""}
+                  onChange={(e) => void patch(r.id, { bpm: e.target.value ? Number(e.target.value) : null })}
+                >
+                  <option value="">bpm…</option>
+                  {BPMS.map((b) => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </>
             )}
 
             {/* Left hand, every section. "Same as right hand" leads because
