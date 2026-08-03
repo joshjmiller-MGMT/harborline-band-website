@@ -166,8 +166,10 @@ export const MEANINGS_BY_KIND: Record<string, Record<number, string>> = {
     3: "can sing the whole thing, played through it",
     4: "can play it, but reading",
     5: "memorized, performable at concert tempo",
-    6: "dissected",
-    7: "lines pulled out and 12-keyed",
+    // Josh 8/2, final: purple is identifying and EXTRACTING the lines; pink is
+    // taking the transcription ITSELF through 12 keys (or a decent portion).
+    6: "identified the lines and pulled them out",
+    7: "12-keyed the transcription itself, or a good portion of it",
   },
 };
 
