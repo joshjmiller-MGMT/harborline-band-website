@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import colors from "tailwindcss/colors";
 
 export default {
   darkMode: ["class"],
@@ -47,9 +48,12 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        purple: "hsl(var(--purple))",
+        // Brand purple stays the DEFAULT, but spreading the stock palette back
+        // in restores purple-400/500/etc — defining a flat value here had
+        // silently deleted every purple-N utility app-wide (mastery swatches).
+        purple: { ...colors.purple, DEFAULT: "hsl(var(--purple))" },
         "purple-glow": "hsl(var(--purple-glow))",
-        blue: "hsl(var(--blue))",
+        blue: { ...colors.blue, DEFAULT: "hsl(var(--blue))" },
         "blue-glow": "hsl(var(--blue-glow))",
         charcoal: "hsl(var(--charcoal))",
         "charcoal-light": "hsl(var(--charcoal-light))",
