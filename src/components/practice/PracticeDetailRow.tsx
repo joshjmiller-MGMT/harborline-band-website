@@ -40,7 +40,7 @@ type Detail = {
   maintenance: boolean; keys_worked: string[] | null;
   lh_id: string | null; lh_item_id: string | null;
   triad_interval: string | null; triad_qualities: string | null;
-  pattern_item_id: string | null;
+  pattern_item_id: string | null; rh_item_id: string | null;
   sort_order: number;
 };
 
@@ -178,6 +178,9 @@ export default function PracticeDetailRow({
   // so it takes a range AND a bpm.
   const isTriadPairs = (methodId: string | null) =>
     !!methodId && byId.get(methodId)?.value === "triad_pairs";
+  const isCA = (methodId: string | null) =>
+    !!methodId && byId.get(methodId)?.value === "chordal_arrangements";
+  const isCombination = category === "Combinations";
 
   const optionsFor = (methodId: string | null, which: "dim2" | "dim3") => {
     if (!methodId) return [];
@@ -211,6 +214,27 @@ export default function PracticeDetailRow({
     return () => { alive = false; };
   }, []);
   const lhStyles = useMemo(() => tax.filter((t) => t.dimension === "lh"), [tax]);
+
+  // Selecting a CA means picking the numbered item — Josh 8/2: "it's numbered,
+  // doesn't need to be more than that." Barry's movements are CAs, so they are
+  // in this same list.
+  const [caItems, setCaItems] = useState<Array<{ id: string; title: string }>>([]);
+  const [allItems, setAllItems] = useState<Array<{ id: string; title: string; kind: string }>>([]);
+  useEffect(() => {
+    let alive = true;
+    db.from("practice_items").select("id,title").contains("roles", ["ca"])
+      .is("archived_at", null).order("title")
+      .then(({ data }: { data: Array<{ id: string; title: string }> | null }) => {
+        if (alive) setCaItems(data ?? []);
+      });
+    // Combinations pairs ANY two kinds of material, one per hand, so the
+    // right-hand picker is deliberately unfiltered.
+    db.from("practice_items").select("id,title,kind").is("archived_at", null).order("kind").order("title")
+      .then(({ data }: { data: Array<{ id: string; title: string; kind: string }> | null }) => {
+        if (alive) setAllItems(data ?? []);
+      });
+    return () => { alive = false; };
+  }, []);
 
   // Josh's off-book triad-pair variation, and anything like it he adds later.
   // It has to be loggable at the same time as a book range: "I want to include
@@ -437,6 +461,28 @@ export default function PracticeDetailRow({
                   {TRIAD_QUALITIES.map((q) => <option key={q} value={q}>{q}</option>)}
                 </select>
               </>
+            )}
+
+            {isCA(r.method_id) && caItems.length > 0 && (
+              <select className={sel} value={r.pattern_item_id ?? ""}
+                title="Which arrangement — the number is the whole identification"
+                onChange={(e) => void patch(r.id, { pattern_item_id: e.target.value || null })}>
+                <option value="">which CA…</option>
+                {caItems.map((i) => <option key={i.id} value={i.id}>{i.title}</option>)}
+              </select>
+            )}
+
+            {/* Combinations: two different kinds of material, one per hand.
+                The left hand uses the same control every section has. */}
+            {isCombination && allItems.length > 0 && (
+              <select className={sel} value={r.rh_item_id ?? ""}
+                title="Right hand"
+                onChange={(e) => void patch(r.id, { rh_item_id: e.target.value || null })}>
+                <option value="">RH…</option>
+                {allItems.map((i) => (
+                  <option key={i.id} value={i.id}>{i.title} ({i.kind})</option>
+                ))}
+              </select>
             )}
 
             {isTriadPairs(r.method_id) && triadItems.length > 0 && (
