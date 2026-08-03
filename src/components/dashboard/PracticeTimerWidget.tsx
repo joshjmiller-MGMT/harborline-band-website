@@ -975,6 +975,26 @@ export default function PracticeTimerWidget() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionStart, setSessionStart] = useState<Date | null>(null);
   const [songOfDay, setSongOfDay] = useState("");
+  // Song of the day searches the chart library (Josh 8/3) — same motion as
+  // song adds in the practice library: type, get chart_index chips, tap one.
+  const [sodMatches, setSodMatches] = useState<Array<{ id: string; title: string }>>([]);
+  const [sodPicked, setSodPicked] = useState(false);
+  useEffect(() => {
+    if (sodPicked || songOfDay.trim().length < 2) { setSodMatches([]); return; }
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from("chart_index").select("id,title")
+        .ilike("title", `%${songOfDay.trim()}%`).limit(12);
+      const seen = new Set<string>();
+      const uniq = ((data as Array<{ id: string; title: string }>) || []).filter((r) => {
+        const k = r.title.toLowerCase();
+        if (seen.has(k)) return false;
+        seen.add(k); return true;
+      });
+      setSodMatches(uniq.slice(0, 5));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [songOfDay, sodPicked]);
   const [sessionNotes, setSessionNotes] = useState("");
   const [chime, setChime] = useState(true);
 
@@ -1520,8 +1540,15 @@ export default function PracticeTimerWidget() {
     // Snapshot metronome usage (incl. in-flight time) before clearing anything.
     const metroSnap = metroLogSnapshot();
     metroAnchorRef.current = null;
-    // commit current segment seconds
-    const finalSegs = segments.map((s, i) => (i === activeIdx ? { ...s, actual_seconds: elapsedSec } : s));
+    // Commit current segment seconds AND mark it completed — only "Next"
+    // marked segments done, so whatever was playing when Stop was hit got
+    // recorded unfinished every session (Josh caught it 8/3: "it thinks I
+    // only did two of the three segments"). Time on the clock = it happened.
+    const finalSegs = segments.map((s, i) =>
+      i === activeIdx
+        ? { ...s, actual_seconds: elapsedSec, completed: elapsedSec > 0 || s.completed }
+        : s,
+    );
     const totalSec = finalSegs.reduce((a, s) => a + s.actual_seconds, 0);
     await supabase
       .from("practice_sessions")
@@ -2190,10 +2217,21 @@ export default function PracticeTimerWidget() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <Input
             value={songOfDay}
-            onChange={(e) => setSongOfDay(e.target.value)}
-            placeholder="🎵 Song of the day"
+            onChange={(e) => { setSongOfDay(e.target.value); setSodPicked(false); }}
+            placeholder="🎵 Song of the day — searches your chart library"
             className="text-sm"
           />
+          {sodMatches.length > 0 && (
+            <div className="flex gap-1 flex-wrap">
+              {sodMatches.map((m) => (
+                <button key={m.id} type="button"
+                  onClick={() => { setSongOfDay(m.title); setSodPicked(true); setSodMatches([]); }}
+                  className="text-[10px] rounded border border-primary/40 bg-primary/10 px-2 py-0.5 hover:bg-primary/20">
+                  📄 {m.title}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-1">
             <Input
               value={sessionNotes}
