@@ -42,6 +42,7 @@ import MetronomeWheel from "@/components/dashboard/MetronomeWheel";
 import {
   colorSpec,
   recommendItems,
+  sectionPool,
   SEGMENT_CATEGORY_TO_KIND,
   type PracticeItem,
   type PracticeItemKind,
@@ -701,8 +702,10 @@ function SortableRow({
 }) {
   // Datalist source — narrow to the kind that matches this segment's category,
   // or fall back to all items if the category isn't recommendation-linked.
-  const matchedKind = SEGMENT_CATEGORY_TO_KIND[seg.category];
-  const datalistItems = matchedKind ? items.filter((it) => it.kind === matchedKind) : items;
+  // Pool-aware (Josh 8/3): the datalist offers only what belongs to this
+  // section — Chords never lists the numbered movements, those are Misc's.
+  const pool = sectionPool(items, seg.category);
+  const datalistItems = pool ?? items;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: seg.key });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -2206,14 +2209,16 @@ export default function PracticeTimerWidget() {
             category maps to a kind and whose label is empty. Surfaces top-3 picks. */}
         {viewMode === "flow" && activeIdx != null && (() => {
           const seg = segments[activeIdx];
-          const matchedKind: PracticeItemKind | undefined = SEGMENT_CATEGORY_TO_KIND[seg.category];
-          if (!matchedKind) return null;
-          const top = recommendItems(items, { kind: matchedKind, count: 3 });
+          // Section pool, not raw kind (Josh 8/3): Chords suggests chordal
+          // EXERCISES; the numbered movements surface in Misc/Other instead.
+          const segPool = sectionPool(items, seg.category);
+          if (!segPool) return null;
+          const top = recommendItems(segPool, { count: 3 });
           if (!top.length) return null;
           return (
             <div className="rounded-md border bg-card p-3">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
-                Pull suggestions ({matchedKind})
+                Pull suggestions ({seg.category})
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 {top.map((it) => {
@@ -2328,6 +2333,35 @@ export default function PracticeTimerWidget() {
                   Target {segments[activeIdx]?.target_minutes} min · Total {fmt(totalElapsed)} / {fmt(totalTarget)}
                 </p>
               )}
+              {/* Suggestion in focus mode too (Josh 8/3) — same section pool
+                  as the flow view, tap to pull it into the segment label. */}
+              {activeIdx != null && (() => {
+                const seg = segments[activeIdx];
+                if (!seg || seg.label) return null;
+                const segPool = sectionPool(items, seg.category);
+                if (!segPool) return null;
+                const top = recommendItems(segPool, { count: 2 });
+                if (!top.length) return null;
+                return (
+                  <div className="flex items-center gap-1.5 flex-wrap justify-center mb-2">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">suggested:</span>
+                    {top.map((it) => {
+                      const spec = colorSpec(it.color_level);
+                      return (
+                        <button
+                          key={it.id}
+                          type="button"
+                          onClick={() => updateSeg(activeIdx, { label: it.artist ? `${it.title} — ${it.artist}` : it.title })}
+                          className={`inline-flex items-center gap-1 rounded-full border ${spec.borderTint} px-2 py-0.5 text-[11px] hover:bg-muted/40`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${spec.swatchBg}`} aria-hidden />
+                          {it.title}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
               <div className="flex items-center gap-2 flex-wrap justify-center mt-2">
                 {!sessionId ? (
                   <Button onClick={startSession} className="gap-1">

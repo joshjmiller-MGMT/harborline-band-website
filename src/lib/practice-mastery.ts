@@ -37,6 +37,8 @@ export interface PracticeItem {
   key: string;
   notes: string;
   color_level: number;
+  /** Extra roles beyond kind: ca, chord_movement, lh_device, rh_device, technique… */
+  roles?: string[] | null;
   color_level_updated_at: string | null;
   last_practiced_at: string | null;
   times_practiced: number;
@@ -220,6 +222,50 @@ export const SEGMENT_CATEGORY_TO_KIND: Record<string, PracticeItemKind> = {
   Arrangements: "other",
   Original: "song",
 };
+
+// ── Section pools (Josh 2026-08-03) ────────────────────────────────────────
+// "What to practice" suggestions must match the section you're IN. Scales
+// suggests scale work, Chords suggests the chordal EXERCISES (Barry chord
+// exercise / Bill / 4ths — method-level work), and the numbered movements
+// (Barry movements, CAs, diads, VAs) belong to the advanced-chordal pool that
+// surfaces in Misc/Other/Combinations — never in Chords.
+const MOVEMENT_ROLES = new Set(["ca", "chord_movement"]);
+
+export const isMovementItem = (it: Pick<PracticeItem, "kind" | "roles">): boolean =>
+  it.kind === "VA" || (it.roles ?? []).some((r) => MOVEMENT_ROLES.has(r));
+
+/**
+ * The named-item pool for a session section. Returns null when the section
+ * takes no item suggestions at all (its suggestions are method-level and come
+ * from the coach instead — e.g. Scales).
+ */
+export function sectionPool(items: PracticeItem[], category: string): PracticeItem[] | null {
+  switch (category) {
+    case "Chords":
+      // Method-level chord work only. Movements are Misc's business.
+      return items.filter((it) => it.kind === "chord" && !isMovementItem(it));
+    case "Scales":
+      // Scale exercises are methods (Belzer, parent scales) — no named items.
+      return null;
+    case "Technical":
+    case "Technique":
+      return items.filter((it) => it.kind === "technique" && !isMovementItem(it));
+    case "Misc":
+    case "Miscellaneous":
+    case "Other":
+    case "Combinations":
+      // The advanced-chordal pool: numbered movements, CAs, VAs, diads.
+      return items.filter(isMovementItem);
+    case "Arrangements":
+      // Arrangements ARE the CAs.
+      return items.filter((it) => (it.roles ?? []).includes("ca"));
+    default: {
+      const kind = SEGMENT_CATEGORY_TO_KIND[category];
+      if (!kind) return null;
+      return items.filter((it) => it.kind === kind && !isMovementItem(it));
+    }
+  }
+}
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const NEVER_PRACTICED_DAYS_FLOOR = 30;
