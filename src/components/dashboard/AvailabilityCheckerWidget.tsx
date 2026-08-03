@@ -32,11 +32,17 @@ interface Report {
   runOfShow?: { docs: any[] };
   cached?: boolean;
   refreshed_at?: string;
+  verdictBasis?: {
+    confirmed: Array<{ title: string; colorId: string | null }>;
+    holds: Array<{ title: string; colorId: string | null }>;
+    personal: number;
+    excludedCanceled: number;
+  };
 }
 
 const verdictMeta: Record<Verdict, { label: string; className: string }> = {
   confirmed_busy: { label: "Confirmed Booking", className: "bg-destructive/20 text-destructive border-destructive/40" },
-  tentative: { label: "Tentative", className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/40" },
+  tentative: { label: "Hold", className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/40" },
   mention_only: { label: "Mentioned in Email", className: "bg-primary/20 text-primary border-primary/40" },
   clear: { label: "Clear", className: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40" },
 };
@@ -229,6 +235,24 @@ export default function AvailabilityCheckerWidget() {
               <div>
                 <p className="text-xs text-muted-foreground">Verdict for {format(new Date(report.date + "T12:00:00"), "EEEE, MMMM d, yyyy")}</p>
                 <Badge variant="outline" className={`mt-1 ${v.className}`}>{v.label}</Badge>
+                {/* Say WHY. The verdict used to be a black box, and when it was
+                    wrong there was no way to see which event caused it. */}
+                {report.verdictBasis && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {report.verdictBasis.confirmed.length > 0 && (
+                      <>booked: {report.verdictBasis.confirmed.map((e) => e.title).join(", ")}. </>
+                    )}
+                    {report.verdictBasis.holds.length > 0 && (
+                      <>holds: {report.verdictBasis.holds.map((e) => e.title).join(", ")}. </>
+                    )}
+                    {report.verdictBasis.personal > 0 && (
+                      <>{report.verdictBasis.personal} personal (not a conflict). </>
+                    )}
+                    {report.verdictBasis.excludedCanceled > 0 && (
+                      <>{report.verdictBasis.excludedCanceled} canceled, excluded.</>
+                    )}
+                  </p>
+                )}
               </div>
               <div className="text-right text-xs text-muted-foreground">
                 <div>{report.googleCalendar.events.length} cal · {report.gmail.messages.length} email · {report.booking?.events.length ?? 0} booking · {report.runOfShow?.docs.length ?? 0} ROS</div>

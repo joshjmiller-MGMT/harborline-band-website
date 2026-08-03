@@ -133,6 +133,11 @@ async function checkGoogleCalendars(supabase: any, dateStr: string) {
               allDay: !!e.start?.date,
               location: e.location || "",
               status: e.status, // confirmed | tentative | cancelled
+              // Josh encodes real state in COLOUR, not Google's status field.
+              // Scheme: 5 Banana=hold · 11 Tomato=needs staffing · 2 Sage=gig
+              // · 10 Basil=warehouse · 9 Blueberry=rehearsal · 4 Flamingo=needs
+              // sub · 3 Grape=personal · 8 Graphite=CANCELED (excluded).
+              colorId: e.colorId || null,
               htmlLink: e.htmlLink,
             });
           }
@@ -357,8 +362,30 @@ Deno.serve(async (req) => {
       : [];
 
     const calEvents = (gcal as any).events || [];
-    const confirmedCal = calEvents.filter((e: any) => e.status === "confirmed");
-    const tentativeCal = calEvents.filter((e: any) => e.status === "tentative");
+
+    // Colour is the source of truth for what an event MEANS (Josh's scheme,
+    // canonical in src/lib/calendar-color-scheme.ts). Google's status field
+    // says "confirmed" for a hold and for a graphited cancellation alike, so
+    // reading status alone reported holds as hard bookings and kept counting
+    // events Josh had already killed. Fixed 2026-08-03.
+    const CANCELED = "8";      // Graphite — excluded everywhere
+    const HOLD = "5";          // Banana — tentative by definition
+    const NEEDS_SUB = "4";     // Flamingo — the date is still committed
+    const BUSY_COLORS = ["11", "2", "10", "9", "4"]; // staffing, gig, warehouse, rehearsal, needs-sub
+    const PERSONAL = "3";      // Grape — personal/dev, not a booking conflict
+
+    const liveCal = calEvents.filter(
+      (e: any) => e.colorId !== CANCELED && e.status !== "cancelled",
+    );
+    const confirmedCal = liveCal.filter(
+      (e: any) => BUSY_COLORS.includes(e.colorId) ||
+        // Uncoloured events fall back to Google's own status.
+        (!e.colorId && e.status === "confirmed"),
+    );
+    const tentativeCal = liveCal.filter(
+      (e: any) => e.colorId === HOLD || (!e.colorId && e.status === "tentative"),
+    );
+    const personalCal = liveCal.filter((e: any) => e.colorId === PERSONAL);
 
     const rosDocs = (runOfShow as any).docs || [];
 
@@ -382,6 +409,14 @@ Deno.serve(async (req) => {
     const report = {
       date: dateStr,
       verdict,
+      // Why the verdict is what it is — the widget shows this instead of
+      // making Josh guess which event drove it.
+      verdictBasis: {
+        confirmed: confirmedCal.map((e: any) => ({ title: e.title, colorId: e.colorId })),
+        holds: tentativeCal.map((e: any) => ({ title: e.title, colorId: e.colorId })),
+        personal: personalCal.length,
+        excludedCanceled: calEvents.length - liveCal.length,
+      },
       googleCalendar: gcal,
       gmail,
       monday: { events: mondayEvents, accounts: mondayRes?.sources || [] },
