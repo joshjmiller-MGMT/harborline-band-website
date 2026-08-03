@@ -19,12 +19,18 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // Gig-lifecycle colors under Josh's 2026-06-22 scheme: a gig is either
 // Sage ("2", confirmed + fully staffed) or Tomato ("11", confirmed but still
 // needs staffing). Basil ("10", dark green) is now warehouse/BSE-admin, not a gig.
-const GIG_COLOR_IDS = new Set(["2", "11"]);
+// Tangerine ("6") added 2026-07-19 (audit gap): the widget always expected
+// orange on the staffing board but the snapshot never fetched it.
+const GIG_COLOR_IDS = new Set(["2", "11", "6"]);
 // Holds (Banana "5") = not-yet-confirmed gigs. Surfaced too, but flagged
 // `is_hold` so the dashboard lists them as "awaiting confirmation" rather than
 // as staffing work (staffing a hold is premature).
 const HOLD_COLOR_ID = "5";
-const SNAPSHOT_COLOR_IDS = new Set([...GIG_COLOR_IDS, HOLD_COLOR_ID]);
+// Flamingo/Cherry Blossom ("4") = needs_sub (Josh rule 2026-07-22): a booked
+// player needs a SUBSTITUTE — distinct from needs-staffing/Tomato(11). Events
+// only flow once Josh recolors per the v2 scheme; fetching it is inert until then.
+const NEEDS_SUB_COLOR_ID = "4";
+const SNAPSHOT_COLOR_IDS = new Set([...GIG_COLOR_IDS, HOLD_COLOR_ID, NEEDS_SUB_COLOR_ID]);
 
 async function ensureFreshToken(supabase: any, row: any): Promise<string> {
   const expiresAt = new Date(row.expires_at).getTime();
@@ -482,6 +488,7 @@ Deno.serve(async (req) => {
               for (const e of ev.items || []) {
                 if (!e.colorId || !SNAPSHOT_COLOR_IDS.has(String(e.colorId))) continue;
                 const is_hold = String(e.colorId) === HOLD_COLOR_ID;
+                const needs_sub = String(e.colorId) === NEEDS_SUB_COLOR_ID;
 
                 const title = e.summary || "(no title)";
 
@@ -536,6 +543,7 @@ Deno.serve(async (req) => {
                   htmlLink: e.htmlLink,
                   colorId: e.colorId,
                   is_hold,
+                  needs_sub,
                   expected_headcount: expected,
                   expected_source: inference.source,
                   staffed_count,

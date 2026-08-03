@@ -264,6 +264,7 @@ export default function AgentTeammates() {
         role: "josh",
         kind: "chat",
         body: text,
+        ticket_ref: null,
         created_at: new Date().toISOString(),
       },
     ]);

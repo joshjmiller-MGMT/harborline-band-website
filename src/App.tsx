@@ -83,7 +83,6 @@ const TeamVenues = lazy(() => import("./pages/team/TeamVenues"));
 const TeamBookingPipeline = lazy(() => import("./pages/team/TeamBookingPipeline"));
 const TeamVisualAssets = lazy(() => import("./pages/team/TeamVisualAssets"));
 const TeamBrandStudio = lazy(() => import("./pages/team/TeamBrandStudio"));
-const TeamBandMembers = lazy(() => import("./pages/team/TeamBandMembers"));
 const TeamBands = lazy(() => import("./pages/team/TeamBands"));
 const TeamMedia = lazy(() => import("./pages/team/TeamMedia"));
 const TeamSystems = lazy(() => import("./pages/team/TeamSystems"));
@@ -91,7 +90,6 @@ const TeamGrants = lazy(() => import("./pages/team/TeamGrants"));
 const TeamLeads = lazy(() => import("./pages/team/TeamLeads"));
 const TeamFeed = lazy(() => import("./pages/team/TeamFeed"));
 const TeamContacts = lazy(() => import("./pages/team/TeamContacts"));
-const TeamAdminUsers = lazy(() => import("./pages/team/TeamAdminUsers"));
 const TeamMembers = lazy(() => import("./pages/team/TeamMembers"));
 const TeamSetlistBuilder = lazy(() => import("./pages/team/TeamSetlistBuilder"));
 const TeamReviewQueue = lazy(() => import("./pages/team/TeamReviewQueue"));
@@ -214,7 +212,8 @@ const App = () => (
                 <Route path="/team/booking-pipeline" element={<TeamBookingPipeline />} />
                 <Route path="/team/visual-assets" element={<TeamVisualAssets />} />
                 <Route path="/team/brand-studio" element={<TeamBrandStudio />} />
-                <Route path="/team/band-members" element={<TeamBandMembers />} />
+                {/* Band Members merged into /team/members (2026-07-12) — redirect keeps old links alive. */}
+                <Route path="/team/band-members" element={<Navigate to="/team/members" replace />} />
                 <Route path="/team/bands" element={<TeamBands />} />
                 {/* SMART board merged into /team/review (2026-07-07) — redirect keeps old links alive. */}
                 <Route path="/team/smart-tasks" element={<Navigate to="/team/review" replace />} />
@@ -224,7 +223,8 @@ const App = () => (
                 <Route path="/team/leads" element={<TeamLeads />} />
                 <Route path="/team/feed" element={<TeamFeed />} />
                 <Route path="/team/contacts" element={<TeamContacts />} />
-                <Route path="/team/admin/users" element={<TeamAdminUsers />} />
+                {/* Team Logins merged into /team/members (2026-07-12) — redirect keeps old links alive. */}
+                <Route path="/team/admin/users" element={<Navigate to="/team/members" replace />} />
                 <Route path="/team/members" element={<TeamMembers />} />
                 <Route path="/team/setlist-builder" element={<TeamSetlistBuilder />} />
                 <Route path="/team/review" element={<TeamReviewQueue />} />

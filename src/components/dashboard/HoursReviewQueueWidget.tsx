@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,9 @@ import {
 // / Edit-classification. Same UX pattern as P21's visual-asset review queue.
 // "Apply" promotes to review_status='reviewed' with current values; "Skip" sets
 // classified_as='none' + reviewed; editing the kind/hours updates the row.
+
+type InstrumentEventClassificationUpdate =
+  Database["public"]["Tables"]["instrument_event_classifications"]["Update"];
 
 export default function HoursReviewQueueWidget() {
   const [rows, setRows] = useState<InstrumentClassification[]>([]);
@@ -61,7 +65,7 @@ export default function HoursReviewQueueWidget() {
   };
 
   const apply = async (r: InstrumentClassification, override?: { kind?: InstrumentKind; hours?: number }) => {
-    const patch: Record<string, unknown> = {
+    const patch: InstrumentEventClassificationUpdate = {
       review_status: "reviewed",
       reviewed_at: new Date().toISOString(),
     };

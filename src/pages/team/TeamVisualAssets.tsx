@@ -17,9 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import { ImagePlus, Search, Sparkles, Trash2, Loader2, X, Check, AlertTriangle, SkipForward, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+type VisualAssetUpdate = Database["public"]["Tables"]["visual_assets"]["Update"];
 
 interface VisualAsset {
   id: string;
@@ -743,7 +746,7 @@ function AssetDetailDialog({
 
   async function save() {
     setSaving(true);
-    const patch: Record<string, unknown> = {
+    const patch: VisualAssetUpdate = {
       alt_text: altText || null,
       caption: caption || null,
       shoot_date: shootDate || null,

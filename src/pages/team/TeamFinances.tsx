@@ -15,6 +15,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 
 // Personal finances board (Josh 2026-06-30). PIN-gated SOFT privacy screen over
@@ -53,6 +54,8 @@ type Vendor = {
   status: string | null;
   recurring: boolean | null;
 };
+
+type FinanceVendorUpdate = Database["public"]["Tables"]["finance_vendors"]["Update"];
 
 function money(n: number): string {
   return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -107,9 +110,10 @@ export default function TeamFinances() {
     setVendors((prev) =>
       prev.map((v) => (v.id === id ? { ...v, [field]: value, status: "identified" } : v)),
     );
+    const patch = { [field]: value, status: "identified" } as FinanceVendorUpdate;
     const { error } = await supabase
       .from("finance_vendors")
-      .update({ [field]: value, status: "identified" })
+      .update(patch)
       .eq("id", id);
     if (error) toast({ title: "Save failed", description: error.message, variant: "destructive" });
   }

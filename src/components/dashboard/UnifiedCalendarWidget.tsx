@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, dateFnsLocalizer, View, EventProps } from "react-big-calendar";
+import { Calendar, dateFnsLocalizer, View, EventProps, ViewsProps } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -1566,12 +1566,14 @@ export default function UnifiedCalendarWidget() {
                 onView={setView}
                 date={date}
                 onNavigate={setDate}
+                // @types/react-big-calendar (^1.16.3) lags the runtime (1.19.4) and doesn't know
+                // about the custom 'sixWeek' view key yet — cast around the stale type.
                 views={{
                   sixWeek: SixWeekView,
                   month: true,
                   week: true,
                   day: true,
-                }}
+                } as unknown as ViewsProps<UnifiedEvent>}
                 eventPropGetter={eventStyleGetter}
                 components={{ event: EventBlock }}
                 style={{ height: "100%" }}

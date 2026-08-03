@@ -59,7 +59,9 @@ function groupPersonnelByDept(personnel: { role: string; name: string }[]): Pers
     .filter(([_, members]) => members.length > 0)
     .map(([label, members]) => ({ label, members }));
 }
-type OrgKey = "harborline" | "bse" | "tsb";
+// Must stay in sync with RunOfShowGenerator: all five orgs are selectable
+// in the UI, and a jmj or one-off doc must never carry the Harborline footer.
+type OrgKey = "harborline" | "bse" | "tsb" | "jmj" | "other";
 type RequiredField = { label: string; key: string };
 
 // ─── Alias lookup (mirrors edge function) ───────────────────────────────
@@ -673,8 +675,13 @@ function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], o
     ? "TOM STARR BAND · tomstarrband.com"
     : org === "bse"
     ? "BALTIMORE SOUND ENTERTAINMENT · baltimoresound.net"
+    : org === "jmj"
+    ? "JOSHUA J MILLER"
+    : org === "other"
+    // One-off ensembles get no brand footer rather than someone else's.
+    ? ""
     : "HARBORLINE · Baltimore's Go-To Live Band · harborlineband.com";
-  children.push(new Paragraph({
+  if (footerText) children.push(new Paragraph({
     spacing: { before: 200 },
     border: { top: { style: BorderStyle.SINGLE, size: 4, color: "DDDDDD", space: 8 } },
     alignment: AlignmentType.CENTER,

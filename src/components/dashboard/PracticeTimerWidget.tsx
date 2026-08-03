@@ -860,9 +860,14 @@ function SortableRow({
           )}
 
           {/* Structured detail (Josh 8/2) — sits under the comment box, never
-              replaces it. Renders nothing for sections with no methods seeded. */}
-          {(active || seg.what_practiced) && seg.id && (
-            <PracticeDetailRow segmentId={seg.id} category={seg.category} />
+              replaces it. Renders nothing for sections with no methods seeded.
+              seg.key holds the DB id once persisted; "tmp-" keys are segments
+              that haven't landed yet, and the detail row needs a real
+              segment_id to write against. (This guard originally checked a
+              nonexistent seg.id, so the whole feature never rendered — caught
+              by the 8/3 audit.) */}
+          {(active || seg.what_practiced) && seg.key && !seg.key.startsWith("tmp-") && (
+            <PracticeDetailRow segmentId={seg.key} category={seg.category} />
           )}
         </div>
       </div>
