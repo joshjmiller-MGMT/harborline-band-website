@@ -112,14 +112,14 @@ function getDetailValue(details: Record<string, string>, lookupKey: string): str
 
 const BLANK = "________";
 
-function detailRuns(label: string, value: string, opts?: { bold?: boolean; fontSize?: number; color?: string }): Paragraph {
+function detailRuns(label: string, value: string, org: OrgKey, opts?: { bold?: boolean; fontSize?: number; color?: string }): Paragraph {
   const fs = (opts?.fontSize || 12) * 2;
   const val = value || BLANK;
   return new Paragraph({
     spacing: { after: 80 },
     children: [
-      new TextRun({ text: `${label}: `, bold: true, size: fs, font: opts?.bold ? "Inter" : "Inter", color: opts?.color || "1a1a1a" }),
-      new TextRun({ text: val, size: fs, font: "Inter", color: val === BLANK ? "cccccc" : (opts?.color || "333333") }),
+      new TextRun({ text: `${label}: `, bold: true, size: fs, font: opts?.bold ? "Inter" : "Inter", color: ink(org, opts?.color || "1a1a1a") }),
+      new TextRun({ text: val, size: fs, font: "Inter", color: val === BLANK ? ink(org, "cccccc") : ink(org, opts?.color || "333333") }),
     ],
   });
 }
@@ -152,6 +152,23 @@ function emptyLine(): Paragraph {
   return new Paragraph({ spacing: { after: 60 }, children: [] });
 }
 
+// BSE branding fix (card 1031b909, applied 2026-08-03): Josh — "with bse doc,
+// i dont like its all grey scale. black and white is cool but grey feels off.
+// feels like color that isnt there so just do black and white." BSE docs get
+// pure #000000 ink (text/borders/accents) instead of the grey/accent palette
+// the other orgs use, and no tinted table shading. Other orgs are untouched.
+function ink(org: OrgKey, color: string): string {
+  return org === "bse" ? "000000" : color;
+}
+function fillFor(org: OrgKey, color: string): string | undefined {
+  return org === "bse" ? undefined : color;
+}
+// BSE logo fix (same card): "make the logo much bigger (at the top)." Scales
+// the per-template base max-height up for BSE only; other orgs unchanged.
+function logoMaxH(org: OrgKey, base: number): number {
+  return org === "bse" ? Math.round(base * 1.9) : base;
+}
+
 async function loadImageAsBuffer(src: string): Promise<{ buf: Buffer | Uint8Array; w: number; h: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -175,16 +192,16 @@ async function loadImageAsBuffer(src: string): Promise<{ buf: Buffer | Uint8Arra
 
 // ─── Shared: build detail paragraphs from requiredFields ────────────────
 
-function buildDetailParagraphs(event: EventData, requiredFields: RequiredField[], opts?: { fontSize?: number; color?: string; labelColor?: string }): Paragraph[] {
+function buildDetailParagraphs(event: EventData, requiredFields: RequiredField[], org: OrgKey, opts?: { fontSize?: number; color?: string; labelColor?: string }): Paragraph[] {
   return requiredFields.map(f => {
     const value = getDetailValue(event.details, f.key);
-    return detailRuns(f.label, value, { fontSize: opts?.fontSize || 12, color: opts?.labelColor || "1a1a1a" });
+    return detailRuns(f.label, value, org, { fontSize: opts?.fontSize || 12, color: opts?.labelColor || "1a1a1a" });
   });
 }
 
 // ─── Song table builder ─────────────────────────────────────────────────
 
-function buildSongTable(songs: SongEntry[], accentColor: string, showRequest = false): Table {
+function buildSongTable(songs: SongEntry[], accentColor: string, org: OrgKey, showRequest = false): Table {
   const allSongs = songs;
   const hasKey = allSongs.some(s => s.key && /^[A-G][b#]?\s*(maj|min|m|major|minor)?$/i.test(s.key.trim()));
   const hasBpm = allSongs.some(s => s.bpm);
@@ -206,7 +223,7 @@ function buildSongTable(songs: SongEntry[], accentColor: string, showRequest = f
   const scale = 9360 / totalRaw;
   const colWidths = cols.map(c => Math.round(c.width * scale));
 
-  const cellBorder = { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" };
+  const cellBorder = { style: BorderStyle.SINGLE, size: 1, color: ink(org, "EEEEEE") };
   const cellBorders = { top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder };
   const headerBorders = { ...cellBorders, bottom: { style: BorderStyle.SINGLE, size: 3, color: accentColor } };
 
@@ -230,9 +247,9 @@ function buildSongTable(songs: SongEntry[], accentColor: string, showRequest = f
           width: { size: colWidths[ci], type: WidthType.DXA },
           borders: cellBorders,
           margins: { top: 30, bottom: 30, left: 60, right: 60 },
-          shading: ri % 2 === 1 ? { fill: "F9F9F9", type: ShadingType.CLEAR } : undefined,
+          shading: ri % 2 === 1 && fillFor(org, "F9F9F9") ? { fill: "F9F9F9", type: ShadingType.CLEAR } : undefined,
           children: [new Paragraph({
-            children: [new TextRun({ text: col.getter(song), size: 22, font: "Inter", color: "222222" })],
+            children: [new TextRun({ text: col.getter(song), size: 22, font: "Inter", color: ink(org, "222222") })],
           })],
         })
       ),
@@ -252,12 +269,12 @@ function buildSongTable(songs: SongEntry[], accentColor: string, showRequest = f
 
 // ─── Client Planner (Elegant) ───────────────────────────────────────────
 
-function buildClientPlanner(event: EventData, requiredFields: RequiredField[], logoData?: { buf: Uint8Array; w: number; h: number }): Document {
+function buildClientPlanner(event: EventData, requiredFields: RequiredField[], org: OrgKey, logoData?: { buf: Uint8Array; w: number; h: number }): Document {
   const children: any[] = [];
 
   // Logo
   if (logoData) {
-    const maxH = 60;
+    const maxH = logoMaxH(org, 60);
     const ratio = logoData.w / logoData.h;
     const h = Math.min(maxH, logoData.h);
     const w = Math.round(h * ratio);
@@ -272,25 +289,25 @@ function buildClientPlanner(event: EventData, requiredFields: RequiredField[], l
   children.push(new Paragraph({
     alignment: AlignmentType.CENTER,
     spacing: { after: 80 },
-    children: [new TextRun({ text: event.eventName || "Wedding Ceremony Planner", font: "Garamond", size: 52, color: "1a1a1a" })],
+    children: [new TextRun({ text: event.eventName || "Wedding Ceremony Planner", font: "Garamond", size: 52, color: ink(org, "1a1a1a") })],
   }));
 
   // Detail fields
-  children.push(hrParagraph("cccccc", 4));
-  children.push(...buildDetailParagraphs(event, requiredFields, { fontSize: 12 }));
-  children.push(hrParagraph("cccccc", 4));
+  children.push(hrParagraph(ink(org, "cccccc"), 4));
+  children.push(...buildDetailParagraphs(event, requiredFields, org, { fontSize: 12 }));
+  children.push(hrParagraph(ink(org, "cccccc"), 4));
 
   // Timeline
   if (event.timeline.length > 0) {
-    children.push(sectionHeading("Timeline", { font: "Garamond", size: 20, color: "1a1a1a" }));
-    children.push(hrParagraph("cccccc", 4));
+    children.push(sectionHeading("Timeline", { font: "Garamond", size: 20, color: ink(org, "1a1a1a") }));
+    children.push(hrParagraph(ink(org, "cccccc"), 4));
     for (const t of event.timeline) {
       children.push(new Paragraph({
         spacing: { after: 60 },
         indent: { left: 240 },
         children: [
-          new TextRun({ text: t.time, bold: true, size: 24, font: "Inter", color: "1a1a1a" }),
-          new TextRun({ text: ` — ${t.description}`, size: 24, font: "Inter", color: "333333" }),
+          new TextRun({ text: t.time, bold: true, size: 24, font: "Inter", color: ink(org, "1a1a1a") }),
+          new TextRun({ text: ` — ${t.description}`, size: 24, font: "Inter", color: ink(org, "333333") }),
         ],
       }));
     }
@@ -298,14 +315,14 @@ function buildClientPlanner(event: EventData, requiredFields: RequiredField[], l
 
   // Song sections
   for (const section of event.songSections) {
-    children.push(sectionHeading(section.title, { font: "Garamond", size: 20, color: "1a1a1a" }));
+    children.push(sectionHeading(section.title, { font: "Garamond", size: 20, color: ink(org, "1a1a1a") }));
     if (section.time) {
       children.push(new Paragraph({
         spacing: { after: 60 },
-        children: [new TextRun({ text: section.time, size: 22, font: "Inter", color: "888888", italics: true })],
+        children: [new TextRun({ text: section.time, size: 22, font: "Inter", color: ink(org, "888888"), italics: true })],
       }));
     }
-    children.push(hrParagraph("cccccc", 4));
+    children.push(hrParagraph(ink(org, "cccccc"), 4));
 
     for (const song of section.songs) {
       const artistPart = song.artist ? ` – ${song.artist}` : "";
@@ -313,17 +330,17 @@ function buildClientPlanner(event: EventData, requiredFields: RequiredField[], l
         spacing: { after: 40 },
         indent: { left: 240 },
         bullet: { level: 0 },
-        children: [new TextRun({ text: `${song.title}${artistPart}`, size: 24, font: "Inter", color: "333333" })],
+        children: [new TextRun({ text: `${song.title}${artistPart}`, size: 24, font: "Inter", color: ink(org, "333333") })],
       }));
     }
   }
 
   // Footer
   children.push(emptyLine());
-  children.push(hrParagraph("dddddd", 4));
+  children.push(hrParagraph(ink(org, "dddddd"), 4));
   children.push(new Paragraph({
     alignment: AlignmentType.CENTER,
-    children: [new TextRun({ text: "Thank you for choosing us for your special day", size: 18, font: "Inter", color: "aaaaaa" })],
+    children: [new TextRun({ text: "Thank you for choosing us for your special day", size: 18, font: "Inter", color: ink(org, "aaaaaa") })],
   }));
 
   return new Document({
@@ -350,11 +367,11 @@ function buildClientPlanner(event: EventData, requiredFields: RequiredField[], l
 
 // ─── Wedding RoS (Musician-facing) ──────────────────────────────────────
 
-function buildWeddingRoS(event: EventData, requiredFields: RequiredField[], logoData?: { buf: Uint8Array; w: number; h: number }): Document {
+function buildWeddingRoS(event: EventData, requiredFields: RequiredField[], org: OrgKey, logoData?: { buf: Uint8Array; w: number; h: number }): Document {
   const children: any[] = [];
 
   if (logoData) {
-    const maxH = 60;
+    const maxH = logoMaxH(org, 60);
     const ratio = logoData.w / logoData.h;
     const h = Math.min(maxH, logoData.h);
     const w = Math.round(h * ratio);
@@ -365,10 +382,10 @@ function buildWeddingRoS(event: EventData, requiredFields: RequiredField[], logo
     }));
   }
 
-  children.push(hrParagraph("222222", 12));
+  children.push(hrParagraph(ink(org, "222222"), 12));
 
   // Details
-  children.push(...buildDetailParagraphs(event, requiredFields, { fontSize: 12 }));
+  children.push(...buildDetailParagraphs(event, requiredFields, org, { fontSize: 12 }));
 
   // Personnel grouped by department
   if (event.personnel.length > 0) {
@@ -377,35 +394,35 @@ function buildWeddingRoS(event: EventData, requiredFields: RequiredField[], logo
     for (const g of groups) {
       children.push(new Paragraph({
         spacing: { after: 40 },
-        children: [new TextRun({ text: g.label.toUpperCase(), size: 20, font: "Inter", color: "999999", bold: true })],
+        children: [new TextRun({ text: g.label.toUpperCase(), size: 20, font: "Inter", color: ink(org, "999999"), bold: true })],
       }));
       for (const p of g.members) {
         children.push(new Paragraph({
           spacing: { after: 60 },
           children: [
-            new TextRun({ text: `${p.role}: `, bold: true, size: 24, font: "Inter", color: "222222" }),
-            new TextRun({ text: p.name, size: 24, font: "Inter", color: "222222" }),
+            new TextRun({ text: `${p.role}: `, bold: true, size: 24, font: "Inter", color: ink(org, "222222") }),
+            new TextRun({ text: p.name, size: 24, font: "Inter", color: ink(org, "222222") }),
           ],
         }));
       }
     }
   }
 
-  children.push(hrParagraph("222222", 12));
+  children.push(hrParagraph(ink(org, "222222"), 12));
 
   // Run of Show heading
-  children.push(sectionHeading("Run of Show", { font: "Inter", size: 18, color: "222222", bold: true }));
+  children.push(sectionHeading("Run of Show", { font: "Inter", size: 18, color: ink(org, "222222"), bold: true }));
 
   // Timeline
   if (event.timeline.length > 0) {
-    children.push(sectionHeading("Timeline", { font: "Inter", size: 16, color: "222222", bold: true }));
-    children.push(hrParagraph("cccccc", 4));
+    children.push(sectionHeading("Timeline", { font: "Inter", size: 16, color: ink(org, "222222"), bold: true }));
+    children.push(hrParagraph(ink(org, "cccccc"), 4));
     for (const t of event.timeline) {
       children.push(new Paragraph({
         spacing: { after: 60 },
         children: [
-          new TextRun({ text: t.time, bold: true, size: 24, font: "Inter", color: "222222" }),
-          new TextRun({ text: ` — ${t.description}`, size: 24, font: "Inter", color: "222222" }),
+          new TextRun({ text: t.time, bold: true, size: 24, font: "Inter", color: ink(org, "222222") }),
+          new TextRun({ text: ` — ${t.description}`, size: 24, font: "Inter", color: ink(org, "222222") }),
         ],
       }));
     }
@@ -413,14 +430,14 @@ function buildWeddingRoS(event: EventData, requiredFields: RequiredField[], logo
 
   // Song sections as numbered lists
   for (const section of event.songSections) {
-    children.push(sectionHeading(section.title, { font: "Inter", size: 16, color: "222222", bold: true }));
+    children.push(sectionHeading(section.title, { font: "Inter", size: 16, color: ink(org, "222222"), bold: true }));
     if (section.time) {
       children.push(new Paragraph({
         spacing: { after: 60 },
-        children: [new TextRun({ text: section.time, size: 22, font: "Inter", color: "666666", italics: true })],
+        children: [new TextRun({ text: section.time, size: 22, font: "Inter", color: ink(org, "666666"), italics: true })],
       }));
     }
-    children.push(hrParagraph("cccccc", 4));
+    children.push(hrParagraph(ink(org, "cccccc"), 4));
 
     for (let i = 0; i < section.songs.length; i++) {
       const song = section.songs[i];
@@ -430,8 +447,8 @@ function buildWeddingRoS(event: EventData, requiredFields: RequiredField[], logo
         spacing: { after: 40 },
         indent: { left: 360 },
         children: [
-          new TextRun({ text: `${i + 1}. `, bold: true, size: 24, font: "Inter", color: "222222" }),
-          new TextRun({ text: `${song.title}${artistPart}${notesPart}`, size: 24, font: "Inter", color: "222222" }),
+          new TextRun({ text: `${i + 1}. `, bold: true, size: 24, font: "Inter", color: ink(org, "222222") }),
+          new TextRun({ text: `${song.title}${artistPart}${notesPart}`, size: 24, font: "Inter", color: ink(org, "222222") }),
         ],
       }));
     }
@@ -439,10 +456,10 @@ function buildWeddingRoS(event: EventData, requiredFields: RequiredField[], logo
 
   // Footer
   children.push(emptyLine());
-  children.push(hrParagraph("cccccc", 4));
+  children.push(hrParagraph(ink(org, "cccccc"), 4));
   children.push(new Paragraph({
     alignment: AlignmentType.CENTER,
-    children: [new TextRun({ text: "Confidential — For musician use only", size: 18, font: "Inter", color: "999999" })],
+    children: [new TextRun({ text: "Confidential — For musician use only", size: 18, font: "Inter", color: ink(org, "999999") })],
   }));
 
   return new Document({
@@ -462,11 +479,11 @@ function buildWeddingRoS(event: EventData, requiredFields: RequiredField[], logo
 // ─── Corporate Event ────────────────────────────────────────────────────
 
 function buildCorporateRoS(event: EventData, requiredFields: RequiredField[], org: OrgKey, logoData?: { buf: Uint8Array; w: number; h: number }): Document {
-  const accentColor = org === "tsb" ? "E85D04" : "14B8A6";
+  const accentColor = org === "bse" ? "000000" : org === "tsb" ? "E85D04" : "14B8A6";
   const children: any[] = [];
 
   if (logoData) {
-    const maxH = 65;
+    const maxH = logoMaxH(org, 65);
     const ratio = logoData.w / logoData.h;
     const h = Math.min(maxH, logoData.h);
     const w = Math.round(h * ratio);
@@ -481,7 +498,7 @@ function buildCorporateRoS(event: EventData, requiredFields: RequiredField[], or
   children.push(new Paragraph({
     alignment: AlignmentType.CENTER,
     spacing: { after: 60 },
-    children: [new TextRun({ text: event.eventName, font: "Inter", size: 44, bold: true, color: "1a1a1a" })],
+    children: [new TextRun({ text: event.eventName, font: "Inter", size: 44, bold: true, color: ink(org, "1a1a1a") })],
   }));
   const eventDate = event.details["event date"] || "";
   const venue = event.details["venue"] || "";
@@ -489,7 +506,7 @@ function buildCorporateRoS(event: EventData, requiredFields: RequiredField[], or
     children.push(new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { after: 200 },
-      children: [new TextRun({ text: [eventDate, venue].filter(Boolean).join("  •  "), size: 24, font: "Inter", color: "333333" })],
+      children: [new TextRun({ text: [eventDate, venue].filter(Boolean).join("  •  "), size: 24, font: "Inter", color: ink(org, "333333") })],
     }));
   }
 
@@ -503,7 +520,7 @@ function buildCorporateRoS(event: EventData, requiredFields: RequiredField[], or
   // Details
   children.push(sectionHeading("Event Details", { font: "Inter", size: 16, color: accentColor, allCaps: true }));
   children.push(new Paragraph({ spacing: { after: 120 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: accentColor, space: 1 } }, children: [] }));
-  children.push(...buildDetailParagraphs(event, requiredFields, { fontSize: 12, labelColor: "1a1a1a" }));
+  children.push(...buildDetailParagraphs(event, requiredFields, org, { fontSize: 12, labelColor: "1a1a1a" }));
 
   // Personnel grouped by department
   if (event.personnel.length > 0) {
@@ -516,8 +533,8 @@ function buildCorporateRoS(event: EventData, requiredFields: RequiredField[], or
       ] }));
       for (const p of g.members) {
         children.push(new Paragraph({ spacing: { after: 40 }, indent: { left: 240 }, children: [
-          new TextRun({ text: `${p.role}: `, bold: true, size: 24, font: "Inter", color: "1a1a1a" }),
-          new TextRun({ text: p.name, size: 24, font: "Inter", color: "333333" }),
+          new TextRun({ text: `${p.role}: `, bold: true, size: 24, font: "Inter", color: ink(org, "1a1a1a") }),
+          new TextRun({ text: p.name, size: 24, font: "Inter", color: ink(org, "333333") }),
         ] }));
       }
     }
@@ -533,8 +550,8 @@ function buildCorporateRoS(event: EventData, requiredFields: RequiredField[], or
         indent: { left: 360 },
         border: { left: { style: BorderStyle.SINGLE, size: 6, color: accentColor, space: 8 } },
         children: [
-          new TextRun({ text: t.time, bold: true, size: 24, font: "Inter", color: "1a1a1a" }),
-          new TextRun({ text: ` — ${t.description}`, size: 24, font: "Inter", color: "333333" }),
+          new TextRun({ text: t.time, bold: true, size: 24, font: "Inter", color: ink(org, "1a1a1a") }),
+          new TextRun({ text: ` — ${t.description}`, size: 24, font: "Inter", color: ink(org, "333333") }),
         ],
       }));
     }
@@ -547,9 +564,9 @@ function buildCorporateRoS(event: EventData, requiredFields: RequiredField[], or
     for (const section of event.songSections) {
       children.push(new Paragraph({
         spacing: { before: 200, after: 80 },
-        children: [new TextRun({ text: `${section.time ? section.time + " — " : ""}${section.title}`, bold: true, size: 26, font: "Inter", color: "1a1a1a" })],
+        children: [new TextRun({ text: `${section.time ? section.time + " — " : ""}${section.title}`, bold: true, size: 26, font: "Inter", color: ink(org, "1a1a1a") })],
       }));
-      children.push(buildSongTable(section.songs, accentColor));
+      children.push(buildSongTable(section.songs, accentColor, org));
     }
   }
 
@@ -559,7 +576,7 @@ function buildCorporateRoS(event: EventData, requiredFields: RequiredField[], or
     spacing: { before: 200 },
     border: { top: { style: BorderStyle.SINGLE, size: 6, color: accentColor, space: 8 } },
     alignment: AlignmentType.CENTER,
-    children: [new TextRun({ text: "Internal Document  •  Confidential", size: 20, font: "Inter", color: "888888" })],
+    children: [new TextRun({ text: "Internal Document  •  Confidential", size: 20, font: "Inter", color: ink(org, "888888") })],
   }));
 
   return new Document({
@@ -580,12 +597,13 @@ function buildCorporateRoS(event: EventData, requiredFields: RequiredField[], or
 
 function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], org: OrgKey, logoData?: { buf: Uint8Array; w: number; h: number }): Document {
   const isTSB = org === "tsb";
-  const purple = isTSB ? "DC2626" : "7C3AED";
-  const teal = isTSB ? "E85D04" : "14B8A6";
+  // BSE: no grey, no color tint — pure black accents (card 1031b909).
+  const purple = org === "bse" ? "000000" : isTSB ? "DC2626" : "7C3AED";
+  const teal = org === "bse" ? "000000" : isTSB ? "E85D04" : "14B8A6";
   const children: any[] = [];
 
   if (logoData) {
-    const maxH = 70;
+    const maxH = logoMaxH(org, 70);
     const ratio = logoData.w / logoData.h;
     const h = Math.min(maxH, logoData.h);
     const w = Math.round(h * ratio);
@@ -613,7 +631,7 @@ function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], o
       spacing: { after: 200 },
       children: metaParts.map((part, i) => new TextRun({
         text: (i > 0 ? "\n" : "") + (i === 1 ? `Location: ${part}` : i === 2 ? `Address: ${part}` : part),
-        size: 24, font: "Inter", color: "333333",
+        size: 24, font: "Inter", color: ink(org, "333333"),
       })),
     }));
   }
@@ -621,7 +639,7 @@ function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], o
   // Details
   children.push(sectionHeading("Event Details", { font: "Inter", size: 22, color: purple, bold: false }));
   children.push(new Paragraph({ spacing: { after: 120 }, border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: teal, space: 1 } }, children: [] }));
-  children.push(...buildDetailParagraphs(event, requiredFields, { fontSize: 12 }));
+  children.push(...buildDetailParagraphs(event, requiredFields, org, { fontSize: 12 }));
 
   // Personnel grouped by department
   if (event.personnel.length > 0) {
@@ -634,7 +652,7 @@ function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], o
       ] }));
       for (const p of g.members) {
         children.push(new Paragraph({ spacing: { after: 40 }, indent: { left: 240 }, children: [
-          new TextRun({ text: `${p.name} – ${p.role}`, size: 24, font: "Inter", color: "333333" }),
+          new TextRun({ text: `${p.name} – ${p.role}`, size: 24, font: "Inter", color: ink(org, "333333") }),
         ] }));
       }
     }
@@ -649,8 +667,8 @@ function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], o
         spacing: { after: 60 },
         indent: { left: 360 },
         children: [
-          new TextRun({ text: t.time, bold: true, size: 24, font: "Inter" }),
-          new TextRun({ text: ` : ${t.description}`, size: 24, font: "Inter", color: "333333" }),
+          new TextRun({ text: t.time, bold: true, size: 24, font: "Inter", color: ink(org, "1a1a1a") }),
+          new TextRun({ text: ` : ${t.description}`, size: 24, font: "Inter", color: ink(org, "333333") }),
         ],
       }));
     }
@@ -663,9 +681,9 @@ function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], o
     for (const section of event.songSections) {
       children.push(new Paragraph({
         spacing: { before: 200, after: 80 },
-        children: [new TextRun({ text: `${section.time ? section.time + " — " : ""}${section.title}`, bold: true, size: 28, font: "Inter", color: "1a1a1a" })],
+        children: [new TextRun({ text: `${section.time ? section.time + " — " : ""}${section.title}`, bold: true, size: 28, font: "Inter", color: ink(org, "1a1a1a") })],
       }));
-      children.push(buildSongTable(section.songs, purple, true));
+      children.push(buildSongTable(section.songs, purple, org, true));
     }
   }
 
@@ -683,9 +701,9 @@ function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], o
     : "HARBORLINE · Baltimore's Go-To Live Band · harborlineband.com";
   if (footerText) children.push(new Paragraph({
     spacing: { before: 200 },
-    border: { top: { style: BorderStyle.SINGLE, size: 4, color: "DDDDDD", space: 8 } },
+    border: { top: { style: BorderStyle.SINGLE, size: 4, color: ink(org, "DDDDDD"), space: 8 } },
     alignment: AlignmentType.CENTER,
-    children: [new TextRun({ text: footerText, size: 20, font: "Inter", color: "666666" })],
+    children: [new TextRun({ text: footerText, size: 20, font: "Inter", color: ink(org, "666666") })],
   }));
 
   return new Document({
@@ -724,10 +742,10 @@ export async function generateDocxBlob(
 
   switch (template) {
     case "client-planner":
-      doc = buildClientPlanner(event, requiredFields, logoData);
+      doc = buildClientPlanner(event, requiredFields, organization, logoData);
       break;
     case "wedding-ros":
-      doc = buildWeddingRoS(event, requiredFields, logoData);
+      doc = buildWeddingRoS(event, requiredFields, organization, logoData);
       break;
     case "corporate-ros":
       doc = buildCorporateRoS(event, requiredFields, organization, logoData);
