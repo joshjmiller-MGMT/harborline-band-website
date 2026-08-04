@@ -7,6 +7,13 @@ import { toast } from "sonner";
 // on the dashboard (smartify restructure P4, 2026-07-07). Timed blocks render as
 // an hour-by-hour rail; flexible blocks sit below. Check-off resets daily
 // (client-side, keyed by date). V1 of the day/week time-blocking system.
+//
+// Mon-Fri weekly focus (card 05ca40d5, applied 2026-08-03): each weekday carries
+// a distinct theme (Mon follow-ups, Tue social, Wed venue/booking reach-outs,
+// Thu lead gen, Fri ad hoc). Rows with kind="weekly_focus" carry a single-entry
+// days_of_week and render as a banner above the checklist instead of as a task —
+// they describe the day, they aren't a to-do. Rows with days_of_week=null (the
+// existing daily rhythm blocks) keep showing every day, unchanged.
 type Block = {
   id: string;
   title: string;
@@ -16,10 +23,15 @@ type Block = {
   active: boolean;
   note: string | null;
   sort_order: number;
+  days_of_week: string[] | null;
 };
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function todayWeekdayName(): string {
+  return new Date().toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
 }
 
 export default function DayPlanWidget() {
@@ -36,7 +48,7 @@ export default function DayPlanWidget() {
     void (async () => {
       const { data } = await supabase
         .from("time_blocks")
-        .select("id, title, kind, duration_min, preferred_time, active, note, sort_order")
+        .select("id, title, kind, duration_min, preferred_time, active, note, sort_order, days_of_week")
         .eq("active", true)
         .order("sort_order", { ascending: true });
       setBlocks((data ?? []) as Block[]);
@@ -53,11 +65,18 @@ export default function DayPlanWidget() {
     });
   }, []);
 
-  const timed = useMemo(() => blocks.filter((b) => b.preferred_time && /^\d/.test(b.preferred_time)), [blocks]);
-  const flexible = useMemo(() => blocks.filter((b) => !b.preferred_time || !/^\d/.test(b.preferred_time)), [blocks]);
+  const todayName = todayWeekdayName();
+  const todayBlocks = useMemo(
+    () => blocks.filter((b) => !b.days_of_week || b.days_of_week.length === 0 || b.days_of_week.includes(todayName)),
+    [blocks, todayName]
+  );
+  const focus = useMemo(() => todayBlocks.find((b) => b.kind === "weekly_focus") ?? null, [todayBlocks]);
+  const checklist = useMemo(() => todayBlocks.filter((b) => b.kind !== "weekly_focus"), [todayBlocks]);
+  const timed = useMemo(() => checklist.filter((b) => b.preferred_time && /^\d/.test(b.preferred_time)), [checklist]);
+  const flexible = useMemo(() => checklist.filter((b) => !b.preferred_time || !/^\d/.test(b.preferred_time)), [checklist]);
   const nowHour = new Date().getHours();
 
-  if (loading || blocks.length === 0) return null;
+  if (loading || (todayBlocks.length === 0)) return null;
 
   const fmt = (t: string) => {
     const h = parseInt(t.slice(0, 2), 10);
@@ -69,7 +88,7 @@ export default function DayPlanWidget() {
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-medium text-foreground flex items-center gap-2">
           <CalendarClock className="w-4 h-4 text-primary" /> Day plan
-          <span className="text-xs text-muted-foreground">({done.size}/{blocks.length} done)</span>
+          <span className="text-xs text-muted-foreground">({done.size}/{checklist.length} done)</span>
         </h3>
         <button
           onClick={() => { setDone(new Set()); try { localStorage.removeItem(`dayplan-${todayKey()}`); } catch { /* ok */ } toast.success("Day plan reset"); }}
@@ -78,6 +97,13 @@ export default function DayPlanWidget() {
           reset
         </button>
       </div>
+
+      {focus && (
+        <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
+          <div className="text-[11px] uppercase tracking-wider text-primary font-medium">{focus.title}</div>
+          {focus.note && <div className="text-sm text-foreground mt-0.5">{focus.note}</div>}
+        </div>
+      )}
 
       <ul className="space-y-1">
         {timed.map((b) => {
