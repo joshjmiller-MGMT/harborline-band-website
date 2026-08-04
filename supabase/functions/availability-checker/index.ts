@@ -6,7 +6,7 @@ import { requireOperator } from "../_shared/require-operator.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CALENDAR_CLIENT_ID");
@@ -14,6 +14,29 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CALENDAR_CLIENT_SECRET");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+// Cron auth — same pattern as holds-from-calendar. The daily prefetch
+// (trigger_availability_prefetch) sends the anon JWT (passes platform
+// verify_jwt) + x-cron-secret; a valid secret skips requireOperator.
+// Root-cause fix 2026-08-04: the cron had been posting with NO auth headers
+// since 2026-05-13, so every scheduled refresh died as a silent 401.
+let cachedCronSecret: string | null = null;
+async function loadCronSecret(supabase: any): Promise<string | null> {
+  if (cachedCronSecret !== null) return cachedCronSecret;
+  const { data, error } = await supabase
+    .from("cron_secrets").select("secret")
+    .eq("name", "trello_route_cron_secret").maybeSingle();
+  if (error || !data?.secret) return null;
+  cachedCronSecret = data.secret as string;
+  return cachedCronSecret;
+}
+
+function constantTimeEquals(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
 
 async function ensureFreshToken(supabase: any, row: any): Promise<string> {
   const expiresAt = new Date(row.expires_at).getTime();
@@ -307,8 +330,18 @@ async function checkScheduledSocial(supabase: any, dateStr: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const denial = await requireOperator(req);
-  if (denial) return denial;
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  const cronHeader = req.headers.get("x-cron-secret");
+  let isCron = false;
+  if (cronHeader) {
+    const expected = await loadCronSecret(supabase);
+    if (expected && constantTimeEquals(cronHeader, expected)) isCron = true;
+  }
+  if (!isCron) {
+    const denial = await requireOperator(req);
+    if (denial) return denial;
+  }
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -319,7 +352,6 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Try cache first (1-hour TTL) unless force=true
     if (!force) {

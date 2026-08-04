@@ -35,6 +35,13 @@ function denial(status: number, body: unknown) {
   });
 }
 
+function constantTimeEquals(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return result === 0;
+}
+
 function base64UrlDecode(input: string): string {
   const pad = (4 - (input.length % 4)) % 4;
   const padded = input.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat(pad);
