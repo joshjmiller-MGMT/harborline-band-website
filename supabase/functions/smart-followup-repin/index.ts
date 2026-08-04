@@ -17,10 +17,19 @@
 // Ops: drain (default) re-pins due follow-ups; dry-run lists what would move.
 // Auth: requireOperator()-gated; the daily cron hits it the same way
 // smart-task-autoenrich is triggered (anon JWT + x-cron-secret under ALLOW_ANON).
-// The internal google-calendar-events call uses the service-role JWT.
+//
+// Calendar writes go DIRECT to the Google API via _shared/gcal-direct.ts
+// (2026-08-04 fix). The old fn-to-fn hop through google-calendar-events broke
+// silently when the platform's SUPABASE_SERVICE_ROLE_KEY moved to the non-JWT
+// sb_secret_ format: every internal call 401'd (jwt_decode_failed), every
+// outcome was "failed" — and this function still returned HTTP 200, so 28
+// straight cron runs looked successful while re-pinning nothing. Direct API
+// access removes the handshake entirely; and a drain where every due item
+// fails now returns 502 so the failure is visible in net._http_response.
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireOperator } from "../_shared/require-operator.ts";
+import { createEvent, getAccountToken, patchEvent, slotFieldsFor } from "../_shared/gcal-direct.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,7 +39,6 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
 
 // Route re-pinned blocks to Josh's MANAGEMENT calendar (his central hub) — same
 // target as the SMART queue drainer.
@@ -145,59 +153,38 @@ function descriptionFor(r: FollowupRow): string {
     .join("\n");
 }
 
-// Walk the follow-up's block to an open 30-min slot today. Update the existing
-// event if we have one; otherwise create a fresh one.
+// Walk the follow-up's block to an open 30-min slot today. Patch the existing
+// event if we have one; otherwise create a fresh one. Direct Google API — no
+// fn-to-fn hop, no auth handshake to break.
 async function repinOne(
   supabase: SupabaseClient,
+  token: string,
   r: FollowupRow,
   today: string,
 ): Promise<RepinOutcome> {
   const summary = titleOf(r);
   const description = descriptionFor(r);
   const hasEvent = !!r.google_calendar_event_id;
-  const path = hasEvent ? "update" : "create";
-  const payload: Record<string, unknown> = {
-    findSlot: true,
-    date: today,
-    slotMinutes: 30,
-    timeZone: "America/New_York",
-    summary,
-    description,
-  };
-  if (hasEvent) payload.eventId = r.google_calendar_event_id;
 
-  let resp: Response;
+  let result;
   try {
-    resp = await fetch(
-      `${FUNCTIONS_BASE}/google-calendar-events?action=${path}&account=${encodeURIComponent(MGMT_CALENDAR_EMAIL)}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      },
-    );
-  } catch (err) {
-    return { id: r.id, title: summary, action: "failed", error: `fetch_threw: ${err instanceof Error ? err.message : String(err)}` };
-  }
-
-  if (!resp.ok) {
-    const body = await resp.text();
+    const fields = await slotFieldsFor(token, today, 30, "America/New_York");
+    result = hasEvent
+      ? await patchEvent(token, r.google_calendar_event_id!, { summary, description, ...fields })
+      : await createEvent(token, { summary, description, ...fields });
     // A stale/deleted event id → fall back to creating a fresh one this pass.
-    if (hasEvent && (resp.status === 404 || resp.status === 410)) {
-      return repinOne(supabase, { ...r, google_calendar_event_id: null }, today);
+    if (!result.ok && hasEvent && (result.status === 404 || result.status === 410)) {
+      return repinOne(supabase, token, { ...r, google_calendar_event_id: null }, today);
     }
-    return { id: r.id, title: summary, action: "failed", error: `gcal_${resp.status}: ${body.slice(0, 200)}` };
+  } catch (err) {
+    return { id: r.id, title: summary, action: "failed", error: `gcal_threw: ${err instanceof Error ? err.message : String(err)}` };
+  }
+  if (!result.ok) {
+    return { id: r.id, title: summary, action: "failed", error: `gcal_${result.status}: ${result.body.slice(0, 200)}` };
   }
 
-  const data = await resp.json();
-  if (data?.connected === false) {
-    return { id: r.id, title: summary, action: "no_account" };
-  }
-  const eventId = data?.event?.id as string | undefined;
-  const htmlLink = data?.event?.htmlLink as string | undefined;
+  const eventId = result.event.id as string | undefined;
+  const htmlLink = result.event.htmlLink as string | undefined;
 
   const patch: Record<string, unknown> = {
     due_date: today,
@@ -257,20 +244,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    const account = await getAccountToken(supabase, MGMT_CALENDAR_EMAIL);
     const outcomes: RepinOutcome[] = [];
-    for (const r of due) {
-      outcomes.push(await repinOne(supabase, r, today));
+    if (!account) {
+      for (const r of due) outcomes.push({ id: r.id, title: titleOf(r), action: "no_account" });
+    } else {
+      for (const r of due) {
+        outcomes.push(await repinOne(supabase, account.token, r, today));
+      }
     }
 
-    return json(200, {
+    const failed = outcomes.filter((o) => o.action === "failed").length;
+    const noAccount = outcomes.filter((o) => o.action === "no_account").length;
+    // A drain where every due item failed (or no calendar account is connected
+    // while items are due) is an outage, not a success — return 5xx so it shows
+    // up as a non-200 in net._http_response instead of hiding inside a 200 body
+    // nobody reads. (The 28-silent-runs lesson.)
+    const allFailed = due.length > 0 && failed + noAccount === due.length;
+    return json(allFailed ? 502 : 200, {
       mode: "drain",
       today,
+      account: account?.email ?? null,
       open_count: open.length,
       due_count: due.length,
       updated: outcomes.filter((o) => o.action === "updated").length,
       created: outcomes.filter((o) => o.action === "created").length,
-      no_account: outcomes.filter((o) => o.action === "no_account").length,
-      failed: outcomes.filter((o) => o.action === "failed").length,
+      no_account: noAccount,
+      failed,
       outcomes,
     });
   } catch (err) {
