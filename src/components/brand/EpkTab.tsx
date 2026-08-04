@@ -3,9 +3,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ExternalLink, Music, Image as ImageIcon, Pin, Star } from "lucide-react";
+import { Loader2, ExternalLink, Music, Image as ImageIcon, Pin, Star, Users, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { fetchActLineup, lineupGap, type LineupPlayer } from "@/lib/actLineup";
 
 // EPK / Roster & Asset Manager — v1 (Josh 7/27). The roster rail + per-act
 // identity + the LIVE readiness checklist (acts + epk_components tables,
@@ -103,19 +104,25 @@ export default function EpkTab() {
   const [pins, setPins] = useState<Pinned[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [kindFilter, setKindFilter] = useState<string>("all");
+  // null = still loading — never show the drift warning before the query lands.
+  const [lineup, setLineup] = useState<LineupPlayer[] | null>(null);
 
   useEffect(() => {
     if (!act) return;
     let alive = true;
+    setLineup(null);
     (async () => {
-      const [a, p] = await Promise.all([
+      const [a, p, l] = await Promise.all([
         db.from("visual_assets").select("id,filename,storage_path,ai_suggested_kind,ai_caption,alt_text")
           .contains("ventures", [act.slug]).order("ai_suggested_kind"),
         db.from("act_epk_assets").select("*").eq("act_id", act.id).order("sort_order"),
+        fetchActLineup(db, act),
       ]);
       if (!alive) return;
       setAssets((a.data ?? []) as Asset[]);
       setPins((p.data ?? []) as Pinned[]);
+      setLineup(l.players);
+      if (l.error) toast({ title: `Lineup query failed: ${l.error}`, variant: "destructive" });
     })();
     return () => { alive = false; };
   }, [act]);
@@ -235,6 +242,44 @@ export default function EpkTab() {
                 onChange={(e) => setActs((p) => p.map((x) => x.id === act.id ? { ...x, booking_phone: e.target.value } : x))}
                 onBlur={(e) => void patchAct({ booking_phone: e.target.value })} className="h-8 text-sm" />
             </div>
+          </Card>
+
+          {/* Lineup — people joined on acts.slug (+ legacy venture tags). A
+              roster act with 0 players is join-key drift, and it says so in
+              red instead of silently rendering nothing (the bug that hid the
+              Economy lineup until 8/4). */}
+          <Card className="p-4">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" /> Lineup
+            </h4>
+            {lineup === null ? (
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            ) : lineupGap(act, lineup.length) ? (
+              <p className="text-xs rounded border border-red-500/40 bg-red-500/10 text-red-400 px-2.5 py-2 flex items-start gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>
+                  Lineup query returned 0 players for a roster act — that&apos;s never real
+                  (every band has at least Josh), so the <code>acts.slug</code> ↔{" "}
+                  <code>people.ventures</code> join key has drifted. Tag this act&apos;s players
+                  with <code>{act.slug}</code> in <a href="/team/people" className="underline">People</a>.
+                </span>
+              </p>
+            ) : lineup.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No lineup here — managed act, the players are their own.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {lineup.map((p) => (
+                  <span key={p.id} className="text-xs rounded-full border border-border bg-muted/30 px-2.5 py-1 text-foreground">
+                    {p.name}
+                    {p.instruments.length > 0 && (
+                      <span className="text-muted-foreground"> · {p.instruments.join(" / ")}</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
           </Card>
 
           {/* Live checklist */}

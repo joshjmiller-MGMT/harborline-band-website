@@ -85,6 +85,8 @@ const SHEET_TYPES = [
   { value: "leadsheet", label: "Lead Sheet" },
   { value: "piano", label: "Piano" },
   { value: "lyric-chord", label: "Lyrics/Chords" },
+  // iReal Pro chord-only exports (2026-08-04) — chords/bars, no melody line.
+  { value: "chord-chart", label: "Chord Chart" },
   { value: "arrangement", label: "Arrangement" },
   { value: "score", label: "Score" },
   { value: "part", label: "Part" },

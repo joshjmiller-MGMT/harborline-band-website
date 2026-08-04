@@ -673,6 +673,23 @@ function useTapTempo(onTempo: (bpm: number) => void) {
 // ---------- Sortable row ----------
 type SegStatus = "pending" | "active" | "done" | "skipped";
 
+// Which segment id (if any) the structured practice-detail row should render
+// against. Pure + typed against RuntimeSegment on purpose: the 8/3 audit found
+// the inline guard checking a NONEXISTENT seg.id, so the whole feature never
+// rendered. Keeping the guard here means a bad property is a compile error and
+// a logic drift is a test failure (src/test/practice-detail.test.tsx).
+// seg.key holds the DB id once persisted; "tmp-" keys are segments that
+// haven't landed yet, and the detail row needs a real segment_id to write
+// against.
+export function detailSegmentId(
+  seg: Pick<RuntimeSegment, "key" | "what_practiced">,
+  active: boolean,
+): string | null {
+  if (!active && !seg.what_practiced) return null;
+  if (!seg.key || seg.key.startsWith("tmp-")) return null;
+  return seg.key;
+}
+
 function SortableRow({
   seg,
   index,
@@ -864,14 +881,12 @@ function SortableRow({
 
           {/* Structured detail (Josh 8/2) — sits under the comment box, never
               replaces it. Renders nothing for sections with no methods seeded.
-              seg.key holds the DB id once persisted; "tmp-" keys are segments
-              that haven't landed yet, and the detail row needs a real
-              segment_id to write against. (This guard originally checked a
-              nonexistent seg.id, so the whole feature never rendered — caught
-              by the 8/3 audit.) */}
-          {(active || seg.what_practiced) && seg.key && !seg.key.startsWith("tmp-") && (
-            <PracticeDetailRow segmentId={seg.key} category={seg.category} />
-          )}
+              The guard lives in detailSegmentId (see its comment for the 8/3
+              seg.id bug this protects against). */}
+          {(() => {
+            const detailId = detailSegmentId(seg, active);
+            return detailId && <PracticeDetailRow segmentId={detailId} category={seg.category} />;
+          })()}
         </div>
       </div>
     </div>

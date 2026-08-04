@@ -15,12 +15,14 @@ import { platformMeta, logSmartLinkEvent, initMetaPixel, pixelTrack, type SmartL
 // The exact consent language shown on the lander. Stored verbatim with each
 // signup (CTIA 5.1.2 wants a record of what was SHOWN, not just consent=true).
 // If this text changes, signups keep the wording they actually agreed to.
-const consentText = (artist: string) =>
+// Exported (with FanSignup) for the consent smoke tests: the stored copy must
+// stay a verbatim subset of what the fan is actually shown.
+export const consentText = (artist: string) =>
   `By submitting your number you agree to receive automated marketing texts from ${artist} at that number. ` +
   `Consent isn't a condition of any purchase. Msg & data rates may apply and message frequency varies. ` +
   `Reply STOP to opt out or HELP for help; every email has an unsubscribe link.`;
 
-function FanSignup({ slug, accent, artist }: { slug: string; accent: string; artist: string }) {
+export function FanSignup({ slug, accent, artist }: { slug: string; accent: string; artist: string }) {
   const [mode, setMode] = useState<"phone" | "email">("phone");
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);

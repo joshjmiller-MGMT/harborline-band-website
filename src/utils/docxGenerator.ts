@@ -61,7 +61,9 @@ function groupPersonnelByDept(personnel: { role: string; name: string }[]): Pers
 }
 // Must stay in sync with RunOfShowGenerator: all five orgs are selectable
 // in the UI, and a jmj or one-off doc must never carry the Harborline footer.
-type OrgKey = "harborline" | "bse" | "tsb" | "jmj" | "other";
+// Exported (with ink/fillFor/logoMaxH/orgFooterText) for the branding smoke
+// tests — the 8/3 audit caught this type three orgs behind the UI.
+export type OrgKey = "harborline" | "bse" | "tsb" | "jmj" | "other";
 type RequiredField = { label: string; key: string };
 
 // ─── Alias lookup (mirrors edge function) ───────────────────────────────
@@ -157,16 +159,31 @@ function emptyLine(): Paragraph {
 // feels like color that isnt there so just do black and white." BSE docs get
 // pure #000000 ink (text/borders/accents) instead of the grey/accent palette
 // the other orgs use, and no tinted table shading. Other orgs are untouched.
-function ink(org: OrgKey, color: string): string {
+export function ink(org: OrgKey, color: string): string {
   return org === "bse" ? "000000" : color;
 }
-function fillFor(org: OrgKey, color: string): string | undefined {
+export function fillFor(org: OrgKey, color: string): string | undefined {
   return org === "bse" ? undefined : color;
 }
 // BSE logo fix (same card): "make the logo much bigger (at the top)." Scales
 // the per-template base max-height up for BSE only; other orgs unchanged.
-function logoMaxH(org: OrgKey, base: number): number {
+export function logoMaxH(org: OrgKey, base: number): number {
   return org === "bse" ? Math.round(base * 1.9) : base;
+}
+
+// Per-org brand footer on client-facing docs. The 8/3 regression: OrgKey had
+// drifted three orgs behind the UI, so a JJM or one-off run-of-show exported
+// with the HARBORLINE footer. Extracted + exported so the smoke test pins
+// every org's footer independently of docx rendering.
+export function orgFooterText(org: OrgKey): string {
+  switch (org) {
+    case "tsb": return "TOM STARR BAND · tomstarrband.com";
+    case "bse": return "BALTIMORE SOUND ENTERTAINMENT · baltimoresound.net";
+    case "jmj": return "JOSHUA J MILLER";
+    // One-off ensembles get no brand footer rather than someone else's.
+    case "other": return "";
+    default: return "HARBORLINE · Baltimore's Go-To Live Band · harborlineband.com";
+  }
 }
 
 async function loadImageAsBuffer(src: string): Promise<{ buf: Buffer | Uint8Array; w: number; h: number }> {
@@ -689,16 +706,7 @@ function buildPartyRunSheet(event: EventData, requiredFields: RequiredField[], o
 
   // Footer
   children.push(emptyLine());
-  const footerText = isTSB
-    ? "TOM STARR BAND · tomstarrband.com"
-    : org === "bse"
-    ? "BALTIMORE SOUND ENTERTAINMENT · baltimoresound.net"
-    : org === "jmj"
-    ? "JOSHUA J MILLER"
-    : org === "other"
-    // One-off ensembles get no brand footer rather than someone else's.
-    ? ""
-    : "HARBORLINE · Baltimore's Go-To Live Band · harborlineband.com";
+  const footerText = orgFooterText(org);
   if (footerText) children.push(new Paragraph({
     spacing: { before: 200 },
     border: { top: { style: BorderStyle.SINGLE, size: 4, color: ink(org, "DDDDDD"), space: 8 } },
