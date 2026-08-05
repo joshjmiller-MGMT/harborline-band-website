@@ -22,16 +22,17 @@
 //   ALLOW_ANON          — "true" to bypass the gate (rollout flag).
 //   OPERATOR_USER_IDS   — comma-separated Supabase Auth user UUIDs.
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS on the denial path narrowed 2026-08-05 (finding F9). This was the last
+// wildcard left after the three conversion waves: every converted function still
+// answered "*" on its own 401/403, because those responses are built here.
+// The bodies carry no sensitive data, but a mixed policy is a policy nobody can
+// reason about — so the denial path now uses the same allowlist as the rest.
+import { corsHeadersFor } from "./allowed-origins.ts";
 
-function denial(status: number, body: unknown) {
+function denial(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeadersFor(req), "Content-Type": "application/json" },
   });
 }
 
@@ -63,7 +64,7 @@ export async function requireOperator(req: Request): Promise<Response | null> {
   const authHeader =
     req.headers.get("authorization") ?? req.headers.get("Authorization");
   if (!authHeader || !authHeader.toLowerCase().startsWith("bearer ")) {
-    return denial(401, { error: "unauthorized", reason: "missing_bearer" });
+    return denial(req, 401, { error: "unauthorized", reason: "missing_bearer" });
   }
 
   const token = authHeader.slice("bearer ".length).trim();
@@ -73,14 +74,14 @@ export async function requireOperator(req: Request): Promise<Response | null> {
     if (parts.length !== 3) throw new Error("malformed_jwt");
     payload = JSON.parse(base64UrlDecode(parts[1]));
   } catch (_err) {
-    return denial(401, { error: "unauthorized", reason: "jwt_decode_failed" });
+    return denial(req, 401, { error: "unauthorized", reason: "jwt_decode_failed" });
   }
 
   // Service-role bypass: cron + internal callers use the service-role JWT.
   if (payload.role === "service_role") return null;
 
   if (!payload.sub || !operatorIds.includes(payload.sub)) {
-    return denial(403, { error: "forbidden", reason: "not_an_operator" });
+    return denial(req, 403, { error: "forbidden", reason: "not_an_operator" });
   }
 
   return null;

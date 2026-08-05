@@ -3,11 +3,9 @@
 
 import { requireOperator } from "../_shared/require-operator.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05 (finding F9). Headers are
+// per-request now because the echoed origin depends on the caller.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
 const BRAND_VOICE: Record<string, string> = {
   harborline:
@@ -66,10 +64,15 @@ function captionsTool(plats: string[]) {
   };
 }
 
+// corsHeaders is threaded in as a parameter rather than closed over at module
+// scope: the echoed origin varies per caller, so a shared constant would race
+// across concurrent requests. The 429 below is thrown as a Response, so it needs
+// the calling request's headers.
 async function callClaude(opts: {
   systemText: string;
   userText: string;
   tool: any;
+  corsHeaders: Record<string, string>;
 }) {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
@@ -96,7 +99,7 @@ async function callClaude(opts: {
   if (resp.status === 429) {
     throw new Response(
       JSON.stringify({ error: "Rate limited, please try again in a moment." }),
-      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 429, headers: { ...opts.corsHeaders, "Content-Type": "application/json" } },
     );
   }
   if (!resp.ok) {
@@ -111,6 +114,9 @@ async function callClaude(opts: {
 }
 
 Deno.serve(async (req) => {
+  // Scoped per-request rather than module-level: the echoed origin varies by
+  // caller, so a shared constant would race across concurrent requests.
+  const corsHeaders = corsHeadersFor(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const denial = await requireOperator(req);
@@ -126,6 +132,7 @@ Deno.serve(async (req) => {
         systemText: `You are a social media strategist. Brand voice: ${voice}\n\nReturn 4 distinct post ideas with varied angles (behind the scenes, performance clip, audience reaction, gear/setlist tease, etc.). Respond by calling return_ideas.`,
         userText: `Source: ${sourceTitle}\nDetails: ${sourceDescription || "(none)"}`,
         tool: IDEAS_TOOL,
+        corsHeaders,
       });
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -139,6 +146,7 @@ Deno.serve(async (req) => {
         systemText: `You are a social media copywriter. Brand voice: ${voice}\n\nWrite captions for the given post on each platform. Keep voice consistent across platforms but tailor format and length to each platform's conventions. Respond by calling return_captions.`,
         userText: `Post: ${postTitle}\nNotes: ${postNotes || "(none)"}`,
         tool,
+        corsHeaders,
       });
       return new Response(JSON.stringify({ captions: result }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

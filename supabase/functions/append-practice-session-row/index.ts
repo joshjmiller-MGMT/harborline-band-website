@@ -39,11 +39,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireOperator } from "../_shared/require-operator.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05 (finding F9). Headers are
+// per-request now because the echoed origin depends on the caller.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CALENDAR_CLIENT_ID");
 const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CALENDAR_CLIENT_SECRET");
@@ -52,11 +50,14 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PRACTICE_SHEET_ID = Deno.env.get("PRACTICE_SHEET_ID");
 const PRACTICE_SHEET_OWNER_EMAIL = Deno.env.get("PRACTICE_SHEET_OWNER_EMAIL");
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+// Factory rather than a module-level closure: the echoed origin depends on the
+// caller, so a shared constant would race across concurrent requests.
+function makeJsonResponse(corsHeaders: Record<string, string>) {
+  return (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
 }
 
 async function refreshToken(supabase: any, row: any): Promise<string> {
@@ -250,6 +251,8 @@ async function appendRow(
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
+  const jsonResponse = makeJsonResponse(corsHeaders);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const denial = await requireOperator(req);

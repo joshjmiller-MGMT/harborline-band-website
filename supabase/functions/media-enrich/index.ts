@@ -11,18 +11,30 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireOperator } from "../_shared/require-operator.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05 (finding F9). Headers are
+// per-request now because the echoed origin depends on the caller.
+// This fn also accepts `x-cron-secret`, which is not in the shared default
+// Allow-Headers list, so that one header is re-added on top.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
+
+function corsFor(req: Request): Record<string, string> {
+  return {
+    ...corsHeadersFor(req),
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-cron-secret",
+  };
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
 const BUCKET = "media-thumbnails";
 
-function json(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+// Factory rather than a module-level closure: the echoed origin depends on the
+// caller, so a shared constant would race across concurrent requests.
+function makeJson(corsHeaders: Record<string, string>) {
+  return (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 
 let cachedCronSecret: string | null = null;
@@ -111,6 +123,8 @@ async function captionWithClaude(thumbB64: string, ctx: { filename: string; vent
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsFor(req);
+  const json = makeJson(corsHeaders);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });

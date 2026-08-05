@@ -15,19 +15,23 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { BlobWriter, TextReader, Uint8ArrayReader, ZipWriter } from "https://deno.land/x/zipjs@v2.7.45/index.js";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05 (finding F9). Headers are
+// per-request now because the echoed origin depends on the caller.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-function deny(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+type Deny = (status: number, body: unknown) => Response;
+
+// Factory rather than a module-level closure: the echoed origin depends on the
+// caller, so a shared constant would race across concurrent requests.
+function makeDeny(corsHeaders: Record<string, string>): Deny {
+  return (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
 }
 function b64urlDecode(s: string): string {
   const pad = (4 - (s.length % 4)) % 4;
@@ -36,7 +40,8 @@ function b64urlDecode(s: string): string {
 }
 // Operator gate, inlined (mirrors _shared/require-operator) so the function
 // bundles cleanly regardless of deploy path.
-function requireOperator(req: Request): Response | null {
+// `deny` is passed in rather than closed over: its CORS headers are per-request.
+function requireOperator(req: Request, deny: Deny): Response | null {
   if (Deno.env.get("ALLOW_ANON") === "true") return null;
   const ids = (Deno.env.get("OPERATOR_USER_IDS") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const h = req.headers.get("authorization") ?? req.headers.get("Authorization");
@@ -61,8 +66,10 @@ type ChartIn = { storage_path: string; filename?: string; variation?: string };
 type SongIn = { song: string; charts: ChartIn[] };
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
+  const deny = makeDeny(corsHeaders);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const denial = requireOperator(req);
+  const denial = requireOperator(req, deny);
   if (denial) return denial;
 
   let body: { gig_date?: string; songs?: SongIn[] };

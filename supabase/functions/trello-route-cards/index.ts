@@ -54,11 +54,10 @@ import {
   type TrelloList,
 } from "../_shared/trello-client.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05 (finding F9). Headers are
+// per-request now because the echoed origin depends on the caller. The 15-minute
+// pg_cron caller sends no Origin, gets no CORS headers, and is unaffected.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -119,11 +118,18 @@ const DEFAULT_SEEDS: Array<{
   },
 ];
 
-function json(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+// `json` is built per-request (factory) rather than held as a module constant:
+// the echoed Origin varies by caller, so a module-level closure over one
+// corsHeaders object would race across concurrent requests. handleRoute /
+// handleMarkDone take it as a parameter for the same reason.
+type JsonFn = (status: number, body: unknown) => Response;
+
+function makeJson(corsHeaders: Record<string, string>): JsonFn {
+  return (status, body) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
 }
 
 async function loadRoutes(
@@ -382,7 +388,7 @@ async function dispatchOne(
   };
 }
 
-async function handleRoute(supabase: SupabaseClient, dryRun: boolean) {
+async function handleRoute(supabase: SupabaseClient, dryRun: boolean, json: JsonFn) {
   const { board, candidates: boardCandidates } = await findBoard();
   if (!board) {
     return {
@@ -602,7 +608,7 @@ function countByHandler(handlers: string[]): Record<string, number> {
   return out;
 }
 
-async function handleMarkDone(cardId: string) {
+async function handleMarkDone(cardId: string, json: JsonFn) {
   const cardRes = await getCardWithLabels(cardId);
   if ("error" in cardRes) {
     return json(cardRes.status, {
@@ -675,6 +681,10 @@ function constantTimeEquals(a: string, b: string): boolean {
 }
 
 Deno.serve(async (req) => {
+  // Scoped per-request rather than module-level: the echoed origin varies by
+  // caller, so a shared mutable constant would race across concurrent requests.
+  const corsHeaders = corsHeadersFor(req);
+  const json = makeJson(corsHeaders);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   // Service-role supabase client — used for cron-secret lookup + route ops.
@@ -729,11 +739,11 @@ Deno.serve(async (req) => {
           detail: "POST body must include a non-empty `card_id` string.",
         });
       }
-      return await handleMarkDone(cardId);
+      return await handleMarkDone(cardId, json);
     }
 
     // Re-use the supabase client created at the top of the handler.
-    const { response } = await handleRoute(supabase, action === "dry-run");
+    const { response } = await handleRoute(supabase, action === "dry-run", json);
     return response;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

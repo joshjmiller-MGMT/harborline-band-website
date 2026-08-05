@@ -31,11 +31,10 @@ import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supa
 import { requireOperator } from "../_shared/require-operator.ts";
 import { createEvent, getAccountToken, patchEvent, slotFieldsFor } from "../_shared/gcal-direct.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05 (finding F9). Headers are
+// per-request now because the echoed origin depends on the caller. Callers with
+// no Origin header (pg_cron via pg_net) get no CORS headers and are unaffected.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -65,13 +64,6 @@ type RepinOutcome = {
   event_id?: string;
   error?: string;
 };
-
-function json(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 // Cron-secret bypass — mirrors smart-task-autoenrich. The daily pg_cron caller
 // presents an anon JWT (which requireOperator rejects) plus the shared
@@ -205,6 +197,14 @@ async function repinOne(
 }
 
 Deno.serve(async (req) => {
+  // Scoped per-request rather than module-level: the echoed origin varies by
+  // caller, so a shared mutable constant would race across concurrent requests.
+  const corsHeaders = corsHeadersFor(req);
+  const json = (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {

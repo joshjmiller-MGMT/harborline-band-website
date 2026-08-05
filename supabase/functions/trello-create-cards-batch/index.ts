@@ -11,22 +11,14 @@
 
 import { requireOperator } from "../_shared/require-operator.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05 (finding F9). Headers are
+// per-request now because the echoed origin depends on the caller. Callers with
+// no Origin header (pg_cron via pg_net) get no CORS headers and are unaffected.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
 const TRELLO_KEY = Deno.env.get("TRELLO_API_KEY");
 const TRELLO_TOKEN = Deno.env.get("TRELLO_API_TOKEN");
 const DEFAULT_BOARD_ID = Deno.env.get("TRELLO_BOARD_ID");
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 function trelloAuth(): string {
   return `key=${encodeURIComponent(TRELLO_KEY!)}&token=${encodeURIComponent(TRELLO_TOKEN!)}`;
@@ -97,6 +89,14 @@ interface CardResult {
 }
 
 Deno.serve(async (req) => {
+  // Scoped per-request rather than module-level: the echoed origin varies by
+  // caller, so a shared mutable constant would race across concurrent requests.
+  const corsHeaders = corsHeadersFor(req);
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

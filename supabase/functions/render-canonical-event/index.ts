@@ -25,20 +25,21 @@ import { renderOutputZ } from "./render-output-z.ts";
 import { renderOutputCClient } from "./render-output-c-client.ts";
 import type { CanonicalEvent, OutputType } from "./canonical-event-types.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05 (finding F9). Headers are
+// per-request now because the echoed origin depends on the caller.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+// Factory rather than a module-level closure over corsHeaders: the echoed origin
+// varies per caller, so a shared constant would race across concurrent requests.
+function makeJsonResponse(corsHeaders: Record<string, string>) {
+  return (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
 }
 
 function autoSelectOutput(event: CanonicalEvent): OutputType {
@@ -76,6 +77,10 @@ function safeFilename(name: string, outputType: OutputType): string {
 }
 
 Deno.serve(async (req) => {
+  // Scoped per-request rather than module-level: the echoed origin varies by
+  // caller, so a shared constant would race across concurrent requests.
+  const corsHeaders = corsHeadersFor(req);
+  const jsonResponse = makeJsonResponse(corsHeaders);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const denial = await requireOperator(req);
