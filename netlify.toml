@@ -7,6 +7,17 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    # HSTS added 2026-08-05 (finding F10). The 8/01 security review recorded HSTS
+    # as "present and live"; that was wrong — no such line existed here. Netlify
+    # provisions certs and redirects HTTP→HTTPS for both hosts served by this
+    # project (harborlineband.com and gethip.to), so a year is safe on the apex.
+    # Deliberately NOT set:
+    #   includeSubDomains — needs a subdomain inventory first. Any subdomain not
+    #     HTTPS-ready would become unreachable for a year, and DNS lives at
+    #     GoDaddy which is hands-off per CLAUDE.md.
+    #   preload — submission to the browser preload list is effectively
+    #     irreversible. Josh's call, not a default.
+    Strict-Transport-Security = "max-age=31536000"
     # microphone=(self): the /team review board uses the Web Speech API for
     # dictation; microphone=() blocked it site-wide (threw not-allowed before any
     # prompt). (self) lets our own origin use the mic; camera/geolocation stay off.
