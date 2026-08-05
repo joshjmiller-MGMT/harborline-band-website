@@ -105,6 +105,11 @@ interface SessionRow {
   status: string;
 }
 
+// Combinations added 2026-08-05 (Josh's call). The taxonomy had scoped the
+// "Mash-up (different section per hand)" method to a Combinations section that
+// did not exist here, so the method — and the two-hands right-hand picker that
+// hangs off it — could never appear anywhere. Josh's verdict was that the
+// section name was right and the app was missing it, not the reverse.
 const CATEGORIES = [
   "Chords",
   "Scales",
@@ -113,6 +118,7 @@ const CATEGORIES = [
   "Lines",
   "Songs",
   "Transcriptions",
+  "Combinations",
   "Arrangements",
   "Original",
   "Other",
