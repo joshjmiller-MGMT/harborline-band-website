@@ -7,15 +7,23 @@
 //
 // The operator gate is inlined (not imported from ../_shared) so the function
 // bundles cleanly when deployed via the Supabase MCP; it mirrors
-// _shared/require-operator.ts exactly.
+// _shared/require-operator.ts exactly. Left inlined on purpose in wave 3 --
+// swapping the auth gate is a behaviour change and this pass is about CORS.
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05, wave 3 (finding F9).
+// Caller check done first: this is NOT called by the public gethip.to lander.
+// Its only caller is the operator surface /team/smart-links
+// (TeamSmartLinks.tsx, "pull previews from Apple") via
+// supabase.functions.invoke -- a browser XHR, so CORS applies.
+// Note this import means the function is no longer _shared-free; it is
+// deployed with the CLI, which bundles _shared the same way it does for the
+// other 52 functions.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
-function deny(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+// Takes `req` because the echoed origin depends on the caller. The denial path
+// mattered here: before this change an unauthorised 401/403 still answered "*".
+function deny(req: Request, status: number, body: unknown) {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeadersFor(req), "Content-Type": "application/json" } });
 }
 function base64UrlDecode(input: string): string {
   const pad = (4 - (input.length % 4)) % 4;
@@ -28,7 +36,7 @@ function requireOperator(req: Request): Response | null {
   const operatorIds = (Deno.env.get("OPERATOR_USER_IDS") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
   if (!authHeader || !authHeader.toLowerCase().startsWith("bearer ")) {
-    return deny(401, { error: "unauthorized", reason: "missing_bearer" });
+    return deny(req, 401, { error: "unauthorized", reason: "missing_bearer" });
   }
   let payload: { sub?: string; role?: string } = {};
   try {
@@ -36,11 +44,11 @@ function requireOperator(req: Request): Response | null {
     if (parts.length !== 3) throw new Error("malformed_jwt");
     payload = JSON.parse(base64UrlDecode(parts[1]));
   } catch (_err) {
-    return deny(401, { error: "unauthorized", reason: "jwt_decode_failed" });
+    return deny(req, 401, { error: "unauthorized", reason: "jwt_decode_failed" });
   }
   if (payload.role === "service_role") return null;
   if (!payload.sub || !operatorIds.includes(payload.sub)) {
-    return deny(403, { error: "forbidden", reason: "not_an_operator" });
+    return deny(req, 403, { error: "forbidden", reason: "not_an_operator" });
   }
   return null;
 }
@@ -48,11 +56,12 @@ function requireOperator(req: Request): Response | null {
 function norm(s: string): string {
   return (s || "").toLowerCase().replace(/\(.*?\)|\[.*?\]|- ep\b|- single\b/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 }
-function json(b: unknown, s = 200) {
-  return new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-}
-
 Deno.serve(async (req) => {
+  // Per-request: the echoed origin depends on the caller.
+  const corsHeaders = corsHeadersFor(req);
+  const json = (b: unknown, s = 200) =>
+    new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const denial = requireOperator(req);
   if (denial) return denial;

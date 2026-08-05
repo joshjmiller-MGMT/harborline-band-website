@@ -7,10 +7,20 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05, wave 3 (finding F9).
+// Two callers, and only one of them is a browser:
+//   * PostingTimesWidget on /team/dashboard, via supabase.functions.invoke --
+//     a browser XHR from harborlineband.com. CORS applies to this one.
+//   * the 09:00 pg_cron job, via pg_net. It sends no Origin, so the helper
+//     returns it no CORS headers and its behaviour is unchanged.
+// This function keeps `x-cron-secret` in Access-Control-Allow-Headers, which
+// the shared helper does not carry. Rather than widen the shared module for a
+// handful of callers, spread the shared headers and override that one key
+// locally -- the same pattern availability-checker and holds-from-calendar use.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
+
+const ALLOW_HEADERS =
+  "authorization, x-client-info, apikey, content-type, x-cron-secret";
 
 type Platform = "instagram" | "tiktok" | "youtube_shorts";
 type Style = "reels" | "carousel" | "story" | "default";
@@ -267,6 +277,11 @@ async function runRefresh(supabase: any, doScrape: boolean) {
 }
 
 Deno.serve(async (req) => {
+  // Per-request: the echoed origin depends on the caller.
+  const corsHeaders = {
+    ...corsHeadersFor(req),
+    "Access-Control-Allow-Headers": ALLOW_HEADERS,
+  };
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const cronSecret = Deno.env.get("POSTING_TIMES_CRON_SECRET");

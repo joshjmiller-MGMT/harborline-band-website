@@ -1,11 +1,29 @@
 // Handles Google OAuth: initiate (?action=start) and callback (?code=...)
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05, wave 3 (finding F9).
+// This function has two completely different kinds of caller and they need
+// separating before anyone touches it again:
+//
+//   1. ?action=start -- a real browser XHR. UnifiedCalendarWidget fetches it
+//      with an operator bearer; AvailabilityCheckerWidget fetches it with NO
+//      Authorization header at all. Both run on harborlineband.com, which is
+//      on the allowlist, so both keep working. CORS genuinely applies here and
+//      this is the only path the narrowing actually affects.
+//
+//   2. ?code=... -- Google's redirect. That is a top-level browser NAVIGATION,
+//      not an XHR, and navigations are not subject to CORS at all. The
+//      response is an HTML page. Its CORS headers were meaningless as "*" and
+//      are equally meaningless now; they are left on it only so every exit
+//      from this function is built the same way. Narrowing them cannot break
+//      the callback, and could not have fixed anything either.
+//
+// What WOULD break this function is verify_jwt. The callback arrives from
+// Google with no Authorization and no apikey, and path 1 above is fetched
+// without auth by one of its two widgets, so both would 401 at the platform
+// gateway before reaching this code. It is pinned verify_jwt = false in
+// supabase/config.toml -- see the note there about the posting-times outage.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CALENDAR_CLIENT_ID");
 const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CALENDAR_CLIENT_SECRET");
@@ -37,6 +55,9 @@ function getRedirectUri(_req: Request): string {
 }
 
 Deno.serve(async (req) => {
+  // Per-request: the echoed origin depends on the caller.
+  const corsHeaders = corsHeadersFor(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

@@ -16,11 +16,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { HANDOFF_PEOPLE } from "../_shared/social-people.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05, wave 3 (finding F9).
+// Traced first, because this one is opened by a non-operator on their phone.
+// social-queue-mutate op=mint_handoff_url returns a PATH
+// (/team/social-handoff/<week>?t=...), not an absolute URL, so the link is
+// always opened on whichever frontend origin Josh shares it from. That is the
+// same Netlify project either way -- harborlineband.com or gethip.to -- and
+// both are on the allowlist, with their www variants and deploy previews.
+// The page then calls this fn with supabase.functions.invoke, a browser XHR.
+// The HMAC week-token remains the only authorization gate; CORS does not
+// change who may read a week, only which pages may ask.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -28,13 +34,6 @@ const SOCIAL_HANDOFF_SECRET =
   Deno.env.get("SOCIAL_HANDOFF_SECRET") ?? "p313-default-rotate-me";
 
 const WEEK_RE = /^\d{4}-W\d{2}$/;
-
-function json(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 async function hmacToken(week: string, person?: string): Promise<string> {
   const key = await crypto.subtle.importKey(
@@ -85,6 +84,14 @@ function constantTimeEq(a: string, b: string): boolean {
 }
 
 Deno.serve(async (req) => {
+  // Per-request: the echoed origin depends on the caller.
+  const corsHeaders = corsHeadersFor(req);
+  const json = (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

@@ -22,25 +22,30 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireOperator } from "../_shared/require-operator.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05, wave 3 (finding F9).
+// Honest note on value: this function has NO browser caller. Its only caller
+// is scripts/chart-library-drive-sync.mjs, a local Node script that sends no
+// Origin header, so the helper returns no CORS headers to it and nothing about
+// its behaviour changes. The conversion buys consistency and protects a future
+// browser caller; it does not close a hole that was open today. It is safe for
+// exactly the reason it is low-value: no-Origin callers are untouched, so the
+// token refresh the calendar systems depend on cannot be affected.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CALENDAR_CLIENT_ID");
 const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CALENDAR_CLIENT_SECRET");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 Deno.serve(async (req) => {
+  // Per-request: the echoed origin depends on the caller.
+  const corsHeaders = corsHeadersFor(req);
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
   if (req.method === "OPTIONS")
     return new Response("ok", { headers: corsHeaders });
 

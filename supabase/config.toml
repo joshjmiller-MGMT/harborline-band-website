@@ -1,1 +1,75 @@
 project_id = "mbqyznttpvebahgygsbx"
+
+# ---------------------------------------------------------------------------
+# verify_jwt pins (added 2026-08-05, CORS wave 3)
+# ---------------------------------------------------------------------------
+# `supabase functions deploy` sends verify_jwt on every deploy. With no
+# [functions.*] block the CLI sends the DEFAULT, which is true. That is not a
+# no-op: it silently rewrites the platform gate on a function that needs it off.
+#
+# This already caused one production outage on this project. `posting-times`
+# was deployed 2026-08-02 00:20 UTC for the operator-gate fix. Its own source
+# comment says "verify_jwt=false here (the cron path carries no JWT)", but the
+# deploy set it to true. The daily 09:00 pg_cron job sends only `x-cron-secret`
+# -- no Authorization, no apikey -- so from that moment the gateway rejected it
+# before it reached our code. posting_times_sources shows a 09:00 scrape every
+# day through 2026-08-01 and then none: 08-02 and 08-03 have no rows at all,
+# and the only 08-04/08-05 rows are ad-hoc runs fired by hand with a JWT.
+# cron.job_run_details still said "succeeded" throughout, because pg_net only
+# reports that the request was QUEUED, never its HTTP status.
+#
+# So these pins exist to state, in the repo, which functions must stay open at
+# the platform gate -- and why each one cannot use the default. In every case
+# the function does its own authorization; verify_jwt=false does not mean
+# unauthenticated.
+
+# Google's OAuth redirect lands here as a plain browser navigation carrying no
+# Authorization and no apikey. It also serves ?action=start, which
+# AvailabilityCheckerWidget fetches with no auth header at all. verify_jwt=true
+# would 401 both at the gateway and take down the whole calendar connect flow.
+[functions.google-calendar-oauth]
+verify_jwt = false
+
+# Meta's webhook/OAuth callbacks are server-to-server and carry no Supabase JWT.
+# Pinned to record the live production value, not to change it.
+[functions.meta-oauth]
+verify_jwt = false
+
+# Called only by the AFTER INSERT trigger trg_fan_welcome via pg_net. Pinned so
+# a future deploy cannot move it; the trigger does send an anon JWT today, but
+# the function is designed to be reachable without one.
+[functions.fan-welcome]
+verify_jwt = false
+
+# Anon-callable by design: the recipient opens a minted /team/social-handoff
+# link on their phone and a deterministic HMAC week-token is the only gate.
+[functions.social-handoff-read]
+verify_jwt = false
+
+# Meta cannot send a Supabase JWT. This function's own header says verify_jwt
+# =false is REQUIRED: GET answers the hub-challenge handshake, POST validates an
+# X-Hub-Signature-256 HMAC of the raw body and 403s on a bad or absent
+# signature. Production was found at TRUE on 2026-08-05, so Meta's deliveries
+# were being rejected at the gateway before reaching that HMAC check.
+# Consequence worth remembering: content ingest has been dead since 7/20 and the
+# known cause was an empty meta_tokens (the IG Business Login was never
+# finished) — but this gate would have kept it dead even after that OAuth was
+# completed. Two independent faults, one symptom.
+[functions.meta-webhook]
+verify_jwt = false
+
+# The daily cron (jobid 6) reaches this with the cron-secret path, not a user
+# JWT, and the function runs requireOperator plus its own secret check
+# internally. Flipped to true by a CORS-wave deploy on 2026-08-05 and restored
+# the same day — the same default-value hazard as posting-times.
+[functions.djep-calendar-events]
+verify_jwt = false
+
+# Restored to false 2026-08-05 to repair the daily cron described above. The
+# real gate is inside the function and was hardened on 2026-08-01: the cron path
+# matches x-cron-secret, and every other caller must present a JWT that
+# supabase.auth.getUser() validates AND whose user id is in OPERATOR_USER_IDS.
+# Anything else gets 401 from our own code. verify_jwt=true is what breaks this
+# function, not what secures it.
+[functions.posting-times]
+verify_jwt = false

@@ -30,11 +30,18 @@ import type {
 
 const EXTRACTOR_VERSION = "v2.5-cut6-array-dedup";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05, wave 3 (finding F9).
+// Honest note on value: this function has NO browser caller anywhere in the
+// repo -- every reference to it in src/ is a comment. It is reached by
+// operator/service-role callers and by server-side routing, none of which send
+// an Origin header, so the helper returns them no CORS headers and their
+// behaviour is unchanged. Converting is therefore harmless but not a fix; it
+// buys consistency with the other 55 functions and covers a future browser
+// caller. Its denial path was already on the allowlist, because
+// _shared/require-operator.ts was corrected in wave 2 -- so before this change
+// the function answered an allowlisted 401 and a wildcard 200, which is the
+// kind of split nobody can reason about later.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -176,13 +183,6 @@ type SourceFile = {
   is_blank_starter?: boolean;
   ingested_at: string;
 };
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 // DJEP match → plain-text representation the parsers/LLM can read. Each
 // DJEP field row becomes a "Label: value" line — Shape B-friendly format.
@@ -599,6 +599,14 @@ async function upsertCanonicalEvent(opts: {
 }
 
 Deno.serve(async (req) => {
+  // Per-request: the echoed origin depends on the caller.
+  const corsHeaders = corsHeadersFor(req);
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const denial = await requireOperator(req);

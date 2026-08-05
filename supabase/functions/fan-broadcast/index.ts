@@ -11,6 +11,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireOperator } from "../_shared/require-operator.ts";
 
+// CORS narrowed from "*" to an allowlist 2026-08-05, wave 3 (finding F9).
+// Real caller: /team/fans (TeamFans.tsx) via supabase.functions.invoke — a
+// browser XHR from harborlineband.com, so CORS genuinely applies here.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -19,14 +24,7 @@ const TWILIO_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
 const TWILIO_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
 const TWILIO_FROM = Deno.env.get("TWILIO_FROM");
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 const db = createClient(SUPABASE_URL, SERVICE_KEY);
-function json(b: unknown, s = 200) {
-  return new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-}
 
 async function sendEmail(to: string, subject: string, body: string): Promise<boolean> {
   if (!RESEND_API_KEY) return false;
@@ -53,6 +51,13 @@ async function sendSms(to: string, body: string): Promise<boolean> {
 }
 
 Deno.serve(async (req) => {
+  // Scoped per-request rather than module-level: the echoed origin depends on
+  // the caller, so a shared mutable constant would race across concurrent
+  // requests.
+  const corsHeaders = corsHeadersFor(req);
+  const json = (b: unknown, s = 200) =>
+    new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const denial = await requireOperator(req);
   if (denial) return denial;

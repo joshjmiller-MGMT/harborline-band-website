@@ -10,11 +10,12 @@
 // All results merged, deduped by platform, seed platform excluded from "new".
 import { requireOperator } from "../_shared/require-operator.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS narrowed from "*" to an allowlist 2026-08-05, wave 3 (finding F9).
+// Caller check done first: this is NOT called by the public gethip.to lander.
+// Its only caller is the operator surface /team/smart-links
+// (TeamSmartLinks.tsx, "find the rest of the links" button) via
+// supabase.functions.invoke — a browser XHR, so CORS applies.
+import { corsHeadersFor } from "../_shared/allowed-origins.ts";
 
 const PLATFORM_MAP: Record<string, string> = {
   spotify: "spotify",
@@ -86,6 +87,9 @@ async function deezerSearch(title: string, artist: string, into: Found) {
 }
 
 Deno.serve(async (req) => {
+  // Per-request: the echoed origin depends on the caller.
+  const corsHeaders = corsHeadersFor(req);
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const denial = await requireOperator(req);
