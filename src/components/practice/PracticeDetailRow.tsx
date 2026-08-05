@@ -282,6 +282,28 @@ export default function PracticeDetailRow({
       .single();
     if (data) setRows((prev) => [...prev, data as Detail]);
   };
+
+  // Josh 8/5: "I'm not seeing these dropdown names for quality drop downs, the
+  // bpm select — and record for each section." The controls existed, but they
+  // live INSIDE a detail row and the list started empty, so every section
+  // opened with nothing but a 10px "log what you drilled" link. You had to
+  // discover a click before the feature existed at all.
+  //
+  // This component only mounts for a segment that is running or already has
+  // notes, so opening one blank row per practised section is exactly the
+  // "record for each section" he asked for — not row pollution.
+  const [seeded, setSeeded] = useState(false);
+  useEffect(() => { setSeeded(false); }, [segmentId]);
+  useEffect(() => {
+    if (loading || seeded) return;
+    const hasControls = itemKind || methods.length > 0;
+    if (!hasControls || rows.length > 0) { setSeeded(true); return; }
+    setSeeded(true);
+    void addRow();
+    // addRow is stable enough here: it only closes over segmentId + rows.length,
+    // and this runs once per segment by the `seeded` latch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, seeded, itemKind, methods.length, rows.length, segmentId]);
   const removeRow = async (id: string) => {
     setRows((prev) => prev.filter((r) => r.id !== id));
     await db.from("practice_segment_details").delete().eq("id", id);
@@ -405,6 +427,19 @@ export default function PracticeDetailRow({
 
   return (
     <div className="space-y-1">
+      {/* Josh 8/5: suggestions were being COMPUTED for method sections and then
+          never rendered — the block only existed in item mode, so Chords,
+          Scales and Patterns silently dropped theirs. That is why coaching felt
+          present on Lines/Songs and absent everywhere else. */}
+      {suggestion && (
+        <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground mb-1">
+          <span className="text-primary/80 shrink-0">suggestion</span>
+          <span>
+            <span className="text-foreground">{suggestion.text}</span>
+            <span className="opacity-70"> — {suggestion.because}</span>
+          </span>
+        </div>
+      )}
       {rows.map((r) => {
         const m = r.method_id ? byId.get(r.method_id) : null;
         const d2 = optionsFor(r.method_id, "dim2");
