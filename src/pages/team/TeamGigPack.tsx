@@ -5,9 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Search, ExternalLink, AlertTriangle, Loader2, FolderOpen, Download } from "lucide-react";
+import { Package, Search, ExternalLink, AlertTriangle, Loader2, FolderOpen, Download, ListMusic } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { ORG_OPTIONS, type SetlistOrg } from "@/lib/songFilters";
 
 // Gig Pack Builder v1 (Josh spec 2026-07-18): setlist in (paste text or import
 // a saved setlist) → every matching chart in the library, grouped per song with
@@ -71,6 +73,14 @@ export default function TeamGigPack() {
   const [resolving, setResolving] = useState(false);
   const [signed, setSigned] = useState<Record<string, string>>({});
   const [zipping, setZipping] = useState(false);
+  // Save-as-setlist (agent_job c5e9689b, 8/5): the Setlist Builder had zero
+  // adoption because nothing in the flow ever offered to save one, which left
+  // Gig Pack's own "Import saved setlist" mode permanently empty. A pack that
+  // just got assembled here IS the setlist — so let it be saved from here.
+  const [savePanel, setSavePanel] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [saveOrg, setSaveOrg] = useState<SetlistOrg>("harborline");
+  const [saving, setSaving] = useState(false);
 
   // Download the whole pack as one zip: set-order numbered folders, per-variation
   // sub-folders, a manifest inside. The charts bucket is private, so the edge fn
@@ -130,6 +140,54 @@ export default function TeamGigPack() {
       });
     } finally {
       setZipping(false);
+    }
+  };
+
+  // Save the resolved song order as a real setlist row, so it comes back in the
+  // "Import saved setlist" dropdown above and opens in the Setlist Builder.
+  // Order is the pack order — the set as it was actually assembled.
+  const saveAsSetlist = async () => {
+    const name = saveName.trim();
+    if (!name) {
+      toast({ title: "Name the setlist first", variant: "destructive" });
+      return;
+    }
+    const songs = (results ?? []).map((r) => r.song);
+    if (!songs.length) return;
+    setSaving(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const uid = sess?.session?.user?.id;
+      if (!uid) throw new Error("Sign in again — no session");
+      // RLS on setlists is owner-scoped: created_by must be the caller.
+      const { data, error } = await supabase
+        .from("setlists")
+        .insert({
+          name,
+          org: saveOrg,
+          event_date: gigDate || null,
+          song_ids: [],           // pack songs are free text, not catalog ids
+          song_snapshot: songs.map((title) => ({ title })),
+          created_by: uid,
+        })
+        .select("id, name, event_date, song_snapshot")
+        .single();
+      if (error) throw error;
+      // Put it straight into the dropdown without a reload.
+      setSetlists((prev) => [data as SetlistRow, ...prev]);
+      setSavePanel(false);
+      toast({
+        title: `Saved "${name}"`,
+        description: `${songs.length} songs · now in Import saved setlist and the Setlist Builder`,
+      });
+    } catch (e) {
+      toast({
+        title: "Save failed",
+        description: e instanceof Error ? e.message : "unknown",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -244,15 +302,59 @@ export default function TeamGigPack() {
               <span>
                 Pack <span className="font-medium text-foreground">{gigDate}</span> · {found.length} of {results.length} songs covered · {found.reduce((a, r) => a + r.hits.length, 0)} charts
               </span>
-              {/* The actual "folder of charts" deliverable — one zip, set-order
-                  numbered, foldered per variation, forScore-importable. */}
-              {found.length > 0 && (
-                <Button size="sm" variant="outline" onClick={() => void downloadZip()} disabled={zipping}>
-                  {zipping ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />}
-                  {zipping ? "Building…" : "Download pack (.zip)"}
+              <span className="flex items-center gap-2">
+                {/* Save this as a setlist — the pack order becomes a reusable
+                    setlist row. Shown for every resolved pack, not just covered
+                    songs: the set is the set even if a chart is missing. */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSaveName((n) => n || `Gig ${gigDate}`);
+                    setSavePanel((v) => !v);
+                  }}
+                >
+                  <ListMusic className="w-4 h-4 mr-1.5" /> Save this as a setlist
                 </Button>
-              )}
+                {/* The actual "folder of charts" deliverable — one zip, set-order
+                    numbered, foldered per variation, forScore-importable. */}
+                {found.length > 0 && (
+                  <Button size="sm" variant="outline" onClick={() => void downloadZip()} disabled={zipping}>
+                    {zipping ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />}
+                    {zipping ? "Building…" : "Download pack (.zip)"}
+                  </Button>
+                )}
+              </span>
             </div>
+
+            {savePanel && (
+              <Card className="border-primary/40 mb-4">
+                <CardContent className="p-3 flex flex-col sm:flex-row gap-2 sm:items-center">
+                  <Input
+                    value={saveName}
+                    onChange={(e) => setSaveName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") void saveAsSetlist(); }}
+                    placeholder="Setlist name"
+                    className="sm:max-w-xs"
+                  />
+                  <Select value={saveOrg} onValueChange={(v) => setSaveOrg(v as SetlistOrg)}>
+                    <SelectTrigger className="sm:w-40"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {ORG_OPTIONS.map((o) => (
+                        <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" onClick={() => void saveAsSetlist()} disabled={saving} className="shrink-0">
+                    {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : null}
+                    Save {results.length} song{results.length === 1 ? "" : "s"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setSavePanel(false)} className="shrink-0">
+                    Cancel
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {missing.length > 0 && (
               <Card className="border-amber-500/40 bg-amber-500/5 mb-4">

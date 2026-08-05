@@ -1,4 +1,6 @@
+import { useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
+import FocusModeWidget from "@/components/dashboard/FocusModeWidget";
 import AvailabilityCheckerWidget from "@/components/dashboard/AvailabilityCheckerWidget";
 import PendingApprovalAlert from "@/components/dashboard/PendingApprovalAlert";
 import FollowupsAlert from "@/components/dashboard/FollowupsAlert";
@@ -10,6 +12,11 @@ import { LayoutDashboard } from "lucide-react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default function TeamDashboard() {
+  // Focus mode (approved 2026-07-21, review card ab338385 "Build all 5"):
+  // element 1 is "exactly ONE next action, everything else hidden". Nothing is
+  // removed — the toggle defaults off and every widget below is one click away.
+  const [focus, setFocus] = useState(false);
+
   return (
     <TeamLayout>
       <div className="container mx-auto px-6 py-12">
@@ -20,7 +27,13 @@ export default function TeamDashboard() {
           <p className="text-muted-foreground mt-2">Overview and tools for the Harborline team.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="mb-6">
+          <ErrorBoundary compact label="Focus mode">
+            <FocusModeWidget onFocusChange={setFocus} />
+          </ErrorBoundary>
+        </div>
+
+        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${focus ? "hidden" : ""}`}>
           {/* Pending-approval alert — surfaces the SMART backlog waiting on Josh. */}
           <div className="lg:col-span-2">
             <ErrorBoundary compact label="Pending approval">

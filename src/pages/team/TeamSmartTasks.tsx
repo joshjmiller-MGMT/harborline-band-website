@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, RefreshCw, ChevronDown, Repeat, MessageSquarePlus, ExternalLink, Inbox, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,7 @@ import {
   type SmartTaskRow,
   type TrelloCard,
 } from "@/hooks/useSmartTaskBoardData";
+import { FOCUS_WIP_CAP, ageDays, cheer, heatTier, heatLabel, HEAT_STYLE } from "@/lib/focus";
 
 // SMART board v3 (Josh spec 2026-07-07): NO scrum boards. Two clean sections —
 // (1) Trello inbox mirroring the SOURCE bucket structure (only buckets that
@@ -199,6 +200,15 @@ export default function SmartBoardPanel() {
     [refreshSmartRows],
   );
 
+  // Focus layer element 5: completion micro-celebration. Done already fired a
+  // sticky undo toast — this gives that toast a beat of praise and a running
+  // count, so closing cards has a visible streak instead of silence.
+  const doneStreak = useRef(0);
+  const doneMsg = () => {
+    const n = ++doneStreak.current;
+    return `${cheer(n)} ${n} done this session — synced everywhere + Trello check-off queued`;
+  };
+
   const sendToReview = useCallback(async (title: string, ref: string | null) => {
     try {
       const { data, error } = await supabase
@@ -288,6 +298,15 @@ export default function SmartBoardPanel() {
                       {STAGE_LABEL[stage]}
                     </span>
                     <span className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                      {/* Focus layer element 3: soft WIP cap on Active. It warns
+                          and never blocks — the point is to make an overloaded
+                          Active column visible, not to police it. */}
+                      {stage === "Active" && rows.length > FOCUS_WIP_CAP && (
+                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 normal-case"
+                          title={`Soft cap is ${FOCUS_WIP_CAP}. Finish or park some before starting more.`}>
+                          {rows.length - FOCUS_WIP_CAP} over the {FOCUS_WIP_CAP} cap
+                        </span>
+                      )}
                       {rows.length}
                       <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
                     </span>
@@ -320,6 +339,12 @@ export default function SmartBoardPanel() {
                       const venture = normalizeVenture(row.board_venture);
                       const isOpen = openRow === row.id;
                       const ctx = row.trello_card_id ? cardCtx[row.trello_card_id] : undefined;
+                      // Focus layer element 4: aging heat. Older reads warmer so
+                      // a card that has been sitting stops being invisible. Done
+                      // rows are excluded — age on a closed card means nothing.
+                      const days = ageDays(row.created_at);
+                      const tier = heatTier(days);
+                      const showHeat = tier !== "fresh" && stage !== "Done";
                       return (
                         <div key={row.id}>
                         <div className="px-3 py-1.5 flex items-center gap-2.5">
@@ -339,9 +364,18 @@ export default function SmartBoardPanel() {
                             title="Click to open this card">
                             {row.revised_title || row.raw_input}
                           </button>
+                          {showHeat && (
+                            <span
+                              className={`flex items-center gap-1 text-[10px] tabular-nums shrink-0 ${HEAT_STYLE[tier].text}`}
+                              title={`Sitting ${days} days`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${HEAT_STYLE[tier].dot}`} />
+                              {heatLabel(days)}
+                            </span>
+                          )}
                           {/* one-click done — river closes queue row + queues Trello check-off */}
                           <button type="button"
-                            onClick={() => patchRow(row.id, { bucket: "Done" }, "Done — synced everywhere + Trello check-off queued", { bucket: stage })}
+                            onClick={() => patchRow(row.id, { bucket: "Done" }, doneMsg(), { bucket: stage })}
                             className="text-green-500/60 hover:text-green-400 shrink-0" title="Mark done (syncs everywhere)">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                           </button>
@@ -423,7 +457,7 @@ export default function SmartBoardPanel() {
                                   Approve → Active
                                 </Button>
                               )}
-                              <Button size="sm" variant="outline" onClick={() => patchRow(row.id, { bucket: "Done" }, "Done — synced everywhere + Trello check-off queued", { bucket: stage })} className="h-7 text-xs gap-1">
+                              <Button size="sm" variant="outline" onClick={() => patchRow(row.id, { bucket: "Done" }, doneMsg(), { bucket: stage })} className="h-7 text-xs gap-1">
                                 ✓ Done
                               </Button>
                               <Button size="sm" variant="ghost" onClick={() => sendToReview(row.revised_title || row.raw_input, row.id)} className="h-7 text-xs gap-1">

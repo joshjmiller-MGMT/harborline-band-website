@@ -30,6 +30,7 @@ import {
   Rss,
   CalendarClock,
   Link2,
+  Mic2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,7 @@ const bookHub: MegaMenu = {
     { name: "Holds", href: "/team/holds", icon: CalendarClock, description: "Sales holds — chase reps, keep players informed" },
     { name: "Venues", href: "/team/venues", icon: Phone, description: "Venue & Festival Tracker — rooms and stages by act fit" },
     { name: "Outreach", href: "/team/outreach", icon: Send, description: "Proactive targets — venues, festivals, radio, playlists, press, collabs" },
+    { name: "Wilson", href: "/team/wilson", icon: Mic2, description: "Charles Wilson — managed artist; agency submissions, bookings, commission" },
     { name: "Contacts", href: "/team/contacts", icon: Users, description: "Central contact hub — mirror of the JJMM sheet; follow-up flags" },
     { name: "People", href: "/team/people", icon: Users, description: "Unified roster — players + crew + both, per venture, linked to Contacts" },
     { name: "Bands", href: "/team/bands", icon: Handshake, description: "Relationship board — bands for show swaps & support slots" },

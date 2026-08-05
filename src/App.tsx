@@ -99,6 +99,7 @@ const TeamOutreach = lazy(() => import("./pages/team/TeamOutreach"));
 const TeamSmartLinks = lazy(() => import("./pages/team/TeamSmartLinks"));
 const TeamFans = lazy(() => import("./pages/team/TeamFans"));
 const TeamPeople = lazy(() => import("./pages/team/TeamPeople"));
+const TeamWilson = lazy(() => import("./pages/team/TeamWilson"));
 
 const queryClient = new QueryClient();
 
@@ -234,6 +235,7 @@ const App = () => (
                 <Route path="/team/fans" element={<TeamFans />} />
                 <Route path="/team/people" element={<TeamPeople />} />
                 <Route path="/team/outreach" element={<TeamOutreach />} />
+                <Route path="/team/wilson" element={<TeamWilson />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
