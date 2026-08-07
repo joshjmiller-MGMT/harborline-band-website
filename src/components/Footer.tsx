@@ -85,7 +85,7 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-start gap-2 text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
-                <span>Baltimore &amp; Washington DC areas</span>
+                <span>Based in Baltimore. Playing Maryland, DC, Virginia, Pennsylvania, Delaware, New Jersey and New York — and we travel farther on request.</span>
               </li>
               <li>
                 <a
