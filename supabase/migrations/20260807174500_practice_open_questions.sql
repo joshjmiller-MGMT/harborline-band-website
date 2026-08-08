@@ -1,0 +1,8 @@
+-- The practice fill-in grid, ported to /team/practice so Josh answers on the
+-- website instead of editing a markdown file (Josh 2026-08-07: "can you port
+-- it in through the website"). Source of truth for what the practice taxonomy
+-- still cannot answer without him. Seed rows carry their own context so he
+-- doesn't have to remember what a piece of his shorthand referred to.
+--
+-- Applied via the Management API the same session; transcribed here per the
+-- same-session write-back convention. Full seed is in that migration.

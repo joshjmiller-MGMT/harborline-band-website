@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import TeamLayout from "@/components/TeamLayout";
 import PracticeTimerWidget from "@/components/dashboard/PracticeTimerWidget";
 import PracticeItemsWidget from "@/components/dashboard/PracticeItemsWidget";
+import PracticeQuestionsWidget from "@/components/dashboard/PracticeQuestionsWidget";
 import HoursHeatmap from "@/components/dashboard/HoursHeatmap";
 import HoursReviewQueueWidget from "@/components/dashboard/HoursReviewQueueWidget";
 import { supabase } from "@/integrations/supabase/client";
@@ -488,6 +489,11 @@ export default function TeamPractice() {
         {/* Practice library — songs + lines + voicings + etc., color-coded */}
         <div className="mb-6">
           <PracticeItemsWidget />
+        </div>
+
+        {/* The fill-in grid: what the taxonomy still can't answer without Josh */}
+        <div className="mb-6">
+          <PracticeQuestionsWidget />
         </div>
 
         {/* Hours track — instrument-time from calendar + 10k progress + review queue */}
