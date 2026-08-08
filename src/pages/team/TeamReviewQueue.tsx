@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import TeamLayout from "@/components/TeamLayout";
 import SmartBoardPanel from "@/pages/team/TeamSmartTasks";
+import PracticeQuestionsWidget from "@/components/dashboard/PracticeQuestionsWidget";
 import { Helmet } from "react-helmet-async";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -943,6 +944,12 @@ export default function TeamReviewQueue() {
               </div>
             )}
           </Card>
+        </div>
+
+        {/* Practice gaps — questions only Josh can answer, so they belong in
+            review rather than cluttering the practice page (Josh 8/07). */}
+        <div className="mt-6">
+          <PracticeQuestionsWidget />
         </div>
       </div>
     </TeamLayout>
