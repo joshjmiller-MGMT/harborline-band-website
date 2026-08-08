@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Sun, AlertTriangle, ArrowRight, CircleDot } from "lucide-react";
+import { Sun, AlertTriangle, ArrowRight, CircleDot, ListChecks } from "lucide-react";
 
 // TODAY command panel (Josh 2026-07-19): "the core answer of what I'm doing
 // daily needs to be on my main dashboard." Pulled LIVE from the system —
@@ -11,6 +11,19 @@ import { Sun, AlertTriangle, ArrowRight, CircleDot } from "lucide-react";
 // the team boards. Right: what every teammate is on right now.
 
 type ReviewRow = { id: string; title: string; priority: string; queued_at: string };
+type TodoRow = ReviewRow & { est_minutes: number | null; do_order: number | null; requires_josh_action: boolean };
+
+// Bands for the full list. do_order is assigned deliberately: unblockers and
+// live security holes first, then anything with a date on it, then decisions
+// that unblock Claude, then long-form sit-down work.
+const BANDS: { key: string; label: string; blurb: string; max: number }[] = [
+  { key: "unblock", label: "Do these first", blurb: "each one unblocks other work or closes a live hole", max: 9 },
+  { key: "clock", label: "On a clock", blurb: "these have a date attached", max: 12 },
+  { key: "decide", label: "Decisions", blurb: "short answers that unblock me", max: 18 },
+  { key: "sitdown", label: "Sit-down work", blurb: "needs a proper block of time", max: 99 },
+];
+
+const mins = (n: number) => (n >= 60 ? `${Math.floor(n / 60)}h ${n % 60 ? `${n % 60}m` : ""}`.trim() : `${n}m`);
 type BlockedJob = { title: string; blocked_reason: string | null; slug: string; emoji: string };
 type AgentRow = { slug: string; name: string; emoji: string; status: string; current_action: string | null };
 type Brief = { brief_date: string; brief_md: string };
@@ -28,6 +41,8 @@ export default function TodayCommandWidget() {
   const [agents, setAgents] = useState<AgentRow[]>([]);
   const [brief, setBrief] = useState<Brief | null>(null);
   const [briefOpen, setBriefOpen] = useState(false);
+  const [todos, setTodos] = useState<TodoRow[]>([]);
+  const [listOpen, setListOpen] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -67,6 +82,15 @@ export default function TodayCommandWidget() {
         .order("brief_date", { ascending: false })
         .limit(1);
       if (b?.[0]) setBrief(b[0] as Brief);
+
+      // The full list — everything open, in the order it should be worked.
+      const { data: t } = await supabase
+        .from("waiting_on_josh")
+        .select("id, title, priority, queued_at, est_minutes, do_order, requires_josh_action")
+        .is("resolved_at", null)
+        .order("do_order", { ascending: true, nullsFirst: false })
+        .order("queued_at", { ascending: true });
+      setTodos((t as TodoRow[]) || []);
     })();
   }, []);
 
@@ -132,6 +156,77 @@ export default function TodayCommandWidget() {
             <Badge variant="outline" className="mt-2 text-[10px]">every routine + update flows here — no silos</Badge>
           </div>
         </div>
+        {/* The full list. The three columns above are the glance; this is
+            everything on Josh, in the order it should be worked, with honest
+            time estimates (Josh 2026-08-08: "everything I need to do for
+            everything"). Banded so a two-minute unblock never sits below a
+            forty-five-minute grant application. */}
+        {todos.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-border/40">
+            <button
+              type="button"
+              onClick={() => setListOpen(!listOpen)}
+              className="flex w-full items-center gap-2 text-left"
+            >
+              <ListChecks className="w-4 h-4 text-primary shrink-0" />
+              <h3 className="font-display text-sm tracking-wide-custom">Everything on you</h3>
+              <Badge variant="secondary" className="font-normal text-[10px]">
+                {todos.length} items · {mins(todos.reduce((s, t) => s + (t.est_minutes ?? 0), 0))} total
+              </Badge>
+              <span className="ml-auto text-xs text-primary">{listOpen ? "hide" : "show"}</span>
+            </button>
+
+            {listOpen && (
+              <div className="mt-3 space-y-4">
+                {BANDS.map((band, bi) => {
+                  const lo = bi === 0 ? 1 : BANDS[bi - 1].max + 1;
+                  const rows = todos.filter(
+                    (t) => (t.do_order ?? 999) >= lo && (t.do_order ?? 999) <= band.max,
+                  );
+                  if (!rows.length) return null;
+                  const total = rows.reduce((s, t) => s + (t.est_minutes ?? 0), 0);
+                  return (
+                    <div key={band.key}>
+                      <div className="flex flex-wrap items-baseline gap-x-2 mb-1.5">
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                          {band.label}
+                        </h4>
+                        <span className="text-[11px] text-muted-foreground">
+                          {band.blurb} · {rows.length} items, {mins(total)}
+                        </span>
+                      </div>
+                      <ul className="space-y-1">
+                        {rows.map((t) => (
+                          <li key={t.id} className="flex items-start gap-2 text-sm">
+                            <span className="mt-0.5 w-9 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+                              {t.est_minutes ? mins(t.est_minutes) : "—"}
+                            </span>
+                            {t.priority === "high" && (
+                              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />
+                            )}
+                            <Link to="/team/review" className="min-w-0 flex-1 hover:text-primary">
+                              {t.title}
+                            </Link>
+                            {t.requires_josh_action && (
+                              <Badge
+                                variant="outline"
+                                className="mt-0.5 shrink-0 text-[9px] uppercase tracking-wider"
+                                title="Only you can do this one — it happens outside our systems"
+                              >
+                                you only
+                              </Badge>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 9am cloud brief — published into the site, rendered here (no silo). */}
         {brief && (
           <div className="mt-3 pt-3 border-t border-border/40">
