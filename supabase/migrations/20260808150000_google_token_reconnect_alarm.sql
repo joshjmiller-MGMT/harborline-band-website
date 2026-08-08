@@ -1,0 +1,13 @@
+-- Raise a review card when a Google account needs reconnecting.
+--
+-- Found 2026-08-08: joshmillermanagement@gmail.com (Josh's MAIN account, the one
+-- everything mirrors into) had needs_reconnect=true and last_refresh_error
+-- "invalid_grant: Token has been expired or revoked" since 2026-08-07 18:30 UTC.
+-- Nothing watched either field, so it never reached a card, an alarm, or the
+-- morning brief. It surfaced only because a human question needed the calendar.
+--
+-- The BSE account kept refreshing fine throughout, so every dashboard looked
+-- healthy while the account carrying the gigs was dark. Green is not healthy.
+--
+-- Applied via the Management API the same session; full body in that migration.
+-- Adds check_google_token_health() + cron 'google-token-health-hourly' at :20.

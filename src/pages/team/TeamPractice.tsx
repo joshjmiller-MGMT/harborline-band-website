@@ -490,6 +490,7 @@ export default function TeamPractice() {
           <PracticeItemsWidget />
         </div>
 
+
         {/* Hours track — instrument-time from calendar + 10k progress + review queue */}
         <div className="mb-6 space-y-4">
           <HoursHeatmap />

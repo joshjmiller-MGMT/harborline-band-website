@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import TeamLayout from "@/components/TeamLayout";
 import SmartBoardPanel from "@/pages/team/TeamSmartTasks";
+import PracticeQuestionsWidget from "@/components/dashboard/PracticeQuestionsWidget";
 import { Helmet } from "react-helmet-async";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
   Paperclip,
   RefreshCw,
   ChevronRight,
+  ChevronLeft,
   X,
   ArrowDownToLine,
   Inbox,
@@ -129,6 +131,8 @@ const MAX_UPLOAD_BYTES = 104857600; // 100 MB — matches the review-uploads buc
 export default function TeamReviewQueue() {
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Phone only: which pane is showing. Desktop ignores this and shows both.
+  const [mobileDetail, setMobileDetail] = useState(false);
   const [filter, setFilter] = useState<"all" | ItemType>("all");
   const [loading, setLoading] = useState(true);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
@@ -189,10 +193,18 @@ export default function TeamReviewQueue() {
   );
 
   const current = items.find((i) => i.id === selectedId) || null;
+  // Position within the *filtered* list, so the phone pager walks what he can see.
+  const currentIndex = filtered.findIndex((i) => i.id === selectedId);
 
   // Clear the typed answer when switching cards (fix: the typed answer used to carry from card to card).
   useEffect(() => {
     setResolution("");
+  }, [selectedId]);
+
+  // Phone: when the queue empties (or nothing is selected), fall back to the
+  // list rather than stranding him on an empty detail pane with the list hidden.
+  useEffect(() => {
+    if (!selectedId) setMobileDetail(false);
   }, [selectedId]);
 
   // Resolve a stable key for each ref + populate URLs (signed for storage_path, passthrough for external_url).
@@ -491,8 +503,18 @@ export default function TeamReviewQueue() {
         </Tabs>
 
         <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-4">
-          {/* Left: list */}
-          <Card className="p-2 max-h-[calc(100vh-220px)] overflow-y-auto">
+          {/* Left: list.
+              Phone (Josh 8/08): the list used to eat the whole viewport and the
+              detail stacked underneath it, so answering a card meant scrolling
+              past a screen-tall list and back up again for the next one. Below
+              lg we now show one pane at a time and let him step card-to-card,
+              so the list is only for jumping, not for every move. Desktop's
+              two-column layout is untouched. */}
+          <Card
+            className={`p-2 max-h-[calc(100vh-220px)] overflow-y-auto ${
+              mobileDetail ? "hidden lg:block" : ""
+            }`}
+          >
             {loading && items.length === 0 ? (
               <div className="flex items-center justify-center py-8 text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -509,7 +531,10 @@ export default function TeamReviewQueue() {
                   return (
                     <li key={item.id}>
                       <button
-                        onClick={() => setSelectedId(item.id)}
+                        onClick={() => {
+                          setSelectedId(item.id);
+                          setMobileDetail(true);
+                        }}
                         className={`w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors border-l-2 ${
                           item.priority === "high"
                             ? "border-l-red-500"
@@ -555,7 +580,44 @@ export default function TeamReviewQueue() {
           </Card>
 
           {/* Right: detail */}
-          <Card className="p-6 max-h-[calc(100vh-220px)] overflow-y-auto">
+          <Card
+            className={`p-6 max-h-[calc(100vh-220px)] overflow-y-auto ${
+              mobileDetail ? "" : "hidden lg:block"
+            }`}
+          >
+            {/* Phone-only pager: step through the queue without going back to
+                the list each time. Hidden on lg, where both panes are visible. */}
+            {current && (
+              <div className="lg:hidden -mx-6 -mt-6 mb-4 flex items-center justify-between gap-2 border-b border-border bg-card/95 px-4 py-2 sticky top-0 z-10 backdrop-blur">
+                <Button variant="ghost" size="sm" onClick={() => setMobileDetail(false)}>
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Queue
+                </Button>
+                <span className="text-[11px] text-muted-foreground tabular-nums">
+                  {currentIndex + 1} of {filtered.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentIndex <= 0}
+                    onClick={() => setSelectedId(filtered[currentIndex - 1].id)}
+                    aria-label="Previous card"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentIndex < 0 || currentIndex >= filtered.length - 1}
+                    onClick={() => setSelectedId(filtered[currentIndex + 1].id)}
+                    aria-label="Next card"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
             {!current ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <CheckCircle2 className="w-10 h-10 mb-3 text-primary" />
@@ -943,6 +1005,12 @@ export default function TeamReviewQueue() {
               </div>
             )}
           </Card>
+        </div>
+
+        {/* Practice gaps — questions only Josh can answer, so they belong in
+            review rather than cluttering the practice page (Josh 8/07). */}
+        <div className="mt-6">
+          <PracticeQuestionsWidget />
         </div>
       </div>
     </TeamLayout>
